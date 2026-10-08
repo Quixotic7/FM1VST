@@ -92,6 +92,7 @@ int main()
     std::printf("tier2_test: FM1EMU_HOME=%s\n", scratch.getFullPathName().toRawUTF8());
 
     FM1Processor p;
+    p.setButtonMode(FM1Processor::kButtonHold);   // (the button parameters held as long as they are on: layers)
     Watch w;
     p.addListener(&w);
     for (int i = 0; i < FM1Processor::kTier2Slots; i++)

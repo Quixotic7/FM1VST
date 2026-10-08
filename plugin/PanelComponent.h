@@ -22,14 +22,22 @@
 // audio thread: the panel never moves the btn_ / key_ parameters). Left click: press / release; right-click or
 // ctrl-click: latch down, again to release; wheel over a knob: one detent per notch (MASTER: 16 of 1023); vertical
 // drag on a knob: one detent per 8 points; a click on a knob selects it for Up / Down. The keyboard map is
-// keymap.c's (by key: see kKeymap in PanelComponent.cpp; the screenshot, recording and dump keys are left out).
-// Losing the keyboard focus releases what the keyboard and the mouse hold (latches stay); destroying the
+// keymap.c's (by key: see keymap() in PanelComponent.cpp; the screenshot, recording and dump keys are left out),
+// plus a fallback row for the F-key buttons (a host or macOS often takes F5 .. F10): C V B N M , = FX SEL ENV LFO
+// EDIT GLO; a control whose first key is an F key shows both on the panel ("F5/C").
+// A key held from the keyboard is pressed once (keyPressed's repeats are ignored while it is held) and let go when
+// its release arrives (keyStateChanged) or, when a host swallowed the release, when the check finds it up: on every
+// keyStateChanged and at 30 Hz while any key is held (checkHeldKeys). "Up" is the physical key's state when its press
+// could be matched to one key (macOS: the HID state, CGEventSourceKeyState; JUCE's KeyPress::isKeyCurrentlyDown only
+// moves with the events the host passes on), else JUCE's. Two keys of one control (Z and Esc): it is held while
+// either is. Losing the keyboard focus releases what the keyboard and the mouse hold (latches stay); destroying the
 // component releases everything.
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <array>
 #include <functional>
+#include <map>
 #include <set>
 
 #include "Processor.h"
@@ -92,11 +100,18 @@ public:
         const char *cap;            // the hint printed on the panel
     };
     static const std::vector<KeymapEntry> &keymap();
-    static const char *keymapHint(Kind kind, int idx);
+    static const char *keymapHint(Kind kind, int idx);    // the first key of a control
+    static juce::String keymapHintText(Kind kind, int idx);   // what the panel prints: "F5/C" when the first is an F key
+
+    // ---- the key-up safety net (see the top). Tests replace the probe (code -> still down) and call the check.
+    using KeyProbe = std::function<bool(int keyCode)>;
+    void setKeyProbe(KeyProbe p) { keyProbe_ = std::move(p); }
+    bool checkHeldKeys();                          // lets go of every held key found up; true if any
+    int keysHeldFromKeyboard() const { return (int)heldCodes_.size(); }
 
 private:
     enum { SRC_KEY = 1, SRC_ESC = 2, SRC_MOUSE = 4, SRC_LATCH = 8 };
-    void timerCallback() override { refresh(); }
+    void timerCallback() override;
     void relayout(float scale);
     void drawBase();
     void drawAllControls();
@@ -150,5 +165,10 @@ private:
     int mouseKind_ = -1, mouseIdx_ = 0, dragKnob_ = -1;
     float dragAcc_ = 0, wheelAcc_ = 0, dragY_ = 0;
     bool shiftHeld_ = false;
-    std::set<int> heldCodes_;                  // key codes down (keymap entries that hold)
+    std::map<int, int> heldCodes_;             // key codes down -> the physical key seen at the press (-1 unknown)
+    KeyProbe keyProbe_;
+    int pollTick_ = 0;
+    bool keyStillDown(int code, int physical) const;
+    int physicalKeyAtPress() const;            // the one physical key newly down (macOS virtual key code), or -1
+    void releaseCode(int code);
 };

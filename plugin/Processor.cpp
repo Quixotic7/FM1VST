@@ -711,6 +711,7 @@ void FM1Processor::bootLocked()
         bytes.resize(size);
     dev_ = std::make_unique<Device>(loaded_->core());
     dev_->set_between([this](uint32_t, bool frame) {
+        tickTaps();                              // (a Tap's press, counted in device ms)
         if (frame) {
             fineFrame();                         // (emu.c ui_frame: fine_frame before the frame)
             readBackParameters();
@@ -738,6 +739,7 @@ void FM1Processor::resetAudioState()            // (devLock_ held, processing st
     appliedMaster_ = -1;
     midiKeys_ = paramKeys_ = 0;
     paramButtons_ = panelKeysCur_ = panelButtonsCur_ = 0;
+    resetButtonEdges();
     fineStage_ = 0;
     fineSteps_ = 0;
     fineGlo_ = false;
@@ -1218,6 +1220,105 @@ void FM1Processor::applyButtons()
     }
 }
 
+// ---- the button parameters' edge semantics (audio thread, devLock_ held; see getButtonMode)
+juce::String FM1Processor::buttonModeName(int m)
+{
+    return m == kButtonHold ? "Hold" : m == kButtonToggleHold ? "Toggle-hold" : "Tap";
+}
+
+void FM1Processor::resetButtonEdges()
+{
+    btnModeCur_ = -1;                            // (the next block takes the values as they are: no edge)
+    btnPrev_ = 0;
+    clearButtonEdges();
+}
+
+void FM1Processor::clearButtonEdges()
+{
+    btnToggled_ = tapHeld_ = tapBusy_ = 0;
+    tapLeft_.fill(0);
+    tapGap_.fill(0);
+    tapQueued_.fill(0);
+}
+
+void FM1Processor::startTap(int i)
+{
+    const uint32_t bit = 1u << i;
+    if (tapBusy_ & bit) {                        // still down, or in the release before the next: one more after it
+        if (tapQueued_[(size_t)i] < kTapQueue)
+            tapQueued_[(size_t)i]++;
+        return;
+    }
+    tapLeft_[(size_t)i] = (uint16_t)btnTapMs_.load();
+    tapHeld_ |= bit;
+    tapBusy_ |= bit;
+}
+
+void FM1Processor::buttonParamsToDevice()
+{
+    uint32_t v = 0;
+    for (int i = 0; i < EMU_NB; i++)
+        if (btn_[(size_t)i]->get())
+            v |= 1u << i;
+    const int mode = btnMode_.load();
+    if (btnModeCur_ < 0) {                       // a new device: the values as they are (no edge)
+        btnPrev_ = v;
+        btnModeCur_ = mode;
+    } else if (mode != btnModeCur_) {            // a new mode: nothing the old one held is kept (edges still count)
+        clearButtonEdges();
+        btnModeCur_ = mode;
+    }
+    const uint32_t rise = v & ~btnPrev_;
+    btnPrev_ = v;
+    switch (mode) {
+    case kButtonHold: paramButtons_ = v; break;
+    case kButtonToggleHold:
+        btnToggled_ ^= rise;
+        paramButtons_ = btnToggled_;
+        break;
+    default:
+        for (int i = 0; i < EMU_NB; i++)
+            if (rise & (1u << i))
+                startTap(i);
+        paramButtons_ = tapHeld_;
+        break;
+    }
+}
+
+// every device ms (the between hook: after the tick, before the frame / idle): a press of btnTapMs_ ms is down for
+// that many ticks; then kTapGapMs released before a queued one
+void FM1Processor::tickTaps()
+{
+    if (!tapBusy_)
+        return;
+    bool changed = false;
+    for (int i = 0; i < EMU_NB; i++) {
+        const uint32_t bit = 1u << i;
+        if (!(tapBusy_ & bit))
+            continue;
+        if (tapLeft_[(size_t)i]) {
+            if (!--tapLeft_[(size_t)i]) {
+                tapHeld_ &= ~bit;
+                tapGap_[(size_t)i] = (uint16_t)kTapGapMs;
+                changed = true;
+            }
+        } else if (!tapGap_[(size_t)i] || !--tapGap_[(size_t)i]) {
+            if (tapQueued_[(size_t)i]) {
+                tapQueued_[(size_t)i]--;
+                tapLeft_[(size_t)i] = (uint16_t)btnTapMs_.load();
+                tapHeld_ |= bit;
+                changed = true;
+            } else {
+                tapBusy_ &= ~bit;
+            }
+        }
+    }
+    if (changed && btnModeCur_ == kButtonTap) {
+        paramButtons_ = tapHeld_;
+        applyButtons();
+    }
+}
+
 // emu.c fine_turn (at block start): a new request holds GLO now; the detent follows before the next UI frame
 void FM1Processor::takeFineRequest()
 {
@@ -1308,7 +1409,7 @@ void FM1Processor::snapshotPanel()
 
 // ---------------------------------------------------------------- state ---
 // A ValueTree "FM1VST" (binary): stateVersion, core, coreVersion, transpose, midiNotesPlayKeys, keyNotesToFirmware,
-// master, preset, editorW, editorH, bigLcd, knobDetents, a child "theme" (name base membrane knob, and bed / label when the theme
+// master, preset, editorW, editorH, bigLcd, knobDetents, buttonMode (0 Tap, 1 Hold, 2 Toggle-hold), buttonTapMs, a child "theme" (name base membrane knob, and bed / label when the theme
 // sets them; "#RRGGBB") and "flash": the image gzip-compressed (a MemoryBlock property; absent when the instance
 // never had one, i.e. a fresh flash).
 void FM1Processor::getStateInformation(juce::MemoryBlock &dest)
@@ -1333,6 +1434,8 @@ void FM1Processor::getStateInformation(juce::MemoryBlock &dest)
     }
     t.setProperty("bigLcd", bigLcd_.load(), nullptr);
     t.setProperty("knobDetents", knobDetents_.load(), nullptr);
+    t.setProperty("buttonMode", btnMode_.load(), nullptr);
+    t.setProperty("buttonTapMs", btnTapMs_.load(), nullptr);
     const Theme th = getTheme();
     juce::ValueTree tt("theme");
     tt.setProperty("name", th.name, nullptr);
@@ -1378,6 +1481,8 @@ void FM1Processor::setStateInformation(const void *data, int sizeInBytes)
         setEditorSize((int)t.getProperty("editorW"), (int)t.getProperty("editorH"));
     bigLcd_.store((bool)t.getProperty("bigLcd", false));
     setKnobDetents((int)t.getProperty("knobDetents", KnobParameter::kDefaultDetents));
+    setButtonMode((int)t.getProperty("buttonMode", kButtonTap));
+    setButtonTapMs((int)t.getProperty("buttonTapMs", kDefaultTapMs));
     const juce::String id = t.getProperty("core", "choralroot").toString();
     std::optional<std::vector<uint8_t>> bytes;
     if (const juce::MemoryBlock *z = t.getProperty("flash").getBinaryData()) {
@@ -1432,10 +1537,7 @@ void FM1Processor::pushKeys()
 
 void FM1Processor::applyTier1()
 {
-    uint32_t b = 0, k = 0;
-    for (int i = 0; i < EMU_NB; i++)
-        if (btn_[(size_t)i]->get())
-            b |= 1u << i;
+    uint32_t k = 0;
     for (int i = 0; i < EMU_NKEY; i++)
         if (key_[(size_t)i]->get())
             k |= 1u << i;
@@ -1444,7 +1546,7 @@ void FM1Processor::applyTier1()
     const uint32_t btnTaps = panelBtnTaps_.exchange(0), keyTaps = panelKeyTaps_.exchange(0);
     panelButtonsCur_ = panelButtons_.load();
     panelKeysCur_ = panelKeys_.load();
-    paramButtons_ = b;
+    buttonParamsToDevice();                      // (the btn_* parameters, as the Button params mode says)
     applyButtons();
     if (const uint32_t t = btnTaps & ~appliedButtons_)
         dev_->buttons_tap(t);

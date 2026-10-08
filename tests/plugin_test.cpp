@@ -2,7 +2,9 @@
 // The plugin's processor, headless (no editor, no window): MIDI notes to keys, sound at 48 and 44.1 kHz, a panel
 // button parameter reaching the HAL, MIDI out decoding, the state round trip of the flash, presets, the cores
 // folders and the bundle path logic, the firmware switch (ChoralRoot -> Felucca -> Melodee -> ChoralRoot: the button
-// labels, the Tier 2 slots rebound, a note on each, ChoralRoot's working flash back). FM1EMU_HOME points at a scratch folder under the build (set here, before any
+// labels, the Tier 2 slots rebound, a note on each, ChoralRoot's working flash back); (i) the button parameters' modes (Tap: one ~90 ms press per rising edge, FX
+// toggled once, OCT+ held at 1 = exactly one octave and no panic; Hold: held 2 s, the layer locked; Toggle-hold:
+// held from the first rise to the second) and their state. FM1EMU_HOME points at a scratch folder under the build (set here, before any
 // processor exists), so nothing is written to ~/Library/Application Support or ~/Library/Caches.
 #include <cstdio>
 #include <cstdlib>
@@ -26,7 +28,7 @@ struct Host {
     int bs;
     juce::AudioBuffer<float> buf;
     float peak = 0.0f;
-    int midiOut = 0, midiBad = 0, noteOnsOut = 0;
+    int midiOut = 0, midiBad = 0, noteOnsOut = 0, allNotesOff = 0;   // allNotesOff: CC 123 (the firmware's panic)
     uint64_t frames = 0;
 
     Host(FM1Processor &proc, double rate, int block) : p(proc), sr(rate), bs(block), buf(2, block)
@@ -52,6 +54,7 @@ struct Host {
                 ok = n == ((d[0] & 0xE0) == 0xC0 ? 2 : 3) && !(d[1] & 0x80) && (n < 3 || !(d[2] & 0x80));
             midiBad += !ok;
             noteOnsOut += msg.isNoteOn();
+            allNotesOff += msg.isController() && msg.getControllerNumber() == 123;
         }
         frames += (uint64_t)bs;
     }
@@ -418,6 +421,179 @@ int main()
         check(hs.peak > 0.01f, "  ... and it plays (peak " + std::to_string(hs.peak) + ")");
         hs.note(false, 62);
         hs.run_ms(50);
+    }
+
+    // ---- (i) the button parameters' modes. A Roto-Control button (and most controller buttons mapped in Live) is a
+    // toggle: it sends 1, and the value stays 1 until it is pressed again. Each mode drives btn_fx 0 -> 1 (stays 1
+    // for 2 s) -> 0 and watches the device's FX bit block by block (256 frames at 48 kHz: 5.3 ms)
+    {
+        a.workingFlashFile().deleteFile();
+        FM1Processor q;
+        Host hq(q, 48000.0, 256);
+        hq.run_ms(700);
+        Device *d = q.deviceForTest();
+        emu_hal_t *h = d->hal();
+        struct Press {
+            uint32_t down, up;                    // device ms (up: 0 while still down)
+        };
+        // run ms of device time, recording the label's presses on the HAL (down: the block's start, up: its end)
+        auto watch = [&](int label, double ms, std::vector<Press> &out) {
+            const uint32_t bit = 1u << h->btn_id[label];
+            const uint64_t until = hq.frames + (uint64_t)(ms * hq.sr / 1000.0);
+            while (hq.frames < until) {
+                const uint32_t t0 = d->ms();
+                const bool was = !out.empty() && !out.back().up;
+                hq.block();
+                const bool is = (h->buttons & bit) != 0;
+                if (is && !was)
+                    out.push_back({t0, 0});
+                else if (!is && was)
+                    out.back().up = d->ms();
+            }
+        };
+        auto lens = [](const std::vector<Press> &v) {
+            std::string o;
+            for (const Press &p : v)
+                o += (o.empty() ? "" : ", ") + (p.up ? std::to_string(p.up - p.down) + " ms" : std::string("held"));
+            return o.empty() ? std::string("none") : o;
+        };
+        auto lit = [&](int label) { return d->led_button(label) == 2; };
+        auto set = [&](int label, float v) { q.buttonParam(label)->setValueNotifyingHost(v); };
+        const int tapMs = q.getButtonTapMs();
+        check(q.getButtonMode() == FM1Processor::kButtonTap && tapMs == FM1Processor::kDefaultTapMs && tapMs == 90,
+              "Button params: Tap by default, a tap of " + std::to_string(tapMs) + " ms of device time");
+
+        // Tap: one press of ~90 ms on the rise, nothing on the fall; FX (ChoralRoot: the effects on / off) toggled once
+        {
+            const bool fx0 = lit(EMU_B_FX);
+            std::vector<Press> v;
+            set(EMU_B_FX, 1.0f);
+            watch(EMU_B_FX, 2000, v);
+            const bool fx1 = lit(EMU_B_FX), lockOpen = lit(EMU_B_OCTDN);
+            set(EMU_B_FX, 0.0f);
+            watch(EMU_B_FX, 500, v);
+            const bool fx2 = lit(EMU_B_FX);
+            const uint32_t len = v.size() == 1 && v[0].up ? v[0].up - v[0].down : 0;
+            check(v.size() == 1 && len >= (uint32_t)tapMs && len <= (uint32_t)tapMs + 6,
+                  "Tap: btn_fx 0 -> 1 (2 s) -> 0: one press on the device (" + lens(v) + "), none on the falling edge");
+            check(fx1 != fx0 && fx2 == fx1 && !lockOpen,
+                  std::string("Tap: FX toggled once (its LED ") + (fx0 ? "lit" : "off") + " -> " + (fx1 ? "lit" : "off") +
+                      ", unchanged by the falling edge); no layer locked open (OCT- not lit)");
+            v.clear();
+            set(EMU_B_FX, 1.0f);                  // (the controller's next press: the next tap, FX back)
+            watch(EMU_B_FX, 300, v);
+            set(EMU_B_FX, 0.0f);
+            watch(EMU_B_FX, 200, v);
+            check(v.size() == 1 && lit(EMU_B_FX) == fx0, "Tap: the next rising edge is the next tap (" + lens(v) +
+                                                             "), FX back as it was");
+            // two rising edges inside one tap (a momentary button pressed twice within 90 ms): two taps, 30 ms apart
+            v.clear();
+            const double blk = 1000.0 * hq.bs / hq.sr;   // (one block)
+            set(EMU_B_HOME, 1.0f);
+            watch(EMU_B_HOME, blk, v);
+            set(EMU_B_HOME, 0.0f);
+            watch(EMU_B_HOME, blk, v);
+            set(EMU_B_HOME, 1.0f);
+            watch(EMU_B_HOME, blk, v);
+            set(EMU_B_HOME, 0.0f);
+            watch(EMU_B_HOME, 400, v);
+            check(v.size() == 2 && v[0].up && v[1].up && v[0].up - v[0].down <= (uint32_t)tapMs + 6 &&
+                      v[1].up - v[1].down <= (uint32_t)tapMs + 6 && v[1].down - v[0].up >= 24 && v[1].down - v[0].up <= 36,
+                  "Tap: two rising edges within one tap: two taps (" + lens(v) + "), released " +
+                      (v.size() == 2 && v[1].up ? std::to_string(v[1].down - v[0].up) : std::string("?")) +
+                      " ms between them");
+        }
+        // OCT+ in Tap with a toggle (1, then it stays): exactly one octave up, no panic; ChoralRoot shifts the octave
+        // on OCT's release, lights OCT+ while the octave is above 0, and holding both OCTs is panic (CC 123 out)
+        {
+            std::vector<Press> v;
+            const bool up0 = lit(EMU_B_OCTUP), dn0 = lit(EMU_B_OCTDN);
+            const int cc0 = hq.allNotesOff;
+            set(EMU_B_OCTUP, 1.0f);
+            watch(EMU_B_OCTUP, 2000, v);
+            const bool up1 = lit(EMU_B_OCTUP);
+            set(EMU_B_OCTUP, 0.0f);               // (the toggle's second press)
+            watch(EMU_B_OCTUP, 300, v);
+            const bool up2 = lit(EMU_B_OCTUP);
+            std::vector<Press> w;
+            set(EMU_B_OCTDN, 1.0f);               // one OCT- tap: back to octave 0 only if OCT+ moved it by exactly 1
+            watch(EMU_B_OCTDN, 300, w);
+            set(EMU_B_OCTDN, 0.0f);
+            watch(EMU_B_OCTDN, 300, w);
+            const bool up3 = lit(EMU_B_OCTUP), dn3 = lit(EMU_B_OCTDN);
+            check(!up0 && !dn0 && v.size() == 1 && v[0].up && v[0].up - v[0].down <= (uint32_t)tapMs + 6 && up1 && up2,
+                  "Tap: btn_octup 1 (2 s), then 0: one press (" + lens(v) + "), the octave up (OCT+ lit), the falling "
+                  "edge nothing");
+            check(w.size() == 1 && !up3 && !dn3, "  ... one OCT- tap brings it back to octave 0 (neither OCT lit): "
+                                                 "exactly one octave shift");
+            check(hq.allNotesOff == cc0, "  ... and no panic (no CC 123 out)");
+        }
+        // Hold: the value is the held state: held 2 s, FX's layer opens and stays (locked; OCT- lit to close it)
+        {
+            q.setButtonMode(FM1Processor::kButtonHold);
+            std::vector<Press> v;
+            const bool fx0 = lit(EMU_B_FX);
+            set(EMU_B_FX, 1.0f);
+            watch(EMU_B_FX, 2000, v);
+            set(EMU_B_FX, 0.0f);
+            watch(EMU_B_FX, 300, v);
+            const bool locked = lit(EMU_B_OCTDN);
+            const uint32_t len = v.size() == 1 && v[0].up ? v[0].up - v[0].down : 0;
+            check(v.size() == 1 && len >= 1995 && len <= 2010 && locked,
+                  "Hold: btn_fx held as long as it is 1 (" + lens(v) + "): the FX layer locked open (OCT- lit)");
+            d->buttons_tap(1u << EMU_B_OCTDN);    // (OCT-: the layer closed)
+            hq.run_ms(300);
+            check(!lit(EMU_B_OCTDN) && lit(EMU_B_FX) == fx0, "  ... OCT- closes it; FX's on / off untouched by the hold");
+        }
+        // Toggle-hold: the first rise holds, the fall keeps it, the second rise lets go
+        {
+            q.setButtonMode(FM1Processor::kButtonToggleHold);
+            std::vector<Press> v;
+            set(EMU_B_FX, 1.0f);
+            watch(EMU_B_FX, 2000, v);
+            const bool held1 = v.size() == 1 && !v[0].up;
+            set(EMU_B_FX, 0.0f);
+            watch(EMU_B_FX, 300, v);
+            const bool held2 = v.size() == 1 && !v[0].up;
+            set(EMU_B_FX, 1.0f);
+            watch(EMU_B_FX, 300, v);
+            const bool released = v.size() == 1 && v[0].up;
+            set(EMU_B_FX, 0.0f);
+            watch(EMU_B_FX, 300, v);
+            const bool locked = lit(EMU_B_OCTDN);
+            check(held1 && held2 && released && v.size() == 1 && locked,
+                  "Toggle-hold: held from the first rise (through the fall), released at the second (" + lens(v) +
+                      "): the FX layer held open, then locked");
+            d->buttons_tap(1u << EMU_B_OCTDN);
+            hq.run_ms(300);
+        }
+        // the panic detector itself: Hold, both OCTs held = panic, with a note sounding
+        {
+            q.setButtonMode(FM1Processor::kButtonHold);
+            const int cc0 = hq.allNotesOff;
+            hq.note(true, 62);
+            hq.run_ms(200);
+            set(EMU_B_OCTDN, 1.0f);
+            set(EMU_B_OCTUP, 1.0f);
+            hq.run_ms(200);
+            set(EMU_B_OCTDN, 0.0f);
+            set(EMU_B_OCTUP, 0.0f);
+            hq.note(false, 62);
+            hq.run_ms(300);
+            check(hq.allNotesOff > cc0, "(the check above sees a panic: Hold, both OCTs held, " +
+                                            std::to_string(hq.allNotesOff - cc0) + " CC 123 out)");
+        }
+        // the state keeps the mode and the tap length
+        {
+            q.setButtonMode(FM1Processor::kButtonToggleHold);
+            q.setButtonTapMs(120);
+            juce::MemoryBlock st;
+            q.getStateInformation(st);
+            FM1Processor r;
+            r.setStateInformation(st.getData(), (int)st.getSize());
+            check(r.getButtonMode() == FM1Processor::kButtonToggleHold && r.getButtonTapMs() == 120,
+                  "the state keeps Button params (Toggle-hold) and the tap length (120 ms)");
+        }
     }
 
     std::printf("plugin_test: %s\n", fails ? "FAIL" : "PASS");

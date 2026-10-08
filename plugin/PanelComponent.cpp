@@ -6,6 +6,10 @@
 #include <cmath>
 #include <cstring>
 
+#if JUCE_MAC
+#include <CoreGraphics/CGEventSource.h>
+#endif
+
 namespace {
 // ================================================================ geometry ===
 // ChoralRootFM1Designer/index.html, drawing units (904 x 566): emu.c's geometry block, verbatim
@@ -233,8 +237,9 @@ void drawKey(Canvas &c, const Palette &p, int k, bool held, int lv)
     if (lv)
         c.rrect(R{cx - 4, r.y + 14, 8, 30}, 4, p.white, lv == 2 ? 1.f : .38f);
     c.text(cx, r.y + 50, 6.5f, noteName(k).c_str(), p.noteText);
-    if (const char *h = PanelComponent::keymapHint(PanelComponent::KM_KEY, k))
-        c.text(cx, r.y + 61, 6.5f, h, p.hint, .9f);
+    const juce::String h = PanelComponent::keymapHintText(PanelComponent::KM_KEY, k);
+    if (h.isNotEmpty())
+        c.text(cx, r.y + 61, 6.5f, h.toRawUTF8(), p.hint, .9f);
 }
 
 void drawButton(Canvas &c, const Palette &p, int i, const juce::String &name, bool held, int lv, int green)
@@ -251,10 +256,11 @@ void drawButton(Canvas &c, const Palette &p, int i, const juce::String &name, bo
     const float size = fitSize(n.toRawUTF8(), oct ? 6.5f : 7.5f, r.w - 5);
     c.text(r.x + r.w / 2, r.y + (oct ? 7.5f : 11) + ((oct ? 6.5f : 7.5f) - size) / 2, size, n.toRawUTF8(),
            lv == 2 ? p.litText : lv == 1 ? p.capTextDim : p.capText);
-    const char *h = PanelComponent::keymapHint(PanelComponent::KM_BTN, i);
-    if (h && !oct)
+    const juce::String hs = PanelComponent::keymapHintText(PanelComponent::KM_BTN, i);
+    const char *h = hs.toRawUTF8();
+    if (hs.isNotEmpty() && !oct)
         c.text(r.x + r.w / 2, r.y + 25, 5, h, lv == 2 ? p.hintLit : lv == 1 ? p.hintDim : p.hint, .9f);
-    else if (h)
+    else if (hs.isNotEmpty())
         c.text(r.x + r.w / 2, r.y + r.h + 4, 5, h, p.hintBed, .9f);
     if (i == EMU_B_PLAY)                          // the green LED
         c.circle(r.x + 6, r.y + r.h - 6, 3.2f, green ? p.green : p.ledOff);
@@ -314,6 +320,10 @@ const std::vector<PanelComponent::KeymapEntry> &PanelComponent::keymap()
         {K::F8Key, KM_BTN, EMU_B_LFO, "F8"}, {K::F9Key, KM_BTN, EMU_B_EDIT, "F9"}, {K::F10Key, KM_BTN, EMU_B_GLO, "F10"},
         {'7', KM_BTN, EMU_B_HOME, "7"}, {'8', KM_BTN, EMU_B_SAVE, "8"}, {'9', KM_BTN, EMU_B_ARP, "9"},
         {'0', KM_BTN, EMU_B_SEQ, "0"}, {'-', KM_BTN, EMU_B_PLAY, "-"}, {'=', KM_BTN, EMU_B_REC, "="},
+        // the fallback row for the F-key buttons (not keymap.c's: a host or macOS often takes F5 .. F10; Live: the
+        // track activators): the bottom letter row, left to right as the buttons
+        {'C', KM_BTN, EMU_B_FX, "C"}, {'V', KM_BTN, EMU_B_SEL, "V"}, {'B', KM_BTN, EMU_B_ENV, "B"},
+        {'N', KM_BTN, EMU_B_LFO, "N"}, {'M', KM_BTN, EMU_B_EDIT, "M"}, {',', KM_BTN, EMU_B_GLO, ","},
         // knobs: Page Down / Up cycle SELECT KNOB1..KNOB4; MASTER, PRESETS, ALGORITHM: the mouse
         {K::pageDownKey, KM_CYCLE, +1, "PGDN"}, {K::pageUpKey, KM_CYCLE, -1, "PGUP"},
         {K::upKey, KM_TURN, +1, "UP"}, {K::downKey, KM_TURN, -1, "DOWN"},
@@ -329,6 +339,19 @@ const char *PanelComponent::keymapHint(Kind kind, int idx)
         if (e.kind == kind && e.idx == idx)
             return e.cap;
     return nullptr;
+}
+
+juce::String PanelComponent::keymapHintText(Kind kind, int idx)
+{
+    juce::StringArray caps;
+    for (const KeymapEntry &e : keymap())
+        if (e.kind == kind && e.idx == idx)
+            caps.add(e.cap);
+    if (caps.isEmpty())
+        return {};
+    const juce::String &first = caps[0];
+    const bool fKey = first.length() >= 2 && first[0] == 'F' && juce::CharacterFunctions::isDigit(first[1]);
+    return fKey && caps.size() > 1 ? first + "/" + caps[1] : first;
 }
 
 static int normKey(int code) { return code >= 'a' && code <= 'z' ? code - 32 : code; }
@@ -883,6 +906,69 @@ void PanelComponent::mouseWheelMove(const juce::MouseEvent &e, const juce::Mouse
     turn(idx, s);
 }
 
+void PanelComponent::timerCallback()
+{
+    refresh();
+    if (!heldCodes_.empty() && (++pollTick_ & 1))   // (30 Hz: a release the host swallowed)
+        checkHeldKeys();
+}
+
+// macOS virtual key codes of the modifier keys (Events.h kVK_RightCommand .. kVK_Function): never a mapped key
+static bool isModifierVk(int vk) { return vk >= 0x36 && vk <= 0x3F; }
+
+int PanelComponent::physicalKeyAtPress() const
+{
+#if JUCE_MAC
+    if (keyProbe_)
+        return -1;
+    int found = -1;
+    for (int vk = 0; vk < 128; vk++) {
+        if (isModifierVk(vk) || !CGEventSourceKeyState(kCGEventSourceStateHIDSystemState, (CGKeyCode)vk))
+            continue;
+        bool taken = false;                      // (already some other held code's key)
+        for (const auto &h : heldCodes_)
+            taken = taken || h.second == vk;
+        if (taken)
+            continue;
+        if (found >= 0)
+            return -1;                           // (two keys newly down: not sure which; JUCE's state then)
+        found = vk;
+    }
+    return found;
+#else
+    return -1;
+#endif
+}
+
+bool PanelComponent::keyStillDown(int code, int physical) const
+{
+    if (keyProbe_)
+        return keyProbe_(code);
+#if JUCE_MAC
+    if (physical >= 0)                           // the key itself: whatever the host passed on or not
+        return CGEventSourceKeyState(kCGEventSourceStateHIDSystemState, (CGKeyCode)physical);
+#endif
+    (void)physical;
+    return juce::KeyPress::isKeyCurrentlyDown(code) ||
+           (code >= 'A' && code <= 'Z' && juce::KeyPress::isKeyCurrentlyDown(code + 32));
+}
+
+// a held code let go: its controls released, unless another held code holds the same control (Z and Esc: OCT-)
+void PanelComponent::releaseCode(int code)
+{
+    heldCodes_.erase(code);
+    for (const KeymapEntry &e : keymap()) {
+        if (e.keyCode != code)
+            continue;
+        bool other = false;
+        for (const auto &h : heldCodes_)
+            for (const KeymapEntry &o : keymap())
+                other = other || (o.keyCode == h.first && o.kind == e.kind && o.idx == e.idx);
+        if (!other)
+            keyAction(e, false, SRC_KEY);
+    }
+}
+
 bool PanelComponent::keyPressed(const juce::KeyPress &k)
 {
     if (k.getModifiers().isCommandDown())
@@ -900,31 +986,26 @@ bool PanelComponent::keyPressed(const juce::KeyPress &k)
         return true;
     }
     if (heldCodes_.count(code))
-        return true;                             // (a repeat)
-    heldCodes_.insert(code);
-    keyAction(*m, true, SRC_KEY);
+        return true;                             // (a repeat: pressed once while held)
+    heldCodes_[code] = physicalKeyAtPress();
+    for (const KeymapEntry &e : keymap())
+        if (e.keyCode == code)
+            keyAction(e, true, SRC_KEY);
     return true;
 }
 
-bool PanelComponent::keyStateChanged(bool)
+bool PanelComponent::checkHeldKeys()
 {
-    bool any = false;
-    for (auto it = heldCodes_.begin(); it != heldCodes_.end();) {
-        const int code = *it;
-        const bool down = juce::KeyPress::isKeyCurrentlyDown(code) ||
-                          (code >= 'A' && code <= 'Z' && juce::KeyPress::isKeyCurrentlyDown(code + 32));
-        if (down) {
-            ++it;
-            continue;
-        }
-        it = heldCodes_.erase(it);
-        for (const KeymapEntry &e : keymap())
-            if (e.keyCode == code)
-                keyAction(e, false, SRC_KEY);
-        any = true;
-    }
-    return any;
+    std::vector<int> up;
+    for (const auto &h : heldCodes_)
+        if (!keyStillDown(h.first, h.second))
+            up.push_back(h.first);
+    for (int code : up)
+        releaseCode(code);
+    return !up.empty();
 }
+
+bool PanelComponent::keyStateChanged(bool) { return checkHeldKeys(); }
 
 void PanelComponent::modifierKeysChanged(const juce::ModifierKeys &m) { shiftHeld_ = m.isShiftDown(); }
 

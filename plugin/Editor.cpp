@@ -270,6 +270,17 @@ FM1Editor::FM1Editor(FM1Processor &p)
     transpose_.setSelectedId(proc_.getTranspose() + 3, juce::dontSendNotification);
     transpose_.onChange = [this] { proc_.setTranspose(transpose_.getSelectedId() - 3); };
 
+    addAndMakeVisible(buttonMode_);
+    for (int m = 0; m < 3; m++)
+        buttonMode_.addItem("Button params: " + FM1Processor::buttonModeName(m), m + 1);
+    buttonMode_.setSelectedId(proc_.getButtonMode() + 1, juce::dontSendNotification);
+    buttonMode_.setTooltip("What the btn_* host parameters (a Roto-Control's buttons, automation) do: Tap: each press "
+                           "(the value going on) is one tap on the device, whatever the controller sends after (for "
+                           "toggle buttons); Hold: on = held (momentary buttons: long presses, layer locks); "
+                           "Toggle-hold: each press toggles held. The panel's own mouse and keys are always real "
+                           "presses.");
+    buttonMode_.onChange = [this] { proc_.setButtonMode(buttonMode_.getSelectedId() - 1); };
+
     addAndMakeVisible(notesPlayKeys_);
     notesPlayKeys_.setToggleState(proc_.getMidiNotesPlayKeys(), juce::dontSendNotification);
     notesPlayKeys_.onClick = [this] { proc_.setMidiNotesPlayKeys(notesPlayKeys_.getToggleState()); };
@@ -292,6 +303,14 @@ FM1Editor::FM1Editor(FM1Processor &p)
     addAndMakeVisible(status_);
     status_.setJustificationType(juce::Justification::centredLeft);
 
+    // the bar's controls never take the keyboard focus: a click on them leaves the computer keys on the panel
+    for (juce::Component *c : std::initializer_list<juce::Component *>{
+             &cores_, &presets_, &transpose_, &themes_, &buttonMode_, &save_, &saveAs_, &rename_, &delete_, &reset_,
+             &export_, &import_, &power_, &bigLcd_, &notesPlayKeys_, &keyNotesToFw_}) {
+        c->setWantsKeyboardFocus(false);
+        c->setMouseClickGrabsKeyboardFocus(false);
+    }
+
     refreshCores();
     refreshPresets();
     refreshThemes();
@@ -313,6 +332,18 @@ FM1Editor::~FM1Editor() { stopTimer(); }
 
 void FM1Editor::paint(juce::Graphics &g) { g.fillAll(kBarBg); }
 
+void FM1Editor::mouseDown(const juce::MouseEvent &)
+{
+    if (panel_.isShowing())
+        panel_.grabKeyboardFocus();
+}
+
+void FM1Editor::focusGained(FocusChangeType)
+{
+    if (panel_.isShowing() && !themeEditor_)
+        panel_.grabKeyboardFocus();
+}
+
 void FM1Editor::resized()
 {
     auto r = getLocalBounds();
@@ -329,6 +360,8 @@ void FM1Editor::resized()
         b->setBounds(row1.removeFromLeft(juce::jmin(84, juce::jmax(40, row1.getWidth() / 7))));
     }
     transpose_.setBounds(row2.removeFromLeft(130));
+    row2.removeFromLeft(4);
+    buttonMode_.setBounds(row2.removeFromLeft(190));
     row2.removeFromLeft(4);
     notesPlayKeys_.setBounds(row2.removeFromLeft(160));
     keyNotesToFw_.setBounds(row2.removeFromLeft(225));
@@ -493,6 +526,8 @@ void FM1Editor::timerCallback()
         refreshPresets();
     if (transpose_.getSelectedId() != proc_.getTranspose() + 3)
         transpose_.setSelectedId(proc_.getTranspose() + 3, juce::dontSendNotification);
+    if (buttonMode_.getSelectedId() != proc_.getButtonMode() + 1)
+        buttonMode_.setSelectedId(proc_.getButtonMode() + 1, juce::dontSendNotification);
     if (keyNotesToFw_.getToggleState() != proc_.getKeyNotesToFirmware())
         keyNotesToFw_.setToggleState(proc_.getKeyNotesToFirmware(), juce::dontSendNotification);
     if (notesPlayKeys_.getToggleState() != proc_.getMidiNotesPlayKeys())

@@ -249,7 +249,17 @@ Roto-Control, panel, firmware), with the function as a small caption under the p
 VOICING); a relative knob's pointer turns 15 degrees per detent from any source.
 
 *Tier 1: the panel (same for every core, 41 parameters).* The 14 buttons and the 27 note keys as
-momentary booleans (Roto-Control buttons, automation, or a MIDI-less chord player).
+booleans (Roto-Control buttons, automation, or a MIDI-less chord player). A key's value is its held
+state. A button's value goes through the **Button params** setting (state; the editor bar), because a
+controller button mapped in a host is usually a toggle (1, and it stays 1 until the next press), which
+read as "held" is a button held forever (OCT acts on release, so every second press; both OCTs = panic;
+a layer button locks its layer at 300 ms): **Tap** (default) turns every rising edge into one press of
+90 ms of device time (a per-button countdown on the audio thread, the device's between hook, so it is
+exact in device ms; well over the firmware's 9 ms debounce and its 15 ms frame, under the 300 ms hold;
+a rise during a tap queues one more after a 30 ms release; the length is a hidden state setting), the
+falling edge nothing; **Hold** is value = held (momentary buttons: layer locks, long presses);
+**Toggle-hold** toggles held on each rising edge. The panel's mouse and keys are real presses in every
+mode.
 
 *Tier 2: the firmware's parameters by name (per core, absolute, bidirectional).* Each core ships a
 parameter map, a table of entries (`core-api/fm1core.h` `fm1param_t`; abridged):
@@ -366,8 +376,10 @@ as a preset. That round trip is a phase 2 check.
 ### 4.8 GUI
 A native JUCE port of `emu.c`'s panel: the designer geometry, the LEDs lit / dim from `emu_hal.led`,
 the LCD as a 240x240 texture refreshed on a 60 Hz timer when `lcd_writes` moves, mouse as in the
-emulator (click, right-click latches, wheel / drag on knobs), the computer key map from `keymap.c`,
-and the big LCD toggle. The plugin window is resizable with the same letterboxed scaling.
+emulator (click, right-click latches, wheel / drag on knobs), the computer key map from `keymap.c`
+(plus a fallback row `C V B N M ,` for F5 .. F10, which hosts and macOS often keep, printed as "F5/C";
+a held key pressed once, released on its key-up or, when the host swallows that, by a 30 Hz check of
+the physical key), and the big LCD toggle. The plugin window is resizable with the same letterboxed scaling.
 
 Considered and rejected: a JUCE 8 WebView reusing `tools/emu/web/index.html`. It saves drawing code but
 pushes a framebuffer through a JS bridge at 60 fps and adds a second runtime to debug.

@@ -115,6 +115,7 @@ int main()
                 FM1Processor::kTier2Slots);
 
     FM1Processor p;
+    p.setButtonMode(FM1Processor::kButtonHold);   // (the button parameters held as long as they are on: layers)
     Watch w;
     p.addListener(&w);
     for (auto *q : p.getParameters())

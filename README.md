@@ -86,12 +86,30 @@ bass on channel 2 once a bass sound is chosen), so it can drive other instrument
 
 - **Parameters (49):** first the eight physical knobs (`knob_master` `knob_select` `knob_presets` `knob_algo`
   `knob_1` .. `knob_4`, panel order: below), then the 41 panel controls: the 14 buttons (`btn_fx` .. `btn_octup`,
-  momentary: on = held; named with the firmware's role and the printed label, e.g. "KEY (SEL)") and the 27 keys
+  named with the firmware's role and the printed label, e.g. "KEY (SEL)"; what their value does is the **Button
+  params** setting, below) and the 27 keys
   (`key_00` .. `key_26`, named by note, "F3" .. "G5"; a key is held when its parameter or a MIDI note holds it).
   **Only the knobs ever report a change to the host**: a press on the panel never moves a button or key parameter,
   and nothing else is a parameter, so Live's Configure mode collects exactly the knobs you turn. The firmware's own
   parameters by name (79 Tier 2 slots, below) are an **opt-in**: `-DFM1_TIER2_SLOTS=79` (8 + 79 + 41 = 128, Live's
   limit for showing a plugin's parameters without configuring them).
+- **Button params: Tap / Hold / Toggle-hold** (the editor bar; stored per instance in the state). A Roto-Control
+  button, like most controller buttons mapped in Live, is a **toggle**: it sends 1 and the value stays 1 until the
+  next press. Read as "held", that is a button held forever: OCT+ shifts the octave only on its release (so it acts
+  on every second press, like a toggle), both OCTs held is panic, and a layer button held past 300 ms locks its
+  layer instead of doing its tap. So:
+  - **Tap** (the default): every rising edge (the value from below 0.5 to 0.5 or more) is **one tap** on the
+    device: the button pressed for 90 ms of device time, then released; the falling edge does nothing. A toggle
+    button and a momentary button both give one tap per press. 90 ms is comfortably a tap: the firmware needs 9 ms
+    of press (its debounce) and reads the buttons once per 15 ms UI frame; a layer locks only after its hold time
+    (300 ms or more). A rising edge while a tap is still down (or in the 30 ms release after it) queues one more
+    tap. The length is a hidden setting in the state (`buttonTapMs`, 20 .. 1000) in case a firmware wants more.
+  - **Hold**: the value is the held state (the old behaviour): for momentary buttons, when you want long presses
+    and layer locks from the controller.
+  - **Toggle-hold**: each rising edge toggles held on / off, so a toggle button can hold a layer open.
+
+  The panel's own mouse and computer keys are real presses and releases whatever the mode; the key parameters
+  (`key_NN`) are always value = held.
 - **The knobs (the Roto-Control's first page, plan 4.5).** One host parameter per physical knob, in panel order, with
   **names that never change** (a Roto-Control binds by name): **Knob Master, Knob Select, Knob Presets, Knob Algo,
   Knob 1, Knob 2, Knob 3, Knob 4**. Knob Master is the pot (0..1023, default 724 as the emulator powers on; its value
@@ -205,7 +223,7 @@ bass on channel 2 once a bass sound is chosen), so it can drive other instrument
 
 The editor is the FM-1 itself: a port of the ChoralRoot emulator's window (`tools/emu/emu.c`, `keymap.c`) as a JUCE
 component (`plugin/PanelComponent.{h,cpp}`) under a slim settings bar (firmware, presets and their buttons, Transpose,
-the two MIDI toggles, Theme, Big LCD, the status with Power on). The host parameters have no generic list any more;
+Button params, the two MIDI toggles, Theme, Big LCD, the status with Power on). The host parameters have no generic list any more;
 they remain the host's.
 
 - **Drawing.** The panel in the designer geometry (904 x 566 units, the 876 x 538 view shown), drawn with the
@@ -238,16 +256,25 @@ they remain the host's.
   | `W E T Y U O P` | black keys C#4 D#4 F#4 G#4 A#4 C#5 D#5 (F#5: the mouse only) |
   | `F1 F2 F3 F4` / `2 3 4 5` / Tab | F#3 G#3 A#3 C#4 / F3 G3 A3 C4 / B3 (ChoralRoot's LOCK) |
   | `Z` `X` (also Esc / Return) | OCT- / OCT+; End: both (panic) |
-  | F5 .. F10 | the top button row (FX SEL ENV LFO EDIT GLO; ChoralRoot: FX KEY BASS LATCH EDIT OPT) |
+  | F5 .. F10, or `C V B N M ,` | the top button row (FX SEL ENV LFO EDIT GLO; ChoralRoot: FX KEY BASS LATCH EDIT OPT) |
   | `7 8 9 0 - =` | the bottom row (HOME SAVE ARP SEQ PLAY REC; ChoralRoot: HOME SAVE PERF METRO LOOP REC) |
   | Page Down / Page Up | select the next / previous of SELECT, KNOB1 .. KNOB4 |
   | Up / Down | turn the selected knob one detent (repeats; MASTER: 32 of 1023) |
   | Shift + Up / Down | fine steps (the firmware's SHIFT: GLO held around the detent); outside the editor, OPT's second function |
   | `` ` `` | the big LCD view |
 
-  The emulator's screenshot, recording and dump keys are not mapped. Cmd shortcuts stay the host's. Losing the
-  keyboard focus releases every key the keyboard or the mouse holds (latches stay); closing the editor releases
-  everything.
+  **Inside a host** the F keys often never reach the plugin (macOS's media keys without `fn`; Live: F1 .. F8 are its
+  track activators), so the top button row has a **fallback row**, `C V B N M ,` (not `keymap.c`'s: the bottom
+  letter row, left to right as the buttons); the panel prints both on those buttons ("F5/C" .. "F10/,"). A host may
+  also keep Tab, Esc and Return for itself: OCT- / OCT+ are `Z` / `X` too. Click the panel once so it has the
+  keyboard focus (the bar's controls never take it away).
+
+  A held key is pressed once (the key repeat is ignored) and let go on its release; when a host swallows the
+  release, the panel finds the key up anyway: it checks on every key event and 30 times a second while a key is
+  held, by the physical key's own state (macOS `CGEventSourceKeyState`, the key learnt at its press) where it can,
+  else by JUCE's. The emulator's screenshot, recording and dump keys are not mapped. Cmd shortcuts stay the host's.
+  Losing the keyboard focus releases every key the keyboard or the mouse holds (latches stay); closing the editor
+  releases everything.
 - **How the panel reaches the firmware.** The panel is its own "held" source, as the emulator merges its keyboard,
   mouse and latch sources: `FM1Processor::panelKey` / `panelButton` set atomics that the audio thread merges at each
   block start with the host parameters and MIDI (keys: `key_NN` | MIDI notes | panel; buttons: `btn_*` | panel). A
@@ -347,9 +374,15 @@ The tests:
   cores load from it), the parameter list (49: the knobs, the buttons, the keys; 128 with the opt-in slots), and the
   firmware switch: ChoralRoot -> Felucca -> Melodee -> ChoralRoot relabels the buttons, follows each core's screen on
   the knobs (and rebinds the opt-in Tier 2 slots), plays a note on each, and comes back to ChoralRoot's working flash byte for
-  byte.
+  byte. The Button params modes, driving `btn_fx` 0 -> 1 (2 s) -> 0 as a toggle controller does: Tap gives one 90 ms
+  press and FX toggled once, nothing on the falling edge, two rises inside one tap two taps; `btn_octup` held at 1 is
+  exactly one octave up and no panic (CC 123 never sent; the check sees a real panic); Hold holds 2 s and locks the
+  FX layer; Toggle-hold holds from the first rise to the second; the state keeps the mode and the tap length.
   After the build, `auval -v aumu Fm1v Qx7u` validates the installed AU.
-- `panel_render_test`: the panel, headless (no window: painted offscreen into images). It writes the pictures
+- `panel_render_test`: the panel, headless (no window: painted offscreen into images). The computer keys at the
+  component (keyPressed / keyStateChanged with the key-down probe faked): a key and its repeats press once, a
+  release the host swallowed is caught by the check, the fallback row (`C` = FX as F5) and its "F5/C" hints, Z and
+  Esc both holding OCT-, Cmd ignored, the focus lost lets go, and no key or button bit ever sticks. It writes the pictures
   `build/panel/<theme>.png` for every preset and `custom-Test-Teal.png` (904 x 566 at scale 2, key D4 held from the
   panel), `Emulator-released.png`, `lcd.png` (the LCD alone), `lcd-1x.png`, `lcd-2x.png`, `big-lcd.png` and
   `editor.png` (the whole editor), and checks: the LCD on the panel at 1x, 2x and in the big view (software and

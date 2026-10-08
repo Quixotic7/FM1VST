@@ -23,7 +23,10 @@
 //      value text "Voicing: -1"), or a relative control where it has no value; their host info never changes;
 //   2. the Tier 2 slots t2_00 .. (FM1_TIER2_SLOTS, 0 by default: none; 79 the opt-in): the map's visible entries
 //      (FM1P_HIDDEN ones are knob targets only), so a specific parameter can be mapped directly;
-//   3. Tier 1: btn_fx .. btn_octup, key_00 .. key_26.
+//   3. Tier 1: btn_fx .. btn_octup, key_00 .. key_26. The button parameters' edge semantics is a setting (Button
+//      params, below): Tap (the default: a rising edge is one press of getButtonTapMs() device ms, a falling edge
+//      nothing: a controller's toggle button and a momentary one both give one tap per press), Hold (the value IS
+//      the held state) or Toggle-hold (a rising edge toggles held). The key parameters are always value = held.
 // ONLY THE KNOBS REPORT (the slots off): a firmware change reports only on the knob(s) whose current target's value
 // changed, inside a gesture only for the knob turned on the device (Device::enc_total minus the host's own relative
 // detents, kOwnTurnMs); the panel never moves the btn_ / key_ parameters.
@@ -85,8 +88,9 @@
 #include "cores.h"
 #include "device.h"
 
-// A momentary panel control as a host boolean (the value IS the held state). Its name can change at run time (a
-// core switch relabels the buttons from the new core's descriptor).
+// A panel control as a host boolean (a key: the value IS the held state; a button: as the Button params setting
+// says, FM1Processor::ButtonMode). Its name can change at run time (a core switch relabels the buttons from the new
+// core's descriptor).
 class PanelBoolParameter : public juce::AudioParameterBool {
 public:
     PanelBoolParameter(const juce::String &id, const juce::String &name);
@@ -219,6 +223,25 @@ public:
     // a relative knob's detents per full travel of the host value (the Roto-Control's 0..1; stored in the state)
     int getKnobDetents() const { return knobDetents_.load(); }
     void setKnobDetents(int n) { knobDetents_.store(juce::jlimit(4, 256, n)); }
+    // what the btn_* host parameters do to the device's buttons (stored in the state; the editor's "Button params"):
+    //   Tap          (default) a rising edge (value from < 0.5 to >= 0.5) presses the button for getButtonTapMs()
+    //                of device time, then releases it; the falling edge does nothing. A rising edge while a tap is
+    //                still down or in its kTapGapMs release queues one more tap (up to kTapQueue)
+    //   Hold         the value is the held state (a momentary controller button: layer locks, long presses)
+    //   ToggleHold   a rising edge toggles held (a toggle controller button can hold a layer open)
+    // A mode change lets go of what the old mode held (a power-on also takes the values as they are: no edge).
+    enum ButtonMode { kButtonTap = 0, kButtonHold = 1, kButtonToggleHold = 2 };
+    int getButtonMode() const { return btnMode_.load(); }
+    void setButtonMode(int m) { btnMode_.store(juce::jlimit(0, 2, m)); }
+    static juce::String buttonModeName(int m);       // "Tap" "Hold" "Toggle-hold"
+    // a Tap's press length in device ms (stored in the state; no editor control). The default 90: the firmware
+    // needs EMU_RELEASE_MS (9) of press and sees the buttons once per 15 ms UI frame; a layer locks at its hold
+    // threshold (HOLD_MS, 300 ms or more)
+    int getButtonTapMs() const { return btnTapMs_.load(); }
+    void setButtonTapMs(int ms) { btnTapMs_.store(juce::jlimit(kMinTapMs, kMaxTapMs, ms)); }
+    static constexpr int kDefaultTapMs = 90, kMinTapMs = 20, kMaxTapMs = 1000;
+    static constexpr int kTapGapMs = 30;             // the release between two queued taps (two UI frames)
+    static constexpr int kTapQueue = 4;
     // the loaded core's labels for the 14 buttons (EMU_B_* order; the panel's own printed label when the core has
     // none)
     juce::StringArray buttonNames() const;
@@ -392,6 +415,18 @@ private:
     std::atomic<int> fineRole_{EMU_E_SELECT};
     // the audio thread's side
     uint32_t paramButtons_ = 0, panelKeysCur_ = 0, panelButtonsCur_ = 0;
+    // the button parameters' edges (audio thread): the values at the last block start, the Toggle-hold state, the
+    // Tap presses counted down per device ms (tickTaps, from the between hook)
+    std::atomic<int> btnMode_{kButtonTap}, btnTapMs_{kDefaultTapMs};
+    int btnModeCur_ = -1;                            // -1: take the values as they are at the next block (no edge)
+    uint32_t btnPrev_ = 0, btnToggled_ = 0, tapHeld_ = 0, tapBusy_ = 0;
+    std::array<uint16_t, EMU_NB> tapLeft_{}, tapGap_{};
+    std::array<uint8_t, EMU_NB> tapQueued_{};
+    void buttonParamsToDevice();                     // (block start) the btn_* values -> paramButtons_
+    void startTap(int label);
+    void tickTaps();                                 // (every device ms)
+    void resetButtonEdges();                         // a new device: also the next block's values taken as they are
+    void clearButtonEdges();                         // the taps and the toggles let go
     int fineStage_ = 0, fineRoleCur_ = EMU_E_SELECT;  // emu.c fine_frame: 0 idle, 1 GLO down, 2 stepped
     int32_t fineSteps_ = 0;
     bool fineGlo_ = false;

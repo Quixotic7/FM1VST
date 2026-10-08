@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The plugin's editor (phase 3): a slim settings bar on top (firmware, presets and their buttons, transpose, the two
-// MIDI toggles, the theme, the big LCD view, the status with Power on) and the FM-1 panel (PanelComponent) filling
+// The plugin's editor (phase 3): a slim settings bar on top (firmware, presets and their buttons, transpose, the
+// button parameters' mode (Button params: Tap / Hold / Toggle-hold), the two MIDI toggles, the theme, the big LCD view, the status with Power on) and the FM-1 panel (PanelComponent) filling
 // the rest. Resizable, the panel's aspect kept (with the big LCD shown the frame letterboxes instead); the last size
 // is remembered per instance in the plugin state. The host parameters have no generic list any more: they remain
 // the host's (automation, the Roto-Control).
@@ -59,6 +59,10 @@ public:
     ~FM1Editor() override;
     void resized() override;
     void paint(juce::Graphics &g) override;
+    // the computer keys belong to the panel: a click on the bar's background, or the focus given to the editor
+    // itself (a host bringing the plugin window forward), passes the keyboard focus on to it
+    void mouseDown(const juce::MouseEvent &) override;
+    void focusGained(FocusChangeType) override;
 
     static constexpr int kBarH = 60;
     PanelComponent &panel() { return panel_; }
@@ -89,7 +93,7 @@ private:
     ThemeStore store_;
     PanelComponent panel_;
     Constrainer constrainer_;
-    juce::ComboBox cores_, presets_, transpose_, themes_;
+    juce::ComboBox cores_, presets_, transpose_, themes_, buttonMode_;
     juce::TextButton save_{"Save"}, saveAs_{"Save as"}, rename_{"Rename"}, delete_{"Delete"}, reset_{"Reset flash"},
         export_{"Export"}, import_{"Import"}, power_{"Power on"}, bigLcd_{"Big LCD"};
     juce::ToggleButton notesPlayKeys_{"MIDI notes play keys"}, keyNotesToFw_{"... and go to the firmware's MIDI in"};

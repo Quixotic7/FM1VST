@@ -17,10 +17,14 @@
 //   (e) every other core: build/panel/core-<id>.png (switchCore, 1.5 s after the power-on, then D4 held 300 ms; the
 //       Emulator theme): its screen and its button labels; the LCD region (at lcd-1x's layout) equals its
 //       framebuffer.
+//   (k) the computer keys at the component (keyPressed / keyStateChanged with the key-down probe faked): a press and
+//       its repeats press once; a release the host swallowed is caught by the check; the fallback row (C = FX as
+//       F5) and its hints; two keys of one control; Cmd ignored; focus lost lets go; nothing sticks.
 // FM1EMU_HOME points at a scratch folder under the build.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -380,6 +384,130 @@ int main()
         }
         p.panelKey(D4, false);
         h.run_ms(50);
+    }
+
+    // ---- (k) the computer keys at the component: keyPressed / keyStateChanged as a host passes them (or not), the
+    // key-down probe faked (what a key's physical state says), the device's key and button bits after each block
+    {
+        FM1Processor p;
+        Host h(p, 44100.0, 256);
+        h.run_ms(600);
+        Device *dev = p.deviceForTest();
+        emu_hal_t *hal = dev->hal();
+        PanelComponent panel(p);
+        panel.setBounds(0, 0, 904, 566);
+        std::set<int> down;                       // the keys physically down
+        panel.setKeyProbe([&](int code) { return down.count(code) != 0; });
+        auto keyBit = [&](int k) { return ((hal->keys >> k) & 1u) != 0; };
+        auto btnBit = [&](int b) { return ((hal->buttons >> hal->btn_id[b]) & 1u) != 0; };
+        auto press = [&](int code, juce::ModifierKeys mods = {}) {
+            down.insert(code);
+            panel.keyStateChanged(true);
+            return panel.keyPressed(juce::KeyPress(code, mods, 0));
+        };
+        auto release = [&](int code, bool hostPassesIt) {
+            down.erase(code);
+            if (hostPassesIt)
+                panel.keyStateChanged(false);
+        };
+        const int D4 = 62 - FM1Processor::kNoteBase;
+
+        // a press, its repeats (keyPressed again while held: no second press), a normal release
+        press('S');
+        h.run_ms(30);
+        const bool held = keyBit(D4);
+        bool stayed = true;
+        for (int i = 0; i < 6; i++) {             // (the key repeat: keyPressed every ~35 ms)
+            panel.keyPressed(juce::KeyPress('s'));
+            panel.keyStateChanged(true);
+            h.run_ms(35);
+            stayed = stayed && keyBit(D4);
+        }
+        check(held && stayed && panel.keysHeldFromKeyboard() == 1,
+              "S (D4) pressed: the key held on the device; 6 repeats of keyPressed: held throughout, pressed once");
+        release('S', true);
+        h.run_ms(30);
+        check(!keyBit(D4) && panel.keysHeldFromKeyboard() == 0, "S released (keyStateChanged): the key let go");
+
+        // a release the host swallowed: no keyStateChanged; the 30 Hz check finds the key up
+        press('X');                               // OCT+
+        h.run_ms(30);
+        const bool octHeld = btnBit(EMU_B_OCTUP);
+        release('X', false);
+        h.run_ms(100);
+        const bool stuckBefore = btnBit(EMU_B_OCTUP);
+        panel.checkHeldKeys();                    // (the timer's work)
+        h.run_ms(30);
+        check(octHeld && stuckBefore && !btnBit(EMU_B_OCTUP) && panel.keysHeldFromKeyboard() == 0,
+              "X (OCT+) pressed, its release never passed on: held until the check, which finds the key up and lets go");
+        // .. and the next press after a swallowed release is a press again, not a repeat
+        press('X');
+        h.run_ms(30);
+        const bool again = btnBit(EMU_B_OCTUP);
+        release('X', false);
+        panel.keyStateChanged(false);             // (another key's event: the check runs too)
+        h.run_ms(30);
+        check(again && !btnBit(EMU_B_OCTUP), "  ... the next press of X presses OCT+ again; any key event lets go of it");
+        press('Z');                               // (back to octave 0)
+        h.run_ms(100);
+        release('Z', true);
+        h.run_ms(100);
+
+        // the fallback row: C = FX, as F5; the panel prints both
+        press('C');
+        h.run_ms(30);
+        const bool fxC = btnBit(EMU_B_FX);
+        release('C', true);
+        h.run_ms(30);
+        const bool fxCUp = !btnBit(EMU_B_FX);
+        press(juce::KeyPress::F5Key);
+        h.run_ms(30);
+        const bool fxF5 = btnBit(EMU_B_FX);
+        release(juce::KeyPress::F5Key, true);
+        h.run_ms(30);
+        check(fxC && fxCUp && fxF5 && !btnBit(EMU_B_FX) && PanelComponent::keymapHintText(PanelComponent::KM_BTN, EMU_B_FX) == "F5/C" &&
+                  PanelComponent::keymapHintText(PanelComponent::KM_BTN, EMU_B_GLO) == "F10/," &&
+                  PanelComponent::keymapHintText(PanelComponent::KM_BTN, EMU_B_HOME) == "7",
+              "C presses FX as F5 does (the fallback row C V B N M , for F5 .. F10); the panel prints \"F5/C\" .. \"F10/,\"");
+        for (int code : {'V', 'B', 'N', 'M', ','}) {
+            press(code);
+            h.run_ms(30);
+            const bool on = hal->buttons != 0;
+            release(code, true);
+            h.run_ms(30);
+            if (!on || hal->buttons != 0)
+                check(false, std::string("fallback key '") + (char)code + "' presses and releases its button");
+        }
+        h.run_ms(400);
+        dev->buttons_tap(1u << EMU_B_OCTDN);      // (OCT-: whatever the taps opened, closed)
+        h.run_ms(200);
+
+        // two keys of one control (Z and Esc: OCT-): held while either is
+        press('Z');
+        press(juce::KeyPress::escapeKey);
+        h.run_ms(30);
+        release('Z', true);
+        h.run_ms(30);
+        const bool stillHeld = btnBit(EMU_B_OCTDN);
+        release(juce::KeyPress::escapeKey, true);
+        h.run_ms(30);
+        check(stillHeld && !btnBit(EMU_B_OCTDN), "Z and Esc (both OCT-) held, Z let go: OCT- still held; Esc let go: released");
+
+        // Cmd is the host's; losing the focus lets go of everything the keyboard holds
+        check(!panel.keyPressed(juce::KeyPress('S', juce::ModifierKeys::commandModifier, 0)), "Cmd+S is not the panel's");
+        down.erase('S');
+        press('S');
+        press('A');
+        press('V');
+        h.run_ms(30);
+        const bool three = keyBit(D4) && keyBit(7) && btnBit(EMU_B_SEL);
+        panel.focusLost(juce::Component::focusChangedDirectly);
+        h.run_ms(30);
+        check(three && hal->keys == 0 && hal->buttons == 0 && panel.keysHeldFromKeyboard() == 0,
+              "S A V held, the focus lost (keys still down): every key and button let go on the device");
+        down.clear();
+        h.run_ms(500);
+        check(hal->keys == 0 && hal->buttons == 0, "nothing sticks: no key or button bit left on the device");
     }
 
     // ---- (c) the contrast floors, every preset (and the custom theme)
