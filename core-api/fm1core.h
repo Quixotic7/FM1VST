@@ -33,7 +33,7 @@ extern "C" {
 #endif
 #include "../cores/ChoralRootFM1/tools/emu/emu_hooks.h"
 
-#define FM1CORE_ABI 3u
+#define FM1CORE_ABI 4u
 /* the flash_path to pass to options() to boot from the bytes given to flash_stage() (ABI 2) */
 #define FM1CORE_FLASH_STAGED "fm1core:staged"
 #define FM1CORE_SYMBOL "fm1core_get"
@@ -46,14 +46,18 @@ extern "C" {
  * argument from constant tables and may be called from any thread. */
 enum {
     FM1P_ENUM = 1u,                 /* names[] holds max - min + 1 value names (also text()'s) */
-    FM1P_META = 2u,                 /* stands for another entry, which target() names; it changes when the core's
-                                     * param_epoch() moves (ChoralRoot: "Perf Knob 1..4" = the current perform mode's
-                                     * KNOB 1..4). get / set act on the current target. */
+    FM1P_META = 2u,                 /* stands for another entry (or for itself, rewritten), which target() names; it
+                                     * changes when the core's param_epoch() moves (Felucca: "E1".."E8", the selected
+                                     * part's engine parameters, whose name / range / names are rewritten from the
+                                     * engine's descriptors). get / set act on the current target. */
     FM1P_PERSIST = 4u,              /* the firmware's settings record holds it: a change reaches the flash image */
     FM1P_EDITOR = 8u,               /* a sound editor parameter (the part's sound; persisted only by SAVE on the
                                      * device) */
     FM1P_SOUND = 16u,               /* the value comes with the part's sound (a sound load sets it): def is the
                                      * parameter's own, not what a fresh unit's default sound brings */
+    FM1P_HIDDEN = 32u,              /* (ABI 4) a knob target only: the host gives it no slot of its own (an editor
+                                     * page's parameter, an Options entry, a cell rewritten per screen); knob_target()
+                                     * may name it. Every other field is valid as for any entry. */
 };
 typedef struct {
     const char *name;               /* "Strum Rate", "Arp Division", "Chord Level" (<= 16 characters) */
@@ -119,9 +123,18 @@ typedef struct {
                                      * 1: current, 0: a save is still deferred by the firmware (a loop playing).
                                      * May erase a sector (the emulated erase stall: ~45 ms of silence). */
 
-    /* ---- the parameter map's epoch (ABI 3): a counter that moves when an FM1P_META entry's target changed (the
-     * host re-reads target() and relabels). Clock thread. NULL: the map has no meta entries. */
+    /* ---- the parameter map's epoch (ABI 3): a counter that moves when an FM1P_META entry's target or descriptor
+     * changed, or (ABI 4) when what any physical knob controls changed (knob_target: a screen, layer, page, mode,
+     * part or popup came or went). The host re-reads target() / knob_target() and relabels. Clock thread. NULL: the
+     * map has no meta entries and no knob targets. */
     uint32_t (*param_epoch)(void);
+
+    /* ---- the physical knobs (ABI 4): what each one does on the screen showing now. role: EMU_E_SELECT ..
+     * EMU_E_K4, EMU_E_MASTER (emu_hooks.h). Returns the index in params of the entry that knob turns now (visible or
+     * FM1P_HIDDEN), or -1: no value there (a navigation knob: a menu cursor, a sound list, an action), the host
+     * turns it as a relative control (hal->enc detents). MASTER is the hal's absolute pot (hal->master): -1. Valid
+     * as of the last param_epoch() call (call that first). Clock thread. NULL: every knob relative. */
+    int32_t (*knob_target)(int role);
 } fm1core_t;
 
 typedef const fm1core_t *(*fm1core_get_fn)(uint32_t abi_version);

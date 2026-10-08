@@ -22,6 +22,7 @@ int fm1core_cr_flash_stage(const uint8_t *bytes, uint32_t n);
 int fm1core_cr_flash_sync(void);
 const fm1param_t *fm1core_cr_params(uint32_t *n);   /* core_choralroot_params.c (in the firmware unit) */
 uint32_t fm1core_cr_param_epoch(void);
+int32_t fm1core_cr_knob_target(int role);
 
 static void w_tick(uint32_t ms)
 {
@@ -88,6 +89,7 @@ static fm1core_t CORE = {
     .flash_dirty = fm1core_cr_flash_dirty,
     .flash_sync = fm1core_cr_flash_sync,
     .param_epoch = fm1core_cr_param_epoch,
+    .knob_target = fm1core_cr_knob_target,
 };
 
 FM1CORE_EXPORT const fm1core_t *fm1core_get(uint32_t abi_version)

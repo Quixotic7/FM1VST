@@ -15,6 +15,19 @@ Tier2Parameter::Tier2Parameter(int slot)
 {
 }
 
+Tier2Parameter::Tier2Parameter(const juce::String &id, const juce::String &initialName, int slot)
+    : juce::AudioProcessorParameterWithID(juce::ParameterID{id, 1}, initialName), slot_(slot)
+{
+}
+
+void Tier2Parameter::storeRange(const fm1param_t *e)
+{
+    min_.store(e->min);
+    max_.store(e->max > e->min ? e->max : e->min + 1);
+    def_.store(e->def);
+    enum_.store((e->flags & FM1P_ENUM) != 0);
+}
+
 void Tier2Parameter::bind(const fm1param_t *e, int metaKnob)
 {
     const juce::SpinLock::ScopedLockType l(lock_);
@@ -30,10 +43,7 @@ void Tier2Parameter::bind(const fm1param_t *e, int metaKnob)
         value_.store(0.0f);
         return;
     }
-    min_.store(e->min);
-    max_.store(e->max > e->min ? e->max : e->min + 1);
-    def_.store(e->def);
-    enum_.store((e->flags & FM1P_ENUM) != 0);
+    storeRange(e);
     value_.store(toNorm(e->def));                       // (the boot's full read-back reports the real value)
 }
 
@@ -42,10 +52,7 @@ void Tier2Parameter::retarget(const fm1param_t *v)
     if (!v || !own_.load())
         return;
     // the range first: a host write racing the switch is denormalised in one range or the other, both valid
-    min_.store(v->min);
-    max_.store(v->max > v->min ? v->max : v->min + 1);
-    def_.store(v->def);
-    enum_.store((v->flags & FM1P_ENUM) != 0);
+    storeRange(v);
     view_.store(v, std::memory_order_release);
 }
 
@@ -67,7 +74,7 @@ bool Tier2Parameter::takePending(int32_t &v)
     if (!pending_.exchange(false, std::memory_order_acq_rel))
         return false;
     v = pendingV_.load(std::memory_order_acquire);
-    return true;
+    return pendingGen_.load(std::memory_order_acquire) == gen_.load(std::memory_order_acquire);
 }
 
 void Tier2Parameter::setFromFirmware(int32_t v, bool gesture)
@@ -87,6 +94,7 @@ void Tier2Parameter::setValue(float x)
     value_.store(x);
     if (tl_fromFirmware || !own_.load(std::memory_order_acquire))
         return;                                          // (the firmware's own value, or an unused slot: inert)
+    pendingGen_.store(gen_.load(std::memory_order_acquire), std::memory_order_release);
     pendingV_.store(toPlain(x), std::memory_order_release);
     pending_.store(true, std::memory_order_release);
 }
@@ -160,4 +168,132 @@ juce::StringArray Tier2Parameter::getAllValueStrings() const
     for (int32_t v = min_.load(), hi = max_.load(); v <= hi; v++)
         all.add(textLocked(v));
     return all;
+}
+
+// ============================================================ the knobs ===
+KnobParameter::KnobParameter(int role, const juce::String &id, const juce::String &knobLabel,
+                             const juce::String &shortLabel)
+    : Tier2Parameter(id, knobLabel, -1), role_(role), label_(knobLabel), short_(shortLabel)
+{
+    value_.store(0.5f);
+}
+
+void KnobParameter::retargetKnob(const fm1param_t *e)
+{
+    gen_.fetch_add(1, std::memory_order_acq_rel);         // (a host write in flight belongs to the old target)
+    pending_.store(false);
+    relPending_.store(false);
+    if (!e) {
+        own_.store(nullptr, std::memory_order_release);
+        view_.store(nullptr, std::memory_order_release);
+        min_.store(0);
+        max_.store(1);
+        def_.store(0);
+        enum_.store(false);
+        relBase_.store(0.5);
+        value_.store(0.5f);
+        relative_.store(true, std::memory_order_release);
+        return;
+    }
+    storeRange(e);                                        // (the range before the entry: see Tier2Parameter)
+    view_.store(e, std::memory_order_release);
+    own_.store(e, std::memory_order_release);
+    relative_.store(false, std::memory_order_release);
+}
+
+void KnobParameter::unbindKnob()
+{
+    const juce::SpinLock::ScopedLockType l(lock_);
+    retargetKnob(nullptr);
+}
+
+bool KnobParameter::takeDetents(int32_t &detents, int detentsPerTravel)
+{
+    if (!relPending_.exchange(false, std::memory_order_acq_rel) || !isRelative())
+        return false;
+    const double base = relBase_.load(), x = (double)value_.load();
+    const int32_t n = (int32_t)std::lround((x - base) * (double)detentsPerTravel);
+    if (!n)
+        return false;
+    relBase_.store(base + (double)n / (double)detentsPerTravel);   // (the remainder stays for the next change)
+    detents = n;
+    return true;
+}
+
+void KnobParameter::recentre()
+{
+    relPending_.store(false);
+    relBase_.store(0.5);
+    value_.store(0.5f);
+}
+
+void KnobParameter::setNormFromFirmware(float x)
+{
+    const bool was = tl_fromFirmware;
+    tl_fromFirmware = true;
+    setValueNotifyingHost(x);
+    tl_fromFirmware = was;
+}
+
+void KnobParameter::setValue(float x)
+{
+    value_.store(x);
+    if (tl_fromFirmware)
+        return;
+    hostSeq_.fetch_add(1);
+    if (isRelative()) {
+        relPending_.store(true, std::memory_order_release);
+        return;
+    }
+    if (!own_.load(std::memory_order_acquire))
+        return;
+    pendingGen_.store(gen_.load(std::memory_order_acquire), std::memory_order_release);
+    pendingV_.store(toPlain(x), std::memory_order_release);
+    pending_.store(true, std::memory_order_release);
+}
+
+float KnobParameter::getDefaultValue() const { return isRelative() ? 0.5f : Tier2Parameter::getDefaultValue(); }
+
+juce::String KnobParameter::getName(int maximumStringLength) const
+{
+    juce::String n;
+    {
+        const juce::SpinLock::ScopedLockType l(lock_);
+        const fm1param_t *v = view_.load(std::memory_order_acquire);
+        if (isRelative() || !v)
+            n = label_ + " (turn)";
+        else
+            n = label_ + ": " + juce::String::fromUTF8(v->name);
+        if (maximumStringLength > 0 && n.length() > maximumStringLength)   // (a short display: "K1 Strum Rate")
+            n = (isRelative() || !v ? short_ + " turn" : short_ + " " + juce::String::fromUTF8(v->name));
+    }
+    return maximumStringLength > 0 ? n.substring(0, maximumStringLength) : n;
+}
+
+juce::String KnobParameter::getText(float x, int maximumStringLength) const
+{
+    if (!isRelative())
+        return Tier2Parameter::getText(x, maximumStringLength);
+    const int d = (int)std::lround(((double)x - 0.5) * kDefaultDetents);   // (the detents from the centre)
+    const juce::String t = d ? (d > 0 ? "+" : "") + juce::String(d) : juce::String("turn");
+    return maximumStringLength > 0 ? t.substring(0, maximumStringLength) : t;
+}
+
+float KnobParameter::getValueForText(const juce::String &text) const
+{
+    if (!isRelative())
+        return Tier2Parameter::getValueForText(text);
+    return (float)juce::jlimit(0.0, 1.0, 0.5 + text.trim().getIntValue() / (double)kDefaultDetents);
+}
+
+int KnobParameter::getNumSteps() const
+{
+    return isRelative() ? juce::AudioProcessor::getDefaultNumParameterSteps() : Tier2Parameter::getNumSteps();
+}
+
+bool KnobParameter::isDiscrete() const { return !isRelative() && Tier2Parameter::isDiscrete(); }
+
+juce::StringArray KnobParameter::getAllValueStrings() const
+{
+    return isRelative() ? juce::StringArray() : Tier2Parameter::getAllValueStrings();
 }

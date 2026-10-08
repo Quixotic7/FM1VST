@@ -134,21 +134,23 @@ int main()
         check(FM1Processor::bundledCoresDirFor(juce::File("/tmp/plugin_test")) == juce::File(),
               "an executable outside a bundle has no bundled cores dir");
 
-        // the parameters: the Tier 2 slots t2_00 .., then the 42 of Tier 1, the ids in order, the names
+        // the parameters: the eight knobs, the Tier 2 slots t2_00 .., then the 41 of Tier 1, the ids in order
         const auto &ps = p.getParameters();
         const int t2 = FM1Processor::kTier2Slots;
-        bool idsOk = ps.size() == t2 + 42;
+        static const char *const KNOBS[8] = {"knob_master", "knob_select", "knob_presets", "knob_algo",
+                                             "knob_1",      "knob_2",      "knob_3",       "knob_4"};
+        auto pid = [&](int i) { return dynamic_cast<juce::AudioProcessorParameterWithID *>(ps[i])->getParameterID(); };
+        bool idsOk = ps.size() == 8 + t2 + 41;
+        for (int i = 0; idsOk && i < 8; i++)
+            idsOk = pid(i) == KNOBS[i];
         for (int i = 0; idsOk && i < t2; i++)
-            idsOk = dynamic_cast<juce::AudioProcessorParameterWithID *>(ps[i])->getParameterID() ==
-                    juce::String::formatted("t2_%02d", i);
+            idsOk = pid(8 + i) == juce::String::formatted("t2_%02d", i);
         for (int i = 0; idsOk && i < 14; i++)
-            idsOk = dynamic_cast<juce::AudioProcessorParameterWithID *>(ps[t2 + i])->getParameterID() == FM1Processor::kButtonIds[i];
+            idsOk = pid(8 + t2 + i) == FM1Processor::kButtonIds[i];
         for (int k = 0; idsOk && k < 27; k++)
-            idsOk = dynamic_cast<juce::AudioProcessorParameterWithID *>(ps[t2 + 14 + k])->getParameterID() ==
-                    juce::String::formatted("key_%02d", k);
-        idsOk = idsOk && dynamic_cast<juce::AudioProcessorParameterWithID *>(ps[t2 + 41])->getParameterID() == "master";
-        check(idsOk, std::to_string(t2) + " Tier 2 slots t2_00 .., then 42 Tier 1 parameters: btn_fx .. btn_octup, "
-                     "key_00 .. key_26, master (" + std::to_string(ps.size()) + " in all)");
+            idsOk = pid(8 + t2 + 14 + k) == juce::String::formatted("key_%02d", k);
+        check(idsOk, "the eight knobs knob_master .. knob_4, " + std::to_string(t2) + " Tier 2 slots t2_00 .., then 41 "
+                     "Tier 1 parameters: btn_fx .. btn_octup, key_00 .. key_26 (" + std::to_string(ps.size()) + " in all)");
         check(p.buttonParam(EMU_B_SEL)->getName(100) == "KEY (SEL)" && p.keyParam(9)->getName(100) == "D4" &&
                   p.keyParam(0)->getName(100) == "F3" && p.masterParam()->get() == 724,
               "names: \"" + p.buttonParam(EMU_B_SEL)->getName(100).toStdString() + "\", key_09 \"" +
@@ -326,7 +328,7 @@ int main()
         FM1Processor s;
         Host hs(s, 48000.0, 256);
         hs.run_ms(600);
-        Tier2Parameter *tempo = s.tier2Param(5);                  // ("Tempo": a setting ChoralRoot keeps in its flash)
+        Tier2Parameter *tempo = s.tier2Param(1);                  // ("Tempo": a setting ChoralRoot keeps in its flash)
         tempo->setValueNotifyingHost(tempo->toNorm(133));
         hs.run_ms(100);
         const std::vector<uint8_t> crFlash = s.currentFlash();
@@ -367,11 +369,13 @@ int main()
                       s.buttonParam(EMU_B_PLAY)->getName(100) == "PLAY (PLAY)" && bn != crButtons,
                   std::string(id) + ": the button parameters relabelled (\"" +
                       s.buttonParam(EMU_B_SEL)->getName(100).toStdString() + "\", was \"KEY (SEL)\")");
-            check(c && s.tier2Bound() == (int)c->nparams && s.tier2Param(4)->getName(100) == "Level" &&
-                      s.tier2Param(0)->getName(100).startsWith("K1 ") && sl != crSlots &&
-                      s.tier2Param((int)c->nparams)->getName(100) == "(unused)",
-                  std::string(id) + ": the Tier 2 slots rebound to its " + std::to_string(c ? c->nparams : 0) +
-                      " entries (slot 0 \"" + s.tier2Param(0)->getName(100).toStdString() + "\", the rest unused)");
+            int visible = 0;
+            for (uint32_t i = 0; c && i < c->nparams; i++)
+                visible += !(c->params[i].flags & FM1P_HIDDEN);
+            check(c && s.tier2Bound() == visible && s.tier2Param(0)->getName(100) == "Level" && sl != crSlots &&
+                      s.tier2Param(visible)->getName(100) == "(unused)",
+                  std::string(id) + ": the Tier 2 slots rebound to its " + std::to_string(visible) +
+                      " visible entries (slot 0 \"" + s.tier2Param(0)->getName(100).toStdString() + "\", the rest unused)");
             hs.note(true, 62);
             hs.run_ms(300);
             check(hs.peak > 0.01f && keyHeld(s, 9), std::string(id) + ": note 62 plays key 9 and sounds (peak " +
@@ -392,7 +396,7 @@ int main()
         hs.run_ms(700);
         s.drainTier2();
         check(slotNames(8) == crSlots && s.tier2Bound() == crBound && names() == crButtons &&
-                  s.tier2Param(5)->entry()->get() == 133 && s.tier2Param(5)->plainValue() == 133,
+                  s.tier2Param(1)->entry()->get() == 133 && s.tier2Param(1)->plainValue() == 133,
               "  ... its labels and its " + std::to_string(crBound) + " Tier 2 slots again, Tempo 133 (firmware and host)");
         hs.peak = 0.0f;
         hs.note(true, 62);

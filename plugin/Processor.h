@@ -15,27 +15,35 @@
 //     block start (panelKey ..); what it shows (LCD, LEDs, held state, MASTER) is a PanelView snapshot the audio
 //     thread writes after a block in which it changed, under viewLock_, which the audio thread only tries.
 //
-// TIER 2: THE FIRMWARE'S PARAMETERS (plan 4.5; the slots: Tier2Parameter.h)
-//   Parameters are created once, in the constructor, Tier 2 first (so a Roto-Control's first page is the map's
-//   first eight entries, the live page), then Tier 1: hosts expect a fixed list, so a core switch rebinds the
-//   FM1_TIER2_SLOTS slots to the new core's map and relabels (updateHostDisplay(parameterInfoChanged)) rather than
-//   adding or removing. Binding: bindTier2Locked() after every module load, unbindTier2Locked() before every unload
-//   (the slots must never call into an unloaded image).
-//   host -> firmware   a host change (Tier2Parameter::setValue, any thread) stores the target in the slot (atomic,
-//                      pending); applyHostParameters() (audio thread, devLock_ held, block start, after Tier 1)
-//                      calls the map's set() for each pending slot and records the value as the host's (so the
-//                      read-back does not echo it; kHoldoffFrames frames of read-back are skipped for the slot).
+// THE HOST PARAMETERS (plan 4.5), created once, in this order (hosts expect a fixed list: a core switch rebinds and
+// relabels, updateHostDisplay(parameterInfoChanged), it never adds or removes):
+//   1. the eight physical knobs, panel order (a Roto-Control's first page): knob_master (MASTER, the pot, 0..1023),
+//      knob_select knob_presets knob_algo knob_1 .. knob_4 (KnobParameter, Tier2Parameter.h): each is whatever that
+//      knob does on the screen showing now (the core's knob_target), or a relative control where it has no value;
+//   2. the Tier 2 slots t2_00 .. (FM1_TIER2_SLOTS): the map's visible entries (FM1P_HIDDEN ones are knob targets
+//      only), so a specific parameter can still be mapped directly;
+//   3. Tier 1: btn_fx .. btn_octup, key_00 .. key_26.
+// Binding: bindTier2Locked() after every module load (the knobs relative until the first read-back evaluates them),
+// unbindTier2Locked() before every unload (no slot may call into an unloaded image).
+//   host -> firmware   a host change (setValue, any thread) stores the target in the slot (atomic, pending);
+//                      applyHostParameters() (audio thread, devLock_ held, block start, after Tier 1) calls the map's
+//                      set() for each pending slot (a bound knob: its target's) and records the value as the host's (so
+//                      the read-back does not echo it; kHoldoffFrames frames of read-back are skipped for the slot). A
+//                      relative knob's change becomes detents (KnobParameter::takeDetents, knobDetents() per full
+//                      travel) sent to the device's encoder (Device::enc, as a panel turn); kRecentreMs of device time
+//                      after the last one the read-back springs it back to 0.5 (no detents, no gesture).
 //   firmware -> host   readBackParameters() (audio thread, devLock_ held, once per device UI frame: Device's
 //                      between hook with frame == true, i.e. every 15 ms of device time right before frame()) calls
-//                      get() on every bound slot and pushes what differs from the last reported value into a
+//                      get() on every bound slot and knob and pushes what differs from the last reported value into a
 //                      lock-free FIFO (juce::AbstractFifo, slot + value); the message thread's timer (30 Hz,
 //                      drainTier2) coalesces it (one update per slot per drain) and calls setValueNotifyingHost,
 //                      inside beginChangeGesture .. endChangeGesture for the burst (a knob turned on the device is a
 //                      touch to Live: it moves the Roto-Control's motor and records automation when armed). The
 //                      feedback never runs inside setValue (plan 4.5's automation caveat).
-//   the meta slots     ("Perf Knob 1..4"): when the core's param_epoch() moved (the perform mode changed), the
-//                      read-back retargets them (name "K1 Arp Division", range, texts follow) and the drain
-//                      announces parameterInfoChanged before pushing their new values (without a gesture).
+//   the epoch          when the core's param_epoch() moved (a screen, layer, page, perform mode, part or engine
+//                      changed), the read-back re-reads knob_target() for the seven knobs and target() for the meta
+//                      slots, retargets the ones whose target (entry, range, name) changed, and the drain announces
+//                      parameterInfoChanged before pushing their new values (without a gesture).
 //   the full sweep     after every power-on (boot, preset load, state restore, flash reset, core switch) the first
 //                      read-back reports every bound slot, without gestures (a preset load is not a touch). Tier 2
 //                      values are not stored in the plugin state: the flash image is the truth.
@@ -182,6 +190,9 @@ public:
     void setEditorSize(int w, int h) { editorW_.store(w), editorH_.store(h); }
     bool getBigLcd() const { return bigLcd_.load(); }
     void setBigLcd(bool on) { bigLcd_.store(on); }
+    // a relative knob's detents per full travel of the host value (the Roto-Control's 0..1; stored in the state)
+    int getKnobDetents() const { return knobDetents_.load(); }
+    void setKnobDetents(int n) { knobDetents_.store(juce::jlimit(4, 256, n)); }
     // the loaded core's labels for the 14 buttons (EMU_B_* order; the panel's own printed label when the core has
     // none)
     juce::StringArray buttonNames() const;
@@ -213,11 +224,15 @@ public:
     PanelBoolParameter *keyParam(int key) { return key_[(size_t)key]; }
     juce::AudioParameterInt *masterParam() { return master_; }
     Tier2Parameter *tier2Param(int slot) { return slot >= 0 && slot < kTier2Slots ? t2_[(size_t)slot] : nullptr; }
-    int tier2Bound() const { return t2Bound_; }      // slots bound to the loaded core's map
+    int tier2Bound() const { return t2Bound_; }      // slots bound to the loaded core's map (its visible entries)
+    // the knob of an EMU_E_* role (SELECT .. KNOB4; MASTER: masterParam), and the detents its relative turns sent
+    KnobParameter *knobParam(int role) { return role >= 0 && role < kKnobs ? knob_[(size_t)role] : nullptr; }
+    int32_t knobDetentsSent(int role) const { return role >= 0 && role < kKnobs ? knobSent_[(size_t)role].load() : 0; }
     // the feedback drain (the timer's work; message thread): tests call it instead of running the message loop
     void drainTier2();
 
     static constexpr int kTier2Slots = FM1_TIER2_SLOTS;
+    static constexpr int kKnobs = EMU_NE - 1;        // the KnobParameters (MASTER is master_)
     static constexpr int kHoldoffFrames = 2;         // read-backs skipped after a host write (30 ms of device time)
 
     static constexpr int kNoteBase = 53;             // MIDI note of key 0 (F3)
@@ -229,6 +244,7 @@ private:
     void applyHostParameters();
     void readBackParameters();
 
+    void createKnobParameters();
     void createTier1Parameters();
     void createTier2Parameters();
     void bindTier2Locked();                          // devLock_ held: the slots onto loaded_'s map
@@ -279,10 +295,14 @@ private:
     std::array<PanelBoolParameter *, EMU_NKEY> key_{};
     juce::AudioParameterInt *master_ = nullptr;
     std::array<Tier2Parameter *, FM1_TIER2_SLOTS> t2_{};
+    std::array<KnobParameter *, EMU_NE - 1> knob_{};    // by EMU_E_* role
     int t2Bound_ = 0;                                    // (written with devLock_ held and the audio stopped)
 
     // Tier 2 feedback: audio-thread state (devLock_ held) and the FIFO to the message thread
-    enum : uint8_t { kT2Change, kT2Sweep, kT2Relabel };
+    // kKnobNorm: a knob turned relative (a relabel), kKnobCentre: re-centred; both: its value 0.5, unless the host
+    // wrote it since (value: the KnobParameter's hostSeq when pushed). FIFO slots: 0 .. kTier2Slots - 1 the Tier 2
+    // slots, then the knobs by role.
+    enum : uint8_t { kT2Change, kT2Sweep, kT2Relabel, kKnobNorm, kKnobCentre };
     struct T2Msg {
         int16_t slot;
         uint8_t kind;
@@ -299,6 +319,15 @@ private:
     std::array<uint8_t, FM1_TIER2_SLOTS> t2Holdoff_{};
     uint32_t t2Epoch_ = 0;
     bool t2EpochValid_ = false;
+    // the knobs (audio thread)
+    std::array<int32_t, EMU_NE - 1> knobReported_{};
+    std::array<bool, EMU_NE - 1> knobValid_{};
+    std::array<uint8_t, EMU_NE - 1> knobHoldoff_{};
+    std::array<uint32_t, EMU_NE - 1> knobSig_{}, knobLastTurn_{};   // the target's signature; device ms of a turn
+    std::array<bool, EMU_NE - 1> knobSigValid_{};
+    std::array<std::atomic<int32_t>, EMU_NE - 1> knobSent_{};       // detents sent (tests)
+    std::atomic<int> knobDetents_{KnobParameter::kDefaultDetents};
+    void retargetKnobs();
 
     // settings
     std::atomic<int> transpose_{0};

@@ -18,10 +18,10 @@ The editor is the FM-1 panel itself (phase 3): LEDs, LCD, mouse and keyboard as 
 | path | what |
 |---|---|
 | `core-api/fm1core.h` | the core ABI (`FM1CORE_ABI 3`): the descriptor `fm1core_t` (id, name, version, source, flash size, button labels, the parameter map `fm1param_t` and `param_epoch`, the panel state `emu_hal_t`, every `emu_fw_*` entry point, `shutdown`, `halted`, and the flash image: `flash`, `flash_dirty`, `flash_stage` to boot from bytes, `flash_sync`) and the one symbol a module exports, `fm1core_get`. The threading contract is in its header comment. |
-| `core-glue/choralroot/` | the ChoralRoot core: `core_choralroot.c` (the submodule's `tools/emu/emu_fw.c`, unmodified, with `exit` / `atexit` redirected so a firmware reboot halts the core instead of the host), `core_choralroot_params.c` (the Tier 2 parameter map, included into the same unit so it reaches the firmware's UI code) and `core_choralroot_desc.c` (the descriptor) |
+| `core-glue/choralroot/` | the ChoralRoot core: `core_choralroot.c` (the submodule's `tools/emu/emu_fw.c`, unmodified, with `exit` / `atexit` redirected so a firmware reboot halts the core instead of the host), `core_choralroot_params.c` (the Tier 2 parameter map and the knobs' targets, included into the same unit so it reaches the firmware's UI code) and `core_choralroot_desc.c` (the descriptor) |
 | `core-glue/felucca/`, `core-glue/melodee/` | the Felucca and Melodee cores, the same three files (`core_<id>.c`, `core_<id>_params.c`, `core_<id>_desc.c`) plus, because these firmwares have no emulator of their own, its equivalent written here: `<id>_fw.c` (the `emu_fw_*` hooks, as ChoralRoot's `emu_fw.c`), `<id>_firmware.h` (the include list, as `emu_firmware.h`) and `<id>_hal.h` (the HAL on the host, as `emu_hal_fw.h`) |
 | `cores/` | the firmwares, git submodules, read-only, pinned (below) |
-| `plugin/` | the JUCE plugin: `Processor.{h,cpp}` (`FM1Processor`: the core and its `Device` on the audio thread, parameters and the Tier 2 feedback loop, MIDI, state, presets, the firmware switch; the threading and file layout are in its header comment), `Tier2Parameter.{h,cpp}` (a rebindable host parameter slot), `Editor.{h,cpp}` (the settings bar and the panel; the theme picker), `PanelComponent.{h,cpp}` (the FM-1 panel: the emulator's drawing, layout, mouse and key map) and `Theme.{h,cpp}` (colour themes: the derived palette, the presets, custom theme files) |
+| `plugin/` | the JUCE plugin: `Processor.{h,cpp}` (`FM1Processor`: the core and its `Device` on the audio thread, parameters and the Tier 2 feedback loop, MIDI, state, presets, the firmware switch; the threading and file layout are in its header comment), `Tier2Parameter.{h,cpp}` (a rebindable host parameter slot, and `KnobParameter`: a physical knob that follows the firmware's screen), `Editor.{h,cpp}` (the settings bar and the panel; the theme picker), `PanelComponent.{h,cpp}` (the FM-1 panel: the emulator's drawing, layout, mouse and key map) and `Theme.{h,cpp}` (colour themes: the derived palette, the presets, custom theme files) |
 | `engine/` | C++17, no JUCE: `cores.{h,cpp}` (find and load modules, one private copy per instance), `device.{h,cpp}` (the single-thread device clock, input, LEDs, LCD, `render` at any host rate), `resampler.h` (4-point Lagrange) |
 | `tests/` | `core_smoke` and `param_test` (per core), `replay_test`, `double_load_test`, `halt_test`, `plugin_test`, `tier2_test`, `panel_render_test`, and `script_runner` (the emulator's script grammar on a `Device`) |
 
@@ -84,59 +84,78 @@ so ChoralRoot plays its chords as on the device. The firmware needs under a seco
 is loaded. The track's MIDI output carries what the firmware sends (ChoralRoot by default: the chord stream on channel 1; the
 bass on channel 2 once a bass sound is chosen), so it can drive other instruments.
 
-- **Parameters (128):** first 86 Tier 2 slots (`t2_00` .. `t2_85`: the firmware's own parameters, below), then the
-  42 Tier 1 panel controls: the 14 buttons (`btn_fx` .. `btn_octup`, momentary: on = held; named with the firmware's
-  role and the printed label, e.g. "KEY (SEL)"), the 27 keys (`key_00` .. `key_26`, named by note, "F3" .. "G5"; a
-  key is held when its parameter or a MIDI note holds it) and `master` (the MASTER pot, 0..1023, default 724 as the
-  emulator powers on). The encoders are not parameters (they are relative; the panel GUI drives them). 128 is Live's
+- **Parameters (128):** first the eight physical knobs (`knob_master` `knob_select` `knob_presets` `knob_algo`
+  `knob_1` .. `knob_4`, panel order: below), then 79 Tier 2 slots (`t2_00` .. `t2_78`: the firmware's own
+  parameters by name, below), then the 41 Tier 1 panel controls: the 14 buttons (`btn_fx` .. `btn_octup`, momentary:
+  on = held; named with the firmware's role and the printed label, e.g. "KEY (SEL)") and the 27 keys (`key_00` ..
+  `key_26`, named by note, "F3" .. "G5"; a key is held when its parameter or a MIDI note holds it). 128 is Live's
   limit for showing a plugin's parameters without configuring them.
-- **The firmware's parameters (Tier 2, plan 4.5).** Absolute values with the firmware's own ranges and value texts
-  ("1/8", "120 ms", "Up-down", "-10.0dB"), read from and written to the running firmware, so a motorised controller
-  such as the Melbourne Instruments Roto-Control follows them. A host change goes through the firmware's own panel
-  code (the screen, the knob row's hot cell, the settings record and the trace behave as for a knob turned on the
-  unit); a change on the firmware's side (its knobs, a preset, a MIDI CC, a mode change) moves the host's value, as a
-  touch (inside a change gesture). After every power-on (a preset load, a state restore, a flash reset) every value
-  is reported once, without gestures, so the controller sweeps to the unit's real state. The values are not stored
-  separately in the plugin state: the flash image is the truth. Slots beyond a core's map are "(unused)". The order
-  is a Roto-Control's page order (eight knobs a page):
+- **The knobs (the Roto-Control's first page, plan 4.5).** One host parameter per physical knob, in panel order:
+  MASTER, SELECT, PRESETS, ALGORITHM, KNOB1, KNOB2, KNOB3, KNOB4. MASTER is the pot (0..1023, default 724 as the
+  emulator powers on). The other seven are always **whatever that knob does on the firmware's screen right now**: its
+  name, range, value texts and value are the parameter the firmware has on it, and they change with the screen. On
+  ChoralRoot's view KNOB1 is "KNOB1: Voicing", SELECT "SELECT: Tempo"; hold PERF and KNOB1..4 become the perform
+  mode's row ("KNOB1: Strum Rate" .. "KNOB4: Strum Hold"; pick Arpeggiate and they become Division, Dir, Gate, Swing);
+  the FX layer gives the effect's row, the KEY layer Tonic / Scale / Transpose / Single Notes, the sound editor the
+  cells of the lane on screen; on Felucca's HOME the engine's four knobs, on its ENV page Attack .. Release, FX held
+  its macros. The host is told (parameter info changed) and the new values are pushed, so a Roto-Control relabels and
+  its motors move to the new positions; a knob turned on the unit (or the panel GUI) moves its motor, as a touch.
+  Where a knob has **no value** on the current screen (SELECT scrolling Options or the editor's lanes, PRESETS and
+  ALGORITHM browsing sounds, a page's empty column), its parameter is a **relative control**, "KNOB1 (turn)": a host
+  change becomes detents at the device (the change of the 0..1 value x 24 per full travel, the knobDetents setting)
+  and the parameter springs back to 0.5 after 400 ms (that re-centre turns nothing), so the knob still scrolls. The
+  core says what each knob is (`fm1core_t.knob_target`, ABI 4); the per-screen tables are in the headers of
+  `core-glue/*/core_*_params.c`. Entries that exist only as knob targets (the sound editor's pages, Options rows,
+  FX Effect, Felucca's FX macros and T1..T4 levels, the cells no named entry covers) are `FM1P_HIDDEN`: they get no
+  Tier 2 slot of their own.
+- **The firmware's parameters by name (Tier 2, plan 4.5).** Absolute values with the firmware's own ranges and value
+  texts ("1/8", "120 ms", "Up-down", "-10.0dB"), read from and written to the running firmware, so a motorised
+  controller such as the Melbourne Instruments Roto-Control follows them (the knobs above are the same values, bound
+  to whatever is on screen). A host change goes through the firmware's own panel code (the screen, the knob row's hot
+  cell, the settings record and the trace behave as for a knob turned on the unit); a change on the firmware's side
+  (its knobs, a preset, a MIDI CC, a mode change) moves the host's value, as a touch (inside a change gesture). After
+  every power-on (a preset load, a state restore, a flash reset) every value is reported once, without gestures, so
+  the controller sweeps to the unit's real state. The values are not stored separately in the plugin state: the flash
+  image is the truth. Slots beyond a core's visible map are "(unused)". They come after the knobs, so a specific
+  parameter can still be mapped directly (eight a page):
 
-  **ChoralRoot** (77):
+  **ChoralRoot** (73 visible, 109 with the hidden knob targets):
 
-  | page | parameters |
-  |---|---|
-  | 1, the live page | `K1`..`K4` (the meta knobs "Perf Knob 1..4": whatever KNOB 1..4 of the current perform mode carry, renamed when the mode changes, e.g. "K1 Strum Rate" -> "K1 Arp Division"), Voicing, Tempo, Transpose, Chord Level |
-  | 2..5 | the perform parameters of every mode, the ones its engine uses: Strum (Rate, Dir, Range, Hold), Slop (Amount, Rate, Dir, Range, Hold), Arp (Division, Dir, Gate, Swing, Range, Retrig, Hold), Pattern (Type, Div, Gate, Swing, Range, Rotate, Retrig, Hold), Harp (Rate, Dir, Gate, Range, Hold) |
-  | 5..8 | chord and global: Perform, Perform Mode, Latch, Key Mode, Key Tonic, Key Scale, Single Notes, Split Point, Play Style, Ext Addition, Secret Chords, Velocity, Bass, Bass Mode, Bass Register, Bass Level, Metronome, Click Level, Time Signature, Loop Length, Loop Quantize, Count-In, Loop Level |
-  | 8..10 | FX: FX on, the chord part's sends (Chord Drive / Chorus / Delay / Reverb: the FX amounts), the bass part's sends, the shared buses (Reverb Size / Damp / Type, Chorus Rate / Depth, Delay Time / Feedback / Colour) |
+  | the slots, in order |
+  |---|
+  | Voicing, Tempo, Transpose, Chord Level, then the perform parameters of every mode, the ones its engine uses: Strum (Rate, Dir, Range, Hold), Slop (Amount, Rate, Dir, Range, Hold), Arp (Division, Dir, Gate, Swing, Range, Retrig, Hold), Pattern (Type, Div, Gate, Swing, Range, Rotate, Retrig, Hold), Harp (Rate, Dir, Gate, Range, Hold) |
+  | chord and global: Perform, Perform Mode, Latch, Key Mode, Key Tonic, Key Scale, Single Notes, Split Point, Play Style, Ext Addition, Secret Chords, Velocity, Bass, Bass Mode, Bass Register, Bass Level, Metronome, Click Level, Time Signature, Loop Length, Loop Quantize, Count-In, Loop Level |
+  | FX: FX on, the chord part's sends (Chord Drive / Chorus / Delay / Reverb: the FX amounts), the bass part's sends, the shared buses (Reverb Size / Damp / Type, Chorus Rate / Depth, Delay Time / Feedback / Colour) |
 
-  **Felucca** (77) and **Melodee** (77, the same layout): the selected part's parameters, as the device's pages show
+  **Felucca** (73 visible, 85 in all) and **Melodee** (the same layout): the selected part's parameters, as the device's pages show
   them, and the song's. "The selected part" follows the unit: pick another part (the ALGORITHM knob, or the `Part`
   parameter) and every part slot reads and writes that one. A host write is the knob's own write (the value clamped
   to the firmware's range, `motion_capture`: a live edit is the motion sequencer's new base, recorded while the part
   records; Melodee shares SCALE / QUANT across the parts as its knob does).
 
-  | page | parameters |
-  |---|---|
-  | 1, the live page | `K1`..`K4` (the HOME screen's four knobs: the engine's own, renamed with it, e.g. ANALOG "K1 E5 CUT", "K2 E6 RES", "K3 Attack", "K4 Release"; FM6 "K1 E3 MLVL" ..), Level, Drive, Delay Send, Reverb Send |
-  | 2 | ENV: Attack, Decay, Sustain, Release; ENV DEST: Env>Filter, Env>Pitch, Env>Shape; Pan |
-  | 3 | the engine (EDIT 1 / EDIT 2): `E1`..`E8`, named, ranged and texted as the selected part's engine has them ("E1 WAVE" SIN..S&H for ANALOG, "E1 ALG" 0..32 for FM6; the host is told when the engine or the part changes) |
-  | 4 | LFO: Rate, Wave, Phase, Fade; LFO DEST: >Pitch, >Filter, >Shape, >Amp |
-  | 5 | Chorus Send, Voice Mode, Glide, Glide Mode, Priority, Allocation, Detune, Mute |
-  | 6 | ARP: Mode, Rate, Octaves, Gate, Swing, Chance, Hold, Order |
-  | 7 | SCL: Scale Root, Scale, Quantize, Transpose; CHORD: Chord, Chord Voicing; Part; Tempo |
-  | 8..10 | Swing, Tune; the FX buses: Delay Time / Feedback / Colour / Mix, Reverb Type / Size / Damp, Chorus Rate / Depth; PATTERN: Length, Div, Swing, Gate (not while a song plays, as the knob); MOD slots 1 and 2: Source, Dest, Amount |
+  | the slots, in order |
+  |---|
+  | Level, Drive, Delay Send, Reverb Send; ENV: Attack, Decay, Sustain, Release |
+  | ENV DEST: Env>Filter, Env>Pitch, Env>Shape; Pan |
+  | the engine (EDIT 1 / EDIT 2): `E1`..`E8`, named, ranged and texted as the selected part's engine has them ("E1 WAVE" SIN..S&H for ANALOG, "E1 ALG" 0..32 for FM6; the host is told when the engine or the part changes) |
+  | LFO: Rate, Wave, Phase, Fade; LFO DEST: >Pitch, >Filter, >Shape, >Amp |
+  | Chorus Send, Voice Mode, Glide, Glide Mode, Priority, Allocation, Detune, Mute |
+  | ARP: Mode, Rate, Octaves, Gate, Swing, Chance, Hold, Order |
+  | SCL: Scale Root, Scale, Quantize, Transpose; CHORD: Chord, Chord Voicing; Part; Tempo |
+  | Swing, Tune; the FX buses: Delay Time / Feedback / Colour / Mix, Reverb Type / Size / Damp, Chorus Rate / Depth; PATTERN: Length, Div, Swing, Gate (not while a song plays, as the knob); MOD slots 1 and 2: Source, Dest, Amount |
 
-  Left out (no safe absolute path, or not a value): the engine and preset choice (a sound load, with its undo and the
-  engine's fade: the PRESETS knob's job), the SLICER insert and MOD slots 3 and 4 (room), the transport (PLAY / REC are
-  buttons), the clock source and MIDI routing (GLO > SYSTEM), the DIGITAL operator pages (inert without `FELUCCA_FM4`),
-  Melodee's FM6 patch pages (ALGO, OP1..6: a copy of the patch, written back by `fm6_page_put`) and CZ-1 tone pages
-  (the same through `cz_ed_put`), its MPC degree and its BOOT / DRUM device settings. Everything is part or song (the
+  No named slot (but the knobs reach them on their pages, through the hidden cells): the SLICER insert, MOD slots 3
+  and 4, the clock source and MIDI routing (GLO > SYSTEM), the operator pages, Melodee's FM6 patch pages (a copy of
+  the patch, written back by `fm6_page_put`) and CZ-1 tone pages (the same through `cz_ed_put`), its BOOT / DRUM
+  device settings. Not a value at all (relative on the knobs): the engine and preset choice (a sound load, with its
+  undo and the engine's fade), the transport (PLAY / REC are buttons). Everything is part or song (the
   project, saved by SAVE > PROJECT on the unit), except Melodee's Tune, which it keeps as last used in its settings.
 
-  `param_test` prints the whole map with ranges and the firmware path each entry is written through.
-  **`-DFM1_EXPOSE_EDITOR=ON`** (off by default) appends the sound editor's ENV, LFO, MOD and MIX pages for the chord
-  and the bass part (30 more, 107 in all); build the plugin with `-DFM1_TIER2_SLOTS=116` (or more) to give them
-  slots (that goes past Live's 128). A sound edit is kept only by SAVE on the unit.
+  `param_test` prints the whole map with ranges, flags (H: hidden) and the firmware path each entry is written
+  through. **`-DFM1_EXPOSE_EDITOR=ON`** (off by default) gives ChoralRoot's sound editor entries (ENV, LFO, MOD and
+  MIX for the chord and the bass part, 30) slots of their own (off they are hidden: the knobs reach them in the
+  editor); build the plugin with `-DFM1_TIER2_SLOTS=103` (or more) to fit them (that goes past Live's 128). A sound
+  edit is kept only by SAVE on the unit.
 - **MIDI in:** with **MIDI notes play keys** on (default), note n on any channel holds key `n - 53 + 12 x Transpose`
   (Transpose: -2..+2 octaves; velocity 0 is a release). Every other message (CCs, program changes, clock, SysEx, and
   notes outside the keys or with the setting off) goes to the firmware's own MIDI in as USB-MIDI packets. A note that
@@ -278,12 +297,18 @@ The tests:
 - `param_test_<id>`: a core's parameter map on a `Device`: every entry set to min, max and its default reads back at
   once and 50 ms later, the enum texts are distinct, exactly the entries the settings record holds reach the flash
   image; it prints the map. ChoralRoot: off-grid targets land exactly, one entry per group prints the trace line a
-  panel turn prints, the meta entries follow the perform mode. Felucca / Melodee: param_format's texts, the HOME knob
-  and engine entries follow the selected part and its engine.
+  panel turn prints; for every core every knob's target on the boot screen is an entry or -1, the hidden entries pass
+  the same checks. ChoralRoot: the view's KNOB3 follows the perform mode. Felucca / Melodee: param_format's texts, the
+  HOME knob and engine entries follow the selected part and its engine.
 - `tier2_test`: the Tier 2 slots on the plugin's processor: a host write reaches the firmware and is not echoed, a
   panel turn reaches the host (coalesced, inside a gesture), a state restore and a preset load report every slot
-  without gestures, a meta slot relabels when the perform mode is picked on the panel; after a switch to Felucca its
-  map on the same slots, ALGORITHM on the panel relabelling the HOME knob and engine slots (with the engine's range).
+  without gestures, the perform mode picked on the panel; after a switch to Felucca its map on the same slots,
+  ALGORITHM on the panel relabelling the engine slots (with the engine's range).
+- `knob_test`: the eight knob parameters: ChoralRoot's view (a host write of KNOB1 moves the voicing), the PERF layer
+  (KNOB1..4 relabel to the mode's row, again when the mode changes; a panel turn reports on the knob and on the
+  target's own slot, inside a gesture), the FX layer, Options (SELECT relative: 0.5 -> 0.75 is 6 detents at the device,
+  it springs back to 0.5 with no detents; a row with no named entry: the hidden Option), the editor; no hidden entry
+  has a slot; Felucca's HOME, ENV, ENV DEST, SLICER (a hidden cell), EDIT 1, GLO and FX held; Melodee's HOME.
 - `plugin_test`: the plugin's processor, headless: MIDI notes press the keys and sound at 48 and 44.1 kHz, the panel
   parameters reach the HAL, MIDI out is well formed, the flash survives the state round trip, presets save / reset /
   load / rename / export / import / delete with backups, the installed bundles resolve their cores folder (all three

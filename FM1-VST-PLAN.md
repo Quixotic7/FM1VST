@@ -165,22 +165,57 @@ and the descriptor. A firmware author who wants their fork in the plugin builds 
 
 The Roto-Control's motorised knobs follow the value of the Live parameter they are mapped to, so a
 parameter must be an **absolute value with a range**, and it must move when the firmware changes it
-(a panel knob turned, a preset loaded, a Live set reopened). The device's encoders are relative and
-their meaning changes with the screen, so they cannot be those parameters. Instead the plugin exposes
-**the firmware's own parameters**, read from and written to the firmware's state. This is possible
-precisely because the core is built from source: the glue sits in the same translation unit as the
-firmware and can reach its tables and setters.
+(a panel knob turned, a preset loaded, a Live set reopened). The user's instruction for the mapping:
+*map the hardware knobs, so the knobs can always be controlled by the Roto-Control, and their values
+change with their function in the firmware.*
 
-**Two tiers of host parameters, per core.**
+**The first page is the FM-1's eight physical knobs**, in panel order: MASTER, SELECT, PRESETS,
+ALGORITHM, KNOB1, KNOB2, KNOB3, KNOB4 (`knob_master knob_select knob_presets knob_algo knob_1 ..
+knob_4`). Each is one host parameter whose **name, range, value texts and value are always whatever that
+physical knob does in the firmware on the screen or layer showing now**: on ChoralRoot's view KNOB1 is
+"KNOB1: Voicing" and SELECT "SELECT: Tempo"; with the PERF layer open KNOB1..4 are the current perform
+mode's row ("KNOB1: Strum Rate" .. "KNOB4: Strum Hold"; Arpeggiate: Division, Dir, Gate, Swing), with the
+FX layer the effect's row (Reverb: Size, Damp, Type, the amount), with KEY the tonic, scale, transpose
+and Single Notes, in the sound editor the cells of the lane on screen, in Options the row's value; on
+Felucca's HOME the engine's four knobs, on its ENV page Attack .. Release, with FX held its macros. MASTER
+is the pot (absolute 0..1023) everywhere.
 
-*Tier 1: the panel (same for every core, 42 parameters).* The 14 buttons and the 27 note keys as
-momentary booleans (Roto-Control buttons, automation, or a MIDI-less chord player), and MASTER as an
-absolute 0..1023 value. The seven relative encoders are **not** host parameters: they stay reachable
-from the plugin's own panel GUI and keyboard map for navigating menus. (A hidden "turn" parameter per
-encoder can be added later for automation of menu moves; it is not for the Roto-Control.)
+- **The core says what each knob is.** ABI 4 adds `int32_t (*knob_target)(int role)` to `fm1core_t`:
+  for a knob role (`EMU_E_SELECT` .. `EMU_E_K4`, `EMU_E_MASTER`) the index of the map entry that knob
+  turns now, or -1 when it has no value there. The glue computes it by reading the firmware's own knob
+  dispatch without turning (ChoralRoot: `cu_knob`'s tests in order over `cr_ui.c`'s layer, Options, editor
+  and view state; Felucca / Melodee: `ui_input`'s, over HOME, the page, the held layer, the menu and
+  dialogs), and `param_epoch()` moves whenever any knob's target changes: it is recomputed as a signature
+  of all eight at every call, so no screen, layer, page, mode, part or popup change can be missed. The
+  per-screen tables are in the headers of `core-glue/*/core_*_params.c`.
+- **Knob targets that are not named parameters.** An entry flagged `FM1P_HIDDEN` exists so a knob can
+  target it but gets no host slot of its own: ChoralRoot's sound editor pages (the editor entries,
+  visible only with `FM1_EXPOSE_EDITOR`), the FX layer's effect picker, an Options row, and the cells no
+  named entry covers (an engine's own and deep pages, MIX 2: "Edit Knob 1..4", rewritten from the cell on
+  screen as Felucca's E1..E8 are rewritten from the engine); Felucca / Melodee's FX macros, T1..T4 levels
+  and page cells ("Knob 1..4": SLICER, the operator pages, GLOBAL's CLK, the FM6 / CZ-1 pages).
+- **The plugin follows.** On an epoch change it re-reads the seven targets, retargets the knob
+  parameters whose target (entry, range, name) changed, announces `parameterInfoChanged` and pushes their
+  values without a gesture: the Roto-Control relabels and its motors move to the new positions. A knob
+  turned on the unit (or the panel GUI) reports on its knob parameter and on the target's own named slot,
+  inside a gesture, through the same read-back as every slot.
+- **Never a dead end: a knob with no value turns.** Where the knob is a navigation knob on the current
+  screen (SELECT scrolling Options or the editor's lanes, PRESETS and ALGORITHM browsing sounds, an
+  empty column, an action), its parameter becomes a relative control, "KNOB1 (turn)", continuous, at
+  0.5: a host change is converted into detents (the change of the normalised value x 24 per full travel,
+  rounded, the remainder kept; a setting) sent to the device's encoder as a panel turn, and after 400 ms
+  of device time without a host change the parameter is re-centred to 0.5 (reported without a gesture;
+  a re-centre never produces detents). ChoralRoot's sound lists (PRESETS: the chord sound, ALGORITHM:
+  the bass sound) stay relative: their length follows the engine and the user's presets.
 
-*Tier 2: the firmware's parameters (per core, absolute, bidirectional).* Each core ships a parameter
-map, a table of entries:
+The named parameters stay, after the eight knobs (Tier 2 below), so a specific parameter can still be
+mapped directly; then the panel's buttons and keys (Tier 1). 8 + 79 + 41 = 128, Live's limit.
+
+*Tier 1: the panel (same for every core, 41 parameters).* The 14 buttons and the 27 note keys as
+momentary booleans (Roto-Control buttons, automation, or a MIDI-less chord player).
+
+*Tier 2: the firmware's parameters by name (per core, absolute, bidirectional).* Each core ships a
+parameter map, a table of entries (`core-api/fm1core.h` `fm1param_t`; abridged):
 
 ```c
 typedef struct {
@@ -197,16 +232,17 @@ For ChoralRoot the map is built from tables that already exist in the firmware, 
 
 | group | source in the firmware | count |
 |---|---|---|
-| perform parameters per mode (Strum, Slop, Arp, Pattern, Harp): rate, division, direction, range, gate, swing, retrig, pattern, rotate, amount, hold | `cr_engine.h` `cr_param_t`, `CR_PAR_MIN` / `CR_PAR_MAX`, `cr_set_param` / `cr_get_param` | **29** of 55 (the ones each mode's engine uses: Strum 4, Slop 5, Arp 7, Pattern 8, Harp 5), plus **4** meta parameters "Perf Knob 1..4" (the current mode's `CU_PERF_KNOB` row, relabelled on a mode change) |
-| chord and global: voicing, transpose, Single Notes, bass voicing, BPM, Key Mode, scale, sticky / latch | `cr_settings.h` `cr_settings_t` and the engine's setters (`cr_set_sticky`, the tempo setter) | **27**: Voicing, Tempo, Transpose, Chord Level (the live page), then Perform, Perform Mode, Latch, Key Mode / Tonic / Scale, Single Notes, Split Point, Play Style, Ext Addition, Secret Chords, Velocity, Bass, Bass Mode / Register / Level, Metronome, Click Level, Time Signature, Loop Length / Quantize / Count-In / Level |
+| perform parameters per mode (Strum, Slop, Arp, Pattern, Harp): rate, division, direction, range, gate, swing, retrig, pattern, rotate, amount, hold | `cr_engine.h` `cr_param_t`, `CR_PAR_MIN` / `CR_PAR_MAX`, `cr_set_param` / `cr_get_param` | **29** of 55 (the ones each mode's engine uses: Strum 4, Slop 5, Arp 7, Pattern 8, Harp 5); the current mode's `CU_PERF_KNOB` row is what the knobs carry in the PERF layer |
+| chord and global: voicing, transpose, Single Notes, bass voicing, BPM, Key Mode, scale, sticky / latch | `cr_settings.h` `cr_settings_t` and the engine's setters (`cr_set_sticky`, the tempo setter) | **27**: Voicing, Tempo, Transpose, Chord Level, then Perform, Perform Mode, Latch, Key Mode / Tonic / Scale, Single Notes, Split Point, Play Style, Ext Addition, Secret Chords, Velocity, Bass, Bass Mode / Register / Level, Metronome, Click Level, Time Signature, Loop Length / Quantize / Count-In / Level |
 | FX: the chord part's sends (drive, chorus, delay, reverb), the bass part's, the shared bus parameters | Felucca's `params.c` table `TP` (`param_desc_t`: label, format, min, max, default) and the FX layer's knob row (`cr_ui.c` line 378) | **17**: FX on, 4 chord sends, 4 bass sends, 8 bus parameters |
-| sound editor pages (ENV, LFO, MOD, MIX, the engine's eight): chord part and bass part | `cr_pages.c` `CP_PAGES` / `CP_LABEL` over `TP` | **2 x 15 = 30** (ENV, LFO, MOD, MIX without Level), **off by default** (`-DFM1_EXPOSE_EDITOR=ON`), to stay under Live's 128 |
-| **total** (built) | | **77** with the editor off (107 on), in 86 host slots: 42 + 86 = 128 |
+| sound editor pages (ENV, LFO, MOD, MIX, the engine's eight): chord part and bass part | `cr_pages.c` `CP_PAGES` / `CP_LABEL` over `TP` | **2 x 15 = 30** (ENV, LFO, MOD, MIX without Level), knob targets in the editor (`FM1P_HIDDEN`); slots of their own only with `-DFM1_EXPOSE_EDITOR=ON` (to stay under Live's 128) |
+| knob targets only (`FM1P_HIDDEN`) | the editor's other cells (`cr_edit.c` `ce_view` / `ce_param`), Options (`opt_get` / `opt_set`), the FX picker | **6**: Edit Knob 1..4 (rewritten per cell), Option (rewritten per row), FX Effect |
+| **total** (built) | | **73** visible (103 with the editor), 109 in the map, in 79 host slots: 8 knobs + 79 + 41 = 128 |
 
-Target: about 80 Tier 2 parameters for ChoralRoot with the editor off, 42 + 80 = 122 in total.
-Order: the perform parameters of the current mode first (so the Roto-Control's first page is the four
-knobs the PERF screen shows plus voicing, BPM, transpose and chord level), then FX, then globals,
-then the panel booleans.
+Order: the eight knobs, then the voicing, BPM, transpose and chord level, the perform parameters,
+globals, FX, then the panel booleans. Felucca and Melodee: 73 visible (the part's level and sends, ENV,
+the engine's E1..E8, LFO, VOICE, ARP, SCL / CHORD, Part, Tempo, the buses, PATTERN, MOD 1 and 2), plus
+12 hidden knob targets (the FX macros, T1..T4 levels, Knob 1..4).
 
 **Writing: always through the firmware's own path.** A host change of "Strum Rate" must leave the
 screen, the knob row's hot cell, the settings record (what SAVE and the flash persist) and the trace
@@ -230,10 +266,11 @@ and the Roto-Control's screens show "1/8", "UP", "120 ms" as the LCD does.
 
 **The Roto-Control side.** Its PLUGIN mode learns Live device parameters per plugin (pages of eight
 knobs and eight buttons, stored on the unit), reads their names and values, and sets the haptic feel
-per control in Roto-Setup. The plugin's job is to make the first 16 parameters the ones a player
-wants on pages one and two, give them short names that fit the Roto-Control's displays, and keep every
-value absolute and current. Confirm page and bank behaviour against the Roto-Setup manual when phase 2
-reaches Live; the retailer and forum descriptions disagree on the counts.
+per control in Roto-Setup. The plugin's first page is the eight physical knobs, so learning that page
+once gives the FM-1's own panel on the Roto-Control on every screen (the names and motors follow);
+the named parameters on the following pages are for mapping one parameter for good. A relabel is a
+parameterInfoChanged: confirm against the Roto-Setup manual how quickly the unit re-reads names (the
+values and motors follow regardless).
 
 **Automation caveat.** When Live is recording automation on an armed parameter, plugin-originated
 updates (a panel knob turned on the plugin's GUI) are written as automation, as with any plugin. That

@@ -116,9 +116,10 @@ set(CR_GEN_NAMES ui_fonts.h cr_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h fel
                  melodee_cz1.h felucca_samples.h)
 set(CR_GEN_HEADERS ${CR_GEN_NAMES})
 list(TRANSFORM CR_GEN_HEADERS PREPEND ${CR}/build/gen/)
-# the Tier 2 parameter map (core-glue/choralroot/core_choralroot_params.c): the sound editor's pages too (30 more
-# host parameters; the plugin then needs -DFM1_TIER2_SLOTS=116 or more)
-option(FM1_EXPOSE_EDITOR "ChoralRoot's Tier 2 map: also the sound editor's ENV / LFO / MOD / MIX pages" OFF)
+# the Tier 2 parameter map (core-glue/choralroot/core_choralroot_params.c): the sound editor's pages get host slots
+# of their own too (30 more; off, they are FM1P_HIDDEN: the knobs reach them in the editor). The plugin then needs
+# -DFM1_TIER2_SLOTS=103 or more
+option(FM1_EXPOSE_EDITOR "ChoralRoot's Tier 2 map: also slots for the sound editor's ENV / LFO / MOD / MIX pages" OFF)
 set(_cr_defs "")
 if(FM1_EXPOSE_EDITOR)
     set(_cr_defs FM1_EXPOSE_EDITOR=1)
@@ -184,8 +185,8 @@ juce_add_binary_data(FM1VST_Themes HEADER_NAME BinaryData.h NAMESPACE BinaryData
 set_target_properties(FM1VST_Themes PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(FM1VST PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/plugin)
 target_compile_features(FM1VST PUBLIC cxx_std_17)
-# the Tier 2 host parameter slots (plugin/Tier2Parameter.h): 86 + the 42 panel parameters = Live's 128
-set(FM1_TIER2_SLOTS 86 CACHE STRING "Tier 2 host parameter slots (the firmware's parameters)")
+# the Tier 2 host parameter slots (plugin/Tier2Parameter.h): the 8 knobs + 79 + the 41 panel booleans = Live's 128
+set(FM1_TIER2_SLOTS 79 CACHE STRING "Tier 2 host parameter slots (the firmware's parameters)")
 target_compile_definitions(FM1VST PUBLIC
     JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0
     FM1_CORES_DIR="${CMAKE_BINARY_DIR}/cores" FM1_TIER2_SLOTS=${FM1_TIER2_SLOTS})
@@ -300,6 +301,15 @@ target_compile_definitions(tier2_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_D
     FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/tier2_test_home")
 add_dependencies(tier2_test ${FM1_CORE_TARGETS})
 add_test(NAME tier2_test COMMAND tier2_test)
+
+# the eight physical knobs as host parameters, following the firmware's screens (headless, as tier2_test)
+add_executable(knob_test tests/knob_test.cpp)
+target_link_libraries(knob_test PRIVATE FM1VST fm1engine)
+target_include_directories(knob_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
+target_compile_definitions(knob_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS>
+    FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/knob_test_home")
+add_dependencies(knob_test ${FM1_CORE_TARGETS})
+add_test(NAME knob_test COMMAND knob_test)
 
 # the panel GUI, headless (phase 3): the panel rendered offscreen to build/panel/*.png for every theme preset, the LCD
 # region against the device's framebuffer, a key's LED, the contrast floors, the custom theme round trip

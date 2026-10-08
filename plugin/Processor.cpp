@@ -156,7 +156,8 @@ FM1Processor::FM1Processor()
         const juce::ScopedLock l(devLock_);
         loadCoreLocked(coreId_);                 // (named buttons for the parameters; booted in prepareToPlay)
     }
-    createTier2Parameters();                     // first: the Roto-Control's first page is the map's live page
+    createKnobParameters();                      // first: the Roto-Control's first page is the eight physical knobs
+    createTier2Parameters();
     createTier1Parameters();
     {
         const juce::ScopedLock l(devLock_);
@@ -189,9 +190,24 @@ void FM1Processor::createTier1Parameters()
         key_[(size_t)k] = p;
         addParameter(p);
     }
+}
+
+// the eight physical knobs in panel order: MASTER (the pot) then SELECT PRESETS ALGORITHM KNOB1..4
+void FM1Processor::createKnobParameters()
+{
     // the emulator's power-on value: emu_fw_init sets emu_hal.master = 724 when the host left it 0
-    master_ = new juce::AudioParameterInt(juce::ParameterID{"master", 1}, "MASTER", 0, 1023, 724);
+    master_ = new juce::AudioParameterInt(juce::ParameterID{"knob_master", 1}, "MASTER", 0, 1023, 724);
     addParameter(master_);
+    static const struct { int role; const char *id, *label, *shortLabel; } K[] = {
+        {EMU_E_SELECT, "knob_select", "SELECT", "SEL"}, {EMU_E_PRESETS, "knob_presets", "PRESETS", "PRE"},
+        {EMU_E_ALGO, "knob_algo", "ALGORITHM", "ALG"},  {EMU_E_K1, "knob_1", "KNOB1", "K1"},
+        {EMU_E_K2, "knob_2", "KNOB2", "K2"},            {EMU_E_K3, "knob_3", "KNOB3", "K3"},
+        {EMU_E_K4, "knob_4", "KNOB4", "K4"}};
+    for (const auto &k : K) {
+        auto *p = new KnobParameter(k.role, k.id, k.label, k.shortLabel);
+        knob_[(size_t)k.role] = p;
+        addParameter(p);
+    }
 }
 
 // ============================================================== Tier 2 ===
@@ -209,21 +225,33 @@ void FM1Processor::bindTier2Locked()
     if (!t2_[0])
         return;                                  // (the constructor: the slots come after the first load)
     const fm1core_t *c = loaded_ ? loaded_->core() : nullptr;
-    const uint32_t n = c && c->params ? std::min<uint32_t>(c->nparams, (uint32_t)kTier2Slots) : 0u;
+    const uint32_t n = c && c->params ? c->nparams : 0u;
+    uint32_t e = 0, visible = 0;
     int meta = 0;
-    for (int i = 0; i < kTier2Slots; i++) {
-        const fm1param_t *e = (uint32_t)i < n ? &c->params[i] : nullptr;
-        t2_[(size_t)i]->bind(e, e && (e->flags & FM1P_META) ? meta++ : -1);
+    t2Bound_ = 0;
+    for (uint32_t i = 0; i < n; i++)
+        visible += !(c->params[i].flags & FM1P_HIDDEN);
+    for (int i = 0; i < kTier2Slots; i++) {          // the visible entries in map order (FM1P_HIDDEN: knob targets)
+        while (e < n && (c->params[e].flags & FM1P_HIDDEN))
+            e++;
+        const fm1param_t *p = e < n ? &c->params[e++] : nullptr;
+        t2_[(size_t)i]->bind(p, p && (p->flags & FM1P_META) ? meta++ : -1);
+        if (p)
+            t2Bound_ = i + 1;
     }
-    t2Bound_ = (int)n;
+    for (KnobParameter *k : knob_)                   // (relative until the first read-back reads knob_target)
+        k->unbindKnob();
     t2Gen_.fetch_add(1);
     t2Reported_.fill(0);
     t2Valid_.fill(false);
     t2Holdoff_.fill(0);
+    knobValid_.fill(false);
+    knobHoldoff_.fill(0);
+    knobSigValid_.fill(false);
     t2EpochValid_ = false;
     t2Sweep_.store(true);
-    if (c && c->nparams > (uint32_t)kTier2Slots)
-        message_ = juce::String(c->name) + ": " + juce::String(c->nparams) + " firmware parameters, " +
+    if (visible > (uint32_t)kTier2Slots)
+        message_ = juce::String(c->name) + ": " + juce::String(visible) + " firmware parameters, " +
                    juce::String(kTier2Slots) + " host slots (build with -DFM1_TIER2_SLOTS)";
 }
 
@@ -232,6 +260,9 @@ void FM1Processor::unbindTier2Locked()
     for (Tier2Parameter *p : t2_)
         if (p)
             p->unbind();
+    for (KnobParameter *k : knob_)
+        if (k)
+            k->unbindKnob();
     t2Bound_ = 0;
     t2Gen_.fetch_add(1);
 }
@@ -260,16 +291,83 @@ void FM1Processor::applyHostParameters()
         t2Valid_[(size_t)i] = true;
         t2Holdoff_[(size_t)i] = (uint8_t)kHoldoffFrames;
     }
+    for (int r = 0; r < kKnobs; r++) {           // the knobs: their target's set(), or detents (relative)
+        KnobParameter *k = knob_[(size_t)r];
+        int32_t v;
+        if (k->isRelative()) {
+            if (k->takeDetents(v, knobDetents_.load())) {
+                dev_->enc(r, v);                 // (as a panel turn: the firmware's own knob code)
+                knobSent_[(size_t)r].fetch_add(v);
+                knobLastTurn_[(size_t)r] = dev_->ms();
+            }
+            continue;
+        }
+        if (!k->takePending(v))
+            continue;
+        if (const fm1param_t *e = k->entry())
+            e->set(v);
+        knobReported_[(size_t)r] = v;
+        knobValid_[(size_t)r] = true;
+        knobHoldoff_[(size_t)r] = (uint8_t)kHoldoffFrames;
+    }
+}
+
+// the seven knobs' targets (the epoch moved, or the first frame after a bind): retarget the ones that changed (which
+// entry, or its range, flags or name: a rewritten cell) and report their values (relabel: no gesture)
+static uint32_t knobSignature(int32_t t, const fm1param_t *e)
+{
+    uint32_t h = 2166136261u;
+    auto mix = [&h](uint32_t v) { h = (h ^ v) * 16777619u; };
+    mix((uint32_t)t);
+    if (e) {
+        mix((uint32_t)e->min);
+        mix((uint32_t)e->max);
+        mix(e->flags);
+        mix((uint32_t)(uintptr_t)e->names);
+        for (const char *s = e->name; s && *s; s++)
+            mix((uint8_t)*s);
+    }
+    return h;
+}
+
+void FM1Processor::retargetKnobs()
+{
+    const fm1core_t *c = dev_->core();
+    for (int r = 0; r < kKnobs; r++) {
+        KnobParameter *k = knob_[(size_t)r];
+        const int32_t t = c->knob_target ? c->knob_target(r) : -1;
+        const fm1param_t *e = t >= 0 && (uint32_t)t < c->nparams ? &c->params[t] : nullptr;
+        const uint32_t sig = knobSignature(e ? t : -1, e);
+        if (knobSigValid_[(size_t)r] && sig == knobSig_[(size_t)r])
+            continue;
+        k->retargetKnob(e);
+        knobHoldoff_[(size_t)r] = 0;
+        if (e) {
+            const int32_t v = e->get();
+            if (!pushTier2(kTier2Slots + r, v, kT2Relabel))
+                continue;                        // (the FIFO full: retried next frame)
+            knobReported_[(size_t)r] = v;
+            knobValid_[(size_t)r] = true;
+        } else {
+            if (!pushTier2(kTier2Slots + r, (int32_t)k->hostSeq(), kKnobNorm))
+                continue;
+            knobValid_[(size_t)r] = false;
+            knobLastTurn_[(size_t)r] = dev_->ms();
+        }
+        knobSig_[(size_t)r] = sig;
+        knobSigValid_[(size_t)r] = true;
+    }
 }
 
 void FM1Processor::readBackParameters()
 {
-    if (!t2Bound_ || !dev_ || dev_->halted())
+    if (!dev_ || dev_->halted())
         return;
     const fm1core_t *c = dev_->core();
-    // the meta slots: the perform mode changed (or the first frame after a bind): their targets
-    if (c->param_epoch) {
-        const uint32_t e = c->param_epoch();
+    // the epoch: a screen, layer, mode, part or engine changed (or the first frame after a bind): the knobs' targets,
+    // the meta slots' targets
+    {
+        const uint32_t e = c->param_epoch ? c->param_epoch() : 0u;
         if (!t2EpochValid_ || e != t2Epoch_) {
             bool ok = true;
             for (int i = 0; i < t2Bound_; i++) {
@@ -287,6 +385,11 @@ void FM1Processor::readBackParameters()
                     ok = false;
                 }
             }
+            if (!t2EpochValid_)
+                knobSigValid_.fill(false);       // (after a bind: every knob announced)
+            retargetKnobs();
+            for (int r = 0; r < kKnobs; r++)
+                ok = ok && knobSigValid_[(size_t)r];
             t2Epoch_ = e;
             t2EpochValid_ = ok;                  // (the FIFO full: retried next frame)
         }
@@ -311,6 +414,33 @@ void FM1Processor::readBackParameters()
             swept = false;                       // (full: what was not reported is retried next frame)
         }
     }
+    for (int r = 0; r < kKnobs; r++) {           // the knobs: a bound one as a slot; a relative one springs back
+        KnobParameter *k = knob_[(size_t)r];
+        if (k->isRelative()) {
+            if (k->relativeOffCentre() && dev_->ms() - knobLastTurn_[(size_t)r] >= KnobParameter::kRecentreMs) {
+                const uint32_t seq = k->hostSeq();
+                if (pushTier2(kTier2Slots + r, (int32_t)seq, kKnobCentre))
+                    k->recentre();               // (no detents: the base moves with the value)
+            }
+            continue;
+        }
+        const fm1param_t *e = k->entry();
+        if (!e)
+            continue;
+        if (!sweep && knobHoldoff_[(size_t)r]) {
+            knobHoldoff_[(size_t)r]--;
+            continue;
+        }
+        const int32_t v = e->get();
+        if (!sweep && knobValid_[(size_t)r] && v == knobReported_[(size_t)r])
+            continue;
+        if (pushTier2(kTier2Slots + r, v, sweep ? kT2Sweep : kT2Change)) {
+            knobReported_[(size_t)r] = v;
+            knobValid_[(size_t)r] = true;
+        } else {
+            swept = false;
+        }
+    }
     if (sweep && swept)
         t2Sweep_.store(false);
 }
@@ -319,9 +449,11 @@ void FM1Processor::drainTier2()
 {
     struct Acc {
         bool any = false, gesture = true;
+        uint8_t kind = kT2Change;
         int32_t v = 0;
     };
-    std::array<Acc, FM1_TIER2_SLOTS> acc{};
+    constexpr int kSlots = FM1_TIER2_SLOTS + EMU_NE - 1;
+    std::array<Acc, kSlots> acc{};
     const uint32_t gen = t2Gen_.load();
     bool any = false, relabel = false;
     for (;;) {
@@ -332,14 +464,15 @@ void FM1Processor::drainTier2()
         auto take = [&](int start, int cnt) {
             for (int k = 0; k < cnt; k++) {
                 const T2Msg &m = t2Buf_[(size_t)(start + k)];
-                if (m.gen != gen || m.slot < 0 || m.slot >= kTier2Slots)
+                if (m.gen != gen || m.slot < 0 || m.slot >= kSlots)
                     continue;                    // (from before a rebind)
                 Acc &a = acc[(size_t)m.slot];
                 a.any = any = true;
                 a.v = m.value;                   // coalesced: the latest
+                a.kind = m.kind;
                 if (m.kind != kT2Change)
                     a.gesture = false;
-                relabel = relabel || m.kind == kT2Relabel;
+                relabel = relabel || m.kind == kT2Relabel || (m.kind == kKnobNorm && m.slot >= kTier2Slots);
             }
         };
         take(s1, n1);
@@ -350,15 +483,27 @@ void FM1Processor::drainTier2()
         return;
     if (relabel)
         updateHostDisplay(ChangeDetails().withParameterInfoChanged(true));
-    for (int i = 0; i < kTier2Slots; i++)
+    auto param = [this](int i) -> Tier2Parameter * {
+        return i < kTier2Slots ? t2_[(size_t)i] : knob_[(size_t)(i - kTier2Slots)];
+    };
+    for (int i = 0; i < kSlots; i++)
         if (acc[(size_t)i].any && acc[(size_t)i].gesture)
-            t2_[(size_t)i]->beginChangeGesture();
-    for (int i = 0; i < kTier2Slots; i++)
-        if (acc[(size_t)i].any)
-            t2_[(size_t)i]->setFromFirmware(acc[(size_t)i].v, false);
-    for (int i = 0; i < kTier2Slots; i++)
+            param(i)->beginChangeGesture();
+    for (int i = 0; i < kSlots; i++) {
+        const Acc &a = acc[(size_t)i];
+        if (!a.any)
+            continue;
+        if (a.kind == kKnobNorm || a.kind == kKnobCentre) {   // relative: 0.5, unless the host turned it since
+            KnobParameter *k = knob_[(size_t)(i - kTier2Slots)];
+            if (k->hostSeq() == (uint32_t)a.v && k->isRelative())
+                k->setNormFromFirmware(0.5f);
+        } else {
+            param(i)->setFromFirmware(a.v, false);
+        }
+    }
+    for (int i = 0; i < kSlots; i++)
         if (acc[(size_t)i].any && acc[(size_t)i].gesture)
-            t2_[(size_t)i]->endChangeGesture();
+            param(i)->endChangeGesture();
 }
 
 juce::String FM1Processor::buttonName(int i) const
@@ -1038,7 +1183,7 @@ void FM1Processor::snapshotPanel()
 
 // ---------------------------------------------------------------- state ---
 // A ValueTree "FM1VST" (binary): stateVersion, core, coreVersion, transpose, midiNotesPlayKeys, keyNotesToFirmware,
-// master, preset, editorW, editorH, bigLcd, a child "theme" (name base membrane knob, and bed / label when the theme
+// master, preset, editorW, editorH, bigLcd, knobDetents, a child "theme" (name base membrane knob, and bed / label when the theme
 // sets them; "#RRGGBB") and "flash": the image gzip-compressed (a MemoryBlock property; absent when the instance
 // never had one, i.e. a fresh flash).
 void FM1Processor::getStateInformation(juce::MemoryBlock &dest)
@@ -1062,6 +1207,7 @@ void FM1Processor::getStateInformation(juce::MemoryBlock &dest)
         t.setProperty("editorH", editorH_.load(), nullptr);
     }
     t.setProperty("bigLcd", bigLcd_.load(), nullptr);
+    t.setProperty("knobDetents", knobDetents_.load(), nullptr);
     const Theme th = getTheme();
     juce::ValueTree tt("theme");
     tt.setProperty("name", th.name, nullptr);
@@ -1106,6 +1252,7 @@ void FM1Processor::setStateInformation(const void *data, int sizeInBytes)
     if (t.hasProperty("editorW") && t.hasProperty("editorH"))
         setEditorSize((int)t.getProperty("editorW"), (int)t.getProperty("editorH"));
     bigLcd_.store((bool)t.getProperty("bigLcd", false));
+    setKnobDetents((int)t.getProperty("knobDetents", KnobParameter::kDefaultDetents));
     const juce::String id = t.getProperty("core", "choralroot").toString();
     std::optional<std::vector<uint8_t>> bytes;
     if (const juce::MemoryBlock *z = t.getProperty("flash").getBinaryData()) {

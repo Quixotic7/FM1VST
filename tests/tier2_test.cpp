@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The plugin's Tier 2 parameters (FM1-VST-PLAN.md 4.5), headless, on the plugin's shared code: the slots and their
 // names, a host write reaching the firmware (and not echoed back), a panel turn reaching the host (with a gesture),
-// the full report after a state restore and a preset load (no gestures), a meta slot ("Perf Knob 1") relabelled when
-// the perform mode changes on the panel, the value texts; (6) after switchCore("felucca"): Felucca's map on the same
-// slots, a host write, the part selected on the panel (ALGORITHM) relabelling the HOME knob and engine slots (an engine
-// slot's range follows the engine: ANALOG's WAVE 5 values, FM6's ALG 33). The message thread's feedback timer is not running here
+// the full report after a state restore and a preset load (no gestures), the perform mode changed on the panel, the
+// value texts; (6) after switchCore("felucca"): Felucca's map on the same slots, a host write, the part selected on
+// the panel (ALGORITHM) relabelling the engine slots (an engine slot's range follows the engine: ANALOG's WAVE 5
+// values, FM6's ALG 33). The eight knob parameters in front of the slots: knob_test. The message thread's feedback timer is not running here
 // (no message loop): the test calls the drain itself between blocks. FM1EMU_HOME points under the build.
 #include <cstdio>
 #include <cstdlib>
@@ -106,7 +106,7 @@ int main()
                 unused += nm == "(unused)";
             namesOk = namesOk && nm.isNotEmpty() && (i < n) == (nm != "(unused)");
         }
-        check(n == 77 && p.getParameters().size() == FM1Processor::kTier2Slots + 42,
+        check(n == 73 && p.getParameters().size() == 8 + FM1Processor::kTier2Slots + 41,
               std::to_string(n) + " of " + std::to_string(FM1Processor::kTier2Slots) + " slots bound (ChoralRoot's map), " +
                   std::to_string(p.getParameters().size()) + " host parameters in all");
         check(namesOk && unused == FM1Processor::kTier2Slots - n, "the slots beyond the map are \"(unused)\" (" +
@@ -133,10 +133,9 @@ int main()
         }
         check(reported == n && gestures == 0, "after the power-on the first drain reports every bound slot (" +
                                                   std::to_string(reported) + "), no gestures");
-        check(p.tier2Param(0)->getName(100) == "K1 Strum Rate" && p.tier2Param(1)->getName(100) == "K2 Strum Dir" &&
-                  w.infoChanged > 0,
-              "the meta slots took their targets: \"" + p.tier2Param(0)->getName(100).toStdString() + "\", \"" +
-                  p.tier2Param(1)->getName(100).toStdString() + "\" (parameterInfoChanged announced)");
+        check(p.tier2Param(0)->getName(100) == "Voicing" && p.tier2Param(1)->getName(100) == "Tempo",
+              "slot 0 \"" + p.tier2Param(0)->getName(100).toStdString() + "\", slot 1 \"" +
+                  p.tier2Param(1)->getName(100).toStdString() + "\" (the map's first visible entries)");
     }
 
     Tier2Parameter *tempo = slotNamed(p, "Tempo");
@@ -198,11 +197,8 @@ int main()
               "Arp Division's value strings: 12, the last \"1/32T\"");
     }
 
-    // ---- (4) the perform mode changed on the panel: Perf Knob 1 relabels and reports its new target's value
+    // ---- (4) the perform mode changed on the panel: "Perform Mode" reports it; a host write of Arp Division
     {
-        Tier2Parameter *k1 = p.tier2Param(0);
-        const juce::String before = k1->getName(100);
-        const int32_t arpDiv = ad->entry()->get();
         w.clear();
         // PERF (ARP) held 500 ms: the perform picker locks open; SELECT +3: Arpeggiate (scripts/cr_perf_row.txt)
         p.buttonParam(EMU_B_ARP)->setValueNotifyingHost(1.0f);
@@ -212,24 +208,15 @@ int main()
         p.deviceForTest()->enc(EMU_E_SELECT, 3);
         h.run_ms(400);
         p.drainTier2();
-        const juce::String after = k1->getName(100);
-        check(before == "K1 Strum Rate" && after == "K1 Arp Division" && w.infoChanged > 0,
-              "PERF held + SELECT +3 (Arpeggiate): slot 0 \"" + before.toStdString() + "\" -> \"" + after.toStdString() +
-                  "\", parameterInfoChanged announced");
-        check(w.changes.count(idx(k1)) && k1->plainValue() == arpDiv && k1->getNumSteps() == 12 &&
-                  k1->getCurrentValueAsText() == ad->getCurrentValueAsText(),
-              "  ... its value is Arp Division's (" + std::to_string(k1->plainValue()) + ", \"" +
-                  k1->getCurrentValueAsText().toStdString() + "\"), its range 12 steps");
         Tier2Parameter *pm = slotNamed(p, "Perform Mode");
-        check(pm && pm->plainValue() == 3 && pm->getCurrentValueAsText() == "Arpeggiate",
-              "  ... and \"Perform Mode\" reports Arpeggiate");
-        // the host turns Perf Knob 1: Arp Division follows, and its own slot reports it
-        k1->setValueNotifyingHost(k1->toNorm(2));
+        check(pm && pm->plainValue() == 3 && pm->getCurrentValueAsText() == "Arpeggiate" && w.changes.count(idx(pm)),
+              "PERF held + SELECT +3: \"Perform Mode\" reports Arpeggiate");
+        ad->setValueNotifyingHost(ad->toNorm(2));
         w.clear();
         h.run_ms(100);
         p.drainTier2();
-        check(ad->entry()->get() == 2 && ad->plainValue() == 2 && w.changes.count(idx(ad)) && !w.changes.count(idx(k1)),
-              "host Perf Knob 1 = 2: the firmware's Arp Division 2, reported on \"Arp Division\", not echoed on K1");
+        check(ad->entry()->get() == 2 && ad->plainValue() == 2 && !w.changes.count(idx(ad)),
+              "host Arp Division = 2: the firmware's Arp Division 2, not echoed");
         p.deviceForTest()->buttons_tap(1u << EMU_B_OCTDN);   // (OCT-: the picker closed)
         h.run_ms(200);
         p.drainTier2();
@@ -253,7 +240,7 @@ int main()
         }
         check(reported == n && gestures == 0, "setStateInformation: every bound slot reported (" + std::to_string(reported) +
                                                   "), no gestures");
-        check(tempo->plainValue() == 120 && ad->plainValue() == 2 && p.tier2Param(0)->getName(100) == "K1 Arp Division",
+        check(tempo->plainValue() == 120 && ad->plainValue() == 2 && p.tier2Param(0)->getName(100) == "Voicing",
               "  ... the state's values: Tempo " + std::to_string(tempo->plainValue()) + ", Arp Division " +
                   std::to_string(ad->plainValue()) + ", slot 0 \"" + p.tier2Param(0)->getName(100).toStdString() + "\"");
 
@@ -300,13 +287,16 @@ int main()
         const int nf = p.tier2Bound();
         const fm1core_t *c = p.deviceForTest()->core();
         Tier2Parameter *k1 = p.tier2Param(0), *e1 = slotNamed(p, "E1 WAVE"), *lvl = slotNamed(p, "Level");
+        int visible = 0;
+        for (uint32_t i = 0; i < c->nparams; i++)
+            visible += !(c->params[i].flags & FM1P_HIDDEN);
         std::printf("        (felucca's live page: ");
         for (int i = 0; i < 8; i++)
             std::printf("%s%s", i ? " | " : "", p.tier2Param(i)->getName(100).toRawUTF8());
         std::printf(")\n");
-        check(nf == (int)c->nparams && k1->getName(100) == "K1 E5 CUT" && e1 && lvl && w.infoChanged > 0,
-              std::to_string(nf) + " slots bound to Felucca's map; slot 0 \"" + k1->getName(100).toStdString() +
-                  "\" (the HOME knob: ANALOG's CUT), \"E1 WAVE\", \"Level\"");
+        check(nf == visible && k1->getName(100) == "Level" && e1 && lvl && w.infoChanged > 0,
+              std::to_string(nf) + " slots bound to Felucca's visible map; slot 0 \"" + k1->getName(100).toStdString() +
+                  "\", \"E1 WAVE\", \"Level\"");
         if (e1 && lvl) {
             check(e1->getNumSteps() == 5 && e1->isDiscrete() && e1->getCurrentValueAsText() == "SAW",
                   "E1 WAVE: 5 values, discrete, \"" + e1->getCurrentValueAsText().toStdString() + "\"");
@@ -318,22 +308,23 @@ int main()
             p.deviceForTest()->enc(EMU_E_ALGO, 1);       // ALGORITHM +1: part 2 (FM6)
             h.run_ms(200);
             p.drainTier2();
-            check(k1->getName(100) == "K1 E3 MLVL" && slotNamed(p, "E1 ALG") == e1 && e1->getNumSteps() == 33 &&
-                      w.infoChanged > 0 && w.changes.count(idx(lvl)),
-                  "ALGORITHM +1 (part 2, FM6): slot 0 \"" + k1->getName(100).toStdString() + "\", the engine slot \"" +
-                      e1->getName(100).toStdString() + "\" with " + std::to_string(e1->getNumSteps()) +
-                      " steps, parameterInfoChanged, Level reports part 2's (" + std::to_string(lvl->plainValue()) + ")");
-            k1->setValueNotifyingHost(k1->toNorm(20));
-            h.run_ms(60);
-            p.drainTier2();
+            check(slotNamed(p, "E1 ALG") == e1 && e1->getNumSteps() == 33 && w.infoChanged > 0 && w.changes.count(idx(lvl)),
+                  "ALGORITHM +1 (part 2, FM6): the engine slot \"" + e1->getName(100).toStdString() + "\" with " +
+                      std::to_string(e1->getNumSteps()) + " steps, parameterInfoChanged, Level reports part 2's (" +
+                      std::to_string(lvl->plainValue()) + ")");
             Tier2Parameter *mlvl = slotNamed(p, "E3 MLVL");
-            check(mlvl && mlvl->entry()->get() == 20 && k1->plainValue() == 20,
-                  "host K1 = 20: FM6's MLVL is 20 (\"" + (mlvl ? mlvl->getCurrentValueAsText().toStdString() : "?") + "\")");
+            if (mlvl) {
+                mlvl->setValueNotifyingHost(mlvl->toNorm(20));
+                h.run_ms(60);
+                p.drainTier2();
+            }
+            check(mlvl && mlvl->entry()->get() == 20 && mlvl->plainValue() == 20,
+                  "host E3 MLVL = 20: FM6's MLVL is 20 (\"" + (mlvl ? mlvl->getCurrentValueAsText().toStdString() : "?") + "\")");
         }
         check(p.switchCore("choralroot"), "switchCore(\"choralroot\"): back");
         h.run_ms(700);
         p.drainTier2();
-        check(p.tier2Bound() == n && p.tier2Param(0)->getName(100).startsWith("K1 "), "ChoralRoot's map again (" +
+        check(p.tier2Bound() == n && p.tier2Param(0)->getName(100) == "Voicing", "ChoralRoot's map again (" +
                                                                                         p.tier2Param(0)->getName(100).toStdString() + ")");
     }
 

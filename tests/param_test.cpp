@@ -74,6 +74,7 @@ static std::string flags(uint32_t f)
     s += f & FM1P_PERSIST ? 'P' : '-';
     s += f & FM1P_SOUND ? 'S' : '-';
     s += f & FM1P_EDITOR ? 'X' : '-';
+    s += f & FM1P_HIDDEN ? 'H' : '-';
     return s;
 }
 
@@ -119,23 +120,23 @@ int main(int argc, char **argv)
     };
 
     // ---- the table, the names
-    std::printf("\n  %-3s %-16s %6s %6s %6s %-5s %s\n", "#", "name", "min", "max", "def", "flag", "path (set)");
+    std::printf("\n  %-3s %-16s %6s %6s %6s %-6s %s\n", "#", "name", "min", "max", "def", "flag", "path (set)");
     std::set<std::string> names;
     size_t longest = 0;
+    uint32_t visible = 0;
     bool fnOk = true;
     for (uint32_t i = 0; i < n; i++) {
-        std::printf("  %-3u %-16s %6d %6d %6d %-5s %s\n", i, P[i].name, P[i].min, P[i].max, P[i].def,
+        std::printf("  %-3u %-16s %6d %6d %6d %-6s %s\n", i, P[i].name, P[i].min, P[i].max, P[i].def,
                     flags(P[i].flags).c_str(), P[i].path ? P[i].path : "");
         names.insert(P[i].name);
+        visible += !(P[i].flags & FM1P_HIDDEN);
         longest = std::max(longest, std::strlen(P[i].name));
         fnOk = fnOk && P[i].get && P[i].set && P[i].text && P[i].min <= P[i].def && P[i].def <= P[i].max &&
                (!(P[i].flags & FM1P_META) == !P[i].target);
     }
-    if (cr)
-        std::printf("  %u parameters (FM1_EXPOSE_EDITOR %s)\n\n", n, n > 80 ? "on" : "off");
-    else
-        std::printf("  %u parameters\n\n", n);
-    check(n <= 86, "the map fits the plugin's 86 Tier 2 slots");
+    std::printf("  %u parameters, %u with a host slot (the rest FM1P_HIDDEN: knob targets only)\n\n", n, visible);
+    // (plugin/Tier2Parameter.h FM1_TIER2_SLOTS: 8 knobs + 79 + the 41 panel booleans = Live's 128)
+    check(visible <= 79, "the visible entries fit the plugin's 79 Tier 2 slots (" + std::to_string(visible) + ")");
     check(names.size() == n, "the names are unique");
     check(longest <= 16, "no name longer than 16 characters (longest " + std::to_string(longest) + ")");
     check(fnOk, "every entry has get / set / text, min <= def <= max, target exactly on the meta entries");
@@ -143,8 +144,32 @@ int main(int argc, char **argv)
     // ---- boot
     Device dev(c);
     dev.boot_from(nullptr, 0);
+    auto knob = [&](int role) -> int {               // what that knob turns now (after the epoch), -2: no hook
+        if (!c->knob_target)
+            return -2;
+        c->param_epoch();
+        return c->knob_target(role);
+    };
+    auto tname = [&](int t) -> std::string { return t >= 0 && (uint32_t)t < n ? P[t].name : t == -1 ? "(turn)" : "?"; };
     run(dev, 600);
     check(dev.booted() && !dev.halted(), "booted on a fresh flash, 600 ms");
+    {   // ---- the physical knobs on the boot screen: every role names an entry or -1 (relative); MASTER -1
+        static const char *const ROLE[EMU_NE] = {"SELECT", "ALGORITHM", "PRESETS", "KNOB1", "KNOB2", "KNOB3", "KNOB4",
+                                                 "MASTER"};
+        std::string line;
+        bool ok = c->knob_target != nullptr;
+        for (int r = 0; r < EMU_NE; r++) {
+            const int t = knob(r);
+            ok = ok && t >= -1 && t < (int)n && (r != EMU_E_MASTER || t == -1);
+            line += std::string(r ? ", " : "") + ROLE[r] + " " + tname(t);
+        }
+        std::printf("        (boot screen: %s)\n", line.c_str());
+        check(ok, "knob_target: every role on the boot screen is a map entry or -1 (MASTER -1)");
+        uint32_t hidden = 0;
+        for (uint32_t i = 0; i < n; i++)
+            hidden += (P[i].flags & FM1P_HIDDEN) != 0;
+        check(hidden > 0, std::to_string(hidden) + " FM1P_HIDDEN entries (knob targets only; set / get below as every entry)");
+    }
 
     // ---- the defaults are what the firmware powers on with
     {
@@ -287,29 +312,23 @@ int main(int argc, char **argv)
         }
     }
 
-    // ---- the meta entries follow the perform mode
+    // ---- the knobs follow the screen: the view's KNOB 3 is the perform mode's first knob
     if (cr) {
-        const int pm = find("Perform Mode"), k1 = find("Perf Knob 1"), ad = find("Arp Division"), sr = find("Strum Rate");
+        const int pm = find("Perform Mode"), ad = find("Arp Division"), sr = find("Strum Rate");
+        const int v1 = knob(EMU_E_K1), sel = knob(EMU_E_SELECT), pre = knob(EMU_E_PRESETS);
         const uint32_t e0 = c->param_epoch();
-        const int t0 = P[k1].target();
+        const int t0 = knob(EMU_E_K3);
         P[pm].set(3);                                     // Arpeggiate
         run(dev, 30);
         const uint32_t e1 = c->param_epoch();
-        const int t1 = P[k1].target();
-        P[ad].set(8);
-        run(dev, 20);
-        const int32_t viaMeta = P[k1].get();
-        P[k1].set(4);
-        run(dev, 20);
-        const int32_t viaEntry = P[ad].get();
-        check(t0 == sr && t1 == ad && e1 != e0 && viaMeta == 8 && viaEntry == 4,
-              "Perf Knob 1: Strum Rate, then (Perform Mode Arpeggiate, the epoch moved " + std::to_string(e0) + " -> " +
-                  std::to_string(e1) + ") Arp Division; get / set act on it");
+        const int t1 = knob(EMU_E_K3);
+        check(v1 == find("Voicing") && sel == find("Tempo") && pre == -1 && t0 == sr && t1 == ad && e1 != e0,
+              "the view: KNOB1 Voicing, SELECT Tempo, PRESETS (turn); KNOB3 " + tname(t0) + ", then (Perform Mode "
+              "Arpeggiate, the epoch moved " + std::to_string(e0) + " -> " + std::to_string(e1) + ") " + tname(t1));
         P[pm].set(4);                                     // Arp 2 Octaves: the same mode
         run(dev, 30);
         check(c->param_epoch() == e1, "Arp 2 Octaves (the same mode): the epoch stays");
         Capture quiet(fwlog + ".4");
-        P[ad].set(P[ad].def);
         P[pm].set(0);
         run(dev, 30);
         P[find("Perform")].set(0);
@@ -318,35 +337,36 @@ int main(int argc, char **argv)
     }
     // ---- Felucca / Melodee: the meta entries follow the selected part and its engine
     if (fam) {
-        const int part = find("Part"), h1 = find("Home Knob 1"), e1 = find("E1");   // ("E1": the name before boot)
+        const int part = find("Part"), e1 = find("E1");   // ("E1": the name before boot)
         int ed1 = -1;
         for (uint32_t i = 0; i < n; i++)
             if (!std::strncmp(P[i].name, "E1 ", 3))
                 ed1 = (int)i;
         const uint32_t ep0 = c->param_epoch();
         const std::string name0 = ed1 >= 0 ? P[ed1].name : "?";
-        const int t0 = h1 >= 0 ? P[h1].target() : -2;
-        const std::string tn0 = t0 >= 0 ? P[t0].name : "?";
-        check(part >= 0 && h1 >= 0 && ed1 >= 0 && e1 < 0, "Part, Home Knob 1 and the engine entries (\"" + name0 +
-                                                             "\") are in the map");
-        if (part >= 0 && h1 >= 0 && ed1 >= 0) {
+        const int t0 = knob(EMU_E_K1);                 // HOME: the engine's first knob
+        const std::string tn0 = tname(t0);
+        check(part >= 0 && t0 >= 0 && ed1 >= 0 && e1 < 0 && knob(EMU_E_ALGO) == part,
+              "Part and the engine entries (\"" + name0 + "\") are in the map; HOME's KNOB1 is " + tn0 +
+                  ", ALGORITHM is Part");
+        if (part >= 0 && t0 >= 0 && ed1 >= 0) {
             const int32_t lvl0 = P[find("Level")].get();
             P[part].set(1);                                // part 2 (FM6 on a fresh unit)
             run(dev, 30);
             const uint32_t ep1 = c->param_epoch();
-            const int t1 = P[h1].target();
+            const int t1 = knob(EMU_E_K1);
             const std::string name1 = P[ed1].name, tn1 = t1 >= 0 ? P[t1].name : "?";
             std::printf("        (part 1: E1 \"%s\", K1 -> \"%s\"; part 2: E1 \"%s\" %d..%d, K1 -> \"%s\"; epoch %u -> %u)\n",
                         name0.c_str(), tn0.c_str(), name1.c_str(), P[ed1].min, P[ed1].max, tn1.c_str(), ep0, ep1);
             check(P[part].get() == 1 && ep1 != ep0 && name1 != name0 && t1 >= 0,
-                  "Part 2: the epoch moved, the engine entries renamed (\"" + name1 + "\"), Home Knob 1 retargeted (\"" +
-                      tn1 + "\")");
-            // the HOME knob acts on its target
-            const int32_t want = (P[t1].min + P[t1].max) / 2 + 1;
-            P[h1].set(want);
-            run(dev, 20);
-            check(P[t1].get() == want && P[h1].get() == want, "Home Knob 1 set " + std::to_string(want) +
-                                                                  ": its target reads it");
+                  "Part 2: the epoch moved, the engine entries renamed (\"" + name1 + "\"), HOME's KNOB1 now \"" +
+                      tn1 + "\"");
+            // the panel's KNOB 1 turns what knob_target names
+            const int32_t before = P[t1].get();
+            dev.enc(EMU_E_K1, before < P[t1].max ? 1 : -1);
+            run(dev, 40);
+            check(P[t1].get() != before, "the panel's KNOB1 +-1 on HOME moves " + tn1 + " (" + std::to_string(before) +
+                                             " -> " + std::to_string(P[t1].get()) + ")");
             P[t1].set(P[t1].def);
             P[find("Level")].set(lvl0 + 1 <= P[find("Level")].max ? lvl0 + 1 : lvl0 - 1);
             run(dev, 20);
