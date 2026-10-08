@@ -242,13 +242,49 @@ void KnobParameter::nudge(float x)
     endChangeGesture();
 }
 
+void KnobParameter::setStepped(int steps)
+{
+    steps = steps > 0 ? juce::jlimit(2, 256, steps) : 0;
+    if (steps_.exchange(steps, std::memory_order_acq_rel) == steps)
+        return;
+    stepAcc_.store(0);
+    pending_.store(false);
+    relPending_.store(false);
+    relBase_.store((double)value_.load());               // (back in Absolute: a relative change counts from here)
+}
+
+bool KnobParameter::takeSteps(int32_t &detents)
+{
+    const int32_t d = stepAcc_.exchange(0, std::memory_order_acq_rel);
+    if (!d || steps() <= 0)
+        return false;
+    detents = d;
+    return true;
+}
+
+int32_t KnobParameter::stepDelta(float x0, float x1, int steps)
+{
+    const double a = juce::jlimit(0.0, 1.0, (double)x0), b = juce::jlimit(0.0, 1.0, (double)x1);
+    for (const int g : {steps - 1, steps}) {
+        const double t = b * g;
+        if (std::abs(t - std::round(t)) < 0.02)
+            return (int32_t)std::lround(t) - (int32_t)std::lround(a * g);
+    }
+    return (int32_t)std::lround((b - a) * ((double)steps - 0.5));
+}
+
 void KnobParameter::setValue(float x)
 {
     value_.store(x);
-    hostValue_.store(x);
+    const float before = hostValue_.exchange(x);
     if (tl_fromFirmware)
         return;
     hostSeq_.fetch_add(1);
+    if (const int n = steps(); n > 0) {                   // Stepped: clicks, whatever the knob turns
+        if (const int32_t d = stepDelta(before, x, n))
+            stepAcc_.fetch_add(d, std::memory_order_acq_rel);
+        return;
+    }
     if (isRelative()) {
         relPending_.store(true, std::memory_order_release);
         return;

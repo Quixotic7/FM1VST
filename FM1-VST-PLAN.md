@@ -236,6 +236,23 @@ is the pot (absolute 0..1023) everywhere.
   of device time without a host change the parameter is re-centred to 0.5 (reported without a gesture;
   a re-centre never produces detents). ChoralRoot's sound lists (PRESETS: the chord sound, ALGORITHM:
   the bass sound) stay relative: their length follows the engine and the user's presets.
+- **Stepped encoders (a setting: "Encoders: Absolute / Stepped", "Steps" 8..64, default 24; in the
+  state).** The Roto-Control can make a knob click in 24 steps, which feels like the FM-1's detented
+  encoders, but each click then moves the parameter 1/24 of its travel: absolute, one click on Tempo
+  (20..300) is about 12 BPM, and a short range does nothing for several clicks, then jumps. In Stepped
+  mode the seven encoder parameters (not Knob Master: it is the pot, absolute always) take a host write
+  as clicks: the change against the host's previous value (what it last wrote or was told: where the
+  motor sits), in steps, becomes that many detents of `Device::enc`, the panel's path, for every
+  target, bound or relative, menus included, exactly as the real encoder. The quantisation of the
+  controller is unknown, so a value on the k/(N-1) grid (0 and 1 both steps) counts as that grid's index
+  against the previous value's index on the same grid, likewise on the k/N grid, and a value on neither
+  (a controller adding 1/N where it sits) counts its distance in steps (`KnobParameter::stepDelta`); a
+  value echoed back quantised to either grid is therefore 0 clicks. The firmware's value is then pushed
+  to the host as any value change (inside a gesture only for a turn on the unit; else without one, with
+  the VST3 re-read), always at its exact place, so the next click is +-1 from where the motor was put
+  and a long range never runs out of travel; a relative target re-centres after 400 ms as before (no
+  clicks). The settle window still drops writes (no detents) and the knob is told its value again, from
+  which the next click counts. Switching the mode drops pending writes and turns nothing.
 
 The named parameters (Tier 2 below) are an **opt-in**, `-DFM1_TIER2_SLOTS=79` (default 0): with them a
 specific parameter can be mapped directly whatever the screen shows, at the price that every firmware

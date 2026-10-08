@@ -281,6 +281,23 @@ FM1Editor::FM1Editor(FM1Processor &p)
                            "presses.");
     buttonMode_.onChange = [this] { proc_.setButtonMode(buttonMode_.getSelectedId() - 1); };
 
+    addAndMakeVisible(encMode_);
+    for (int m = 0; m < 2; m++)
+        encMode_.addItem("Encoders: " + FM1Processor::encoderModeName(m), m + 1);
+    encMode_.setSelectedId(proc_.getEncoderMode() + 1, juce::dontSendNotification);
+    encMode_.setTooltip("What the seven encoder parameters (Knob Select .. Knob 4) take from the host. Absolute: the "
+                        "value of what the knob turns now. Stepped: a controller whose knobs click in steps (a "
+                        "Roto-Control knob set to 24 steps): each click is one detent of the FM-1's encoder, as on "
+                        "the unit (Tempo 1 BPM per click, a menu one row), and the firmware's value is sent back. "
+                        "Knob Master (the pot) is always absolute.");
+    encMode_.onChange = [this] { proc_.setEncoderMode(encMode_.getSelectedId() - 1); };
+    addAndMakeVisible(encSteps_);
+    for (int n = FM1Processor::kMinEncSteps; n <= FM1Processor::kMaxEncSteps; n++)
+        encSteps_.addItem(juce::String(n) + " steps", n);
+    encSteps_.setSelectedId(proc_.getEncoderSteps(), juce::dontSendNotification);
+    encSteps_.setTooltip("Stepped: the controller's steps per full turn of a knob (the Roto-Control's step setting)");
+    encSteps_.onChange = [this] { proc_.setEncoderSteps(encSteps_.getSelectedId()); };
+
     addAndMakeVisible(notesPlayKeys_);
     notesPlayKeys_.setToggleState(proc_.getMidiNotesPlayKeys(), juce::dontSendNotification);
     notesPlayKeys_.onClick = [this] { proc_.setMidiNotesPlayKeys(notesPlayKeys_.getToggleState()); };
@@ -305,7 +322,7 @@ FM1Editor::FM1Editor(FM1Processor &p)
 
     // the bar's controls never take the keyboard focus: a click on them leaves the computer keys on the panel
     for (juce::Component *c : std::initializer_list<juce::Component *>{
-             &cores_, &presets_, &transpose_, &themes_, &buttonMode_, &save_, &saveAs_, &rename_, &delete_, &reset_,
+             &cores_, &presets_, &transpose_, &themes_, &buttonMode_, &encMode_, &encSteps_, &save_, &saveAs_, &rename_, &delete_, &reset_,
              &export_, &import_, &power_, &bigLcd_, &notesPlayKeys_, &keyNotesToFw_}) {
         c->setWantsKeyboardFocus(false);
         c->setMouseClickGrabsKeyboardFocus(false);
@@ -362,6 +379,10 @@ void FM1Editor::resized()
     transpose_.setBounds(row2.removeFromLeft(130));
     row2.removeFromLeft(4);
     buttonMode_.setBounds(row2.removeFromLeft(190));
+    row2.removeFromLeft(4);
+    encMode_.setBounds(row2.removeFromLeft(160));
+    row2.removeFromLeft(4);
+    encSteps_.setBounds(row2.removeFromLeft(88));
     row2.removeFromLeft(4);
     notesPlayKeys_.setBounds(row2.removeFromLeft(160));
     keyNotesToFw_.setBounds(row2.removeFromLeft(225));
@@ -528,6 +549,11 @@ void FM1Editor::timerCallback()
         transpose_.setSelectedId(proc_.getTranspose() + 3, juce::dontSendNotification);
     if (buttonMode_.getSelectedId() != proc_.getButtonMode() + 1)
         buttonMode_.setSelectedId(proc_.getButtonMode() + 1, juce::dontSendNotification);
+    if (encMode_.getSelectedId() != proc_.getEncoderMode() + 1)
+        encMode_.setSelectedId(proc_.getEncoderMode() + 1, juce::dontSendNotification);
+    if (encSteps_.getSelectedId() != proc_.getEncoderSteps())
+        encSteps_.setSelectedId(proc_.getEncoderSteps(), juce::dontSendNotification);
+    encSteps_.setEnabled(proc_.getEncoderMode() == FM1Processor::kEncStepped);
     if (keyNotesToFw_.getToggleState() != proc_.getKeyNotesToFirmware())
         keyNotesToFw_.setToggleState(proc_.getKeyNotesToFirmware(), juce::dontSendNotification);
     if (notesPlayKeys_.getToggleState() != proc_.getMidiNotesPlayKeys())

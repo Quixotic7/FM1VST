@@ -39,6 +39,9 @@
 //                      relative knob's change becomes detents (KnobParameter::takeDetents, knobDetents() per full
 //                      travel) sent to the device's encoder (Device::enc, as a panel turn); kRecentreMs of device time
 //                      after the last one the read-back springs it back to 0.5 (no detents, no gesture).
+//                      Encoders: Stepped (setEncoderMode): every write of the seven encoder knobs, bound or relative,
+//                      is clicks (KnobParameter::takeSteps) sent as detents (Device::enc); the read-back pushes the
+//                      target's new value back, and the next click counts from it.
 //   firmware -> host   readBackParameters() (audio thread, devLock_ held, once per device UI frame: Device's
 //                      between hook with frame == true, i.e. every 15 ms of device time right before frame()) calls
 //                      get() on every bound slot and knob and pushes what differs from the last reported value into a
@@ -223,6 +226,22 @@ public:
     // a relative knob's detents per full travel of the host value (the Roto-Control's 0..1; stored in the state)
     int getKnobDetents() const { return knobDetents_.load(); }
     void setKnobDetents(int n) { knobDetents_.store(juce::jlimit(4, 256, n)); }
+    // what the seven encoder parameters (SELECT PRESETS ALGORITHM KNOB1..4; never Knob Master, the pot) take from the
+    // host (stored in the state; the editor's "Encoders"):
+    //   Absolute     (default) a write is the value of what the knob turns now (a relative knob: its change x
+    //                knobDetents per travel, as detents)
+    //   Stepped      a write is clicks of a stepped controller (a Roto-Control knob set to getEncoderSteps() steps,
+    //                feeling like the FM-1's detents): its change in steps (KnobParameter::stepDelta) is that many
+    //                detents of the device's encoder (Device::enc, the panel's path), bound or relative; the firmware's
+    //                value is pushed back so the next click counts from where the motor was put
+    // A switch drops the old mode's pending writes; nothing is turned by the switch itself.
+    enum EncoderMode { kEncAbsolute = 0, kEncStepped = 1 };
+    int getEncoderMode() const { return encMode_.load(); }
+    void setEncoderMode(int m);
+    int getEncoderSteps() const { return encSteps_.load(); }
+    void setEncoderSteps(int n);
+    static juce::String encoderModeName(int m);      // "Absolute" "Stepped"
+    static constexpr int kDefaultEncSteps = 24, kMinEncSteps = 8, kMaxEncSteps = 64;
     // what the btn_* host parameters do to the device's buttons (stored in the state; the editor's "Button params"):
     //   Tap          (default) a rising edge (value from < 0.5 to >= 0.5) presses the button for getButtonTapMs()
     //                of device time, then releases it; the falling edge does nothing. A rising edge while a tap is
@@ -418,6 +437,8 @@ private:
     // the button parameters' edges (audio thread): the values at the last block start, the Toggle-hold state, the
     // Tap presses counted down per device ms (tickTaps, from the between hook)
     std::atomic<int> btnMode_{kButtonTap}, btnTapMs_{kDefaultTapMs};
+    std::atomic<int> encMode_{kEncAbsolute}, encSteps_{kDefaultEncSteps};
+    void applyEncoderMode();                         // the knobs' setStepped from encMode_ / encSteps_
     int btnModeCur_ = -1;                            // -1: take the values as they are at the next block (no edge)
     uint32_t btnPrev_ = 0, btnToggled_ = 0, tapHeld_ = 0, tapBusy_ = 0;
     std::array<uint16_t, EMU_NB> tapLeft_{}, tapGap_{};

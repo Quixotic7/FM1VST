@@ -311,6 +311,27 @@ void FM1Processor::applyHostParameters()
         const bool settling = knobSettling_[(size_t)r] && dev_->ms() - knobRetargetMs_[(size_t)r] < kSettleMs;
         if (!settling)
             knobSettling_[(size_t)r] = false;
+        if (k->steps() > 0) {                    // Stepped: the host's clicks are detents, whatever the knob turns
+            if (!k->takeSteps(v))
+                continue;
+            if (settling) {                      // (dropped: the host is told the knob's value, it counts from that)
+                if (k->isRelative()) {
+                    k->recentre();
+                    pushTier2(kTier2Slots + r, (int32_t)k->hostSeq(), kKnobCentre);
+                } else {
+                    knobValid_[(size_t)r] = false;
+                    knobHoldoff_[(size_t)r] = 0;
+                }
+                knobDropped_[(size_t)r].fetch_add(1);
+                continue;
+            }
+            dev_->enc(r, v);                     // (the firmware's own knob code, as the real encoder's detents)
+            hostEnc_[(size_t)r] += v;            // (not a device turn: no gesture when its value is pushed back)
+            knobSent_[(size_t)r].fetch_add(v);
+            knobLastTurn_[(size_t)r] = dev_->ms();
+            knobHoldoff_[(size_t)r] = 0;         // (the read-back pushes the new value: the motor goes there)
+            continue;
+        }
         if (k->isRelative()) {
             if (settling) {
                 if (k->takeDetents(v, knobDetents_.load()) || k->relativeOffCentre()) {
@@ -600,7 +621,10 @@ void FM1Processor::drainTier2()
             } else if (!k->isRelative()) {
                 // a change: unless the host's value is that step already; a relabel or the sweep: unless the host has
                 // exactly that value (the old one means another range)
-                const bool same = a.kind == kT2Change ? k->toPlain(k->hostValue()) == a.v : juce::exactlyEqual(k->toNorm(a.v), k->hostValue());
+                // (Stepped: always the exact place, so the controller's next click counts from the firmware's value)
+                const bool same = a.kind == kT2Change && k->steps() <= 0
+                                      ? k->toPlain(k->hostValue()) == a.v
+                                      : juce::exactlyEqual(k->toNorm(a.v), k->hostValue());
                 if (!same) {
                     k->setFromFirmware(a.v, a.gesture);
                     quiet = quiet || !a.gesture;
@@ -1221,6 +1245,28 @@ void FM1Processor::applyButtons()
 }
 
 // ---- the button parameters' edge semantics (audio thread, devLock_ held; see getButtonMode)
+juce::String FM1Processor::encoderModeName(int m) { return m == kEncStepped ? "Stepped" : "Absolute"; }
+
+void FM1Processor::setEncoderMode(int m)
+{
+    encMode_.store(juce::jlimit(0, 1, m));
+    applyEncoderMode();
+}
+
+void FM1Processor::setEncoderSteps(int n)
+{
+    encSteps_.store(juce::jlimit(kMinEncSteps, kMaxEncSteps, n));
+    applyEncoderMode();
+}
+
+void FM1Processor::applyEncoderMode()
+{
+    const int n = encMode_.load() == kEncStepped ? encSteps_.load() : 0;
+    for (KnobParameter *k : knob_)
+        if (k)
+            k->setStepped(n);
+}
+
 juce::String FM1Processor::buttonModeName(int m)
 {
     return m == kButtonHold ? "Hold" : m == kButtonToggleHold ? "Toggle-hold" : "Tap";
@@ -1409,7 +1455,8 @@ void FM1Processor::snapshotPanel()
 
 // ---------------------------------------------------------------- state ---
 // A ValueTree "FM1VST" (binary): stateVersion, core, coreVersion, transpose, midiNotesPlayKeys, keyNotesToFirmware,
-// master, preset, editorW, editorH, bigLcd, knobDetents, buttonMode (0 Tap, 1 Hold, 2 Toggle-hold), buttonTapMs, a child "theme" (name base membrane knob, and bed / label when the theme
+// master, preset, editorW, editorH, bigLcd, knobDetents, buttonMode (0 Tap, 1 Hold, 2 Toggle-hold), buttonTapMs,
+// encoderMode (0 Absolute, 1 Stepped), encoderSteps (8..64), a child "theme" (name base membrane knob, and bed / label when the theme
 // sets them; "#RRGGBB") and "flash": the image gzip-compressed (a MemoryBlock property; absent when the instance
 // never had one, i.e. a fresh flash).
 void FM1Processor::getStateInformation(juce::MemoryBlock &dest)
@@ -1436,6 +1483,8 @@ void FM1Processor::getStateInformation(juce::MemoryBlock &dest)
     t.setProperty("knobDetents", knobDetents_.load(), nullptr);
     t.setProperty("buttonMode", btnMode_.load(), nullptr);
     t.setProperty("buttonTapMs", btnTapMs_.load(), nullptr);
+    t.setProperty("encoderMode", encMode_.load(), nullptr);
+    t.setProperty("encoderSteps", encSteps_.load(), nullptr);
     const Theme th = getTheme();
     juce::ValueTree tt("theme");
     tt.setProperty("name", th.name, nullptr);
@@ -1483,6 +1532,8 @@ void FM1Processor::setStateInformation(const void *data, int sizeInBytes)
     setKnobDetents((int)t.getProperty("knobDetents", KnobParameter::kDefaultDetents));
     setButtonMode((int)t.getProperty("buttonMode", kButtonTap));
     setButtonTapMs((int)t.getProperty("buttonTapMs", kDefaultTapMs));
+    encSteps_.store(juce::jlimit(kMinEncSteps, kMaxEncSteps, (int)t.getProperty("encoderSteps", kDefaultEncSteps)));
+    setEncoderMode((int)t.getProperty("encoderMode", kEncAbsolute));
     const juce::String id = t.getProperty("core", "choralroot").toString();
     std::optional<std::vector<uint8_t>> bytes;
     if (const juce::MemoryBlock *z = t.getProperty("flash").getBinaryData()) {

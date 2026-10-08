@@ -100,8 +100,14 @@ protected:
 // (reported to the host without a gesture; a re-centre never makes detents). A relative knob turned on the device
 // (panel, mouse, keys) is NUDGED: the host is told 0.5 + detents / kDefaultDetents inside a gesture (the
 // Roto-Control's motor follows, Live's Configure collects the knob), then it springs back the same way.
-// THREADS: retargetKnob / takeDetents / recentre: the audio thread (lock-free, as Tier2Parameter::retarget); the
-// rest as Tier2Parameter.
+// STEPPED (FM1Processor's "Encoders: Stepped", setStepped(N)): the host writes are the clicks of a stepped
+// controller (a Roto-Control knob set to N steps: each click moves the value 1/N of the travel), so a write is never
+// a value: its change against the host's previous value (hostValue(): what the host last wrote or was told, i.e.
+// where the controller's motor sits) in steps (stepDelta) becomes that many detents of the device's encoder, bound
+// or relative alike (takeSteps), as the real knob's clicks. Pushes from the firmware (setFromFirmware, the re-centre,
+// a retarget) move hostValue() without making steps, so the next click counts from where the motor was put.
+// THREADS: retargetKnob / takeDetents / takeSteps / recentre: the audio thread (lock-free, as
+// Tier2Parameter::retarget); setStepped any thread; the rest as Tier2Parameter.
 class KnobParameter : public Tier2Parameter {
 public:
     KnobParameter(int role, const juce::String &id, const juce::String &fixedName);
@@ -126,6 +132,18 @@ public:
     // the message thread: a device turn of a relative knob shown to the host (x: 0.5 + detents / kDefaultDetents),
     // inside a gesture; the next host change counts its detents from x
     void nudge(float x);
+    // ---- Stepped: steps > 0 (8..64), 0 absolute. A change drops the old mode's pending work: the next write counts
+    // from the host's current value, no detent from the switch itself
+    void setStepped(int steps);
+    int steps() const { return steps_.load(std::memory_order_acquire); }
+    // the audio thread: the clicks the host made since the last call (false: none)
+    bool takeSteps(int32_t &detents);
+    // a stepped controller's move from x0 to x1 in clicks of a `steps` controller, rounded. Which quantisation the
+    // controller uses is not known (k / (steps - 1): 0 and 1 both steps; k / steps): a value on either grid (within
+    // 0.02 of a step) counts as that grid's step index against the previous value's index on the same grid (so a
+    // value echoed back quantised, on either grid, is 0 clicks); a value on neither (a controller adding 1 / steps
+    // to where it sits) counts its distance in steps (x (steps - 0.5): 1 / steps and 1 / (steps - 1) both 1)
+    static int32_t stepDelta(float x0, float x1, int steps);
     // what the knob does now ("Voicing", "Strum Rate"; "" relative): the value text's prefix, the panel's caption
     juce::String functionName() const;
 
@@ -148,4 +166,6 @@ private:
     std::atomic<double> relBase_{0.5};
     std::atomic<uint32_t> hostSeq_{0};
     std::atomic<float> hostValue_{0.5f};
+    std::atomic<int> steps_{0};
+    std::atomic<int32_t> stepAcc_{0};                     // clicks not yet taken by the audio thread
 };

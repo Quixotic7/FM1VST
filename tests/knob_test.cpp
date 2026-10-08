@@ -16,7 +16,12 @@
 // layer; (e) Options: SELECT relative, a host turn 0.5 -> 0.75 is +6 detents at the device, the spring back makes
 // none, the hidden "Option" entry; (g) the sound editor: KNOB1 bound to the cell. Felucca: HOME's knobs, the ENV
 // page, ENV DEST's empty column relative, SLICER (the hidden cell), the GLO and FX layers held, EDIT 1. Melodee:
-// HOME. The message loop is not running: the test calls the drain itself. FM1EMU_HOME points under the build.
+// HOME. (st) Stepped encoders (24 steps: a Roto-Control knob set to 24 steps): each click of a host write is one
+// detent at the device, bound (Voicing, Tempo: +10 BPM for 10 clicks, 100 clicks never out of travel) or relative (the
+// Options cursor, one row per click; the re-centre makes none), pushed back and counted from there; an echo of the
+// pushed value quantised (k/23, k/24) makes none; a skipped index is 2; the settle window drops a click; Knob Master
+// stays absolute; switching the mode turns nothing; the state keeps it. Felucca: Knob 1 and Tempo stepped.
+// The message loop is not running: the test calls the drain itself. FM1EMU_HOME points under the build.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -697,6 +702,242 @@ int main()
         check(fn(k[0]) == "Voicing", "HOME: the view again (" + fn(k[0]) + ")");
     }
 
+    // ---- (st) Stepped encoders (the editor's "Encoders: Stepped", 24 steps): a Roto-Control knob set to 24 steps
+    // writes one click per step; each click is one detent of the device's encoder (bound or relative), the firmware's
+    // value is pushed back and the next click counts from it. The controller is modelled as one whose position is
+    // the step index of where its motor sits (G = 23: values k / 23; G = 24: values k / 24)
+    auto onGrid = [](float x, int g) { return (float)juce::jlimit(0.0, 1.0, (double)std::lround((double)x * g) / g); };
+    auto clickG = [&](KnobParameter *q, int dir, int g) {   // a click from where the host has the knob
+        q->setValueNotifyingHost((float)juce::jlimit(0.0, 1.0, (double)(std::lround((double)q->hostValue() * g) + dir) / g));
+    };
+    auto sentAll = [&]() {
+        int32_t s = 0;
+        for (int r = 0; r < FM1Processor::kKnobs; r++)
+            s += p.knobDetentsSent(r);
+        return s;
+    };
+    {
+        check(KnobParameter::stepDelta(0.5f, 13.0f / 23, 24) == 1 && KnobParameter::stepDelta(0.5f, 13.0f / 24, 24) == 1 &&
+                  KnobParameter::stepDelta(0.5f, 11.0f / 23, 24) == -1 && KnobParameter::stepDelta(0.5f, 11.0f / 24, 24) == -1 &&
+                  KnobParameter::stepDelta(0.3607f, onGrid(0.3607f, 23), 24) == 0 &&
+                  KnobParameter::stepDelta(0.3607f, onGrid(0.3607f, 24), 24) == 0 &&
+                  KnobParameter::stepDelta(0.3607f, 0.3607f + 1.0f / 24, 24) == 1 &&
+                  KnobParameter::stepDelta(0.3607f, 0.3607f - 1.0f / 23, 24) == -1 &&
+                  KnobParameter::stepDelta(10.0f / 23, 12.0f / 23, 24) == 2,
+              "stepDelta: a click on either grid (k/23, k/24) or by 1/24 from anywhere is 1; a value echoed back "
+              "quantised to either grid is 0; two steps are 2");
+        const fm1param_t *vo = entryNamed(p, "Voicing");
+        k[0]->setValueNotifyingHost(k[0]->toNorm(0));   // (Absolute: voicing 0, the host at 0.5)
+        pump(100);
+        const int32_t s0 = sentAll();
+        p.setEncoderMode(FM1Processor::kEncStepped);
+        pump(100);
+        check(p.getEncoderMode() == FM1Processor::kEncStepped && p.getEncoderSteps() == 24 && sentAll() == s0 &&
+                  vo->get() == 0 && fn(k[0]) == "Voicing" && std::abs(k[0]->hostValue() - 0.5f) < 1e-6f,
+              "Stepped, 24 steps: the switch turns nothing (voicing " + std::to_string(vo->get()) + ")");
+        // (a) Knob 1, Voicing -12..12: the host writes 12/23, 13/23, 14/23, 13/23 (no push between them)
+        const int32_t a0 = p.knobDetentsSent(EMU_E_K1);
+        std::string seq;
+        for (int i : {12, 13, 14, 13}) {
+            k[0]->setValueNotifyingHost((float)i / 23.0f);
+            h.run_ms(40);
+            seq += " " + std::to_string(i) + "/23 -> " + std::to_string(vo->get()) + " (" +
+                   std::to_string(p.knobDetentsSent(EMU_E_K1) - a0) + ")";
+        }
+        w.clear();
+        pump(100);
+        const int ki = idx(k[0]);
+        check(vo->get() == 1 && p.knobDetentsSent(EMU_E_K1) - a0 == 1 && std::abs(k[0]->hostValue() - k[0]->toNorm(1)) < 1e-6f &&
+                  w.changes[ki] >= 1 && !w.begins.count(ki) && k[0]->getCurrentValueAsText() == "Voicing: +1",
+              "(a) Knob 1 written 12/23 13/23 14/23 13/23 (voicing, detents so far:" + seq +
+                  "): 0, +1, +1, -1; the host told voicing 1's place (" + std::to_string(k[0]->hostValue()) +
+                  ", no gesture), \"" + k[0]->getCurrentValueAsText().toStdString() + "\"");
+        bool each = true;
+        std::string vs;
+        for (int dir : {1, 1, 1, -1, -1, -1}) {   // the motor at the pushed place, a click from there (k/23)
+            const int32_t v0 = vo->get(), d0 = p.knobDetentsSent(EMU_E_K1);
+            clickG(k[0], dir, 23);
+            pump(70);
+            each = each && vo->get() == v0 + dir && p.knobDetentsSent(EMU_E_K1) - d0 == dir &&
+                   std::abs(k[0]->hostValue() - k[0]->toNorm(vo->get())) < 1e-6f;
+            vs += " " + std::to_string(vo->get());
+        }
+        check(each && vo->get() == 1, "(a) 3 clicks up, 3 down, each pushed back and the next counted from it: voicing" + vs);
+        // (e) a fast turn: the host skipped an index
+        {
+            const int32_t v0 = vo->get(), d0 = p.knobDetentsSent(EMU_E_K1);
+            clickG(k[0], 2, 23);
+            pump(70);
+            check(vo->get() == v0 + 2 && p.knobDetentsSent(EMU_E_K1) - d0 == 2,
+                  "(e) a 2-step write (an index skipped): 2 detents, voicing " + std::to_string(v0) + " -> " +
+                      std::to_string(vo->get()));
+            clickG(k[0], -2, 24);             // (and back by two k/24 steps)
+            pump(70);
+            check(vo->get() == v0 && p.knobDetentsSent(EMU_E_K1) - d0 == 0, "(e) -2 on the k/24 grid: back to " +
+                                                                                 std::to_string(vo->get()));
+        }
+        // (b) SELECT, Tempo 20..300: one BPM per click; (c) the pushed value echoed back quantised (k/23, k/24, as it
+        // was): never a detent
+        {
+            const fm1param_t *tp = entryNamed(p, "Tempo");
+            const int32_t t0 = tp->get(), d0 = p.knobDetentsSent(EMU_E_SELECT);
+            bool inRange = true, followsFw = true, echoQuiet = true;
+            int32_t t10 = 0;
+            for (int i = 0; i < 100; i++) {
+                clickG(sel, 1, 23);
+                pump(70);
+                inRange = inRange && sel->hostValue() >= 0.0f && sel->hostValue() <= 1.0f;
+                followsFw = followsFw && std::abs(sel->hostValue() - sel->toNorm(tp->get())) < 1e-6f;
+                if (i == 9)
+                    t10 = tp->get();
+                // the controller sends back what it was told, quantised to its grid (k/23 on odd clicks, k/24 on even)
+                const float pushed = sel->hostValue();
+                const int32_t e0 = sentAll(), tv = tp->get();
+                sel->setValueNotifyingHost(onGrid(pushed, i % 2 ? 23 : 24));
+                h.run_ms(20);
+                sel->setValueNotifyingHost(onGrid(pushed, i % 2 ? 23 : 24));   // (twice)
+                pump(40);
+                echoQuiet = echoQuiet && sentAll() == e0 && tp->get() == tv;
+            }
+            check(fn(sel) == "Tempo" && t10 == t0 + 10, "(b) Knob Select (Tempo): 10 clicks up: " + std::to_string(t0) +
+                                                            " -> " + std::to_string(t10) + " BPM (+10, not +120)");
+            check(tp->get() == t0 + 100 && p.knobDetentsSent(EMU_E_SELECT) - d0 == 100 && inRange && followsFw,
+                  "(b) 100 clicks up: " + std::to_string(t0) + " -> " + std::to_string(tp->get()) +
+                      " BPM, the host's value always the firmware's tempo's place (now " +
+                      std::to_string(sel->hostValue()) + "), never out of travel");
+            check(echoQuiet, "(c) after every push the host wrote it back quantised (k/23 or k/24, twice): no detent, "
+                             "the tempo unmoved");
+            for (int i = 0; i < 100; i++) {
+                clickG(sel, -1, 24);
+                pump(40);
+            }
+            check(tp->get() == t0 && p.knobDetentsSent(EMU_E_SELECT) - d0 == 0,
+                  "(b) 100 clicks down (k/24): back to " + std::to_string(tp->get()) + " BPM");
+        }
+        // (d) a menu: Options, SELECT is the cursor (relative): one row per click; the re-centre makes no detents
+        {
+            click(EMU_B_GLO);
+            pump(300);
+            check(sel->isRelative() && std::abs(sel->hostValue() - 0.5f) < 1e-6f, "(d) Options: Knob Select relative at 0.5");
+            const int32_t d0 = p.knobDetentsSent(EMU_E_SELECT);
+            std::vector<std::string> rows{fn(k[0])};
+            for (int i = 0; i < 5; i++) {
+                clickG(sel, 1, i < 3 ? 23 : 24);
+                pump(70);
+                rows.push_back(fn(k[0]));
+            }
+            bool distinct = true;
+            std::string rs;
+            for (size_t i = 0; i < rows.size(); i++) {
+                rs += (i ? " > " : "") + rows[i];
+                if (i)
+                    distinct = distinct && rows[i] != rows[i - 1];
+            }
+            check(distinct && p.knobDetentsSent(EMU_E_SELECT) - d0 == 5,
+                  "(d) 5 clicks (3 on k/23, 2 on k/24): 5 detents, the cursor one row each: " + rs);
+            w.clear();
+            pump(600);
+            check(std::abs(sel->hostValue() - 0.5f) < 1e-6f && w.changes.count(idx(sel)) && !w.begins.count(idx(sel)) &&
+                      p.knobDetentsSent(EMU_E_SELECT) - d0 == 5 && fn(k[0]) == rows.back(),
+                  "(d) 600 ms idle: re-centred to 0.5 (no gesture), no detents, the cursor stays (" + fn(k[0]) + ")");
+            for (int i = 0; i < 5; i++) {
+                clickG(sel, -1, 23);
+                pump(70);
+            }
+            check(p.knobDetentsSent(EMU_E_SELECT) - d0 == 0 && fn(k[0]) == rows.front(),
+                  "(d) 5 clicks down from the centre: back on " + fn(k[0]));
+            click(EMU_B_GLO);
+            pump(600);
+            check(fn(sel) == "Tempo" && fn(k[0]) == "Voicing", "(d) Options closed");
+        }
+        // the settle window: a click within 150 ms of a retarget is dropped (no detent), the host is told the new
+        // target's value, and the first click after the window counts from it
+        {
+            const int32_t dr0 = p.knobWritesDropped(EMU_E_K1), d0 = p.knobDetentsSent(EMU_E_K1);
+            click(EMU_B_EDIT);
+            h.run_ms(40);
+            const fm1param_t *lv = k[0]->entry();
+            const std::string f = fn(k[0]);
+            const int32_t l0 = lv ? lv->get() : -1, dir = lv && l0 < lv->max ? 1 : -1;
+            clickG(k[0], dir, 23);            // (the motor still on the voicing)
+            h.run_ms(60);
+            p.drainTier2();
+            pump(200);
+            const bool dropped = f != "Voicing" && lv->get() == l0 && p.knobWritesDropped(EMU_E_K1) == dr0 + 1 &&
+                                 p.knobDetentsSent(EMU_E_K1) == d0 &&
+                                 std::abs(k[0]->hostValue() - k[0]->toNorm(l0)) < 1e-6f;
+            clickG(k[0], dir, 23);
+            pump(70);
+            const int32_t l1 = lv->get();
+            check(dropped && (l1 - l0) * dir > 0 && p.knobDetentsSent(EMU_E_K1) - d0 == dir &&
+                      std::abs(k[0]->hostValue() - k[0]->toNorm(l1)) < 1e-6f,
+                  "EDIT (Knob 1 " + f + "): a click within " + std::to_string(FM1Processor::kSettleMs) +
+                      " ms of the retarget dropped (no detent, the host told " + std::to_string(l0) +
+                      "'s place); the next click is one detent from there: " + std::to_string(l0) + " -> " +
+                      std::to_string(l1));
+            clickG(k[0], -dir, 23);
+            pump(70);
+            click(EMU_B_HOME);
+            pump(300);
+            check(fn(k[0]) == "Voicing" && lv->get() == l0, "HOME: the view again, " + f + " back at " + std::to_string(lv->get()));
+        }
+        // (f) Knob Master is the pot whatever the mode: an absolute write lands as it is
+        {
+            const int32_t s1 = sentAll(), m0 = p.masterParam()->get();
+            p.masterParam()->setValueNotifyingHost(p.masterParam()->convertTo0to1(300.0f));
+            pump(100);
+            check(p.masterParam()->get() == 300 && sentAll() == s1,
+                  "(f) Knob Master = 300 in Stepped: 300 (absolute), no detents anywhere");
+            p.masterParam()->setValueNotifyingHost(p.masterParam()->convertTo0to1((float)m0));
+            pump(100);
+        }
+        // (g) the mode switched at runtime: nothing turned, the next click counts from the host's value
+        {
+            p.setEncoderMode(FM1Processor::kEncAbsolute);
+            k[0]->setValueNotifyingHost(k[0]->toNorm(3));
+            pump(100);
+            const int32_t s1 = sentAll();
+            const bool abs3 = vo->get() == 3;
+            p.setEncoderMode(FM1Processor::kEncStepped);
+            pump(100);
+            const bool none = sentAll() == s1 && vo->get() == 3;
+            clickG(k[0], 1, 23);
+            pump(70);
+            check(abs3 && none && vo->get() == 4 && sentAll() - s1 == 1,
+                  "(g) Absolute: host Knob 1 = 3 lands as a value; switched to Stepped: no detent; one click: voicing " +
+                      std::to_string(vo->get()));
+            p.setEncoderMode(FM1Processor::kEncAbsolute);
+            pump(50);
+            k[0]->setValueNotifyingHost(k[0]->toNorm(0));
+            pump(100);
+            check(vo->get() == 0 && sentAll() - s1 == 1, "(g) back in Absolute: host Knob 1 = 0 lands as a value (voicing " +
+                                                             std::to_string(vo->get()) + ")");
+        }
+        // (h) the state keeps the mode and the steps
+        {
+            p.setEncoderMode(FM1Processor::kEncStepped);
+            p.setEncoderSteps(32);
+            juce::MemoryBlock st;
+            p.getStateInformation(st);
+            p.setEncoderMode(FM1Processor::kEncAbsolute);
+            p.setEncoderSteps(16);
+            p.setStateInformation(st.getData(), (int)st.getSize());
+            h.run_ms(700);
+            p.drainTier2();
+            const bool kept = p.getEncoderMode() == FM1Processor::kEncStepped && p.getEncoderSteps() == 32 &&
+                              k[0]->steps() == 32 && p.masterParam() && sel->steps() == 32;
+            p.setEncoderSteps(5);
+            const int lo = p.getEncoderSteps();
+            p.setEncoderSteps(99);
+            const int hi = p.getEncoderSteps();
+            check(kept && lo == 8 && hi == 64, "(h) the state round trip: Stepped, 32 steps (the knobs too); steps "
+                                               "clamped to 8..64");
+            p.setEncoderSteps(24);
+            p.setEncoderMode(FM1Processor::kEncAbsolute);
+            check(fn(k[0]) == "Voicing" && k[0]->steps() == 0, "Absolute again (" + fn(k[0]) + ")");
+        }
+    }
+
     // ---- Felucca
     {
         check(p.switchCore("felucca"), "switchCore(\"felucca\")");
@@ -776,6 +1017,42 @@ int main()
                   filt == -50 && namesFixed(),
               "GLO held: the four parts' levels; FX held: the macros (host FILTER -50 lands); let go: the page again (" +
                   fn(k[0]) + ")");
+        // Stepped on Felucca: HOME's Knob 1 (E5 CUT) and Knob Select (Tempo) one detent per click, pushed back
+        tap(EMU_B_HOME);
+        pump(300);
+        p.setEncoderMode(FM1Processor::kEncStepped);
+        {
+            const fm1param_t *c5 = k[0]->entry();
+            const int32_t c0 = c5 ? c5->get() : 0, d0 = p.knobDetentsSent(EMU_E_K1);
+            p.deviceForTest()->enc(EMU_E_K1, 1);  // (what one detent does to it on the unit)
+            pump(100);
+            const int32_t per = c5 ? c5->get() - c0 : 0;
+            p.deviceForTest()->enc(EMU_E_K1, -1);
+            pump(100);
+            bool each = c5 && per != 0;
+            for (int i = 0; i < 3; i++) {
+                const int32_t v0 = c5->get();
+                clickG(k[0], 1, 24);
+                pump(70);
+                each = each && c5->get() - v0 == per && std::abs(k[0]->hostValue() - k[0]->toNorm(c5->get())) < 1e-6f;
+            }
+            const fm1param_t *tp = sel->entry();
+            const int32_t t0 = tp ? tp->get() : 0;
+            for (int i = 0; i < 5; i++) {
+                clickG(sel, 1, 23);
+                pump(70);
+            }
+            check(fn(k[0]) == "E5 CUT" && each && p.knobDetentsSent(EMU_E_K1) - d0 == 3 && fn(sel) == "Tempo" &&
+                      tp->get() == t0 + 5,
+                  "felucca Stepped: 3 clicks of Knob 1 (E5 CUT) = 3 detents (" + std::to_string(per) + " each, " +
+                      std::to_string(c0) + " -> " + std::to_string(c5 ? c5->get() : 0) + "), 5 of Knob Select = Tempo +5 (" +
+                      std::to_string(t0) + " -> " + std::to_string(tp ? tp->get() : 0) + ")");
+            for (int i = 0; i < 5; i++) {
+                clickG(sel, -1, 23);
+                pump(70);
+            }
+        }
+        p.setEncoderMode(FM1Processor::kEncAbsolute);
     }
     // ---- Melodee
     {

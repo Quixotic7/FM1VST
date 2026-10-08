@@ -93,7 +93,7 @@ private:
     ThemeStore store_;
     PanelComponent panel_;
     Constrainer constrainer_;
-    juce::ComboBox cores_, presets_, transpose_, themes_, buttonMode_;
+    juce::ComboBox cores_, presets_, transpose_, themes_, buttonMode_, encMode_, encSteps_;
     juce::TextButton save_{"Save"}, saveAs_{"Save as"}, rename_{"Rename"}, delete_{"Delete"}, reset_{"Reset flash"},
         export_{"Export"}, import_{"Import"}, power_{"Power on"}, bigLcd_{"Big LCD"};
     juce::ToggleButton notesPlayKeys_{"MIDI notes play keys"}, keyNotesToFw_{"... and go to the firmware's MIDI in"};

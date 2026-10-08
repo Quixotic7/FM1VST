@@ -110,6 +110,24 @@ bass on channel 2 once a bass sound is chosen), so it can drive other instrument
 
   The panel's own mouse and computer keys are real presses and releases whatever the mode; the key parameters
   (`key_NN`) are always value = held.
+- **Encoders: Absolute / Stepped** and **Steps** (the editor bar; stored per instance in the state; default
+  Absolute, 24 steps, 8..64). For a controller whose knobs click in steps, such as a Roto-Control knob set to 24
+  steps so it feels like the FM-1's own detented encoders. Each click of such a knob moves the Live parameter 1/24 of
+  its travel, so in Absolute mode one click on Knob Select (Tempo, 20..300 BPM) jumps about 12 BPM, and on a short
+  range (Voicing, a 4-way switch) several clicks do nothing and then one jumps. In **Stepped** mode a write to one of
+  the seven encoder parameters (Knob Select, Knob Presets, Knob Algo, Knob 1..4) is not a value but **clicks**: its
+  change in steps (whichever way the controller quantises, k/23 or k/24, and a skipped step counting 2) is sent to
+  the device as that many **detents of the real encoder**, the firmware's own knob path, whatever the knob turns on
+  the screen: Tempo moves 1 BPM per click, Voicing one step, an Options or editor menu one row, PRESETS one sound.
+  The firmware's resulting value is pushed back (the motor goes to it, the value text reads "Function: value" as
+  before) and the next click counts from there, so the knob never runs out of travel on a long range. A value the
+  controller echoes back after a push is never a click. Where the knob has no value (a menu cursor) it springs back
+  to the centre after 400 ms as before, and that is never a click either. **Knob Master is the pot and stays
+  absolute** in both modes. Switching the mode turns nothing.
+  To set it up on the Roto-Control: map the eight knobs as usual (Knob Master .. Knob 4 on the first page), set Knob
+  Select, Knob Presets, Knob Algo and Knob 1..4 to **24 steps** in the Roto-Control's knob settings (leave Knob
+  Master **smooth**, not stepped), then pick **Encoders: Stepped** and **24 steps** on the plugin's bar (set the
+  plugin's Steps to whatever step count the controller uses).
 - **The knobs (the Roto-Control's first page, plan 4.5).** One host parameter per physical knob, in panel order, with
   **names that never change** (a Roto-Control binds by name): **Knob Master, Knob Select, Knob Presets, Knob Algo,
   Knob 1, Knob 2, Knob 3, Knob 4**. Knob Master is the pot (0..1023, default 724 as the emulator powers on; its value
@@ -367,7 +385,13 @@ The tests:
   switch is dropped, the switch asks a VST3 host to re-read the values and a turn alone does not; the PERF layer and the perform mode
   switched from the host; a panel turn; the FX layer; Options (SELECT relative: 0.5 -> 0.75 is 6 detents at the
   device, it springs back to 0.5 with no detents; a row with no named entry: the hidden Option), the editor;
-  Felucca's HOME, ENV, ENV DEST, SLICER (a hidden cell), EDIT 1, GLO and FX held; Melodee's HOME.
+  Felucca's HOME, ENV, ENV DEST, SLICER (a hidden cell), EDIT 1, GLO and FX held; Melodee's HOME; **Stepped
+  encoders** (24 steps): Knob 1 written 12/23 13/23 14/23 13/23 is 0, +1, +1, -1 detents (Voicing), clicks with the
+  firmware's value pushed back between them count from it, a skipped index is 2 detents, 100 clicks of Knob Select
+  take Tempo 120 -> 220 BPM (10 clicks: +10) with the host's value always the tempo's place, a push echoed back
+  quantised (k/23, k/24) is never a detent, the Options cursor moves one row per click and the re-centre turns
+  nothing, a click within the settle window is dropped and the next counts from the pushed value, Knob Master stays
+  absolute, switching the mode turns nothing, the state keeps the mode and the steps; Felucca's Knob 1 and Tempo.
 - `plugin_test`: the plugin's processor, headless: MIDI notes press the keys and sound at 48 and 44.1 kHz, the panel
   parameters reach the HAL, MIDI out is well formed, the flash survives the state round trip, presets save / reset /
   load / rename / export / import / delete with backups, the installed bundles resolve their cores folder (all three
