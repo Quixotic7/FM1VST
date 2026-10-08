@@ -254,9 +254,23 @@ theme always stays legible: bed and edge from the base, pressed and LED-off from
 pointer and labels by contrast. Advanced overrides for the derived colours live in the theme file but
 not in the picker.
 
-- **Presets:** the shipped set is sampled from product photos of the real colour variants (the lineup
-  is not reliably documented online; the black unit is confirmed, the others get named after what the
-  photos show), plus the emulator's current dark grey as "Emulator".
+- **Presets:** sampled from M-VAVE's product photos in `reference/MVaveOfficialColors/` and kept in
+  `themes/presets.json` (starting values; phase 3 tunes each by eye against its photo). The knobs are
+  black on every real unit; the membrane colour is what varies, and on some units the recessed key bed
+  is a darker shade of it, so the theme carries an optional `bed`:
+
+  | preset | base | membrane | bed | knob |
+  |---|---|---|---|---|
+  | Black | #3A3A3C | #2E2E30 | #2C2C2C | #2A2A2A |
+  | Black/Green | #4C4B4E | #6FCCBD | #65CDBC | #424344 |
+  | Cool Gray | #E3D9CF | #3A3C3D | #1A1E1F | #1C1C1C |
+  | Orange | #C4734F | #92594D | #834C41 | #171717 |
+  | Purple | #C19AD5 | #7D72B5 | #443B80 | #1C1C1E |
+  | White/Blue | #F2ECE7 | #587592 | #193046 | #181918 |
+  | Emulator | #1C1C20 | #2B2B31 | #141417 | #35353C |
+
+  Label colour flips with the base: white labels on the dark bodies, dark on Cool Gray and White/Blue,
+  as the photos show.
 - **Custom:** a colour picker per group in the plugin's settings bar; custom themes are saved as JSON in
   `~/Library/Application Support/fm1emu/themes/<name>.json` and listed with the presets.
 - **State:** the theme name and its three colours are stored in the plugin state next to the flash

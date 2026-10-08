@@ -1,0 +1,13 @@
+{
+  "_comment": "Panel colour presets (FM1-VST-PLAN.md 4.8). base / membrane / knob are the three user-facing colours; bed is the recessed plate the keys sit in (derived from membrane when absent). Sampled as 7x7 medians from the product photos in reference/MVaveOfficialColors on 2026-10-07; photo lighting shades them, so phase 3 tunes each by eye against its photo. 'emulator' is the ChoralRoot emulator's own palette (tools/emu/emu.c C_PLATE / C_CAP / knob cap).",
+  "presets": [
+    { "name": "Black",       "photo": "fm-1-1.webp",            "base": "#3A3A3C", "membrane": "#2E2E30", "bed": "#2C2C2C", "knob": "#2A2A2A",
+      "note": "the photo's body reads #646464 under studio light; the unit is near-black, so base is darkened to match the bed" },
+    { "name": "Black/Green", "photo": "fm-1-blackgreen-5.webp", "base": "#4C4B4E", "membrane": "#6FCCBD", "bed": "#65CDBC", "knob": "#424344" },
+    { "name": "Cool Gray",   "photo": "fm-1-coolgray-1.webp",   "base": "#E3D9CF", "membrane": "#3A3C3D", "bed": "#1A1E1F", "knob": "#1C1C1C" },
+    { "name": "Orange",      "photo": "fm-1-orange-1.webp",     "base": "#C4734F", "membrane": "#92594D", "bed": "#834C41", "knob": "#171717" },
+    { "name": "Purple",      "photo": "fm-1-purple-1.webp",     "base": "#C19AD5", "membrane": "#7D72B5", "bed": "#443B80", "knob": "#1C1C1E" },
+    { "name": "White/Blue",  "photo": "fm-1-whiteblue-1.webp",  "base": "#F2ECE7", "membrane": "#587592", "bed": "#193046", "knob": "#181918" },
+    { "name": "Emulator",    "photo": null,                     "base": "#1C1C20", "membrane": "#2B2B31", "bed": "#141417", "knob": "#35353C" }
+  ]
+}
