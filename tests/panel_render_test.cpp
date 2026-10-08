@@ -1,0 +1,355 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// The panel GUI, headless (FM1-VST-PLAN.md phase 3): no window is opened. The processor is driven block by block,
+// the PanelComponent is painted offscreen into juce::Images (JUCE's software renderer, and the native one), and:
+//   - build/panel/<theme>.png for every preset in themes/presets.json and one custom theme (904 x 566 at scale 2,
+//     key D4 held through panelKey), build/panel/lcd.png (the LCD alone), lcd-1x.png / lcd-2x.png / big-lcd.png;
+//   (a) the LCD on the panel, at integer scales (1x, 2x, and the big view), sampled back to 240 x 240, equals the
+//       device's framebuffer converted to RGB888 within 1 LSB per channel (the nearest-neighbour path);
+//   (b) key D4's LED is the lit colour while panelKey holds it and the LED-off colour after, and the key_09 host
+//       parameter never moved;
+//   (c) every preset's derived palette keeps the contrast floors (label / plate, pointer / knob cap, LED-off / cap,
+//       pressed / cap), printed as a table;
+//   (d) a custom theme: saved, listed, the default for a new instance; a state naming it restores its colours into
+//       the editor after its file is deleted.
+// FM1EMU_HOME points at a scratch folder under the build.
+#include <cstdio>
+#include <cstdlib>
+#include <string>
+#include <vector>
+
+#include "Editor.h"
+#include "PanelComponent.h"
+#include "Processor.h"
+#include "Theme.h"
+
+static int fails = 0;
+static void check(bool c, const std::string &what)
+{
+    std::printf("  %s  %s\n", c ? "ok  " : "FAIL", what.c_str());
+    fails += !c;
+}
+
+struct Host {
+    FM1Processor &p;
+    double sr;
+    int bs;
+    juce::AudioBuffer<float> buf;
+    uint64_t frames = 0;
+    Host(FM1Processor &proc, double rate, int block) : p(proc), sr(rate), bs(block), buf(2, block)
+    {
+        p.setRateAndBufferSizeDetails(rate, block);
+        p.prepareToPlay(rate, block);
+    }
+    void run_ms(double ms)
+    {
+        const uint64_t until = frames + (uint64_t)(ms * sr / 1000.0);
+        while (frames < until) {
+            juce::MidiBuffer m;
+            buf.clear();
+            p.processBlock(buf, m);
+            frames += (uint64_t)bs;
+        }
+    }
+};
+
+static juce::Image render(PanelComponent &panel, float scale, bool native = false)
+{
+    panel.refresh();
+    const int w = juce::roundToInt((float)panel.getWidth() * scale), h = juce::roundToInt((float)panel.getHeight() * scale);
+    juce::Image img = native ? juce::Image(juce::Image::RGB, w, h, true)
+                             : juce::Image(juce::Image::RGB, w, h, true, juce::SoftwareImageType());
+    {
+        juce::Graphics g(img);
+        g.addTransform(juce::AffineTransform::scale(scale));
+        panel.paintEntireComponent(g, true);
+    }
+    return img;
+}
+
+static bool writePng(const juce::Image &img, const juce::File &f)
+{
+    f.deleteFile();
+    juce::FileOutputStream out(f);
+    juce::PNGImageFormat png;
+    return out.openedOk() && png.writeImageToStream(img, out);
+}
+
+static juce::String fileNameFor(const juce::String &theme)
+{
+    return theme.replaceCharacters("/ ", "--");
+}
+
+static int maxDiff(juce::Colour a, juce::Colour b)
+{
+    return std::max({std::abs(a.getRed() - b.getRed()), std::abs(a.getGreen() - b.getGreen()), std::abs(a.getBlue() - b.getBlue())});
+}
+
+// the LCD region of img (n pixels per LCD pixel from r's origin) against the device's framebuffer: the worst channel
+// difference, and the number of pixels off by more than 1
+static void compareLcd(const juce::Image &img, juce::Rectangle<int> r, int n, const uint16_t *fb, int &worst, int &bad)
+{
+    worst = 0;
+    bad = 0;
+    for (int y = 0; y < EMU_LCD_H; y++)
+        for (int x = 0; x < EMU_LCD_W; x++) {
+            const uint16_t v = fb[y * EMU_LCD_W + x];
+            const uint32_t p = (uint32_t)((v >> 8) | ((v & 0xFFu) << 8));
+            const uint32_t r5 = (p >> 11) & 31u, g6 = (p >> 5) & 63u, b5 = p & 31u;
+            const juce::Colour want((juce::uint8)((r5 << 3) | (r5 >> 2)), (juce::uint8)((g6 << 2) | (g6 >> 4)),
+                                    (juce::uint8)((b5 << 3) | (b5 >> 2)));
+            // every pixel of the n x n block (nearest-neighbour: all equal)
+            for (int sy = 0; sy < n; sy++)
+                for (int sx = 0; sx < n; sx++) {
+                    const int d = maxDiff(img.getPixelAt(r.getX() + x * n + sx, r.getY() + y * n + sy), want);
+                    worst = std::max(worst, d);
+                    bad += d > 1;
+                }
+        }
+}
+
+static uint32_t lcdChecksum(const uint16_t *fb)
+{
+    uint32_t h = 2166136261u;
+    for (int i = 0; i < EMU_LCD_W * EMU_LCD_H; i++)
+        h = (h ^ fb[i]) * 16777619u;
+    return h;
+}
+
+int main()
+{
+    const juce::File scratch(FM1_SCRATCH_DIR);
+    scratch.deleteRecursively();
+    scratch.createDirectory();
+    setenv("FM1EMU_HOME", scratch.getFullPathName().toRawUTF8(), 1);
+    juce::ScopedJuceInitialiser_GUI gui;
+    const juce::File out(FM1_PANEL_OUT);
+    out.createDirectory();
+    std::printf("panel_render_test: FM1EMU_HOME=%s, pictures in %s\n", scratch.getFullPathName().toRawUTF8(),
+                out.getFullPathName().toRawUTF8());
+
+    const Theme custom = [] {
+        Theme t;
+        t.name = "Test Teal";
+        t.base = juce::Colour(0xFF1F3B3D);
+        t.membrane = juce::Colour(0xFFE07A3C);
+        t.knob = juce::Colour(0xFFE8E2D6);
+        t.bed = std::nullopt;
+        t.label = std::nullopt;
+        return t;
+    }();
+
+    {
+        FM1Processor p;
+        Host h(p, 44100.0, 256);
+        h.run_ms(600);
+        Device *dev = p.deviceForTest();
+        check(dev && dev->booted() && !dev->halted(), "the device booted and runs");
+
+        PanelComponent panel(p);
+        panel.setButtonNames(p.buttonNames());
+        panel.setBounds(0, 0, 904, 566);
+        const Theme emu = ThemeStore::preset("Emulator").value_or(Theme{});
+        panel.setTheme(emu);
+
+        // ---- (b) key D4 (MIDI 62 = key 9) held from the panel
+        const int D4 = 62 - FM1Processor::kNoteBase;
+        p.panelKey(D4, true);
+        h.run_ms(300);
+        check(dev->led_key(D4) == 2, "D4 held through panelKey: its LED is lit on the device (led_key " +
+                                         std::to_string(dev->led_key(D4)) + ")");
+        check(((dev->hal()->keys >> D4) & 1u) != 0, "D4 held through panelKey: the HAL holds the key");
+        check(!p.keyParam(D4)->get(), "the key_09 host parameter did not move (the panel is its own source)");
+        juce::Image held = render(panel, 2.0f);
+        const juce::Point<int> led = panel.keyLedPx(D4);
+        const juce::Colour litPx = held.getPixelAt(led.x, led.y);
+        check(maxDiff(litPx, panel.palette().white) <= 1,
+              "D4's LED pixel while held is the lit colour " + toHex(panel.palette().white).toStdString() + " (got " +
+                  toHex(litPx).toStdString() + ")");
+
+        // the pictures: every preset and one custom theme, D4 held
+        for (const Theme &t : ThemeStore::presets()) {
+            panel.setTheme(t);
+            const juce::File f = out.getChildFile(fileNameFor(t.name) + ".png");
+            check(writePng(render(panel, 2.0f), f), "wrote " + f.getFullPathName().toStdString());
+        }
+        panel.setTheme(custom);
+        {
+            const juce::File f = out.getChildFile("custom-" + fileNameFor(custom.name) + ".png");
+            check(writePng(render(panel, 2.0f), f), "wrote " + f.getFullPathName().toStdString());
+        }
+        panel.setTheme(emu);
+
+        p.panelKey(D4, false);
+        h.run_ms(300);
+        // ChoralRoot's keys glow dim at rest (fm1_led_dim): D4 goes from lit back to dim; the LED-off colour is
+        // checked on an LED that is off (PLAY's green one, stopped)
+        const int after = dev->led_key(D4);
+        check(after != 2, "D4 released: its LED is no longer lit on the device (led_key " + std::to_string(after) +
+                              (after == 1 ? ": ChoralRoot's keys glow dim at rest)" : ")"));
+        juce::Image released = render(panel, 2.0f);
+        const Palette &pal = panel.palette();
+        auto dimOf = [](juce::Colour off, juce::Colour lit) {   // emu.c blend at alpha .38
+            auto ch = [](int s, int d) { return (juce::uint8)((float)s + (float)(d - s) * .38f); };
+            return juce::Colour(ch(off.getRed(), lit.getRed()), ch(off.getGreen(), lit.getGreen()), ch(off.getBlue(), lit.getBlue()));
+        };
+        const juce::Colour wantD4 = after == 1 ? dimOf(pal.ledOff, pal.white) : after == 2 ? pal.white : pal.ledOff;
+        const juce::Colour d4Px = released.getPixelAt(led.x, led.y);
+        check(maxDiff(d4Px, wantD4) <= 1, "D4's LED pixel after the release follows the device: " +
+                                              std::string(after == 1 ? "dim " : after == 2 ? "lit " : "off ") +
+                                              toHex(wantD4).toStdString() + " (got " + toHex(d4Px).toStdString() + ")");
+        int offKeys = 0;
+        for (int k = 0; k < EMU_NKEY; k++)
+            offKeys += dev->led_key(k) == 0;
+        std::printf("  (key LEDs off on the device at rest: %d of %d)\n", offKeys, EMU_NKEY);
+        {
+            const juce::Point<int> o = panel.playGreenPx();
+            const juce::Colour offPx = released.getPixelAt(o.x, o.y);
+            check(dev->led_play_green() == 0 && maxDiff(offPx, pal.ledOff) <= 1,
+                  "PLAY's green LED (off on the device) is the LED-off colour " + toHex(pal.ledOff).toStdString() + " (got " +
+                      toHex(offPx).toStdString() + ")");
+        }
+        writePng(released, out.getChildFile("Emulator-released.png"));
+
+        // a button through the panel: SEL (ChoralRoot KEY) reaches the HAL, its parameter does not move
+        p.panelButton(EMU_B_SEL, true);
+        h.run_ms(50);
+        const bool selDown = (dev->hal()->buttons >> dev->hal()->btn_id[EMU_B_SEL]) & 1u;
+        p.panelButton(EMU_B_SEL, false);
+        h.run_ms(50);
+        const bool selUp = !((dev->hal()->buttons >> dev->hal()->btn_id[EMU_B_SEL]) & 1u);
+        check(selDown && selUp && !p.buttonParam(EMU_B_SEL)->get(), "panelButton holds and releases SEL on the HAL; btn_sel unmoved");
+        // MASTER from the panel moves the master parameter (16 per detent)
+        {
+            const int m0 = p.masterParam()->get();
+            p.panelEnc(EMU_E_MASTER, -2);
+            h.run_ms(20);
+            check(p.masterParam()->get() == m0 - 32 && dev->hal()->master == m0 - 32,
+                  "panelEnc(MASTER, -2): the master parameter and the HAL move by 32 (" + std::to_string(m0) + " -> " +
+                      std::to_string(dev->hal()->master) + ")");
+        }
+
+        // ---- (a) the LCD region, pixel for pixel, at integer scales
+        h.run_ms(200);
+        panel.refresh();
+        {
+            struct Case {
+                const char *name;
+                int w, h;
+                float scale;
+                bool big;
+                int wantN;
+            };
+            const Case cases[] = {{"lcd-1x", 1402, 861, 1.0f, false, 1}, {"lcd-2x", 1450, 880, 2.0f, false, 2},
+                                  {"big-lcd", 960, 1550, 1.0f, true, 4}};
+            for (const Case &c : cases) {
+                for (int native = 0; native < 2; native++) {
+                    panel.setBigLcd(c.big);
+                    panel.setBounds(0, 0, c.w, c.h);
+                    const juce::Image img = render(panel, c.scale, native != 0);
+                    const PanelComponent::Layout &L = panel.layout();
+                    const uint16_t *fb = dev->lcd();
+                    int worst = 0, bad = 0;
+                    const int n = c.big ? L.nBig : L.nSmall;
+                    const juce::Rectangle<int> r = c.big ? L.lcdBig : L.lcdSmall;
+                    check(n == c.wantN, std::string(c.name) + ": the layout snapped to an integer LCD scale " + std::to_string(n) +
+                                            " (k " + std::to_string(L.k) + ", want " + std::to_string(c.wantN) + ")");
+                    if (n > 0) {
+                        compareLcd(img, r, n, fb, worst, bad);
+                        check(bad == 0, std::string(c.name) + (native ? " (native renderer)" : " (software renderer)") +
+                                            ": the LCD region equals the device framebuffer (checksum " +
+                                            juce::String::toHexString((int)lcdChecksum(fb)).toStdString() + ") at " +
+                                            std::to_string(n) + "x: worst channel difference " + std::to_string(worst) +
+                                            ", pixels off by more than 1: " + std::to_string(bad));
+                    }
+                    if (!native) {
+                        const juce::File f = out.getChildFile(juce::String(c.name) + ".png");
+                        writePng(img, f);
+                    }
+                }
+            }
+            panel.setBigLcd(false);
+            panel.setBounds(0, 0, 904, 566);
+            const juce::File f = out.getChildFile("lcd.png");
+            check(writePng(panel.lcdImage(), f), "wrote " + f.getFullPathName().toStdString() + " (the LCD alone)");
+            // the screen shows something (the home screen is not all one colour)
+            const juce::Image &lcd = panel.lcdImage();
+            int distinct = 0;
+            const juce::Colour c0 = lcd.getPixelAt(0, 0);
+            for (int y = 0; y < EMU_LCD_H; y += 4)
+                for (int x = 0; x < EMU_LCD_W; x += 4)
+                    distinct += lcd.getPixelAt(x, y) != c0;
+            check(distinct > 50, "the LCD shows the firmware's screen (" + std::to_string(distinct) + " sampled pixels differ from the corner)");
+        }
+    }
+
+    // ---- (c) the contrast floors, every preset (and the custom theme)
+    {
+        constexpr double kLabel = 3.0, kPointer = 2.0, kLed = 1.3, kPressed = 1.3;
+        std::printf("\n  contrast ratios (floors: label/plate %.1f, pointer/knob %.1f, LED-off/cap %.1f, pressed/cap %.1f)\n",
+                    kLabel, kPointer, kLed, kPressed);
+        std::printf("  %-12s %-8s %-8s %-8s | %11s %13s %11s %11s | %9s %9s %9s\n", "theme", "base", "membrane", "knob",
+                    "label/plate", "pointer/knob", "ledoff/cap", "pressed/cap", "bedlabel", "captext", "hint/cap");
+        std::vector<Theme> all = ThemeStore::presets();
+        all.push_back(custom);
+        bool ok = true;
+        for (const Theme &t : all) {
+            const Palette p = derive(t);
+            const double a = contrastRatio(p.label, p.plate), b = contrastRatio(p.pointer, p.knobCap);
+            const double c = contrastRatio(p.ledOff, p.cap), d = contrastRatio(p.pressed, p.cap);
+            std::printf("  %-12s %s  %s  %s  | %11.2f %13.2f %11.2f %11.2f | %9.2f %9.2f %9.2f\n", t.name.toRawUTF8(),
+                        toHex(t.base).toRawUTF8(), toHex(t.membrane).toRawUTF8(), toHex(t.knob).toRawUTF8(), a, b, c, d,
+                        contrastRatio(p.bedLabel, p.bed), contrastRatio(p.capText, p.cap), contrastRatio(p.hint, p.cap));
+            ok = ok && a >= kLabel && b >= kPointer && c >= kLed && d >= kPressed;
+        }
+        std::printf("\n");
+        check(ok, "every theme keeps the contrast floors");
+    }
+
+    // ---- (d) the custom theme round trip
+    {
+        ThemeStore store(FM1Processor::home());
+        check(store.save(custom), "saved the custom theme to " + store.fileFor(custom.name).getFullPathName().toStdString());
+        bool listed = false;
+        for (const Theme &t : store.customs())
+            listed = listed || (t.name == custom.name && t.sameColours(custom));
+        check(listed, "customs() lists it with its colours");
+        check(!store.save(ThemeStore::presets().front()), "a custom theme cannot take a preset's name");
+        check(store.setDefaultName(custom.name) && store.defaultName() == custom.name, "set as the default theme");
+        {
+            FM1Processor fresh;
+            const Theme t = fresh.getTheme();
+            check(t.name == custom.name && t.sameColours(custom), "a new instance starts with the default theme");
+        }
+        juce::MemoryBlock state;
+        {
+            FM1Processor a;
+            a.setTheme(custom);
+            a.getStateInformation(state);
+        }
+        store.setDefaultName("");
+        check(store.remove(custom.name) && !store.fileFor(custom.name).exists() && !store.find(custom.name),
+              "deleted the theme file");
+        FM1Processor b;
+        check(b.getTheme().name == "Emulator", "without a default, a new instance starts with Emulator (" + b.getTheme().name.toStdString() + ")");
+        b.setStateInformation(state.getData(), (int)state.getSize());
+        {
+            FM1Editor ed(b);
+            const Theme t = ed.panelTheme();
+            check(t.name == custom.name && t.sameColours(custom),
+                  "the state restores the theme into the editor with its file gone (" + t.name.toStdString() + " " +
+                      toHex(t.base).toStdString() + " " + toHex(t.membrane).toStdString() + " " + toHex(t.knob).toStdString() + ")");
+            const juce::Image img = [&] {
+                juce::Image i(juce::Image::RGB, ed.getWidth(), ed.getHeight(), true, juce::SoftwareImageType());
+                juce::Graphics g(i);
+                ed.paintEntireComponent(g, true);
+                return i;
+            }();
+            const juce::File f = out.getChildFile("editor.png");
+            check(writePng(img, f), "wrote " + f.getFullPathName().toStdString() + " (the whole editor, " +
+                                        std::to_string(ed.getWidth()) + " x " + std::to_string(ed.getHeight()) + ")");
+        }
+    }
+
+    std::printf("panel_render_test: %s (%d failure%s)\n", fails ? "FAILED" : "passed", fails, fails == 1 ? "" : "s");
+    return fails ? 1 : 0;
+}

@@ -162,6 +162,7 @@ FM1Processor::FM1Processor()
         const juce::ScopedLock l(devLock_);
         bindTier2Locked();
     }
+    theme_ = ThemeStore(home()).defaultTheme();  // (a state restore replaces it)
     startTimerHz(30);                            // the Tier 2 feedback drain
 }
 
@@ -458,8 +459,10 @@ void FM1Processor::bootLocked()
         bytes.resize(size);
     dev_ = std::make_unique<Device>(loaded_->core());
     dev_->set_between([this](uint32_t, bool frame) {
-        if (frame)
+        if (frame) {
+            fineFrame();                         // (emu.c ui_frame: fine_frame before the frame)
             readBackParameters();
+        }
     });
     dev_->boot_from(bytes.empty() ? nullptr : bytes.data(), (uint32_t)bytes.size());
     resetAudioState();
@@ -481,6 +484,13 @@ void FM1Processor::resetAudioState()            // (devLock_ held, processing st
     appliedKeys_ = appliedButtons_ = 0xFFFFFFFFu;
     appliedMaster_ = -1;
     midiKeys_ = paramKeys_ = 0;
+    paramButtons_ = panelKeysCur_ = panelButtonsCur_ = 0;
+    fineStage_ = 0;
+    fineSteps_ = 0;
+    fineGlo_ = false;
+    for (auto &e : panelEnc_)
+        e.store(0);
+    viewDirty_ = true;                           // (a new device: a fresh snapshot, the LCD included)
     for (auto &ch : noteKey_)
         ch.fill(-1);
     keyCount_.fill(0);
@@ -840,22 +850,197 @@ void FM1Processor::setCurrentProgram(int index)
 
 // ------------------------------------------------------------- settings ---
 void FM1Processor::setTranspose(int octaves) { transpose_.store(juce::jlimit(-2, 2, octaves)); }
-FM1Theme FM1Processor::getTheme() const
+Theme FM1Processor::getTheme() const
 {
     const juce::SpinLock::ScopedLockType l(themeLock_);
     return theme_;
 }
-void FM1Processor::setTheme(const FM1Theme &t)
+void FM1Processor::setTheme(const Theme &t)
 {
-    const juce::SpinLock::ScopedLockType l(themeLock_);
-    theme_ = t;
+    {
+        const juce::SpinLock::ScopedLockType l(themeLock_);
+        theme_ = t;
+    }
+    themeSerial_.fetch_add(1);
+}
+
+juce::StringArray FM1Processor::buttonNames() const
+{
+    const juce::ScopedLock l(devLock_);
+    juce::StringArray out;
+    for (int i = 0; i < EMU_NB; i++)
+        out.add(loaded_ && loaded_->core()->button_names[i] ? loaded_->core()->button_names[i] : kPanelLabels[i]);
+    return out;
+}
+
+// ------------------------------------------------------------ the panel ---
+void FM1Processor::panelKey(int key, bool down)
+{
+    if (key < 0 || key >= EMU_NKEY)
+        return;
+    const uint32_t bit = 1u << key;
+    if (down) {
+        panelKeyTaps_.fetch_or(bit);
+        panelKeys_.fetch_or(bit);
+    } else {
+        panelKeys_.fetch_and(~bit);
+    }
+}
+
+void FM1Processor::panelButton(int label, bool down)
+{
+    if (label < 0 || label >= EMU_NB)
+        return;
+    const uint32_t bit = 1u << label;
+    if (down) {
+        panelBtnTaps_.fetch_or(bit);
+        panelButtons_.fetch_or(bit);
+    } else {
+        panelButtons_.fetch_and(~bit);
+    }
+}
+
+void FM1Processor::panelEnc(int role, int detents)
+{
+    if (!detents || role < 0 || role >= EMU_NE)
+        return;
+    if (role == EMU_E_MASTER)
+        panelMaster(master_->get() + 16 * detents);
+    else
+        panelEnc_[(size_t)role].fetch_add(detents);
+}
+
+void FM1Processor::panelMaster(int value)
+{
+    const int v = juce::jlimit(0, 1023, value);
+    if (v == master_->get())
+        return;
+    master_->beginChangeGesture();
+    master_->setValueNotifyingHost(master_->convertTo0to1((float)v));
+    master_->endChangeGesture();
+}
+
+void FM1Processor::panelFineTurn(int role, int detents)
+{
+    if (!detents || role < 0 || role >= EMU_NE - 1)
+        return;
+    fineRole_.store(role);
+    fineReq_.fetch_add(detents);
+}
+
+void FM1Processor::panelReleaseAll()
+{
+    panelKeys_.store(0);
+    panelButtons_.store(0);
+}
+
+bool FM1Processor::getPanelView(PanelView &out) const
+{
+    const juce::SpinLock::ScopedLockType l(viewLock_);
+    if (out.seq == view_.seq)
+        return false;
+    if (out.lcdSeq != view_.lcdSeq)
+        out.lcd = view_.lcd;
+    out.seq = view_.seq;
+    out.running = view_.running;
+    out.lcdWrites = view_.lcdWrites;
+    out.lcdSeq = view_.lcdSeq;
+    out.keyLed = view_.keyLed;
+    out.btnLed = view_.btnLed;
+    out.playGreen = view_.playGreen;
+    out.keys = view_.keys;
+    out.buttons = view_.buttons;
+    out.master = view_.master;
+    return true;
+}
+
+// the audio thread (devLock_ held): param | panel | the fine-turn GLO onto the device's buttons
+void FM1Processor::applyButtons()
+{
+    const uint32_t b = paramButtons_ | panelButtonsCur_ | (fineGlo_ ? 1u << EMU_B_GLO : 0u);
+    if (b != appliedButtons_) {
+        dev_->buttons(b);
+        appliedButtons_ = b;
+    }
+}
+
+// emu.c fine_turn (at block start): a new request holds GLO now; the detent follows before the next UI frame
+void FM1Processor::takeFineRequest()
+{
+    const int32_t n = fineReq_.exchange(0);
+    if (!n)
+        return;
+    const int role = fineRole_.load();
+    if (fineStage_ && role != fineRoleCur_)
+        return;                                  // (another knob while one is stepping: dropped, as emu.c)
+    fineRoleCur_ = role;
+    fineSteps_ += n;
+    if (!fineStage_) {
+        fineGlo_ = true;
+        applyButtons();
+        fineStage_ = 1;
+    } else if (fineStage_ == 2) {
+        fineStage_ = 1;                          // another detent: stepped at the next frame, GLO kept down
+    }
+}
+
+// emu.c fine_frame (before each UI frame, on the device clock)
+void FM1Processor::fineFrame()
+{
+    if (fineStage_ == 1) {
+        dev_->enc(fineRoleCur_, fineSteps_);
+        fineSteps_ = 0;
+        fineStage_ = 2;
+    } else if (fineStage_ == 2) {
+        fineGlo_ = false;
+        applyButtons();
+        fineStage_ = 0;
+    }
+}
+
+// the end of a block (devLock_ held): a new snapshot for the GUI when anything it shows moved
+void FM1Processor::snapshotPanel()
+{
+    const bool running = dev_ && dev_->booted() && !dev_->halted();
+    const emu_hal_t *h = dev_ ? dev_->hal() : nullptr;
+    const uint32_t keys = appliedKeys_ == 0xFFFFFFFFu ? 0u : appliedKeys_;
+    const uint32_t buttons = appliedButtons_ == 0xFFFFFFFFu ? 0u : appliedButtons_;
+    const bool lcdMoved = h && h->lcd_writes != view_.lcdWrites;
+    const bool ledsMoved = h && (std::memcmp(viewLeds_, h->led, EMU_NCOL) || std::memcmp(viewLeds_ + EMU_NCOL, h->led_dim, EMU_NCOL));
+    if (!viewDirty_ && !lcdMoved && !ledsMoved && running == viewRunning_ && keys == viewKeys_ &&
+        buttons == viewButtons_ && (!h || h->master == viewMaster_))
+        return;
+    const juce::SpinLock::ScopedTryLockType l(viewLock_);
+    if (!l.isLocked())
+        return;                                  // (the GUI is copying: the next block)
+    if (h) {
+        if (lcdMoved || viewDirty_) {
+            std::memcpy(view_.lcd.data(), h->lcd, sizeof h->lcd);
+            view_.lcdWrites = h->lcd_writes;
+            view_.lcdSeq++;
+        }
+        std::memcpy(viewLeds_, h->led, EMU_NCOL);
+        std::memcpy(viewLeds_ + EMU_NCOL, h->led_dim, EMU_NCOL);
+        for (int k = 0; k < EMU_NKEY; k++)
+            view_.keyLed[(size_t)k] = (uint8_t)dev_->led_key(k);
+        for (int b = 0; b < EMU_NB; b++)
+            view_.btnLed[(size_t)b] = (uint8_t)dev_->led_button(b);
+        view_.playGreen = (uint8_t)dev_->led_play_green();
+        view_.master = h->master;
+        viewMaster_ = h->master;
+    }
+    view_.running = viewRunning_ = running;
+    view_.keys = viewKeys_ = keys;
+    view_.buttons = viewButtons_ = buttons;
+    view_.seq++;
+    viewDirty_ = false;
 }
 
 // ---------------------------------------------------------------- state ---
 // A ValueTree "FM1VST" (binary): stateVersion, core, coreVersion, transpose, midiNotesPlayKeys, keyNotesToFirmware,
-// master, preset, a
-// child "theme" (name base membrane bed knob) and "flash": the image gzip-compressed (a MemoryBlock property; absent
-// when the instance never had one, i.e. a fresh flash).
+// master, preset, editorW, editorH, bigLcd, a child "theme" (name base membrane knob, and bed / label when the theme
+// sets them; "#RRGGBB") and "flash": the image gzip-compressed (a MemoryBlock property; absent when the instance
+// never had one, i.e. a fresh flash).
 void FM1Processor::getStateInformation(juce::MemoryBlock &dest)
 {
     juce::ValueTree t("FM1VST");
@@ -872,13 +1057,21 @@ void FM1Processor::getStateInformation(juce::MemoryBlock &dest)
     t.setProperty("keyNotesToFirmware", keyNotesToFirmware_.load(), nullptr);
     t.setProperty("master", master_->get(), nullptr);
     t.setProperty("preset", currentPreset_, nullptr);
-    const FM1Theme th = getTheme();
+    if (editorW_.load() > 0 && editorH_.load() > 0) {
+        t.setProperty("editorW", editorW_.load(), nullptr);
+        t.setProperty("editorH", editorH_.load(), nullptr);
+    }
+    t.setProperty("bigLcd", bigLcd_.load(), nullptr);
+    const Theme th = getTheme();
     juce::ValueTree tt("theme");
     tt.setProperty("name", th.name, nullptr);
-    tt.setProperty("base", th.base, nullptr);
-    tt.setProperty("membrane", th.membrane, nullptr);
-    tt.setProperty("bed", th.bed, nullptr);
-    tt.setProperty("knob", th.knob, nullptr);
+    tt.setProperty("base", toHex(th.base), nullptr);
+    tt.setProperty("membrane", toHex(th.membrane), nullptr);
+    tt.setProperty("knob", toHex(th.knob), nullptr);
+    if (th.bed)
+        tt.setProperty("bed", toHex(*th.bed), nullptr);
+    if (th.label)
+        tt.setProperty("label", toHex(*th.label), nullptr);
     t.appendChild(tt, nullptr);
     if (!f.empty())
         t.setProperty("flash", gzip(f), nullptr);
@@ -897,15 +1090,22 @@ void FM1Processor::setStateInformation(const void *data, int sizeInBytes)
     if (t.hasProperty("master"))
         *master_ = juce::jlimit(0, 1023, (int)t.getProperty("master"));
     const juce::ValueTree tt = t.getChildWithName("theme");
-    if (tt.isValid()) {
-        FM1Theme th;
+    if (tt.isValid()) {                          // (the state's colours win over any theme file)
+        Theme th;
         th.name = tt.getProperty("name", th.name).toString();
-        th.base = tt.getProperty("base", th.base).toString();
-        th.membrane = tt.getProperty("membrane", th.membrane).toString();
-        th.bed = tt.getProperty("bed", th.bed).toString();
-        th.knob = tt.getProperty("knob", th.knob).toString();
+        th.base = parseHex(tt.getProperty("base", "").toString()).value_or(th.base);
+        th.membrane = parseHex(tt.getProperty("membrane", "").toString()).value_or(th.membrane);
+        th.knob = parseHex(tt.getProperty("knob", "").toString()).value_or(th.knob);
+        th.bed = parseHex(tt.getProperty("bed", "").toString());
+        th.label = parseHex(tt.getProperty("label", "").toString());
+        if (!tt.hasProperty("label"))            // (a phase 2 state: no label key; a preset's own label)
+            if (auto p = ThemeStore::preset(th.name))
+                th.label = p->label;
         setTheme(th);
     }
+    if (t.hasProperty("editorW") && t.hasProperty("editorH"))
+        setEditorSize((int)t.getProperty("editorW"), (int)t.getProperty("editorH"));
+    bigLcd_.store((bool)t.getProperty("bigLcd", false));
     const juce::String id = t.getProperty("core", "choralroot").toString();
     std::optional<std::vector<uint8_t>> bytes;
     if (const juce::MemoryBlock *z = t.getProperty("flash").getBinaryData()) {
@@ -951,7 +1151,7 @@ bool FM1Processor::isBusesLayoutSupported(const BusesLayout &layouts) const
 
 void FM1Processor::pushKeys()
 {
-    const uint32_t m = paramKeys_ | midiKeys_;
+    const uint32_t m = paramKeys_ | midiKeys_ | panelKeysCur_;
     if (m != appliedKeys_) {
         dev_->keys(m);
         appliedKeys_ = m;
@@ -967,10 +1167,16 @@ void FM1Processor::applyTier1()
     for (int i = 0; i < EMU_NKEY; i++)
         if (key_[(size_t)i]->get())
             k |= 1u << i;
-    if (b != appliedButtons_) {
-        dev_->buttons(b);
-        appliedButtons_ = b;
-    }
+    // the panel GUI's held source (merged, never written into the parameters) and its taps: a press released
+    // before this block reaches the firmware as a tap (emu.c hold_key / hold_btn set keys_tap / buttons_tap)
+    const uint32_t btnTaps = panelBtnTaps_.exchange(0), keyTaps = panelKeyTaps_.exchange(0);
+    panelButtonsCur_ = panelButtons_.load();
+    panelKeysCur_ = panelKeys_.load();
+    paramButtons_ = b;
+    applyButtons();
+    if (const uint32_t t = btnTaps & ~appliedButtons_)
+        dev_->buttons_tap(t);
+    takeFineRequest();
     paramKeys_ = k;
     const bool np = notesPlayKeys_.load();
     if (!np && lastNotesPlayKeys_) {             // turned off: let go of what MIDI notes held
@@ -981,6 +1187,11 @@ void FM1Processor::applyTier1()
     }
     lastNotesPlayKeys_ = np;
     pushKeys();
+    if (const uint32_t t = keyTaps & ~appliedKeys_)
+        dev_->keys_tap(t);
+    for (int r = 0; r < EMU_NE - 1; r++)         // (MASTER: the parameter, below)
+        if (const int32_t n = panelEnc_[(size_t)r].exchange(0))
+            dev_->enc(r, n);
     const int m = master_->get();
     if (m != appliedMaster_) {
         dev_->master(m);
@@ -1190,6 +1401,7 @@ void FM1Processor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuff
         }
         buffer.clear();
     }
+    snapshotPanel();
     midi.swapWith(midiOut_);
 }
 

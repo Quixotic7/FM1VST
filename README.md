@@ -5,12 +5,12 @@ planned as VST3, AU and Standalone. The emulator compiles the firmware's own C s
 HAL, so the plugin plays exactly what the device plays. The plan, the architecture and the phases are
 in [FM1-VST-PLAN.md](FM1-VST-PLAN.md).
 
-Status: phase 2. The ChoralRoot firmware builds as a loadable core module
+Status: phase 3. The ChoralRoot firmware builds as a loadable core module
 (`build/cores/choralroot.fm1core`) behind a versioned C ABI, a JUCE-free engine loads it, runs its device clock and
 resamples its output to the host rate, and a JUCE plugin (AU, VST3, Standalone) plays it with the firmware's own
 parameters (77, absolute and bidirectional: the Roto-Control map, plan 4.5) and the panel's 42 controls as host
-parameters, MIDI in and out, the flash image as its state, and presets per firmware. The panel GUI (phase 3) is
-next.
+parameters, MIDI in and out, the flash image as its state, and presets per firmware. The editor is the FM-1 panel itself
+(phase 3): LEDs, LCD, mouse and keyboard as in the emulator, with colour themes.
 
 ## Layout
 
@@ -18,9 +18,9 @@ next.
 |---|---|
 | `core-api/fm1core.h` | the core ABI (`FM1CORE_ABI 3`): the descriptor `fm1core_t` (id, name, version, source, flash size, button labels, the parameter map `fm1param_t` and `param_epoch`, the panel state `emu_hal_t`, every `emu_fw_*` entry point, `shutdown`, `halted`, and the flash image: `flash`, `flash_dirty`, `flash_stage` to boot from bytes, `flash_sync`) and the one symbol a module exports, `fm1core_get`. The threading contract is in its header comment. |
 | `core-glue/choralroot/` | the ChoralRoot core: `core_choralroot.c` (the submodule's `tools/emu/emu_fw.c`, unmodified, with `exit` / `atexit` redirected so a firmware reboot halts the core instead of the host), `core_choralroot_params.c` (the Tier 2 parameter map, included into the same unit so it reaches the firmware's UI code) and `core_choralroot_desc.c` (the descriptor) |
-| `plugin/` | the JUCE plugin: `Processor.{h,cpp}` (`FM1Processor`: the core and its `Device` on the audio thread, parameters and the Tier 2 feedback loop, MIDI, state, presets, the firmware switch; the threading and file layout are in its header comment), `Tier2Parameter.{h,cpp}` (a rebindable host parameter slot) and `Editor.{h,cpp}` (a plain settings bar over JUCE's generic parameter editor; phase 3 replaces it) |
+| `plugin/` | the JUCE plugin: `Processor.{h,cpp}` (`FM1Processor`: the core and its `Device` on the audio thread, parameters and the Tier 2 feedback loop, MIDI, state, presets, the firmware switch; the threading and file layout are in its header comment), `Tier2Parameter.{h,cpp}` (a rebindable host parameter slot), `Editor.{h,cpp}` (the settings bar and the panel; the theme picker), `PanelComponent.{h,cpp}` (the FM-1 panel: the emulator's drawing, layout, mouse and key map) and `Theme.{h,cpp}` (colour themes: the derived palette, the presets, custom theme files) |
 | `engine/` | C++17, no JUCE: `cores.{h,cpp}` (find and load modules, one private copy per instance), `device.{h,cpp}` (the single-thread device clock, input, LEDs, LCD, `render` at any host rate), `resampler.h` (4-point Lagrange) |
-| `tests/` | `core_smoke`, `replay_test`, `double_load_test`, `halt_test`, `param_test`, `plugin_test`, `tier2_test`, and `script_runner` (the emulator's script grammar on a `Device`) |
+| `tests/` | `core_smoke`, `replay_test`, `double_load_test`, `halt_test`, `param_test`, `plugin_test`, `tier2_test`, `panel_render_test`, and `script_runner` (the emulator's script grammar on a `Device`) |
 
 ## Cores
 
@@ -78,7 +78,7 @@ bass on channel 2 once a bass sound is chosen), so it can drive other instrument
   "... and go to the firmware's MIDI in" sends it as well.
 - **MIDI out:** the firmware's USB-MIDI packets, decoded (SysEx reassembled), at the position in the block where they
   were produced.
-- **State:** the firmware's id and version, the settings (transpose, the MIDI toggles, the theme) and the whole 1 MiB
+- **State:** the firmware's id and version, the settings (transpose, the MIDI toggles, the theme, the editor size and big-LCD view) and the whole 1 MiB
   flash image, gzip-compressed (a few KB), so a Live set reopens with the unit exactly as it was saved.
 - **Firmware dropdown:** every core found in the two folders; switching saves the old one's flash, loads the new one
   and powers it on from its own flash.
@@ -92,12 +92,95 @@ bass on channel 2 once a bass sound is chosen), so it can drive other instrument
                                  an instance is released or closed, before a firmware switch, and on Save)
     <core-id>/presets/*.fm1preset  a snapshot of the whole flash
     <core-id>/backups/*.fm1preset  written before a preset load or a flash reset (the newest 50 kept)
+    themes/*.json                custom colour themes (one per file), settings.json: the default theme
   ```
 
   A `.fm1preset` is one line of JSON (`{"fm1preset":1,"core":"choralroot","version":"0.1","name":"..","date":"..",
   "size":1048576}`), a newline, then the flash image gzip-compressed (`tail -n +2 X.fm1preset | gunzip > flash.bin`).
 - **`FM1EMU_HOME`:** when set, it replaces `~/Library/Application Support` (data under `$FM1EMU_HOME/fm1emu/`) and
   `~/Library/Caches` (`$FM1EMU_HOME/Caches/fm1emu/`). The tests set it to a folder in the build.
+
+## The panel (phase 3)
+
+The editor is the FM-1 itself: a port of the ChoralRoot emulator's window (`tools/emu/emu.c`, `keymap.c`) as a JUCE
+component (`plugin/PanelComponent.{h,cpp}`) under a slim settings bar (firmware, presets and their buttons, Transpose,
+the two MIDI toggles, Theme, Big LCD, the status with Power on). The host parameters have no generic list any more;
+they remain the host's.
+
+- **Drawing.** The panel in the designer geometry (904 x 566 units, the 876 x 538 view shown), drawn with the
+  emulator's own rasteriser (anti-aliased rounded boxes, rings, round-capped pointers, its 5x7 font): the body, the
+  key and button beds, the 27 keys with their LED bars, the 14 buttons with the firmware's labels on the caps
+  (ChoralRoot: FX KEY BASS LATCH EDIT OPT / HOME SAVE PERF METRO LOOP REC) and the panel's printed labels small on the
+  bed where they differ (SEL ENV LFO GLO over the top row, ARP SEQ PLAY under the bottom one), the OCT buttons, the 8
+  knobs with their names and pointers (the encoders are endless: the pointer turns 15 degrees per detent the panel
+  sends; MASTER shows its 0..1023 position over 270 degrees), the computer-key hints in green, and the LEDs as the
+  firmware sets them: lit / dim / off, REC red, PLAY orange plus its green LED. The panel is rasterised once per size
+  and theme at the screen's physical pixels (sharp on Retina at any size); after that only the controls whose state
+  changed (held, LED, pointer, selection) and the LCD are redrawn, polled at 60 Hz.
+- **The LCD** is the firmware's 240 x 240 RGB565 framebuffer on the panel's screen. The window is resizable with the
+  panel's aspect kept and snaps to an integer multiple of the LCD when one is within 8 %: the LCD is then drawn
+  nearest-neighbour, pixel for pixel (at other sizes it is smoothed). The default size puts the panel at 1.6 points
+  per unit (1401 x 861 points: about 80 % of a 1080p screen's height; the LCD at 1x, 2x on Retina). **Big LCD** (the
+  bar's button, or the backtick key) shows the LCD above the panel as a square as wide as the panel (snapped down to
+  a multiple of 240 when one is within 10 %; the frame letterboxes in the window). The size and the big-LCD view are
+  remembered per instance in the state.
+- **Mouse:** click a key or a button to press it (released on mouse up); right-click or ctrl-click latches it down
+  until clicked again; the wheel over a knob turns it one detent per notch (MASTER: 16 of 1023); dragging a knob up /
+  down turns it (8 points a detent); a click on a knob selects it for Up / Down (the green ring).
+- **Keyboard** (click the panel first; physical US-layout keys, `keymap.c`'s map; the F keys may need `fn`):
+
+  | computer keys | FM-1 |
+  |---|---|
+  | `A S D F G H J K L ; ' ]` | white keys C4 D4 E4 F4 G4 A4 B4 C5 D5 E5 F5 G5 |
+  | `W E T Y U O P` | black keys C#4 D#4 F#4 G#4 A#4 C#5 D#5 (F#5: the mouse only) |
+  | `F1 F2 F3 F4` / `2 3 4 5` / Tab | F#3 G#3 A#3 C#4 / F3 G3 A3 C4 / B3 (ChoralRoot's LOCK) |
+  | `Z` `X` (also Esc / Return) | OCT- / OCT+; End: both (panic) |
+  | F5 .. F10 | the top button row (FX SEL ENV LFO EDIT GLO; ChoralRoot: FX KEY BASS LATCH EDIT OPT) |
+  | `7 8 9 0 - =` | the bottom row (HOME SAVE ARP SEQ PLAY REC; ChoralRoot: HOME SAVE PERF METRO LOOP REC) |
+  | Page Down / Page Up | select the next / previous of SELECT, KNOB1 .. KNOB4 |
+  | Up / Down | turn the selected knob one detent (repeats; MASTER: 32 of 1023) |
+  | Shift + Up / Down | fine steps (the firmware's SHIFT: GLO held around the detent); outside the editor, OPT's second function |
+  | `` ` `` | the big LCD view |
+
+  The emulator's screenshot, recording and dump keys are not mapped. Cmd shortcuts stay the host's. Losing the
+  keyboard focus releases every key the keyboard or the mouse holds (latches stay); closing the editor releases
+  everything.
+- **How the panel reaches the firmware.** The panel is its own "held" source, as the emulator merges its keyboard,
+  mouse and latch sources: `FM1Processor::panelKey` / `panelButton` set atomics that the audio thread merges at each
+  block start with the host parameters and MIDI (keys: `key_NN` | MIDI notes | panel; buttons: `btn_*` | panel). A
+  panel press never moves the `btn_*` / `key_*` host parameters, so automation and the Roto-Control are unaffected,
+  and a press released before the next block still reaches the firmware as a tap. `panelEnc` queues encoder detents
+  for the audio thread; MASTER is the host's `master` parameter, which the panel moves as any plugin GUI moves a
+  parameter (inside a gesture). Shift + Up / Down holds GLO around the detent on the device clock (`emu.c`
+  fine_turn). The GUI never reads the core: the audio thread copies the LCD, the LEDs and the held state into a
+  snapshot after each block in which they changed, under a lock it only tries.
+
+### Themes
+
+The real FM-1 comes in several colours; the panel's colours are a theme (`plugin/Theme.{h,cpp}`): three picked
+colours, **Base** (the body), **Membrane** (the silicone keys and buttons) and **Knobs**, plus two optional overrides,
+**Bed** (the recessed plate the keys sit in; else a darker shade of the membrane) and **Label** (the printed labels;
+else white or dark, whichever contrasts more with the body). Everything else is derived so a theme stays legible: the
+edge lines from the base, the pressed cap (lightened), the LED-off slot (darkened) and the cap outlines from the
+membrane, the knob pointer by contrast with the knob, the text on caps and beds by contrast. The LEDs' lit colours
+(white, red, orange, green) are fixed. `panel_render_test` checks every preset against contrast floors (label / body
+3.0, pointer / knob 2.0, LED-off / cap 1.3, pressed / cap 1.3).
+
+- **Presets** (`themes/presets.json`, embedded in the plugin): Black, Black/Green, Cool Gray, Orange, Purple,
+  White/Blue (sampled from M-VAVE's product photos in `reference/MVaveOfficialColors/`) and Emulator (the ChoralRoot
+  emulator's own palette).
+- **Custom:** the Theme menu's **Custom...** opens colour pickers for Base, Membrane and Knobs, Bed and Label with an
+  "override" switch each, and a name; every change previews live. **Save** writes
+  `~/Library/Application Support/fm1emu/themes/<name>.json`; **Save as default** also makes it the theme new
+  instances start with (`fm1emu/settings.json`, `"defaultTheme"`); **Delete** removes the file. Custom themes are
+  listed after the presets. A theme file has the keys of a presets entry (`bed` and `label` optional):
+
+  ```json
+  {"name": "My Teal", "base": "#1F3B3D", "membrane": "#E07A3C", "knob": "#E8E2D6", "bed": "#B85F2C", "label": "#F4F0E8"}
+  ```
+
+- **In the state:** the theme's name and colours are stored with the instance, so a set reopens looking the same even
+  when its custom theme file is gone (the menu then lists it as "<name> (this set)").
 
 ## Building
 
@@ -135,6 +218,15 @@ The tests:
   parameters reach the HAL, MIDI out is well formed, the flash survives the state round trip, presets save / reset /
   load / rename / export / import / delete with backups, and the installed bundles resolve their cores folder.
   After the build, `auval -v aumu Fm1v Qx7u` validates the installed AU.
+- `panel_render_test`: the panel, headless (no window: painted offscreen into images). It writes the pictures
+  `build/panel/<theme>.png` for every preset and `custom-Test-Teal.png` (904 x 566 at scale 2, key D4 held from the
+  panel), `Emulator-released.png`, `lcd.png` (the LCD alone), `lcd-1x.png`, `lcd-2x.png`, `big-lcd.png` and
+  `editor.png` (the whole editor), and checks: the LCD on the panel at 1x, 2x and in the big view (software and
+  native renderers), sampled back to 240 x 240, equals the device's framebuffer (RGB565 to RGB888) within 1 per
+  channel; D4's LED pixel is the lit colour while `panelKey` holds it and follows the device after the release, and
+  its `key_09` parameter never moves; a panel button and MASTER reach the HAL; every preset keeps the contrast floors
+  (the table is printed); a custom theme saves, lists, becomes the default for a new instance, and a state naming it
+  restores its colours into the editor after its file is deleted.
 
 **The reference emulator.** `replay_test` compares against the submodule's own headless emulator,
 `cores/ChoralRootFM1/build/host/emu --headless --script ... --wav ...`. The build target `reference_emu` builds it

@@ -11,6 +11,9 @@
 //     suspendProcessing(true) .. (false), so the host stops calling processBlock while the Device is replaced.
 //   - Host parameter values (Tier 1) are atomics (JUCE's parameters) read once at the start of each block.
 //   - The non-automatable settings the audio thread needs (transpose, "MIDI notes play keys") are atomics.
+//   - The panel GUI (PanelComponent): its held keys / buttons, encoder detents and fine turns are atomics taken at
+//     block start (panelKey ..); what it shows (LCD, LEDs, held state, MASTER) is a PanelView snapshot the audio
+//     thread writes after a block in which it changed, under viewLock_, which the audio thread only tries.
 //
 // TIER 2: THE FIRMWARE'S PARAMETERS (plan 4.5; the slots: Tier2Parameter.h)
 //   Parameters are created once, in the constructor, Tier 2 first (so a Roto-Control's first page is the map's
@@ -43,6 +46,7 @@
 //                              instance is released or destroyed, before a core switch, and on an explicit save
 //   <core-id>/presets/NAME.fm1preset    a named snapshot of the whole flash (format below)
 //   <core-id>/backups/DATE.fm1preset    written before a preset load or a flash reset (the newest 50 are kept)
+//   themes/NAME.json, settings.json     custom colour themes and the default theme (Theme.h: ThemeStore)
 // The per-instance copies of the module go to <FM1EMU_HOME>/Caches/fm1emu/instances (else ~/Library/Caches/...).
 //
 // THE .fm1preset FORMAT: one line of JSON, a '\n', then the flash image gzip-compressed (RFC 1952: `tail -n +2 F |
@@ -59,6 +63,7 @@
 #include <string>
 #include <vector>
 
+#include "Theme.h"
 #include "Tier2Parameter.h"
 #include "cores.h"
 #include "device.h"
@@ -76,9 +81,19 @@ private:
     juce::String displayName_;
 };
 
-struct FM1Theme {                       // stored in the state only (phase 3 draws with it); colours "#RRGGBB"
-    juce::String name = "Emulator";
-    juce::String base = "#1C1C20", membrane = "#2B2B31", bed = "#141417", knob = "#35353C";
+// What the panel shows, snapshotted on the audio thread at the end of a block when it changed (the GUI never reads
+// the core's hal directly: it copies this under a spin lock the audio thread only ever tries).
+struct PanelView {
+    uint32_t seq = 0;                                 // moves with every snapshot
+    bool running = false;                             // a booted, not halted device
+    uint32_t lcdWrites = 0;                           // hal->lcd_writes when lcd was copied
+    uint32_t lcdSeq = 0;                              // moves with every copy of lcd (a power cycle restarts lcd_writes)
+    std::array<uint16_t, EMU_LCD_W * EMU_LCD_H> lcd{};   // RGB565 big-endian, as sent
+    std::array<uint8_t, EMU_NKEY> keyLed{};           // 0 off, 1 dim, 2 lit
+    std::array<uint8_t, EMU_NB> btnLed{};
+    uint8_t playGreen = 0;                            // 0 / 2
+    uint32_t keys = 0, buttons = 0;                   // what the device holds now (all sources merged; label bits)
+    int master = 724;                                 // hal->master, 0..1023
 };
 
 class FM1Processor : public juce::AudioProcessor, private juce::AsyncUpdater, private juce::Timer {
@@ -156,8 +171,38 @@ public:
     // other message (and every note when "MIDI notes play keys" is off, or out of the key range) always goes in.
     bool getKeyNotesToFirmware() const { return keyNotesToFirmware_.load(); }
     void setKeyNotesToFirmware(bool on) { keyNotesToFirmware_.store(on); }
-    FM1Theme getTheme() const;
-    void setTheme(const FM1Theme &t);
+    // the panel's colour theme (Theme.h): a new instance starts with the user's default theme (ThemeStore); the
+    // state stores the theme itself (name and colours), so a set reopens looking the same even when its custom
+    // theme file is gone. themeSerial() moves on every setTheme (the editor follows a state restore with it).
+    Theme getTheme() const;
+    void setTheme(const Theme &t);
+    uint32_t themeSerial() const { return themeSerial_.load(); }
+    // the editor's last size and big-LCD view, per instance (stored in the state; 0 x 0: never opened)
+    juce::Point<int> getEditorSize() const { return {editorW_.load(), editorH_.load()}; }
+    void setEditorSize(int w, int h) { editorW_.store(w), editorH_.store(h); }
+    bool getBigLcd() const { return bigLcd_.load(); }
+    void setBigLcd(bool on) { bigLcd_.store(on); }
+    // the loaded core's labels for the 14 buttons (EMU_B_* order; the panel's own printed label when the core has
+    // none)
+    juce::StringArray buttonNames() const;
+
+    // ---- the panel GUI's input (message thread). A separate "held" source, merged on the audio thread with the
+    // host parameters and MIDI (keys: param | MIDI | panel; buttons: param | panel | fine-turn GLO), as emu.c merges
+    // SRC_KEY / SRC_MOUSE / SRC_LATCH: the panel never moves the btn_ / key_ host parameters. A press that is
+    // released before the next block still reaches the firmware as a tap.
+    void panelKey(int key, bool down);
+    void panelButton(int label, bool down);
+    // turn an encoder (EMU_E_* role) by detents, + clockwise. MASTER is the host's "master" parameter: the panel
+    // moves it (16 of 1023 per detent, inside a gesture) as any plugin GUI moves a continuous parameter.
+    void panelEnc(int role, int detents);
+    void panelMaster(int value);
+    // Shift + Up / Down (emu.c fine_turn): GLO held around the detent: GLO goes down at the next block, the detent
+    // arrives before the next UI frame, GLO up one frame later (all on the device clock)
+    void panelFineTurn(int role, int detents);
+    void panelReleaseAll();                          // every panel key and button up
+    // the latest snapshot: copies it into out when out.seq differs (the LCD only when out.lcdSeq differs);
+    // false when nothing changed
+    bool getPanelView(PanelView &out) const;
 
     // the current flash image (synced first when the device runs); empty = a fresh flash
     std::vector<uint8_t> currentFlash();
@@ -260,7 +305,32 @@ private:
     std::atomic<bool> notesPlayKeys_{true};
     std::atomic<bool> keyNotesToFirmware_{false};
     mutable juce::SpinLock themeLock_;
-    FM1Theme theme_;
+    Theme theme_;
+    std::atomic<uint32_t> themeSerial_{0};
+    std::atomic<int> editorW_{0}, editorH_{0};
+    std::atomic<bool> bigLcd_{false};
+
+    // the panel GUI's input (written by the message thread, taken by the audio thread at block start)
+    std::atomic<uint32_t> panelKeys_{0}, panelButtons_{0}, panelKeyTaps_{0}, panelBtnTaps_{0};
+    std::array<std::atomic<int32_t>, EMU_NE> panelEnc_{};
+    std::atomic<int32_t> fineReq_{0};
+    std::atomic<int> fineRole_{EMU_E_SELECT};
+    // the audio thread's side
+    uint32_t paramButtons_ = 0, panelKeysCur_ = 0, panelButtonsCur_ = 0;
+    int fineStage_ = 0, fineRoleCur_ = EMU_E_SELECT;  // emu.c fine_frame: 0 idle, 1 GLO down, 2 stepped
+    int32_t fineSteps_ = 0;
+    bool fineGlo_ = false;
+    void applyButtons();
+    void takeFineRequest();
+    void fineFrame();
+    // the panel snapshot
+    void snapshotPanel();
+    mutable juce::SpinLock viewLock_;
+    PanelView view_;
+    uint8_t viewLeds_[2 * EMU_NCOL] = {};
+    uint32_t viewKeys_ = 0xFFFFFFFFu, viewButtons_ = 0xFFFFFFFFu;
+    int viewMaster_ = -1;
+    bool viewRunning_ = false, viewDirty_ = true;
 
     // audio-thread state
     uint32_t paramKeys_ = 0, midiKeys_ = 0, appliedKeys_ = 0xFFFFFFFFu, appliedButtons_ = 0xFFFFFFFFu;

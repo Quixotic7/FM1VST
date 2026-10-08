@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # FM1VST: the FM-1 emulator from ChoralRoot FM-1 as a plugin (see FM1-VST-PLAN.md).
 # Phase 1: the ChoralRoot core as a loadable module, the engine (core loader, device clock, resampler), replay tests.
-# Phase 2: the JUCE plugin (plugin/): AU, VST3, Standalone.
+# Phase 2: the JUCE plugin (plugin/): AU, VST3, Standalone. Phase 3: the panel GUI (plugin/PanelComponent, Theme).
 cmake_minimum_required(VERSION 3.22)
 project(FM1VST VERSION 0.2.0 LANGUAGES C CXX)
 
@@ -132,13 +132,17 @@ juce_add_plugin(FM1VST
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT TRUE
     IS_MIDI_EFFECT FALSE
-    EDITOR_WANTS_KEYBOARD_FOCUS FALSE
+    EDITOR_WANTS_KEYBOARD_FOCUS TRUE
     VST3_CATEGORIES Instrument Synth
     AU_MAIN_TYPE kAudioUnitType_MusicDevice
     COPY_PLUGIN_AFTER_BUILD FALSE
     VST3_COPY_DIR "${FM1_VST3_DIR}"
     AU_COPY_DIR "${FM1_AU_DIR}")
-target_sources(FM1VST PRIVATE plugin/Processor.cpp plugin/Tier2Parameter.cpp plugin/Editor.cpp)
+target_sources(FM1VST PRIVATE plugin/Processor.cpp plugin/Tier2Parameter.cpp plugin/Editor.cpp plugin/Theme.cpp
+                              plugin/PanelComponent.cpp)
+# the theme presets (themes/presets.json), embedded: BinaryData::presets_json
+juce_add_binary_data(FM1VST_Themes HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES themes/presets.json)
+set_target_properties(FM1VST_Themes PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(FM1VST PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/plugin)
 target_compile_features(FM1VST PUBLIC cxx_std_17)
 # the Tier 2 host parameter slots (plugin/Tier2Parameter.h): 86 + the 42 panel parameters = Live's 128
@@ -147,7 +151,7 @@ target_compile_definitions(FM1VST PUBLIC
     JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0
     FM1_CORES_DIR="${CMAKE_BINARY_DIR}/cores" FM1_TIER2_SLOTS=${FM1_TIER2_SLOTS})
 target_link_libraries(FM1VST
-    PRIVATE juce::juce_audio_utils fm1engine
+    PRIVATE juce::juce_audio_utils fm1engine FM1VST_Themes
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
 add_dependencies(FM1VST choralroot_core)
 
@@ -245,3 +249,13 @@ target_compile_definitions(tier2_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_D
     FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/tier2_test_home")
 add_dependencies(tier2_test choralroot_core)
 add_test(NAME tier2_test COMMAND tier2_test)
+
+# the panel GUI, headless (phase 3): the panel rendered offscreen to build/panel/*.png for every theme preset, the LCD
+# region against the device's framebuffer, a key's LED, the contrast floors, the custom theme round trip
+add_executable(panel_render_test tests/panel_render_test.cpp)
+target_link_libraries(panel_render_test PRIVATE FM1VST fm1engine)
+target_include_directories(panel_render_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
+target_compile_definitions(panel_render_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS>
+    FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/panel_test_home" FM1_PANEL_OUT="${CMAKE_BINARY_DIR}/panel")
+add_dependencies(panel_render_test choralroot_core)
+add_test(NAME panel_render_test COMMAND panel_render_test)
