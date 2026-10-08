@@ -1,0 +1,3 @@
+[submodule "cores/ChoralRootFM1"]
+	path = cores/ChoralRootFM1
+	url = https://github.com/Quixotic7/ChoralRootFM1.git
