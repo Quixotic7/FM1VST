@@ -306,7 +306,20 @@ void FM1Processor::applyHostParameters()
     for (int r = 0; r < kKnobs; r++) {           // the knobs: their target's set(), or detents (relative)
         KnobParameter *k = knob_[(size_t)r];
         int32_t v;
+        // just retargeted: what the host sends now was meant for the old target (its motor, its value: the push has
+        // not reached it yet). Dropped; the knob is told its value again.
+        const bool settling = knobSettling_[(size_t)r] && dev_->ms() - knobRetargetMs_[(size_t)r] < kSettleMs;
+        if (!settling)
+            knobSettling_[(size_t)r] = false;
         if (k->isRelative()) {
+            if (settling) {
+                if (k->takeDetents(v, knobDetents_.load()) || k->relativeOffCentre()) {
+                    k->recentre();
+                    pushTier2(kTier2Slots + r, (int32_t)k->hostSeq(), kKnobCentre);
+                    knobDropped_[(size_t)r].fetch_add(1);
+                }
+                continue;
+            }
             if (k->takeDetents(v, knobDetents_.load())) {
                 dev_->enc(r, v);                 // (as a panel turn: the firmware's own knob code)
                 hostEnc_[(size_t)r] += v;        // (the host's own detents: not a device turn to report)
@@ -317,6 +330,12 @@ void FM1Processor::applyHostParameters()
         }
         if (!k->takePending(v))
             continue;
+        if (settling) {
+            knobValid_[(size_t)r] = false;       // (the next read-back tells the host the target's value)
+            knobHoldoff_[(size_t)r] = 0;
+            knobDropped_[(size_t)r].fetch_add(1);
+            continue;
+        }
         if (const fm1param_t *e = k->entry())
             e->set(v);
         knobReported_[(size_t)r] = v;
@@ -356,6 +375,8 @@ void FM1Processor::retargetKnobs()
         k->retargetKnob(e);
         knobHoldoff_[(size_t)r] = 0;
         nudgeAcc_[(size_t)r] = 0;
+        knobRetargetMs_[(size_t)r] = dev_->ms();
+        knobSettling_[(size_t)r] = true;
         if (e) {
             const int32_t v = e->get();
             if (!pushTier2(kTier2Slots + r, v, kT2Relabel))
@@ -561,6 +582,7 @@ void FM1Processor::drainTier2()
         if (a.any)
             t2_[(size_t)i]->setFromFirmware(a.v, a.allChange && a.gesture);
     }
+    bool quiet = false;                          // a knob told without a gesture: ask a VST3 host to re-read
     for (int pass = 0; pass < 2; pass++)         // the knobs: the touched ones first
         for (int r = 0; r < kKnobs; r++) {
             const Acc &a = acc[(size_t)(kTier2Slots + r)];
@@ -571,16 +593,24 @@ void FM1Processor::drainTier2()
                 if (k->hostSeq() == (uint32_t)a.v && k->isRelative())
                     k->nudge((float)(0.5 + (double)a.aux / KnobParameter::kDefaultDetents));
             } else if (a.kind == kKnobNorm || a.kind == kKnobCentre) {   // relative: 0.5, unless the host turned it
-                if (k->hostSeq() == (uint32_t)a.v && k->isRelative() && !juce::exactlyEqual(k->hostValue(), 0.5f))
+                if (k->hostSeq() == (uint32_t)a.v && k->isRelative() && !juce::exactlyEqual(k->hostValue(), 0.5f)) {
                     k->setNormFromFirmware(0.5f);
+                    quiet = true;
+                }
             } else if (!k->isRelative()) {
                 // a change: unless the host's value is that step already; a relabel or the sweep: unless the host has
                 // exactly that value (the old one means another range)
                 const bool same = a.kind == kT2Change ? k->toPlain(k->hostValue()) == a.v : juce::exactlyEqual(k->toNorm(a.v), k->hostValue());
-                if (!same)
+                if (!same) {
                     k->setFromFirmware(a.v, a.gesture);
+                    quiet = quiet || !a.gesture;
+                }
             }
         }
+    // (performEdit outside a gesture is outside the VST3 contract: Live ignored it. kParamValuesChanged makes the
+    // host read back what the wrapper's controller now holds, without a touch)
+    if (quiet)
+        vst3_.refresh();
 }
 
 juce::String FM1Processor::buttonName(int i) const

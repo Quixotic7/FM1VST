@@ -103,8 +103,12 @@ bass on channel 2 once a bass sound is chosen), so it can drive other instrument
   editor the cells of the lane on screen; on Felucca's HOME the engine's four knobs, on its ENV page Attack ..
   Release, FX held its macros. Each knob is a continuous 0..1 parameter over its current function's range (quantised
   inside to the firmware's steps), so nothing the host caches about it (name, steps, default) ever changes and the
-  plugin never sends "parameter info changed" for a knob; when the screen changes the new value is pushed (no
-  gesture), so the Roto-Control's motor moves to it and its display shows the new text. **Who reports:** a knob
+  plugin never sends "parameter info changed" for a knob; when the screen changes (within a UI frame, whatever
+  caused it) the new value is pushed without a gesture and a VST3 host is asked to re-read the values
+  (`restartComponent(kParamValuesChanged)`: Live ignores a value change outside a gesture), so the Roto-Control's
+  motor moves to it and its display shows the new text. For 150 ms after a knob's function changed, host writes to
+  it are dropped (they were meant for the old function: the motor had not moved yet) and the host is told the new
+  value again. **Who reports:** a knob
   turned on the unit, the panel GUI or its keys reports on that knob, inside a gesture (a touch: Live's Configure
   collects it, automation records when armed); a knob whose function's value changed for another reason (a PRESETS
   turn loads a sound whose reverb send differs from the one Knob 4 shows; a MIDI CC) is updated without a gesture;
@@ -329,7 +333,11 @@ The tests:
   (`Device::enc(role, +2)` reports on that knob first, inside a gesture; a relative one is nudged and springs back;
   any other knob reports only if its function's value changed, without a gesture; nothing else reports), Knob 4 on
   the view explicitly; PRESETS on the view (only Knob Presets touched; Knob 4 follows its send untouched) and in the
-  KEY layer (the sends change, no knob shows one: only Knob Presets reports); the PERF layer and the perform mode
+  KEY layer (the sends change, no knob shows one: only Knob Presets reports); **page switches** clicked on the panel
+  (the view -> EDIT -> HOME, PERF open / mode changed from the panel and from the host / closed, FX, KEY, Options
+  open / closed, Felucca HOME -> ENV -> HOME): every knob's host value is its new function's before anything is
+  turned, the first turn then reports a step from it (EDIT: Level 98 -> 99), a stale host write within 150 ms of the
+  switch is dropped, the switch asks a VST3 host to re-read the values and a turn alone does not; the PERF layer and the perform mode
   switched from the host; a panel turn; the FX layer; Options (SELECT relative: 0.5 -> 0.75 is 6 detents at the
   device, it springs back to 0.5 with no detents; a row with no named entry: the hidden Option), the editor;
   Felucca's HOME, ENV, ENV DEST, SLICER (a hidden cell), EDIT 1, GLO and FX held; Melodee's HOME.

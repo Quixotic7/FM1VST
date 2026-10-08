@@ -205,9 +205,18 @@ is the pot (absolute 0..1023) everywhere.
   rescans a plugin's parameters on every such call; with a discrete target per screen it would have been
   needed on every screen change). Only the opt-in Tier 2 meta slots and a core switch (the buttons'
   names) still announce it.
-- **The plugin follows.** On an epoch change it re-reads the seven targets, retargets the knob
-  parameters whose target (entry, range, name) changed and pushes their values without a gesture: the
-  Roto-Control's motors move to the new positions and its displays show the new texts.
+- **The plugin follows.** The epoch is checked at every UI frame's read-back (every 15 ms of device
+  time), so a screen change is seen within a frame whichever thread caused it (a panel click, a host
+  write, a MIDI message). It re-reads the seven targets, retargets the knob parameters whose target
+  (entry, range, name) changed and pushes their values without a gesture. A value pushed without a
+  gesture reaches a VST3 host as `performEdit` outside `beginEdit` / `endEdit`, which Live ignores (it
+  kept Knob 1 at the voicing's value after the editor opened: the next Roto-Control turn wrote that stale
+  value onto the editor's Level), so every drain that pushed one also calls
+  `IComponentHandler::restartComponent(kParamValuesChanged)` (`plugin/HostRefresh.cpp`, through JUCE's
+  `VST3ClientExtensions::setIComponentHandler`): the host reads back what JUCE's edit controller now
+  holds, as after a preset load, without a touch. The Roto-Control's motors move to the new positions and
+  its displays show the new texts. For 150 ms of device time after a retarget, host writes to that knob
+  are dropped (the motor still sat on the old target's value) and the knob is told its value again.
 - **Only the knobs report, and only the one turned is a touch.** Live's Configure mode collects every
   parameter the plugin reports as changed, so with the Tier 2 slots off (the default) only the eight knobs
   can ever report. A knob turned on the unit (the panel GUI, its keys, a fine turn: the device's detent

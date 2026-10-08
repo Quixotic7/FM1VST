@@ -178,7 +178,7 @@ juce_add_plugin(FM1VST
     COPY_PLUGIN_AFTER_BUILD FALSE
     VST3_COPY_DIR "${FM1_VST3_DIR}"
     AU_COPY_DIR "${FM1_AU_DIR}")
-target_sources(FM1VST PRIVATE plugin/Processor.cpp plugin/Tier2Parameter.cpp plugin/Editor.cpp plugin/Theme.cpp
+target_sources(FM1VST PRIVATE plugin/Processor.cpp plugin/Tier2Parameter.cpp plugin/HostRefresh.cpp plugin/Editor.cpp plugin/Theme.cpp
                               plugin/PanelComponent.cpp)
 # the theme presets (themes/presets.json), embedded: BinaryData::presets_json
 juce_add_binary_data(FM1VST_Themes HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES themes/presets.json)

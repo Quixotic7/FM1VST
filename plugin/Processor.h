@@ -79,6 +79,7 @@
 #include <string>
 #include <vector>
 
+#include "HostRefresh.h"
 #include "Theme.h"
 #include "Tier2Parameter.h"
 #include "cores.h"
@@ -141,6 +142,7 @@ public:
     using juce::AudioProcessor::processBlock;
 
     juce::AudioProcessorEditor *createEditor() override;
+    juce::VST3ClientExtensions *getVST3ClientExtensions() override { return &vst3_; }
     bool hasEditor() const override { return true; }
     const juce::String getName() const override { return "FM1VST"; }
     bool acceptsMidi() const override { return true; }
@@ -254,10 +256,15 @@ public:
     int32_t knobDetentsSent(int role) const { return role >= 0 && role < kKnobs ? knobSent_[(size_t)role].load() : 0; }
     // the feedback drain (the timer's work; message thread): tests call it instead of running the message loop
     void drainTier2();
+    uint32_t hostRefreshes() const { return vst3_.refreshes(); }   // the drains that asked a VST3 host to re-read
+    int32_t knobWritesDropped(int role) const { return role >= 0 && role < kKnobs ? knobDropped_[(size_t)role].load() : 0; }
 
     static constexpr int kTier2Slots = FM1_TIER2_SLOTS;
     static constexpr int kKnobs = EMU_NE - 1;        // the KnobParameters (MASTER is master_)
     static constexpr int kHoldoffFrames = 2;         // read-backs skipped after a host write (30 ms of device time)
+    // after a knob's retarget, host writes are dropped for this long (device ms): the controller's motor and the
+    // host still hold the old target's value until the push reaches them; the knob is then told its value again
+    static constexpr uint32_t kSettleMs = 150;
 
     static constexpr int kNoteBase = 53;             // MIDI note of key 0 (F3)
     static const char *const kPanelLabels[EMU_NB];   // the printed labels: FX SEL ENV .. OCT+
@@ -359,6 +366,10 @@ private:
     std::array<uint32_t, EMU_NE - 1> ownTurnMs_{};      // device ms of the last device turn
     std::array<bool, EMU_NE - 1> ownTurnValid_{};
     static constexpr uint32_t kOwnTurnMs = 150;          // a target change this soon after a device turn is its own
+    std::array<uint32_t, EMU_NE - 1> knobRetargetMs_{};
+    std::array<bool, EMU_NE - 1> knobSettling_{};
+    std::array<std::atomic<int32_t>, EMU_NE - 1> knobDropped_{};   // writes dropped (tests)
+    Vst3HostRefresh vst3_;
     void retargetKnobs();
     void resetKnobTurns();
     void takeKnobTurns(std::array<int32_t, EMU_NE - 1> &own);

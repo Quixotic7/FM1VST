@@ -191,6 +191,172 @@ int main()
         p.drainTier2();
     }
 
+    // ---- (s) page switches: the host-visible value of every knob follows its new target BEFORE anything is turned
+    // (the screen changed by a panel click, as in Live: panelButton from the message thread; the device and the
+    // drain pumped as the audio thread and the 30 Hz timer would, nothing else), and the first turn after the
+    // switch reports a step from the new target's value, never a jump from the old one
+    auto click = [&](int b) {                     // a tap on the panel (down and up before the next block)
+        p.panelButton(b, true);
+        p.panelButton(b, false);
+    };
+    auto hold = [&](int b) {                      // a layer button held past HOLD_MS: the layer locks open
+        p.panelButton(b, true);
+        h.run_ms(500);
+        p.panelButton(b, false);
+    };
+    auto pump = [&](double ms) {                  // blocks with a drain every ~33 ms
+        for (double t = 0; t < ms; t += 33) {
+            h.run_ms(33);
+            p.drainTier2();
+        }
+    };
+    // every knob's host value is its target's place now (hostWrote: a value the host wrote itself may be any x that
+    // quantises to the target's step)
+    auto followed = [&](const std::string &where, bool hostWrote = false) {
+        std::string s, bad;
+        for (int r = 0; r < FM1Processor::kKnobs; r++) {
+            KnobParameter *q = p.knobParam(r);
+            const fm1param_t *e = q->isRelative() ? nullptr : q->entry();
+            const float want = e ? q->toNorm(e->get()) : 0.5f;
+            const bool ok = std::abs(q->hostValue() - want) < 1e-6f || (hostWrote && e && q->toPlain(q->hostValue()) == e->get());
+            char b[96];
+            std::snprintf(b, sizeof b, "%s%s %.3f", r ? ", " : "", fn(q).c_str(), q->hostValue());
+            s += b;
+            if (!ok)
+                bad += " " + q->getName(100).toStdString() + " (host " + std::to_string(q->hostValue()) + ", want " +
+                       std::to_string(want) + ")";
+        }
+        check(bad.empty() && namesFixed(), where + ": every knob's host value is its new target's (" + s + ")" +
+                                               (bad.empty() ? "" : "; STALE:" + bad));
+    };
+    // the first panel turn of a knob: reported one step from its target's value as the host already had it
+    auto firstTurn = [&](const std::string &where, int role, int detents) {
+        KnobParameter *q = p.knobParam(role);
+        const fm1param_t *e = q->entry();
+        if (q->isRelative() || !e) {
+            check(false, where + ": " + q->getName(100).toStdString() + " is not bound");
+            return;
+        }
+        const float hostBefore = q->hostValue();
+        const int32_t v0 = e->get();
+        w.clear();
+        p.panelEnc(role, detents);
+        pump(100);
+        const int32_t v1 = e->get();
+        const int i = idx(q);
+        const bool adjacent = v1 != v0 && std::abs(v1 - v0) <= std::abs(detents) * 8 &&
+                              std::abs(w.last[i] - q->toNorm(v1)) < 1e-6f && w.begins[i] == 1;
+        check(adjacent && std::abs(hostBefore - q->toNorm(v0)) < 1e-6f,
+              where + ": the first panel turn of " + q->getName(100).toStdString() + " (" + fn(q) + ") " +
+                  std::to_string(v0) + " -> " + std::to_string(v1) + ": the host goes " + std::to_string(hostBefore) +
+                  " -> " + std::to_string(w.last[i]) + " (a step, inside a gesture)");
+        p.panelEnc(role, -detents);
+        pump(100);
+    };
+    {
+        const fm1param_t *vo = entryNamed(p, "Voicing");
+        k[0]->setValueNotifyingHost(0.25f);       // a known voicing from the host
+        pump(100);
+        const float voNorm = k[0]->toNorm(vo->get());
+        check(std::abs(k[0]->hostValue() - 0.25f) < 1e-6f && vo->get() == k[0]->toPlain(0.25f),
+              "the view: host Knob 1 = 0.25: voicing " + std::to_string(vo->get()));
+        click(EMU_B_EDIT);                        // EDIT tapped: the chord sound's editor
+        pump(300);
+        std::printf("        (the editor: %s)\n", page().c_str());
+        const fm1param_t *lv = k[0]->entry();
+        check(lv && fn(k[0]) == "Level" && std::abs(k[0]->hostValue() - k[0]->toNorm(lv->get())) < 1e-6f &&
+                  std::abs(k[0]->hostValue() - 0.25f) > 1e-3f,
+              "EDIT (no knob turned): Knob 1 is Level " + std::to_string(lv ? lv->get() : -1) + ", the host was pushed " +
+                  std::to_string(k[0]->hostValue()) + " (was the voicing's 0.25)");
+        followed("EDIT");
+        firstTurn("EDIT", EMU_E_K1, 1);
+        firstTurn("EDIT", EMU_E_K4, -1);
+        click(EMU_B_HOME);
+        pump(300);
+        check(fn(k[0]) == "Voicing" && std::abs(k[0]->hostValue() - voNorm) < 1e-6f,
+              "EDIT -> HOME: Knob 1 Voicing again, the host back at the voicing's " + std::to_string(voNorm));
+        followed("EDIT -> HOME");
+        firstTurn("HOME", EMU_E_K1, 1);
+        hold(EMU_B_ARP);                          // the PERF layer
+        pump(300);
+        followed("PERF open (" + row() + ")");
+        firstTurn("PERF", EMU_E_K1, 1);
+        firstTurn("PERF", EMU_E_K3, 1);
+        p.panelEnc(EMU_E_SELECT, 1);              // the perform mode: Strum -> Slop (SELECT is the picker here)
+        pump(300);
+        followed("PERF, the mode changed by a panel turn of SELECT (" + row() + ")");
+        firstTurn("PERF, new mode", EMU_E_K1, 1);
+        sel->setValueNotifyingHost(sel->toNorm(3));   // and from the host: Arpeggiate
+        pump(400);
+        followed("PERF, the mode changed by the host (" + row() + ")");
+        firstTurn("PERF, Arpeggiate", EMU_E_K2, 1);
+        sel->setValueNotifyingHost(sel->toNorm(0));
+        pump(400);
+        click(EMU_B_OCTDN);                       // OCT-: the layer closed
+        pump(300);
+        followed("PERF closed (" + row() + ")");
+        hold(EMU_B_FX);
+        pump(300);
+        followed("FX open (" + row() + ")");
+        firstTurn("FX", EMU_E_K1, 1);
+        click(EMU_B_OCTDN);
+        pump(300);
+        followed("FX closed");
+        hold(EMU_B_SEL);                          // KEY
+        pump(300);
+        followed("KEY open (" + row() + ")");
+        firstTurn("KEY", EMU_E_K3, 1);
+        click(EMU_B_OCTDN);
+        pump(300);
+        click(EMU_B_GLO);                         // OPT tapped: Options
+        pump(300);
+        followed("Options open (" + page() + ")");
+        firstTurn("Options", EMU_E_K1, 1);
+        click(EMU_B_GLO);
+        pump(600);
+        followed("Options closed (" + page() + ")");
+        check(fn(k[0]) == "Voicing", "back on the view (" + page() + ")");
+    }
+    // the race: the screen changed, the host (a Roto-Control's motor still on the old target) writes before the push
+    // reached it. The write is dropped (kSettleMs after the retarget), the host is told the new target's value; a
+    // write after the window lands. And each page switch's pushes (no gesture) ask a VST3 host to re-read the values
+    // (restartComponent kParamValuesChanged: Live ignored the gestureless performEdit); a turn alone does not.
+    {
+        k[0]->setValueNotifyingHost(0.25f);
+        pump(100);
+        const uint32_t ref0 = p.hostRefreshes();
+        const int32_t drop0 = p.knobWritesDropped(EMU_E_K1);
+        click(EMU_B_EDIT);
+        h.run_ms(40);                             // (the retarget happened; the drain has not run yet)
+        const fm1param_t *lv = k[0]->entry();
+        const int32_t level0 = lv ? lv->get() : -1;
+        k[0]->setValueNotifyingHost(0.27f);       // the stale motor: the old voicing's place, nudged
+        h.run_ms(60);
+        p.drainTier2();
+        pump(100);
+        check(fn(k[0]) == "Level" && lv->get() == level0 && p.knobWritesDropped(EMU_E_K1) == drop0 + 1 &&
+                  std::abs(k[0]->hostValue() - k[0]->toNorm(level0)) < 1e-6f,
+              "EDIT, the host writes 0.27 (meant for the voicing) within " + std::to_string(FM1Processor::kSettleMs) +
+                  " ms of the retarget: dropped, Level stays " + std::to_string(lv->get()) + ", the host is told " +
+                  std::to_string(k[0]->hostValue()));
+        check(p.hostRefreshes() > ref0, "  ... the switch's pushes asked a VST3 host to re-read the values (" +
+                                            std::to_string(p.hostRefreshes() - ref0) + " restartComponent)");
+        k[0]->setValueNotifyingHost(k[0]->toNorm(level0 - 3));
+        pump(100);
+        check(lv->get() == level0 - 3, "  ... a host write after the window lands: Level " + std::to_string(lv->get()));
+        k[0]->setValueNotifyingHost(k[0]->toNorm(level0));
+        pump(100);
+        const uint32_t ref1 = p.hostRefreshes();
+        p.panelEnc(EMU_E_K1, 1);
+        pump(100);
+        check(p.hostRefreshes() == ref1, "  ... a panel turn alone (a touch) asks no re-read");
+        p.panelEnc(EMU_E_K1, -1);
+        pump(100);
+        click(EMU_B_HOME);
+        pump(300);
+        check(fn(k[0]) == "Voicing", "HOME: the view again");
+    }
+
     // ---- (t) the turn rule: Device::enc(role, +2) on the screen showing now
     auto turnRule = [&](const char *where, int role, int detents) {
         KnobParameter *kn = p.knobParam(role);
@@ -475,7 +641,7 @@ int main()
               "500 ms later: SELECT re-centred to 0.5 (the host told, no gesture), no detents from it (still " +
                   std::to_string(d2) + "), the cursor stays");
         sel->setValueNotifyingHost(0.5f + 1.0f / 24.0f);   // one row down: MIDI Perform (no named entry)
-        h.run_ms(60);
+        h.run_ms(200);                            // (a host write right after a retarget would be dropped: kSettleMs)
         p.drainTier2();
         check(fn(k[0]) == "MIDI Perform" && !k[0]->isRelative() && k[0]->entry()->max - k[0]->entry()->min == 16,
               "+1 detent: KNOB1 \"" + fn(k[0]) + "\" (the hidden \"Option\" entry rewritten), 17 values");
@@ -547,6 +713,20 @@ int main()
         check(cut && cut->get() == 40 && k[0]->getCurrentValueAsText().startsWith("E5 CUT: "),
               "host Knob 1 = 40: E5 CUT 40 (\"" + k[0]->getCurrentValueAsText().toStdString() + "\")");
         turnRule("felucca HOME", EMU_E_K4, 2);
+        {
+            k[0]->setValueNotifyingHost(0.25f);
+            pump(100);
+            followed("felucca HOME, host Knob 1 = 0.25", true);
+            click(EMU_B_ENV);
+            pump(300);
+            followed("felucca HOME -> ENV (" + row() + ")");
+            firstTurn("felucca ENV", EMU_E_K1, 1);
+            click(EMU_B_HOME);
+            pump(300);
+            followed("felucca ENV -> HOME (" + row() + ")");
+            check(fn(k[0]) == "E5 CUT" && std::abs(k[0]->hostValue() - 0.25f) < 0.01f,
+                  "felucca HOME again: Knob 1 E5 CUT, the host back at " + std::to_string(k[0]->hostValue()));
+        }
         auto tap = [&](int b) {
             p.deviceForTest()->buttons_tap(1u << b);
             h.run_ms(200);
