@@ -54,7 +54,7 @@ Working name `fm1emu` (rename freely). Top-level layout:
 ```
 fm1emu/
   LICENSE                GPL-3.0-only (required by the firmware)
-  CMakeLists.txt         JUCE via FetchContent (or a submodule), cores as C static libraries
+  CMakeLists.txt         JUCE via FetchContent (or a submodule), each core as a .fm1core dylib (4.3)
   cores/                 git submodules, read-only, pinned commits:
     ChoralRootFM1/         https://github.com/Quixotic7/ChoralRootFM1
     Felucca/               https://github.com/hugelton/Felucca      (phase 4)
@@ -108,30 +108,58 @@ The firmware is fixed at 44.1 kHz. The engine runs it there and resamples to the
 `LagrangeInterpolator` is enough for a first pass; r8brain if quality complaints). At a 44.1 kHz session
 the resampler is bypassed and the output equals the device's samples.
 
-### 4.3 One firmware image per process (the globals problem)
-The firmware unit is a single C file full of globals: **one core instance per process**. For v1 the
-second plugin instance shows "already running in another instance" on its panel and stays silent. Two
-ways to lift this later, in order of preference:
+### 4.3 Cores are loadable firmware modules in a folder (the firmware browser)
+Each firmware is built as its own dynamic library, a **core module** (`choralroot.fm1core`, a dylib
+with a small JSON sidecar or an embedded descriptor), and the plugin finds them in two folders:
 
-1. build each core as a dylib and `dlopen` a per-instance copy from a unique temp path (dyld gives each
-   path its own globals); cheap, in-process;
-2. an out-of-process core (a helper per instance over shared memory); more work, but also isolates a
-   crashing firmware from Ableton, which matters once third-party cores exist.
+- bundled: inside the plugin's own bundle (`Contents/Resources/cores/`), so a fresh install already
+  has ChoralRoot, Felucca and Melodee;
+- user: `~/Library/Application Support/fm1emu/cores/`, so a new or third-party firmware is installed by
+  dropping a file there, no rebuild of the plugin.
+
+The plugin scans both at start and when its menu opens, and shows them in a **dropdown on the
+settings bar** (name and version from the descriptor): pick one and the instrument switches to that
+firmware in place. No file dialog. Switching tears the old core down (its flash image is saved to that
+core's own folder first), loads the new one and powers it on; the panel relabels its buttons from the
+new core's descriptor, the parameter list (4.5) changes to the new core's map, and the host is told the
+parameters changed (`updateHostDisplay` with the parameter-info flag; Live handles this). The plugin
+state (4.7) records the core's identifier and version so a Live set reopens on the firmware it was saved
+with, and says which one is missing if it is not installed.
+
+Each core keeps its own flash image (`.../fm1emu/<core-id>/flash.bin`), so switching firmwares is like
+swapping units, not reflashing one: coming back to ChoralRoot finds its user sounds and loops as left.
+
+**The globals problem, solved by the same mechanism.** The firmware unit is a single C file full of
+globals, so a core can exist once per loaded image. Because cores are dylibs, each plugin instance
+`dlopen`s **its own copy** of the module (copied to a unique path under the plugin's cache folder;
+dyld gives each path its own globals). Two instances of the plugin can run two ChoralRoots, or a
+ChoralRoot and a Felucca, in one Live set. The copy is deleted when the instance goes away. The
+out-of-process variant (a helper per instance over shared memory, which would also isolate a crashing
+third-party firmware from Live) stays as a later option behind the same ABI.
 
 ### 4.4 The core ABI
-`core-api/fm1core.h` is `emu_hooks.h` plus a descriptor:
+`core-api/fm1core.h` is `emu_hooks.h` turned into a versioned C ABI that a dylib exports as one symbol,
+`fm1core_get(uint32_t abi_version)`, returning a descriptor:
 
 ```c
 typedef struct {
     uint32_t abi_version;
-    const char *name, *version;        /* "ChoralRoot", "1.0" */
+    const char *id, *name, *version;   /* "choralroot", "ChoralRoot", "1.0" */
+    const char *source_url;            /* the firmware repo and commit the core was built from */
     uint32_t flash_size;               /* 1 MiB today */
     const char *const *button_names;   /* the firmware's own labels for the 14 buttons (ChoralRoot: FX KEY BASS ..) */
-    /* the emu_fw_* entry points as function pointers */
+    const fm1param_t *params;          /* the Tier 2 parameter map (4.5) and its count */
+    uint32_t nparams;
+    emu_hal_t *hal;                    /* the module's own emu_hal (keys, LEDs, LCD) */
+    /* the emu_fw_* entry points as function pointers: options, init, tick, frame, idle, audio, midi_in,
+     * midi_out_take, dump, plus shutdown (flush the flash, release) */
 } fm1core_t;
 ```
 
-Each core also publishes its panel labels so the GUI prints what the firmware means by each button.
+Nothing in the plugin links a firmware symbol directly; everything goes through the descriptor, which
+is what makes a core a drop-in file. The glue for a core is tiny: the firmware unit, the parameter map
+and the descriptor. A firmware author who wants their fork in the plugin builds one from the
+`core-glue/` template and ships the `.fm1core`.
 
 ### 4.5 Parameters exposed to the host (the Roto-Control mapping)
 
@@ -220,12 +248,45 @@ sees a parameter fight.
   ChoralRoot's chord and bass notes to other instruments. Live 12 passes MIDI out of VST3 / AU effects
   and instruments on the track's MIDI output.
 
-### 4.7 State and the flash
+### 4.7 State, the flash, and presets per firmware
 The core's 1 MiB flash image (settings, user sounds, loops, FM6 and CZ banks) **is** the plugin state:
-`getStateInformation` stores it (zlib-compressed; it is mostly 0xFF) so a Live set reopens with the
-instrument exactly as left. A per-core default image lives in
-`~/Library/Application Support/fm1emu/<core>/flash.bin` for new instances, with Reset flash, Import and
-Export buttons; ChoralRoot's backup JSON format can be imported later through `cr_backup.c`.
+`getStateInformation` stores it (zlib-compressed; it is mostly 0xFF) together with the core id and
+version, the theme and the plugin's own settings, so a Live set reopens with the instrument exactly as
+left. ChoralRoot's backup JSON format can be imported and exported through `cr_backup.c`.
+
+**Everything a firmware owns lives in that firmware's folder**, so switching cores never mixes them up:
+
+```
+~/Library/Application Support/fm1emu/
+  cores/                      user-installed .fm1core modules (4.3)
+  choralroot/
+    flash.bin                 the working flash: what a new instance of this core starts from
+    presets/
+      Warm Pads.fm1preset     a named snapshot of the whole flash (gz), plus a JSON header
+      Live Set A.fm1preset
+    backups/                  dated copies made before a Reset flash or a preset load
+  felucca/
+    flash.bin
+    presets/ ...
+  themes/                     custom colour themes (4.8; themes are not per firmware)
+```
+
+A **preset** is a snapshot of the whole flash: all user sounds, loops, FM6 / CZ banks and settings at
+once (the firmware's own SAVE keeps writing single sounds inside the flash as on the device; a preset
+is the plugin's layer above that, "the whole unit as it is now"). The settings bar has a **preset
+dropdown next to the firmware dropdown**, listing the current core's `presets/` folder: pick one to
+load, Save / Save as / Rename / Delete, no file dialog. A preset file carries the core id and version
+it was made with, so the list only shows presets that fit the loaded firmware, and the plugin can
+warn before loading one from an older firmware version (the flash formats are versioned on the
+firmware side; `cr_settings.c` migrates older records, so this is a warning, not a refusal).
+
+Presets also appear to the host as the plugin's program list (VST3 / AU presets), so Live's own
+preset browser and the Roto-Control's preset buttons, if it has them, can step through them.
+
+Import / Export buttons move single `.fm1preset` files in and out for sharing, and Export can also
+write ChoralRoot's backup JSON so a preset made in the plugin can be restored onto a real FM-1 with
+the installer page (`tools/fm1_install.py --restore`), and a backup from a real unit can be imported
+as a preset. That round trip is a phase 2 check.
 
 ### 4.8 GUI
 A native JUCE port of `emu.c`'s panel: the designer geometry, the LEDs lit / dim from `emu_hal.led`,
@@ -293,15 +354,20 @@ commit, CMake that runs the generate step and builds the firmware unit as a stat
 README with the licensing summary (what is Felucca's, Melodee's, ChoralRoot's). Check: `cmake --build`
 produces `libcore_choralroot.a`.
 
-**Phase 1: engine + replay test (1-2 days).** `core-api`, the ChoralRoot glue, `engine/device.cpp`
-with the single-thread clock and the resampler, and `tests/replay_test` that runs `cr_dmaj.txt` and
-compares with `build/host/emu --headless --wav`. Check: bit-for-bit equal WAV at 44.1 kHz; the 48 kHz
-output null-tests against a resampled reference within a stated tolerance.
+**Phase 1: engine + replay test (2-3 days).** `core-api` with the descriptor, the ChoralRoot glue
+built as a `.fm1core` dylib exporting `fm1core_get` (the static library stays for the tests), a core
+loader (`engine/cores.cpp`: scan the two folders, load a module, the per-instance copy), `engine/device.cpp`
+with the single-thread clock and the resampler, and `tests/replay_test` that runs `cr_dmaj.txt` through
+a loaded module and compares with `build/host/emu --headless --wav`. Check: bit-for-bit equal WAV at
+44.1 kHz; the 48 kHz output null-tests against a resampled reference within a stated tolerance; a test
+loads the ChoralRoot module twice and drives the two with different scripts, proving separate globals.
 
 **Phase 2: plugin without a custom GUI (3-5 days).** JUCE processor with the Tier 1 panel parameters
 and the ChoralRoot Tier 2 parameter map (perform, chord, FX, globals), the feedback loop, MIDI in /
 out, state, generic editor. Load in Live 12, map the Roto-Control's first page, play chords from a MIDI
-clip. Check: Live set reopens with a user sound intact; turning "Strum Rate" on the Roto-Control
+clip. Check: Live set reopens with a user sound intact; a preset saved from the dropdown, the flash
+reset, and the preset loaded back gives the same user sounds (and a backup JSON exported from it
+restores onto a real FM-1); turning "Strum Rate" on the Roto-Control
 changes the value the LCD shows and the trace prints; turning the plugin's own knob moves the
 Roto-Control's motor; loading a preset sweeps the knobs; no dropouts at 64-sample buffers over ten
 minutes. A headless test drives each mapped parameter min to max and back and checks `get()` equals
@@ -318,7 +384,9 @@ the preset list); a custom theme survives save, reopen and a deleted theme file.
 `tests/ui_test.c`'s stubs and `tests/hostsim.c`. Core selection in the plugin. Sloop if it builds on the
 host. Check: each core boots to its home screen in the Standalone and passes a key-press sound test.
 
-**Phase 5: robustness and release.** Multi-instance (4.3), CLAP, notarised builds, a Releases page.
+**Phase 5: robustness and release.** Per-instance core copies for multiple instances (4.3), the user
+cores folder with a third-party core test (a renamed copy of the ChoralRoot module dropped in and
+picked from the dropdown), CLAP, notarised builds, a Releases page.
 
 **Phase 6 (research, parallel, no deadline): a binary core.** Feasibility study for a pi32v2 CPU
 emulator: disassemble `V15-FM-1.fwsc` with kagaimiq's Ghidra processor module, count the instruction
@@ -337,7 +405,14 @@ not code. The core ABI already has a slot for it.
   parameter in phase 2's headless test, not guessed.
 - **Live's parameter count**: Live exposes a VST3's parameters, but its device panel and the
   Roto-Control's learn list get unwieldy past about 128; the editor tier stays off by default.
-- **Globals** (4.3): one instance per process in v1 is a real limitation for anyone layering two FM-1s.
+- **Dylib cores** (4.3): the per-instance copy trick must be proven early (phase 1 builds the
+  ChoralRoot core as a dylib and loads it twice in a test); if dyld ever dedups copies, the fallback is
+  the out-of-process helper. Code signing: a plugin that copies and loads dylibs at runtime must sign
+  the copies with the same identity or the hardened runtime refuses them; the notarised build (phase 5)
+  settles this, and the development build runs unsigned.
+- **Switching cores in a running host**: changing the parameter list while Live has automation or a
+  Roto-Control page mapped to the old one is the kind of thing hosts handle unevenly; the state stores
+  the core so it only happens when the user asks.
 - **Generate step**: Pillow needs `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib`; CMake sets it.
 - **Submodule hygiene**: everything the plugin needs from ChoralRoot is reached through
   `tools/emu/emu_fw.c` and `tools/build.py`. If a later ChoralRoot commit changes `emu_hooks.h`, the
