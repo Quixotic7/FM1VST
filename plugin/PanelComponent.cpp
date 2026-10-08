@@ -260,9 +260,12 @@ void drawButton(Canvas &c, const Palette &p, int i, const juce::String &name, bo
         c.circle(r.x + 6, r.y + r.h - 6, 3.2f, green ? p.green : p.ledOff);
 }
 
-void drawKnob(Canvas &c, const Palette &p, int i, float a, bool sel)
+// a knob; fn: what it does now (the firmware value it is bound to), a small caption under its printed name
+void drawKnob(Canvas &c, const Palette &p, int i, float a, bool sel, const char *fn)
 {
     const float cx = ENC_CX[i], cy = ENC_CY[i];
+    if (fn && *fn)
+        c.text(cx, ENC_LY[i] + 2.5f, fitSize(fn, 5.f, 84.f), fn, p.label, .85f);
     c.circle(cx, cy, ENC_R, p.knobBody);
     c.ring(cx, cy, ENC_R - 3, p.knobRing, 1, 2.5f, 2);
     c.circle(cx, cy, ENC_CAP, p.knobCap);
@@ -273,6 +276,15 @@ void drawKnob(Canvas &c, const Palette &p, int i, float a, bool sel)
 }
 
 float masterAngle(int master) { return (float)((master / 1023.0 - .5) * 1.5 * kPi); }
+// a bound knob's pointer: its value's place in its range on MASTER's 270 degree sweep
+float boundAngle(float norm) { return (float)(((double)norm - .5) * 1.5 * kPi); }
+int fnHash(const char *s)
+{
+    uint32_t h = 2166136261u;
+    for (; s && *s; s++)
+        h = (h ^ (uint8_t)*s) * 16777619u;
+    return (int)(h & 0x7FFFFFFF);
+}
 }   // namespace
 
 // ================================================================ keymap ===
@@ -508,6 +520,7 @@ bool PanelComponent::updateControls(bool force)
         const float a = i == EMU_E_MASTER ? masterAngle(view_.master) : knobAngle_[(size_t)i];
         d.a = (int)std::lround(a * 1000.0f);
         d.b = selKnob_ == i;
+        d.c = i == EMU_E_MASTER ? 0 : fnHash(view_.knobs[(size_t)i].fn);
         if (force || d != knobDrawn_[(size_t)i])
             todo.push_back({2, i, d});
     }
@@ -522,8 +535,8 @@ bool PanelComponent::updateControls(bool force)
             const R r = geo().btn[t.i];
             restoreBox(r.x - 2, r.y - 2, r.w + 4, r.h + (t.i >= EMU_B_OCTDN ? 11 : 4), &px);
         } else {
-            const float e = ENC_R + 5;
-            restoreBox(ENC_CX[t.i] - e, ENC_CY[t.i] - e, 2 * e, 2 * e, &px);
+            const float e = ENC_R + 5, top = ENC_LY[t.i] + 1.5f;   // (the caption under the printed name too)
+            restoreBox(ENC_CX[t.i] - 44, top, 88, ENC_CY[t.i] + e - top, &px);
         }
         dirty.push_back(px);
     }
@@ -538,7 +551,7 @@ bool PanelComponent::updateControls(bool force)
                 btnDrawn_[(size_t)t.i] = t.d;
             } else {
                 const float a = t.i == EMU_E_MASTER ? masterAngle(view_.master) : knobAngle_[(size_t)t.i];
-                drawKnob(c, pal_, t.i, a, t.d.b != 0);
+                drawKnob(c, pal_, t.i, a, t.d.b != 0, t.i == EMU_E_MASTER ? "" : view_.knobs[(size_t)t.i].fn);
                 knobDrawn_[(size_t)t.i] = t.d;
             }
         }
@@ -580,6 +593,18 @@ void PanelComponent::rebuildLcdImages()
 void PanelComponent::refresh()
 {
     proc_.getPanelView(view_);
+    // the knobs' pointers: a bound one at its value (whoever moved it: the host, the Roto-Control, the panel, the
+    // firmware), a relative one turned by every detent the device was given (the panel's, the host's)
+    for (int r = 0; r < EMU_NE - 1; r++) {
+        const PanelView::Knob &kn = view_.knobs[(size_t)r];
+        const int32_t d = turnsInit_ ? kn.turns - turnsSeen_[(size_t)r] : 0;
+        turnsSeen_[(size_t)r] = kn.turns;
+        if (kn.bound)
+            knobAngle_[(size_t)r] = boundAngle(kn.norm);
+        else if (d && std::abs(d) < 4096)      // (a power cycle restarts the device's count)
+            knobAngle_[(size_t)r] = std::fmod(knobAngle_[(size_t)r] + (float)d * (2 * kPi / 24), 2 * kPi);
+    }
+    turnsInit_ = true;
     if (view_.lcdSeq != lcdSeen_) {
         lcdSeen_ = view_.lcdSeq;
         // RGB565 big-endian (as sent) -> ARGB, the 5 / 6 bits replicated (emu_img.c)
@@ -641,6 +666,14 @@ juce::Point<int> PanelComponent::keyLedPx(int key) const
             lay_.frY + lay_.lcdPx + (int)std::floor((r.y + 22 - VIEW.y) * lay_.k)};
 }
 
+juce::Rectangle<int> PanelComponent::knobBoxPx(int role) const
+{
+    const int i = juce::jlimit(0, EMU_NE - 1, role);
+    const float x0 = ENC_CX[i] - ENC_R, y0 = ENC_CY[i] - ENC_R;
+    return {lay_.frX + (int)std::floor((x0 - VIEW.x) * lay_.k), lay_.frY + lay_.lcdPx + (int)std::floor((y0 - VIEW.y) * lay_.k),
+            (int)std::ceil(2 * ENC_R * lay_.k), (int)std::ceil(2 * ENC_R * lay_.k)};
+}
+
 juce::Point<int> PanelComponent::playGreenPx() const
 {
     const R r = geo().btn[EMU_B_PLAY];
@@ -686,16 +719,13 @@ void PanelComponent::turn(int role, int steps)
 {
     if (!steps || role < 0 || role >= EMU_NE)
         return;
-    proc_.panelEnc(role, steps);                 // (MASTER: 16 per step, the parameter)
-    if (role != EMU_E_MASTER)
-        knobAngle_[(size_t)role] += (float)steps * (2 * kPi / 24);
+    proc_.panelEnc(role, steps);                 // (MASTER: 16 per step, the parameter; the pointers follow the snapshot)
     updateControls(false);
 }
 
 void PanelComponent::fineTurn(int role, int steps)
 {
     proc_.panelFineTurn(role, steps);
-    knobAngle_[(size_t)role] += (float)steps * (2 * kPi / 24);
     updateControls(false);
 }
 

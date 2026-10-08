@@ -9,8 +9,8 @@ Status: phase 4. Three firmwares build as loadable core modules behind a version
 (`build/cores/choralroot.fm1core`), Felucca (`felucca.fm1core`) and Melodee (`melodee.fm1core`), each from its
 unmodified source; the plugin's firmware dropdown switches between them in place. A JUCE-free engine loads a core,
 runs its device clock and resamples its output to the host rate, and a JUCE plugin (AU, VST3, Standalone) plays it
-with the firmware's own parameters (each core's map, absolute and bidirectional: the Roto-Control map, plan 4.5) and
-the panel's 42 controls as host parameters, MIDI in and out, the flash image as its state, and presets per firmware.
+with the eight physical knobs as host parameters that follow the firmware's screen (the Roto-Control map, plan 4.5;
+the firmware's own parameters by name as an opt-in) and the panel's 41 buttons and keys as host parameters, MIDI in and out, the flash image as its state, and presets per firmware.
 The editor is the FM-1 panel itself (phase 3): LEDs, LCD, mouse and keyboard as in the emulator, with colour themes.
 
 ## Layout
@@ -84,31 +84,43 @@ so ChoralRoot plays its chords as on the device. The firmware needs under a seco
 is loaded. The track's MIDI output carries what the firmware sends (ChoralRoot by default: the chord stream on channel 1; the
 bass on channel 2 once a bass sound is chosen), so it can drive other instruments.
 
-- **Parameters (128):** first the eight physical knobs (`knob_master` `knob_select` `knob_presets` `knob_algo`
-  `knob_1` .. `knob_4`, panel order: below), then 79 Tier 2 slots (`t2_00` .. `t2_78`: the firmware's own
-  parameters by name, below), then the 41 Tier 1 panel controls: the 14 buttons (`btn_fx` .. `btn_octup`, momentary:
-  on = held; named with the firmware's role and the printed label, e.g. "KEY (SEL)") and the 27 keys (`key_00` ..
-  `key_26`, named by note, "F3" .. "G5"; a key is held when its parameter or a MIDI note holds it). 128 is Live's
-  limit for showing a plugin's parameters without configuring them.
-- **The knobs (the Roto-Control's first page, plan 4.5).** One host parameter per physical knob, in panel order:
-  MASTER, SELECT, PRESETS, ALGORITHM, KNOB1, KNOB2, KNOB3, KNOB4. MASTER is the pot (0..1023, default 724 as the
-  emulator powers on). The other seven are always **whatever that knob does on the firmware's screen right now**: its
-  name, range, value texts and value are the parameter the firmware has on it, and they change with the screen. On
-  ChoralRoot's view KNOB1 is "KNOB1: Voicing", SELECT "SELECT: Tempo"; hold PERF and KNOB1..4 become the perform
-  mode's row ("KNOB1: Strum Rate" .. "KNOB4: Strum Hold"; pick Arpeggiate and they become Division, Dir, Gate, Swing);
-  the FX layer gives the effect's row, the KEY layer Tonic / Scale / Transpose / Single Notes, the sound editor the
-  cells of the lane on screen; on Felucca's HOME the engine's four knobs, on its ENV page Attack .. Release, FX held
-  its macros. The host is told (parameter info changed) and the new values are pushed, so a Roto-Control relabels and
-  its motors move to the new positions; a knob turned on the unit (or the panel GUI) moves its motor, as a touch.
-  Where a knob has **no value** on the current screen (SELECT scrolling Options or the editor's lanes, PRESETS and
-  ALGORITHM browsing sounds, a page's empty column), its parameter is a **relative control**, "KNOB1 (turn)": a host
-  change becomes detents at the device (the change of the 0..1 value x 24 per full travel, the knobDetents setting)
-  and the parameter springs back to 0.5 after 400 ms (that re-centre turns nothing), so the knob still scrolls. The
-  core says what each knob is (`fm1core_t.knob_target`, ABI 4); the per-screen tables are in the headers of
-  `core-glue/*/core_*_params.c`. Entries that exist only as knob targets (the sound editor's pages, Options rows,
-  FX Effect, Felucca's FX macros and T1..T4 levels, the cells no named entry covers) are `FM1P_HIDDEN`: they get no
-  Tier 2 slot of their own.
-- **The firmware's parameters by name (Tier 2, plan 4.5).** Absolute values with the firmware's own ranges and value
+- **Parameters (49):** first the eight physical knobs (`knob_master` `knob_select` `knob_presets` `knob_algo`
+  `knob_1` .. `knob_4`, panel order: below), then the 41 panel controls: the 14 buttons (`btn_fx` .. `btn_octup`,
+  momentary: on = held; named with the firmware's role and the printed label, e.g. "KEY (SEL)") and the 27 keys
+  (`key_00` .. `key_26`, named by note, "F3" .. "G5"; a key is held when its parameter or a MIDI note holds it).
+  **Only the knobs ever report a change to the host**: a press on the panel never moves a button or key parameter,
+  and nothing else is a parameter, so Live's Configure mode collects exactly the knobs you turn. The firmware's own
+  parameters by name (79 Tier 2 slots, below) are an **opt-in**: `-DFM1_TIER2_SLOTS=79` (8 + 79 + 41 = 128, Live's
+  limit for showing a plugin's parameters without configuring them).
+- **The knobs (the Roto-Control's first page, plan 4.5).** One host parameter per physical knob, in panel order, with
+  **names that never change** (a Roto-Control binds by name): **Knob Master, Knob Select, Knob Presets, Knob Algo,
+  Knob 1, Knob 2, Knob 3, Knob 4**. Knob Master is the pot (0..1023, default 724 as the emulator powers on; its value
+  text "Master: 724"). The other seven are always **whatever that knob does on the firmware's screen right now**, and
+  that goes into the **value text**: "Function: value", e.g. on ChoralRoot's view Knob 1 reads "Voicing: -1", Knob
+  Select "Tempo: 147 BPM", Knob 3 "Strum Rate: 126 ms", Knob 4 "Chord Reverb: 33"; hold PERF and Knob 1..4 read the
+  perform mode's row ("Strum Rate: .." .. "Strum Hold: Off"; pick Arpeggiate and they become Division, Dir, Gate,
+  Swing); the FX layer gives the effect's row, the KEY layer Tonic / Scale / Transpose / Single Notes, the sound
+  editor the cells of the lane on screen; on Felucca's HOME the engine's four knobs, on its ENV page Attack ..
+  Release, FX held its macros. Each knob is a continuous 0..1 parameter over its current function's range (quantised
+  inside to the firmware's steps), so nothing the host caches about it (name, steps, default) ever changes and the
+  plugin never sends "parameter info changed" for a knob; when the screen changes the new value is pushed (no
+  gesture), so the Roto-Control's motor moves to it and its display shows the new text. **Who reports:** a knob
+  turned on the unit, the panel GUI or its keys reports on that knob, inside a gesture (a touch: Live's Configure
+  collects it, automation records when armed); a knob whose function's value changed for another reason (a PRESETS
+  turn loads a sound whose reverb send differs from the one Knob 4 shows; a MIDI CC) is updated without a gesture;
+  a value the host already has is not sent again. Where a knob has **no value** on the current screen (SELECT
+  scrolling Options or the editor's lanes, PRESETS and ALGORITHM browsing sounds, a page's empty column), it is a
+  **relative control** (value text "turn"): a host change becomes detents at the device (the change of the 0..1 value
+  x 24 per full travel, the knobDetents setting) and the parameter springs back to 0.5 after 400 ms (that re-centre
+  turns nothing), so the knob still scrolls; turned on the unit, it is nudged off the centre by its detents (inside a
+  gesture) and springs back the same way. The core says what each knob is (`fm1core_t.knob_target`, ABI 4); the
+  per-screen tables are in the headers of `core-glue/*/core_*_params.c`. Entries that exist only as knob targets
+  (the sound editor's pages, Options rows, FX Effect, Felucca's FX macros and T1..T4 levels, the cells no named entry
+  covers) are `FM1P_HIDDEN`: they never get a Tier 2 slot of their own.
+- **The firmware's parameters by name (Tier 2, plan 4.5; opt-in: `-DFM1_TIER2_SLOTS=79`, off by default).** For
+  direct mappings of a specific parameter whatever the screen shows. Each slot reports its own entry's changes,
+  inside a gesture, so with the slots on Live's Configure also collects the sends and parameters a knob or a preset
+  moves. Absolute values with the firmware's own ranges and value
   texts ("1/8", "120 ms", "Up-down", "-10.0dB"), read from and written to the running firmware, so a motorised
   controller such as the Melbourne Instruments Roto-Control follows them (the knobs above are the same values, bound
   to whatever is on screen). A host change goes through the firmware's own panel code (the screen, the knob row's hot
@@ -116,8 +128,8 @@ bass on channel 2 once a bass sound is chosen), so it can drive other instrument
   (its knobs, a preset, a MIDI CC, a mode change) moves the host's value, as a touch (inside a change gesture). After
   every power-on (a preset load, a state restore, a flash reset) every value is reported once, without gestures, so
   the controller sweeps to the unit's real state. The values are not stored separately in the plugin state: the flash
-  image is the truth. Slots beyond a core's visible map are "(unused)". They come after the knobs, so a specific
-  parameter can still be mapped directly (eight a page):
+  image is the truth. Slots beyond a core's visible map are "(unused)". They come after the knobs (`t2_00` ..
+  `t2_78`), eight a page:
 
   **ChoralRoot** (73 visible, 109 with the hidden knob targets):
 
@@ -197,8 +209,10 @@ they remain the host's.
   key and button beds, the 27 keys with their LED bars, the 14 buttons with the firmware's labels on the caps
   (ChoralRoot: FX KEY BASS LATCH EDIT OPT / HOME SAVE PERF METRO LOOP REC) and the panel's printed labels small on the
   bed where they differ (SEL ENV LFO GLO over the top row, ARP SEQ PLAY under the bottom one), the OCT buttons, the 8
-  knobs with their names and pointers (the encoders are endless: the pointer turns 15 degrees per detent the panel
-  sends; MASTER shows its 0..1023 position over 270 degrees), the computer-key hints in green, and the LEDs as the
+  knobs with their names and pointers (a knob bound to a firmware value points at that value's place in its range
+  over 270 degrees, as MASTER shows its 0..1023 position, and moves whenever the value does, from the host, a
+  Roto-Control, the panel or the firmware; its function is a small caption under its name, e.g. KNOB1 / VOICING; a
+  relative knob is endless: its pointer turns 15 degrees per detent the device is given, from the panel or the host), the computer-key hints in green, and the LEDs as the
   firmware sets them: lit / dim / off, REC red, PLAY orange plus its green LED. The panel is rasterised once per size
   and theme at the screen's physical pixels (sharp on Retina at any size); after that only the controls whose state
   changed (held, LED, pointer, selection) and the LCD are redrawn, polled at 60 Hz.
@@ -282,6 +296,10 @@ Then:
 cmake -B build && cmake --build build && ctest --test-dir build --output-on-failure
 ```
 
+The Tier 2 slots (the firmware's parameters by name) are off by default; `cmake -B build -DFM1_TIER2_SLOTS=79` turns
+them on (`FM1_TIER2_SLOTS` is a cache variable: a build folder configured before the default became 0 keeps 79 until
+it is set again, `-DFM1_TIER2_SLOTS=0`).
+
 The tests:
 
 - `core_smoke_<id>` (`choralroot`, `felucca`, `melodee`): the module, loaded as the plugin loads it, boots, draws,
@@ -300,20 +318,27 @@ The tests:
   panel turn prints; for every core every knob's target on the boot screen is an entry or -1, the hidden entries pass
   the same checks. ChoralRoot: the view's KNOB3 follows the perform mode. Felucca / Melodee: param_format's texts, the
   HOME knob and engine entries follow the selected part and its engine.
-- `tier2_test`: the Tier 2 slots on the plugin's processor: a host write reaches the firmware and is not echoed, a
+- `tier2_test` (skipped unless built with `-DFM1_TIER2_SLOTS=79`): the Tier 2 slots on the plugin's processor: a
+  host write reaches the firmware and is not echoed, a
   panel turn reaches the host (coalesced, inside a gesture), a state restore and a preset load report every slot
   without gestures, the perform mode picked on the panel; after a switch to Felucca its map on the same slots,
   ALGORITHM on the panel relabelling the engine slots (with the engine's range).
-- `knob_test`: the eight knob parameters: ChoralRoot's view (a host write of KNOB1 moves the voicing), the PERF layer
-  (KNOB1..4 relabel to the mode's row, again when the mode changes; a panel turn reports on the knob and on the
-  target's own slot, inside a gesture), the FX layer, Options (SELECT relative: 0.5 -> 0.75 is 6 detents at the device,
-  it springs back to 0.5 with no detents; a row with no named entry: the hidden Option), the editor; no hidden entry
-  has a slot; Felucca's HOME, ENV, ENV DEST, SLICER (a hidden cell), EDIT 1, GLO and FX held; Melodee's HOME.
+- `knob_test`: the eight knob parameters: their fixed names, order and host info (continuous, default steps, never
+  parameterInfoChanged); ChoralRoot's view (the functions in the value texts, a host write of Knob 1 moves the
+  voicing, not echoed); **the turn rule** for all seven knobs on the view and in the KEY, PERF and FX layers
+  (`Device::enc(role, +2)` reports on that knob first, inside a gesture; a relative one is nudged and springs back;
+  any other knob reports only if its function's value changed, without a gesture; nothing else reports), Knob 4 on
+  the view explicitly; PRESETS on the view (only Knob Presets touched; Knob 4 follows its send untouched) and in the
+  KEY layer (the sends change, no knob shows one: only Knob Presets reports); the PERF layer and the perform mode
+  switched from the host; a panel turn; the FX layer; Options (SELECT relative: 0.5 -> 0.75 is 6 detents at the
+  device, it springs back to 0.5 with no detents; a row with no named entry: the hidden Option), the editor;
+  Felucca's HOME, ENV, ENV DEST, SLICER (a hidden cell), EDIT 1, GLO and FX held; Melodee's HOME.
 - `plugin_test`: the plugin's processor, headless: MIDI notes press the keys and sound at 48 and 44.1 kHz, the panel
   parameters reach the HAL, MIDI out is well formed, the flash survives the state round trip, presets save / reset /
   load / rename / export / import / delete with backups, the installed bundles resolve their cores folder (all three
-  cores load from it), and the firmware switch: ChoralRoot -> Felucca -> Melodee -> ChoralRoot relabels the buttons,
-  rebinds the Tier 2 slots to each map, plays a note on each, and comes back to ChoralRoot's working flash byte for
+  cores load from it), the parameter list (49: the knobs, the buttons, the keys; 128 with the opt-in slots), and the
+  firmware switch: ChoralRoot -> Felucca -> Melodee -> ChoralRoot relabels the buttons, follows each core's screen on
+  the knobs (and rebinds the opt-in Tier 2 slots), plays a note on each, and comes back to ChoralRoot's working flash byte for
   byte.
   After the build, `auval -v aumu Fm1v Qx7u` validates the installed AU.
 - `panel_render_test`: the panel, headless (no window: painted offscreen into images). It writes the pictures
@@ -324,7 +349,10 @@ The tests:
   channel; D4's LED pixel is the lit colour while `panelKey` holds it and follows the device after the release, and
   its `key_09` parameter never moves; a panel button and MASTER reach the HAL; every preset keeps the contrast floors
   (the table is printed); a custom theme saves, lists, becomes the default for a new instance, and a state naming it
-  restores its colours into the editor after its file is deleted. And one picture per other core,
+  restores its colours into the editor after its file is deleted; a host write of Knob 1 (Voicing) to 0.25 and to
+  0.75 turns KNOB1's pointer by the firmware values' distance on the 270 degree sweep (`knob1-025.png`,
+  `knob1-075.png`: the knob's pixels differ), the panel's own turn moves it too, and the relative PRESETS turns 15
+  degrees per detent the host gives it. And one picture per other core,
   `build/panel/core-felucca.png` and `core-melodee.png` (1.5 s after the power-on, D4 held), its LCD checked against
   its framebuffer.
 

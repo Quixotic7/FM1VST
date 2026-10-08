@@ -171,9 +171,8 @@ juce::StringArray Tier2Parameter::getAllValueStrings() const
 }
 
 // ============================================================ the knobs ===
-KnobParameter::KnobParameter(int role, const juce::String &id, const juce::String &knobLabel,
-                             const juce::String &shortLabel)
-    : Tier2Parameter(id, knobLabel, -1), role_(role), label_(knobLabel), short_(shortLabel)
+KnobParameter::KnobParameter(int role, const juce::String &id, const juce::String &fixedName)
+    : Tier2Parameter(id, fixedName, -1), role_(role), name_(fixedName)
 {
     value_.store(0.5f);
 }
@@ -235,9 +234,18 @@ void KnobParameter::setNormFromFirmware(float x)
     tl_fromFirmware = was;
 }
 
+void KnobParameter::nudge(float x)
+{
+    relBase_.store((double)x);
+    beginChangeGesture();
+    setNormFromFirmware(x);
+    endChangeGesture();
+}
+
 void KnobParameter::setValue(float x)
 {
     value_.store(x);
+    hostValue_.store(x);
     if (tl_fromFirmware)
         return;
     hostSeq_.fetch_add(1);
@@ -252,48 +260,39 @@ void KnobParameter::setValue(float x)
     pending_.store(true, std::memory_order_release);
 }
 
-float KnobParameter::getDefaultValue() const { return isRelative() ? 0.5f : Tier2Parameter::getDefaultValue(); }
-
 juce::String KnobParameter::getName(int maximumStringLength) const
 {
-    juce::String n;
-    {
-        const juce::SpinLock::ScopedLockType l(lock_);
-        const fm1param_t *v = view_.load(std::memory_order_acquire);
-        if (isRelative() || !v)
-            n = label_ + " (turn)";
-        else
-            n = label_ + ": " + juce::String::fromUTF8(v->name);
-        if (maximumStringLength > 0 && n.length() > maximumStringLength)   // (a short display: "K1 Strum Rate")
-            n = (isRelative() || !v ? short_ + " turn" : short_ + " " + juce::String::fromUTF8(v->name));
-    }
-    return maximumStringLength > 0 ? n.substring(0, maximumStringLength) : n;
+    return maximumStringLength > 0 ? name_.substring(0, maximumStringLength) : name_;
+}
+
+juce::String KnobParameter::functionName() const
+{
+    const juce::SpinLock::ScopedLockType l(lock_);
+    const fm1param_t *v = view_.load(std::memory_order_acquire);
+    return !isRelative() && v ? juce::String::fromUTF8(v->name) : juce::String();
 }
 
 juce::String KnobParameter::getText(float x, int maximumStringLength) const
 {
-    if (!isRelative())
-        return Tier2Parameter::getText(x, maximumStringLength);
-    const int d = (int)std::lround(((double)x - 0.5) * kDefaultDetents);   // (the detents from the centre)
-    const juce::String t = d ? (d > 0 ? "+" : "") + juce::String(d) : juce::String("turn");
+    juce::String t;
+    {
+        const juce::SpinLock::ScopedLockType l(lock_);
+        const fm1param_t *v = view_.load(std::memory_order_acquire);
+        if (!isRelative() && v) {
+            t = juce::String::fromUTF8(v->name) + ": " + textLocked(toPlain(x));
+        } else {
+            const int d = (int)std::lround(((double)x - 0.5) * kDefaultDetents);   // (the detents from the centre)
+            t = d ? (d > 0 ? "+" : "") + juce::String(d) : juce::String("turn");
+        }
+    }
     return maximumStringLength > 0 ? t.substring(0, maximumStringLength) : t;
 }
 
 float KnobParameter::getValueForText(const juce::String &text) const
 {
+    // "Voicing: -1" or just "-1" (a host's text entry); a relative knob: detents from the centre
+    const juce::String t = text.contains(": ") ? text.fromFirstOccurrenceOf(": ", false, false) : text;
     if (!isRelative())
-        return Tier2Parameter::getValueForText(text);
-    return (float)juce::jlimit(0.0, 1.0, 0.5 + text.trim().getIntValue() / (double)kDefaultDetents);
-}
-
-int KnobParameter::getNumSteps() const
-{
-    return isRelative() ? juce::AudioProcessor::getDefaultNumParameterSteps() : Tier2Parameter::getNumSteps();
-}
-
-bool KnobParameter::isDiscrete() const { return !isRelative() && Tier2Parameter::isDiscrete(); }
-
-juce::StringArray KnobParameter::getAllValueStrings() const
-{
-    return isRelative() ? juce::StringArray() : Tier2Parameter::getAllValueStrings();
+        return Tier2Parameter::getValueForText(t);
+    return (float)juce::jlimit(0.0, 1.0, 0.5 + t.trim().getIntValue() / (double)kDefaultDetents);
 }

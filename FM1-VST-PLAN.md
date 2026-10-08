@@ -171,10 +171,13 @@ change with their function in the firmware.*
 
 **The first page is the FM-1's eight physical knobs**, in panel order: MASTER, SELECT, PRESETS,
 ALGORITHM, KNOB1, KNOB2, KNOB3, KNOB4 (`knob_master knob_select knob_presets knob_algo knob_1 ..
-knob_4`). Each is one host parameter whose **name, range, value texts and value are always whatever that
-physical knob does in the firmware on the screen or layer showing now**: on ChoralRoot's view KNOB1 is
-"KNOB1: Voicing" and SELECT "SELECT: Tempo"; with the PERF layer open KNOB1..4 are the current perform
-mode's row ("KNOB1: Strum Rate" .. "KNOB4: Strum Hold"; Arpeggiate: Division, Dir, Gate, Swing), with the
+knob_4`), named **"Knob Master" "Knob Select" "Knob Presets" "Knob Algo" "Knob 1" .. "Knob 4"**. The names
+never change: the Roto-Control binds a mapping by the parameter's name (the first version, "KNOB1:
+Voicing" becoming "KNOB1: Level" with the screen, broke its mappings in Live). Each is one host parameter
+whose **value is always whatever that physical knob does in the firmware on the screen or layer showing
+now**, and its **value text says what that is**, "Function: value": on ChoralRoot's view Knob 1 reads
+"Voicing: -1" and Knob Select "Tempo: 147 BPM"; with the PERF layer open Knob 1..4 are the current perform
+mode's row ("Strum Rate: 126 ms" .. "Strum Hold: Off"; Arpeggiate: Division, Dir, Gate, Swing), with the
 FX layer the effect's row (Reverb: Size, Damp, Type, the amount), with KEY the tonic, scale, transpose
 and Single Notes, in the sound editor the cells of the lane on screen, in Options the row's value; on
 Felucca's HOME the engine's four knobs, on its ENV page Attack .. Release, with FX held its macros. MASTER
@@ -194,22 +197,47 @@ is the pot (absolute 0..1023) everywhere.
   named entry covers (an engine's own and deep pages, MIX 2: "Edit Knob 1..4", rewritten from the cell on
   screen as Felucca's E1..E8 are rewritten from the engine); Felucca / Melodee's FX macros, T1..T4 levels
   and page cells ("Knob 1..4": SLICER, the operator pages, GLOBAL's CLK, the FM6 / CZ-1 pages).
+- **Fixed host info: continuous, quantised inside.** A knob parameter is continuous 0..1 with the
+  default number of steps and default 0.5 whatever it targets; the value maps linearly onto the current
+  target's range (v = min + round(x (max - min))). So nothing a host caches (title, short title, step
+  count, default: what JUCE's VST3 wrapper compares in `updateParameterInfo`, what an AU host reads as
+  parameter info) ever changes, and the plugin never announces `parameterInfoChanged` for a knob (Live
+  rescans a plugin's parameters on every such call; with a discrete target per screen it would have been
+  needed on every screen change). Only the opt-in Tier 2 meta slots and a core switch (the buttons'
+  names) still announce it.
 - **The plugin follows.** On an epoch change it re-reads the seven targets, retargets the knob
-  parameters whose target (entry, range, name) changed, announces `parameterInfoChanged` and pushes their
-  values without a gesture: the Roto-Control relabels and its motors move to the new positions. A knob
-  turned on the unit (or the panel GUI) reports on its knob parameter and on the target's own named slot,
-  inside a gesture, through the same read-back as every slot.
+  parameters whose target (entry, range, name) changed and pushes their values without a gesture: the
+  Roto-Control's motors move to the new positions and its displays show the new texts.
+- **Only the knobs report, and only the one turned is a touch.** Live's Configure mode collects every
+  parameter the plugin reports as changed, so with the Tier 2 slots off (the default) only the eight knobs
+  can ever report. A knob turned on the unit (the panel GUI, its keys, a fine turn: the device's detent
+  counters, minus the host's own relative detents) reports on that knob, inside a gesture, first in its
+  batch. A knob whose target's value changed for another reason (PRESETS loads a sound whose sends
+  differ, and KNOB4 shows the chord reverb send; a MIDI CC) is updated without a gesture; a knob whose
+  target did not change reports nothing; a value the host already has is not sent again. A relative knob
+  turned on the unit is *nudged*: the host is told 0.5 + detents / 24 inside a gesture (its motor follows,
+  Configure collects it), then it springs back as below. (Before this, the named slots reported with a
+  gesture on every firmware change: one PRESETS turn put four sends and KNOB4 into Configure, which is why
+  KNOB4 later seemed to "register nothing": it was already there, collected by the PRESETS turn.)
 - **Never a dead end: a knob with no value turns.** Where the knob is a navigation knob on the current
   screen (SELECT scrolling Options or the editor's lanes, PRESETS and ALGORITHM browsing sounds, an
-  empty column, an action), its parameter becomes a relative control, "KNOB1 (turn)", continuous, at
+  empty column, an action), its parameter becomes a relative control (value text "turn"), at
   0.5: a host change is converted into detents (the change of the normalised value x 24 per full travel,
   rounded, the remainder kept; a setting) sent to the device's encoder as a panel turn, and after 400 ms
   of device time without a host change the parameter is re-centred to 0.5 (reported without a gesture;
   a re-centre never produces detents). ChoralRoot's sound lists (PRESETS: the chord sound, ALGORITHM:
   the bass sound) stay relative: their length follows the engine and the user's presets.
 
-The named parameters stay, after the eight knobs (Tier 2 below), so a specific parameter can still be
-mapped directly; then the panel's buttons and keys (Tier 1). 8 + 79 + 41 = 128, Live's limit.
+The named parameters (Tier 2 below) are an **opt-in**, `-DFM1_TIER2_SLOTS=79` (default 0): with them a
+specific parameter can be mapped directly whatever the screen shows, at the price that every firmware
+change of one reports on its slot (Configure collects them too). The default list is the eight knobs and
+the panel's buttons and keys (Tier 1): 8 + 41 = 49; with the slots 8 + 79 + 41 = 128, Live's limit.
+
+*The panel follows the knobs.* The GUI snapshot carries, per knob, whether it is bound, its target's
+value as a place 0..1 in its range, the device's detent count and the function's name: a bound knob's
+pointer sits at its value on MASTER's 270 degree sweep and moves whenever the value does (host,
+Roto-Control, panel, firmware), with the function as a small caption under the printed name (KNOB1 /
+VOICING); a relative knob's pointer turns 15 degrees per detent from any source.
 
 *Tier 1: the panel (same for every core, 41 parameters).* The 14 buttons and the 27 note keys as
 momentary booleans (Roto-Control buttons, automation, or a MIDI-less chord player).
@@ -237,7 +265,7 @@ For ChoralRoot the map is built from tables that already exist in the firmware, 
 | FX: the chord part's sends (drive, chorus, delay, reverb), the bass part's, the shared bus parameters | Felucca's `params.c` table `TP` (`param_desc_t`: label, format, min, max, default) and the FX layer's knob row (`cr_ui.c` line 378) | **17**: FX on, 4 chord sends, 4 bass sends, 8 bus parameters |
 | sound editor pages (ENV, LFO, MOD, MIX, the engine's eight): chord part and bass part | `cr_pages.c` `CP_PAGES` / `CP_LABEL` over `TP` | **2 x 15 = 30** (ENV, LFO, MOD, MIX without Level), knob targets in the editor (`FM1P_HIDDEN`); slots of their own only with `-DFM1_EXPOSE_EDITOR=ON` (to stay under Live's 128) |
 | knob targets only (`FM1P_HIDDEN`) | the editor's other cells (`cr_edit.c` `ce_view` / `ce_param`), Options (`opt_get` / `opt_set`), the FX picker | **6**: Edit Knob 1..4 (rewritten per cell), Option (rewritten per row), FX Effect |
-| **total** (built) | | **73** visible (103 with the editor), 109 in the map, in 79 host slots: 8 knobs + 79 + 41 = 128 |
+| **total** (built) | | **73** visible (103 with the editor), 109 in the map; with the opt-in, 79 host slots: 8 knobs + 79 + 41 = 128 |
 
 Order: the eight knobs, then the voicing, BPM, transpose and chord level, the perform parameters,
 globals, FX, then the panel booleans. Felucca and Melodee: 73 visible (the part's level and sends, ENV,

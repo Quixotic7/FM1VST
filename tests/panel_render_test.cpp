@@ -11,6 +11,9 @@
 //       pressed / cap), printed as a table;
 //   (d) a custom theme: saved, listed, the default for a new instance; a state naming it restores its colours into
 //       the editor after its file is deleted;
+//   (r) the face knobs: a host write of Knob 1 (Voicing) at 0.25 and at 0.75 turns its pointer by the firmware's
+//       values' distance on the 270 degree sweep (build/panel/knob1-025.png, knob1-075.png: the knob's pixels
+//       differ), the panel's own turn moves it too; a relative knob turns 15 degrees per detent from any source;
 //   (e) every other core: build/panel/core-<id>.png (switchCore, 1.5 s after the power-on, then D4 held 300 ms; the
 //       Emulator theme): its screen and its button labels; the LCD region (at lcd-1x's layout) equals its
 //       framebuffer.
@@ -230,6 +233,60 @@ int main()
             check(p.masterParam()->get() == m0 - 32 && dev->hal()->master == m0 - 32,
                   "panelEnc(MASTER, -2): the master parameter and the HAL move by 32 (" + std::to_string(m0) + " -> " +
                       std::to_string(dev->hal()->master) + ")");
+        }
+
+        // ---- (r) the face knobs follow what they control: Knob 1 (Voicing on the view) written by the host to 0.25,
+        // then 0.75: the pointer on MASTER's 270 degree sweep at the firmware's value, the caption "VOICING" under
+        // KNOB1; a relative knob (PRESETS) turns by its detents, whoever gave them (the host's relative turn here)
+        {
+            KnobParameter *k1 = p.knobParam(EMU_E_K1);
+            const fm1param_t *e = k1->entry();
+            auto normOf = [&]() { return e ? (float)(e->get() - e->min) / (float)(e->max - e->min) : -1.f; };
+            k1->setValueNotifyingHost(0.25f);
+            h.run_ms(60);
+            const float n25 = normOf();
+            const juce::Image a = render(panel, 2.0f);
+            const float a25 = panel.knobAngle(EMU_E_K1);
+            k1->setValueNotifyingHost(0.75f);
+            h.run_ms(60);
+            const float n75 = normOf();
+            const juce::Image b = render(panel, 2.0f);
+            const float a75 = panel.knobAngle(EMU_E_K1);
+            const juce::Rectangle<int> box = panel.knobBoxPx(EMU_E_K1);
+            int differ = 0;
+            for (int y = box.getY(); y < box.getBottom(); y++)
+                for (int x = box.getX(); x < box.getRight(); x++)
+                    differ += maxDiff(a.getPixelAt(x, y), b.getPixelAt(x, y)) > 24;
+            const float want = (n75 - n25) * 1.5f * 3.14159265f;
+            check(k1->functionName() == "Voicing" && std::abs((a75 - a25) - want) < 1e-3f && differ > 20,
+                  "host Knob 1 (Voicing) 0.25 -> 0.75 (the firmware's value at " + std::to_string(n25) + " -> " +
+                      std::to_string(n75) + " of its range): the KNOB1 pointer turned " +
+                      std::to_string((a75 - a25) * 180.f / 3.14159265f) + " degrees, " + std::to_string(differ) +
+                      " pixels of the knob differ");
+            const juce::File fa = out.getChildFile("knob1-025.png"), fb = out.getChildFile("knob1-075.png");
+            check(writePng(a, fa) && writePng(b, fb), "wrote " + fa.getFullPathName().toStdString() + " and " +
+                                                          fb.getFileName().toStdString());
+            // a firmware-side change moves it too: the panel's own turn of KNOB1 (+3 detents of voicing)
+            const float before = panel.knobAngle(EMU_E_K1);
+            p.panelEnc(EMU_E_K1, -3);
+            h.run_ms(60);
+            render(panel, 2.0f);
+            check(panel.knobAngle(EMU_E_K1) < before, "the panel's KNOB1 -3: the pointer follows the firmware's value (" +
+                                                          std::to_string(normOf()) + ")");
+            KnobParameter *pr = p.knobParam(EMU_E_PRESETS);
+            const float r0 = panel.knobAngle(EMU_E_PRESETS);
+            pr->setValueNotifyingHost(0.5f + 2.0f / 24.0f);   // (the host's relative turn: 2 detents)
+            h.run_ms(60);
+            render(panel, 2.0f);
+            const float dr = (panel.knobAngle(EMU_E_PRESETS) - r0) * 180.f / 3.14159265f;
+            check(pr->isRelative() && std::abs(dr - 30.f) < 0.5f,
+                  "PRESETS (relative) turned 2 detents by the host: its pointer turned " + std::to_string(dr) +
+                      " degrees (15 per detent)");
+            pr->setValueNotifyingHost(0.5f);
+            h.run_ms(600);
+            k1->setValueNotifyingHost(k1->toNorm(0));
+            h.run_ms(60);
+            panel.refresh();
         }
 
         // ---- (a) the LCD region, pixel for pixel, at integer scales

@@ -196,15 +196,25 @@ void FM1Processor::createTier1Parameters()
 void FM1Processor::createKnobParameters()
 {
     // the emulator's power-on value: emu_fw_init sets emu_hal.master = 724 when the host left it 0
-    master_ = new juce::AudioParameterInt(juce::ParameterID{"knob_master", 1}, "MASTER", 0, 1023, 724);
+    // (the value text carries the function, as the other knobs': "Master: 724")
+    master_ = new juce::AudioParameterInt(
+        juce::ParameterID{"knob_master", 1}, "Knob Master", 0, 1023, 724,
+        juce::AudioParameterIntAttributes()
+            .withStringFromValueFunction([](int v, int maxLen) {
+                const juce::String t = "Master: " + juce::String(v);
+                return maxLen > 0 ? t.substring(0, maxLen) : t;
+            })
+            .withValueFromStringFunction([](const juce::String &t) {
+                return (t.contains(": ") ? t.fromFirstOccurrenceOf(": ", false, false) : t).trim().getIntValue();
+            }));
     addParameter(master_);
-    static const struct { int role; const char *id, *label, *shortLabel; } K[] = {
-        {EMU_E_SELECT, "knob_select", "SELECT", "SEL"}, {EMU_E_PRESETS, "knob_presets", "PRESETS", "PRE"},
-        {EMU_E_ALGO, "knob_algo", "ALGORITHM", "ALG"},  {EMU_E_K1, "knob_1", "KNOB1", "K1"},
-        {EMU_E_K2, "knob_2", "KNOB2", "K2"},            {EMU_E_K3, "knob_3", "KNOB3", "K3"},
-        {EMU_E_K4, "knob_4", "KNOB4", "K4"}};
+    static const struct { int role; const char *id, *name; } K[] = {
+        {EMU_E_SELECT, "knob_select", "Knob Select"}, {EMU_E_PRESETS, "knob_presets", "Knob Presets"},
+        {EMU_E_ALGO, "knob_algo", "Knob Algo"},       {EMU_E_K1, "knob_1", "Knob 1"},
+        {EMU_E_K2, "knob_2", "Knob 2"},               {EMU_E_K3, "knob_3", "Knob 3"},
+        {EMU_E_K4, "knob_4", "Knob 4"}};
     for (const auto &k : K) {
-        auto *p = new KnobParameter(k.role, k.id, k.label, k.shortLabel);
+        auto *p = new KnobParameter(k.role, k.id, k.name);
         knob_[(size_t)k.role] = p;
         addParameter(p);
     }
@@ -218,11 +228,12 @@ void FM1Processor::createTier2Parameters()
         t2_[(size_t)i] = p;
         addParameter(p);
     }
+    t2Created_ = true;
 }
 
 void FM1Processor::bindTier2Locked()
 {
-    if (!t2_[0])
+    if (!t2Created_)
         return;                                  // (the constructor: the slots come after the first load)
     const fm1core_t *c = loaded_ ? loaded_->core() : nullptr;
     const uint32_t n = c && c->params ? c->nparams : 0u;
@@ -248,9 +259,10 @@ void FM1Processor::bindTier2Locked()
     knobValid_.fill(false);
     knobHoldoff_.fill(0);
     knobSigValid_.fill(false);
+    resetKnobTurns();
     t2EpochValid_ = false;
     t2Sweep_.store(true);
-    if (visible > (uint32_t)kTier2Slots)
+    if (kTier2Slots > 0 && visible > (uint32_t)kTier2Slots)
         message_ = juce::String(c->name) + ": " + juce::String(visible) + " firmware parameters, " +
                    juce::String(kTier2Slots) + " host slots (build with -DFM1_TIER2_SLOTS)";
 }
@@ -267,13 +279,13 @@ void FM1Processor::unbindTier2Locked()
     t2Gen_.fetch_add(1);
 }
 
-bool FM1Processor::pushTier2(int slot, int32_t v, uint8_t kind)
+bool FM1Processor::pushTier2(int slot, int32_t v, uint8_t kind, int32_t aux)
 {
     int s1, n1, s2, n2;
     t2Fifo_.prepareToWrite(1, s1, n1, s2, n2);
     if (n1 + n2 < 1)
         return false;
-    t2Buf_[(size_t)(n1 ? s1 : s2)] = T2Msg{(int16_t)slot, kind, t2Gen_.load(std::memory_order_relaxed), v};
+    t2Buf_[(size_t)(n1 ? s1 : s2)] = T2Msg{(int16_t)slot, kind, t2Gen_.load(std::memory_order_relaxed), v, aux};
     t2Fifo_.finishedWrite(1);
     return true;
 }
@@ -297,6 +309,7 @@ void FM1Processor::applyHostParameters()
         if (k->isRelative()) {
             if (k->takeDetents(v, knobDetents_.load())) {
                 dev_->enc(r, v);                 // (as a panel turn: the firmware's own knob code)
+                hostEnc_[(size_t)r] += v;        // (the host's own detents: not a device turn to report)
                 knobSent_[(size_t)r].fetch_add(v);
                 knobLastTurn_[(size_t)r] = dev_->ms();
             }
@@ -342,6 +355,7 @@ void FM1Processor::retargetKnobs()
             continue;
         k->retargetKnob(e);
         knobHoldoff_[(size_t)r] = 0;
+        nudgeAcc_[(size_t)r] = 0;
         if (e) {
             const int32_t v = e->get();
             if (!pushTier2(kTier2Slots + r, v, kT2Relabel))
@@ -359,11 +373,45 @@ void FM1Processor::retargetKnobs()
     }
 }
 
+void FM1Processor::resetKnobTurns()
+{
+    for (int r = 0; r < kKnobs; r++) {
+        encSeen_[(size_t)r] = dev_ ? dev_->enc_total(r) : 0;
+        hostEnc_[(size_t)r] = 0;
+        nudgeAcc_[(size_t)r] = 0;
+        ownTurnMs_[(size_t)r] = 0;
+        ownTurnValid_[(size_t)r] = false;
+    }
+}
+
+// the detents each knob was turned on the device since the last frame (the panel, its keys, a fine turn, a test's
+// Device::enc), the host's own (a relative knob's host change) left out
+void FM1Processor::takeKnobTurns(std::array<int32_t, EMU_NE - 1> &own)
+{
+    for (int r = 0; r < kKnobs; r++) {
+        const int32_t total = dev_->enc_total(r);
+        own[(size_t)r] = total - encSeen_[(size_t)r] - hostEnc_[(size_t)r];
+        encSeen_[(size_t)r] = total;
+        hostEnc_[(size_t)r] = 0;
+        if (own[(size_t)r]) {
+            ownTurnMs_[(size_t)r] = dev_->ms();
+            ownTurnValid_[(size_t)r] = true;
+        }
+    }
+}
+
+bool FM1Processor::ownTurnRecent(int r) const
+{
+    return ownTurnValid_[(size_t)r] && dev_->ms() - ownTurnMs_[(size_t)r] <= kOwnTurnMs;
+}
+
 void FM1Processor::readBackParameters()
 {
     if (!dev_ || dev_->halted())
         return;
     const fm1core_t *c = dev_->core();
+    std::array<int32_t, EMU_NE - 1> own{};
+    takeKnobTurns(own);
     // the epoch: a screen, layer, mode, part or engine changed (or the first frame after a bind): the knobs' targets,
     // the meta slots' targets
     {
@@ -372,12 +420,12 @@ void FM1Processor::readBackParameters()
             bool ok = true;
             for (int i = 0; i < t2Bound_; i++) {
                 Tier2Parameter *p = t2_[(size_t)i];
-                const fm1param_t *own = p->entry();
-                if (!p->isMeta() || !own || !own->target)
+                const fm1param_t *o = p->entry();
+                if (!p->isMeta() || !o || !o->target)
                     continue;
-                const int32_t t = own->target();
-                p->retarget(t >= 0 && (uint32_t)t < c->nparams ? &c->params[t] : own);
-                const int32_t v = own->get();
+                const int32_t t = o->target();
+                p->retarget(t >= 0 && (uint32_t)t < c->nparams ? &c->params[t] : o);
+                const int32_t v = o->get();
                 if (pushTier2(i, v, kT2Relabel)) {
                     t2Reported_[(size_t)i] = v;
                     t2Valid_[(size_t)i] = true;
@@ -397,17 +445,17 @@ void FM1Processor::readBackParameters()
     const bool sweep = t2Sweep_.load();
     bool swept = true;
     for (int i = 0; i < t2Bound_; i++) {
-        const fm1param_t *own = t2_[(size_t)i]->entry();
-        if (!own)
+        const fm1param_t *o = t2_[(size_t)i]->entry();
+        if (!o)
             continue;
         if (!sweep && t2Holdoff_[(size_t)i]) {
             t2Holdoff_[(size_t)i]--;
             continue;
         }
-        const int32_t v = own->get();
+        const int32_t v = o->get();
         if (!sweep && t2Valid_[(size_t)i] && v == t2Reported_[(size_t)i])
             continue;
-        if (pushTier2(i, v, sweep ? kT2Sweep : kT2Change)) {
+        if (pushTier2(i, v, sweep ? kT2Sweep : kT2Change, 1)) {
             t2Reported_[(size_t)i] = v;
             t2Valid_[(size_t)i] = true;
         } else {
@@ -417,10 +465,23 @@ void FM1Processor::readBackParameters()
     for (int r = 0; r < kKnobs; r++) {           // the knobs: a bound one as a slot; a relative one springs back
         KnobParameter *k = knob_[(size_t)r];
         if (k->isRelative()) {
-            if (k->relativeOffCentre() && dev_->ms() - knobLastTurn_[(size_t)r] >= KnobParameter::kRecentreMs) {
+            // a device turn: shown to the host as a nudge off the centre (inside a gesture), then the spring back
+            if (own[(size_t)r]) {
+                const int32_t acc = juce::jlimit(-KnobParameter::kDefaultDetents / 2, KnobParameter::kDefaultDetents / 2,
+                                                 nudgeAcc_[(size_t)r] + own[(size_t)r]);
+                if (pushTier2(kTier2Slots + r, (int32_t)k->hostSeq(), kKnobNudge, acc)) {
+                    nudgeAcc_[(size_t)r] = acc;
+                    knobLastTurn_[(size_t)r] = dev_->ms();
+                }
+                continue;
+            }
+            if ((k->relativeOffCentre() || nudgeAcc_[(size_t)r]) &&
+                dev_->ms() - knobLastTurn_[(size_t)r] >= KnobParameter::kRecentreMs) {
                 const uint32_t seq = k->hostSeq();
-                if (pushTier2(kTier2Slots + r, (int32_t)seq, kKnobCentre))
+                if (pushTier2(kTier2Slots + r, (int32_t)seq, kKnobCentre)) {
                     k->recentre();               // (no detents: the base moves with the value)
+                    nudgeAcc_[(size_t)r] = 0;
+                }
             }
             continue;
         }
@@ -434,7 +495,10 @@ void FM1Processor::readBackParameters()
         const int32_t v = e->get();
         if (!sweep && knobValid_[(size_t)r] && v == knobReported_[(size_t)r])
             continue;
-        if (pushTier2(kTier2Slots + r, v, sweep ? kT2Sweep : kT2Change)) {
+        // a gesture only when this knob was turned on the device just now: its own change is a touch (Live's
+        // Configure, the Roto-Control's touch, automation); the target moved by anything else (a sound loaded by
+        // PRESETS changing the send KNOB4 shows, a MIDI CC) is a plain value update
+        if (pushTier2(kTier2Slots + r, v, sweep ? kT2Sweep : kT2Change, !sweep && ownTurnRecent(r) ? 1 : 0)) {
             knobReported_[(size_t)r] = v;
             knobValid_[(size_t)r] = true;
         } else {
@@ -445,12 +509,18 @@ void FM1Processor::readBackParameters()
         t2Sweep_.store(false);
 }
 
+// the message thread: what the read-back pushed, coalesced (one update per parameter per drain, the latest), told
+// to the host. A Tier 2 slot's firmware change: inside a gesture (as before the knobs). A knob: inside a gesture only
+// when it was turned on the device (kT2Change with aux 1, kKnobNudge); those first, so a host collecting touched
+// parameters sees the turned knob before any knob its turn moved. Nothing is told that the host already has (the
+// same firmware value, a relative knob already at 0.5). parameterInfoChanged only for a Tier 2 meta slot's relabel
+// (the knobs' names, ranges and steps never change).
 void FM1Processor::drainTier2()
 {
     struct Acc {
-        bool any = false, gesture = true;
+        bool any = false, gesture = false, allChange = true;
         uint8_t kind = kT2Change;
-        int32_t v = 0;
+        int32_t v = 0, aux = 0;
     };
     constexpr int kSlots = FM1_TIER2_SLOTS + EMU_NE - 1;
     std::array<Acc, kSlots> acc{};
@@ -469,10 +539,13 @@ void FM1Processor::drainTier2()
                 Acc &a = acc[(size_t)m.slot];
                 a.any = any = true;
                 a.v = m.value;                   // coalesced: the latest
+                a.aux = m.aux;
                 a.kind = m.kind;
                 if (m.kind != kT2Change)
-                    a.gesture = false;
-                relabel = relabel || m.kind == kT2Relabel || (m.kind == kKnobNorm && m.slot >= kTier2Slots);
+                    a.allChange = false;
+                if ((m.kind == kT2Change && m.aux) || m.kind == kKnobNudge)
+                    a.gesture = true;
+                relabel = relabel || (m.kind == kT2Relabel && m.slot < kTier2Slots);
             }
         };
         take(s1, n1);
@@ -483,27 +556,31 @@ void FM1Processor::drainTier2()
         return;
     if (relabel)
         updateHostDisplay(ChangeDetails().withParameterInfoChanged(true));
-    auto param = [this](int i) -> Tier2Parameter * {
-        return i < kTier2Slots ? t2_[(size_t)i] : knob_[(size_t)(i - kTier2Slots)];
-    };
-    for (int i = 0; i < kSlots; i++)
-        if (acc[(size_t)i].any && acc[(size_t)i].gesture)
-            param(i)->beginChangeGesture();
-    for (int i = 0; i < kSlots; i++) {
+    for (int i = 0; i < kTier2Slots; i++) {      // the Tier 2 slots (opt-in): as before the knobs
         const Acc &a = acc[(size_t)i];
-        if (!a.any)
-            continue;
-        if (a.kind == kKnobNorm || a.kind == kKnobCentre) {   // relative: 0.5, unless the host turned it since
-            KnobParameter *k = knob_[(size_t)(i - kTier2Slots)];
-            if (k->hostSeq() == (uint32_t)a.v && k->isRelative())
-                k->setNormFromFirmware(0.5f);
-        } else {
-            param(i)->setFromFirmware(a.v, false);
-        }
+        if (a.any)
+            t2_[(size_t)i]->setFromFirmware(a.v, a.allChange && a.gesture);
     }
-    for (int i = 0; i < kSlots; i++)
-        if (acc[(size_t)i].any && acc[(size_t)i].gesture)
-            param(i)->endChangeGesture();
+    for (int pass = 0; pass < 2; pass++)         // the knobs: the touched ones first
+        for (int r = 0; r < kKnobs; r++) {
+            const Acc &a = acc[(size_t)(kTier2Slots + r)];
+            if (!a.any || a.gesture != (pass == 0))
+                continue;
+            KnobParameter *k = knob_[(size_t)r];
+            if (a.kind == kKnobNudge) {          // relative, turned on the device: unless the host turned it since
+                if (k->hostSeq() == (uint32_t)a.v && k->isRelative())
+                    k->nudge((float)(0.5 + (double)a.aux / KnobParameter::kDefaultDetents));
+            } else if (a.kind == kKnobNorm || a.kind == kKnobCentre) {   // relative: 0.5, unless the host turned it
+                if (k->hostSeq() == (uint32_t)a.v && k->isRelative() && !juce::exactlyEqual(k->hostValue(), 0.5f))
+                    k->setNormFromFirmware(0.5f);
+            } else if (!k->isRelative()) {
+                // a change: unless the host's value is that step already; a relabel or the sweep: unless the host has
+                // exactly that value (the old one means another range)
+                const bool same = a.kind == kT2Change ? k->toPlain(k->hostValue()) == a.v : juce::exactlyEqual(k->toNorm(a.v), k->hostValue());
+                if (!same)
+                    k->setFromFirmware(a.v, a.gesture);
+            }
+        }
 }
 
 juce::String FM1Processor::buttonName(int i) const
@@ -611,6 +688,7 @@ void FM1Processor::bootLocked()
     });
     dev_->boot_from(bytes.empty() ? nullptr : bytes.data(), (uint32_t)bytes.size());
     resetAudioState();
+    resetKnobTurns();                            // (a new device: its detent counters start at 0)
     t2Sweep_.store(true);                        // the first read-back reports every Tier 2 value
     t2EpochValid_ = false;
     halted_.store(dev_->halted());
@@ -1096,6 +1174,7 @@ bool FM1Processor::getPanelView(PanelView &out) const
     out.keys = view_.keys;
     out.buttons = view_.buttons;
     out.master = view_.master;
+    out.knobs = view_.knobs;
     return true;
 }
 
@@ -1152,7 +1231,22 @@ void FM1Processor::snapshotPanel()
     const uint32_t buttons = appliedButtons_ == 0xFFFFFFFFu ? 0u : appliedButtons_;
     const bool lcdMoved = h && h->lcd_writes != view_.lcdWrites;
     const bool ledsMoved = h && (std::memcmp(viewLeds_, h->led, EMU_NCOL) || std::memcmp(viewLeds_ + EMU_NCOL, h->led_dim, EMU_NCOL));
-    if (!viewDirty_ && !lcdMoved && !ledsMoved && running == viewRunning_ && keys == viewKeys_ &&
+    // the knobs: what each is bound to and where its value is (the firmware's own, whoever moved it)
+    std::array<PanelView::Knob, EMU_NE - 1> kv{};
+    for (int r = 0; r < kKnobs; r++) {
+        PanelView::Knob &o = kv[(size_t)r];
+        const KnobParameter *k = knob_[(size_t)r];
+        const fm1param_t *e = running && k && !k->isRelative() ? k->entry() : nullptr;
+        o.turns = dev_ ? dev_->enc_total(r) : 0;
+        if (!e)
+            continue;
+        const int32_t v = e->get(), lo = e->min, hi = e->max > e->min ? e->max : e->min + 1;
+        o.bound = true;
+        o.norm = (float)juce::jlimit(0.0, 1.0, (double)(v - lo) / (double)(hi - lo));
+        std::snprintf(o.fn, sizeof o.fn, "%s", e->name ? e->name : "");
+    }
+    const bool knobsMoved = kv != viewKnobs_;
+    if (!viewDirty_ && !lcdMoved && !ledsMoved && !knobsMoved && running == viewRunning_ && keys == viewKeys_ &&
         buttons == viewButtons_ && (!h || h->master == viewMaster_))
         return;
     const juce::SpinLock::ScopedTryLockType l(viewLock_);
@@ -1174,6 +1268,7 @@ void FM1Processor::snapshotPanel()
         view_.master = h->master;
         viewMaster_ = h->master;
     }
+    view_.knobs = viewKnobs_ = kv;
     view_.running = viewRunning_ = running;
     view_.keys = viewKeys_ = keys;
     view_.buttons = viewButtons_ = buttons;

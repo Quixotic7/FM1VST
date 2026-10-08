@@ -151,8 +151,11 @@ int main()
             idsOk = pid(8 + t2 + 14 + k) == juce::String::formatted("key_%02d", k);
         check(idsOk, "the eight knobs knob_master .. knob_4, " + std::to_string(t2) + " Tier 2 slots t2_00 .., then 41 "
                      "Tier 1 parameters: btn_fx .. btn_octup, key_00 .. key_26 (" + std::to_string(ps.size()) + " in all)");
+        check(ps.size() == (size_t)(t2 ? 128 : 49), "the parameter count: " + std::to_string(ps.size()) +
+                                                        (t2 ? " (the opt-in Tier 2 slots: Live's 128)" : " (8 knobs + 14 buttons + 27 keys)"));
         check(p.buttonParam(EMU_B_SEL)->getName(100) == "KEY (SEL)" && p.keyParam(9)->getName(100) == "D4" &&
-                  p.keyParam(0)->getName(100) == "F3" && p.masterParam()->get() == 724,
+                  p.keyParam(0)->getName(100) == "F3" && p.masterParam()->get() == 724 &&
+                  p.masterParam()->getName(100) == "Knob Master" && p.knobParam(EMU_E_K4)->getName(100) == "Knob 4",
               "names: \"" + p.buttonParam(EMU_B_SEL)->getName(100).toStdString() + "\", key_09 \"" +
                   p.keyParam(9)->getName(100).toStdString() + "\", master " + std::to_string(p.masterParam()->get()));
         check(p.getNumPrograms() == 1 && p.getProgramName(0) == "Init", "no presets: one program, \"Init\"");
@@ -328,15 +331,21 @@ int main()
         FM1Processor s;
         Host hs(s, 48000.0, 256);
         hs.run_ms(600);
-        Tier2Parameter *tempo = s.tier2Param(1);                  // ("Tempo": a setting ChoralRoot keeps in its flash)
+        // Knob Select is "Tempo" on the view (a setting ChoralRoot keeps in its flash)
+        KnobParameter *tempo = s.knobParam(EMU_E_SELECT);
         tempo->setValueNotifyingHost(tempo->toNorm(133));
         hs.run_ms(100);
         const std::vector<uint8_t> crFlash = s.currentFlash();
         const std::vector<uint8_t> crFresh = freshFlash;
+        // the Tier 2 slots' names (none by default) and the knobs' functions (their names never change)
         auto slotNames = [&](int n) {
             std::string out;
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < n && i < FM1Processor::kTier2Slots; i++)
                 out += (i ? " | " : "") + s.tier2Param(i)->getName(100).toStdString();
+            for (int r = 0; r < FM1Processor::kKnobs; r++) {
+                const juce::String f = s.knobParam(r)->functionName();
+                out += " / " + (f.isEmpty() ? std::string("turn") : f.toStdString());
+            }
             return out;
         };
         auto names = [&]() {
@@ -349,7 +358,7 @@ int main()
         const int crBound = s.tier2Bound();
         std::printf("        (choralroot: %d Tier 2 slots bound, page 1: %s; buttons%s)\n", crBound, crSlots.c_str(),
                     crButtons.c_str());
-        check(tempo->getName(100) == "Tempo" && tempo->entry()->get() == 133 && diffBytes(crFlash, crFresh) != 0 &&
+        check(tempo->functionName() == "Tempo" && tempo->entry()->get() == 133 && diffBytes(crFlash, crFresh) != 0 &&
                   diffBytes(crFlash, crFresh) != (size_t)-1,
               "choralroot: host Tempo 133, its flash differs from a fresh unit's (" +
                   std::to_string(diffBytes(crFlash, crFresh)) + " bytes)");
@@ -372,10 +381,14 @@ int main()
             int visible = 0;
             for (uint32_t i = 0; c && i < c->nparams; i++)
                 visible += !(c->params[i].flags & FM1P_HIDDEN);
-            check(c && s.tier2Bound() == visible && s.tier2Param(0)->getName(100) == "Level" && sl != crSlots &&
-                      s.tier2Param(visible)->getName(100) == "(unused)",
-                  std::string(id) + ": the Tier 2 slots rebound to its " + std::to_string(visible) +
-                      " visible entries (slot 0 \"" + s.tier2Param(0)->getName(100).toStdString() + "\", the rest unused)");
+            if (FM1Processor::kTier2Slots > 0)
+                check(c && s.tier2Bound() == visible && s.tier2Param(0)->getName(100) == "Level" && sl != crSlots &&
+                          s.tier2Param(visible)->getName(100) == "(unused)",
+                      std::string(id) + ": the Tier 2 slots rebound to its " + std::to_string(visible) +
+                          " visible entries (slot 0 \"" + s.tier2Param(0)->getName(100).toStdString() + "\", the rest unused)");
+            else
+                check(c && s.tier2Bound() == 0 && sl != crSlots && s.knobParam(EMU_E_K1)->getName(100) == "Knob 1",
+                      std::string(id) + ": no Tier 2 slots; the knobs follow its screen (" + sl + "), their names fixed");
             hs.note(true, 62);
             hs.run_ms(300);
             check(hs.peak > 0.01f && keyHeld(s, 9), std::string(id) + ": note 62 plays key 9 and sounds (peak " +
@@ -396,8 +409,9 @@ int main()
         hs.run_ms(700);
         s.drainTier2();
         check(slotNames(8) == crSlots && s.tier2Bound() == crBound && names() == crButtons &&
-                  s.tier2Param(1)->entry()->get() == 133 && s.tier2Param(1)->plainValue() == 133,
-              "  ... its labels and its " + std::to_string(crBound) + " Tier 2 slots again, Tempo 133 (firmware and host)");
+                  tempo->entry() && tempo->entry()->get() == 133 && tempo->plainValue() == 133,
+              "  ... its labels, its knobs and its " + std::to_string(crBound) +
+                  " Tier 2 slots again, Tempo 133 (firmware and host)");
         hs.peak = 0.0f;
         hs.note(true, 62);
         hs.run_ms(300);

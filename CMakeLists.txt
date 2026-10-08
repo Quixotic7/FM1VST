@@ -185,8 +185,10 @@ juce_add_binary_data(FM1VST_Themes HEADER_NAME BinaryData.h NAMESPACE BinaryData
 set_target_properties(FM1VST_Themes PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(FM1VST PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/plugin)
 target_compile_features(FM1VST PUBLIC cxx_std_17)
-# the Tier 2 host parameter slots (plugin/Tier2Parameter.h): the 8 knobs + 79 + the 41 panel booleans = Live's 128
-set(FM1_TIER2_SLOTS 79 CACHE STRING "Tier 2 host parameter slots (the firmware's parameters)")
+# the Tier 2 host parameter slots (plugin/Tier2Parameter.h): 0 by default, the host sees the 8 knobs and the 41 panel
+# booleans (49), so Live's Configure collects nothing but the knobs. The opt-in for direct mappings of the firmware's
+# own parameters: -DFM1_TIER2_SLOTS=79 (the 8 knobs + 79 + 41 = Live's 128)
+set(FM1_TIER2_SLOTS 0 CACHE STRING "Tier 2 host parameter slots (the firmware's parameters; 0: none, 79: the opt-in)")
 target_compile_definitions(FM1VST PUBLIC
     JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0
     FM1_CORES_DIR="${CMAKE_BINARY_DIR}/cores" FM1_TIER2_SLOTS=${FM1_TIER2_SLOTS})
@@ -301,6 +303,7 @@ target_compile_definitions(tier2_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_D
     FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/tier2_test_home")
 add_dependencies(tier2_test ${FM1_CORE_TARGETS})
 add_test(NAME tier2_test COMMAND tier2_test)
+set_tests_properties(tier2_test PROPERTIES SKIP_RETURN_CODE 77)   # (FM1_TIER2_SLOTS 0: nothing to test)
 
 # the eight physical knobs as host parameters, following the firmware's screens (headless, as tier2_test)
 add_executable(knob_test tests/knob_test.cpp)

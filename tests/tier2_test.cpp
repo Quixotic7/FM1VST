@@ -80,6 +80,10 @@ static Tier2Parameter *slotNamed(FM1Processor &p, const juce::String &name)
 
 int main()
 {
+    if (FM1Processor::kTier2Slots == 0) {             // (the default: no slots; the knobs are knob_test's)
+        std::printf("tier2_test: SKIP (FM1_TIER2_SLOTS 0: no Tier 2 slots; configure with -DFM1_TIER2_SLOTS=79)\n");
+        return 77;
+    }
     const juce::File scratch(FM1_SCRATCH_DIR);
     scratch.deleteRecursively();
     scratch.createDirectory();

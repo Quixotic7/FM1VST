@@ -68,6 +68,7 @@ void Device::enc(int role, int32_t n)
         h->master = m < 0 ? 0 : m > 1023 ? 1023 : m;
     } else if (role >= 0 && role < EMU_NE - 1) {
         h->enc[h->enc_id[role]] += n * h->enc_dir[role];
+        enc_total_[role] += n;
     }
 }
 void Device::master(int32_t v) { c_->hal->master = v < 0 ? 0 : v > 1023 ? 1023 : v; }

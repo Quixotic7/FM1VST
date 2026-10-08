@@ -21,12 +21,13 @@
 
 #include "fm1core.h"
 
-// the pool's size: ChoralRoot's visible map (73 entries; FM1P_HIDDEN ones get no slot) plus headroom, chosen so that
-// the eight knob parameters (MASTER and the seven KnobParameters), the pool and the 41 Tier 1 panel booleans make
-// exactly 128, Live's limit for showing a plugin's parameters without configuring them (plan 4.5). A ChoralRoot core
-// built with FM1_EXPOSE_EDITOR (103 visible) needs -DFM1_TIER2_SLOTS=103 (or more).
+// the pool's size: 0 by default (plan 4.5): the host sees the eight knob parameters and the 41 panel booleans only, so
+// Live's Configure collects nothing but the knobs (a firmware change of a sound's sends, a preset, a mode reported on
+// a parameter of its own lands in Configure too). -DFM1_TIER2_SLOTS=79 brings the slots back (an opt-in for direct
+// mappings: ChoralRoot's 73 visible entries plus headroom; 8 + 79 + 41 = Live's 128); a ChoralRoot core built with
+// FM1_EXPOSE_EDITOR (103 visible) needs 103 or more.
 #ifndef FM1_TIER2_SLOTS
-#define FM1_TIER2_SLOTS 79
+#define FM1_TIER2_SLOTS 0
 #endif
 static constexpr int kTier2NameMax = 16;   // the longest name a slot reports (the Roto-Control's displays)
 
@@ -87,19 +88,23 @@ protected:
     std::atomic<uint32_t> gen_{0}, pendingGen_{0};       // moves on every knob retarget
 };
 
-// One of the FM-1's physical knobs as a host parameter (plan 4.5: the first page, MASTER SELECT PRESETS ALGORITHM
-// KNOB1..4; MASTER itself is a plain AudioParameterInt). What it is follows the firmware's screen: the core's
-// knob_target(role) names the map entry that knob turns now, and the slot is that entry exactly as a Tier 2 slot
-// would be (name "KNOB1: Strum Rate", range, texts, discrete), or -1: no value there, and the slot is a RELATIVE
-// control, "KNOB1 (turn)", continuous, centred at 0.5: a host change becomes detents (the change of the normalised
-// value x detentsPerTravel, rounded; the remainder kept), sent to the device's encoder as a panel turn, and after
-// kRecentreMs of device time without a host change the value springs back to 0.5 (reported to the host without a
-// gesture; a re-centre never makes detents).
+// One of the FM-1's physical knobs as a host parameter (plan 4.5: the first page, "Knob Master" "Knob Select" "Knob
+// Presets" "Knob Algo" "Knob 1".."Knob 4"; MASTER itself is a plain AudioParameterInt). The NAME NEVER CHANGES (a
+// Roto-Control binds by name), nor does anything else the host caches (continuous 0..1, the default number of steps,
+// default 0.5): what the knob does on the firmware's screen goes into the VALUE TEXT ("Voicing: -1", "Strum Rate:
+// 126 ms"), so the host never needs parameterInfoChanged for a knob. The core's knob_target(role) names the map entry
+// that knob turns now: the host value 0..1 is that entry's range, quantised inside (v = min + round(x (max - min))).
+// -1: no value there, and the knob is a RELATIVE control (text "turn", centred at 0.5): a host change becomes detents
+// (the change of the normalised value x detentsPerTravel, rounded; the remainder kept), sent to the device's encoder
+// as a panel turn, and after kRecentreMs of device time without a host change the value springs back to 0.5
+// (reported to the host without a gesture; a re-centre never makes detents). A relative knob turned on the device
+// (panel, mouse, keys) is NUDGED: the host is told 0.5 + detents / kDefaultDetents inside a gesture (the
+// Roto-Control's motor follows, Live's Configure collects the knob), then it springs back the same way.
 // THREADS: retargetKnob / takeDetents / recentre: the audio thread (lock-free, as Tier2Parameter::retarget); the
 // rest as Tier2Parameter.
 class KnobParameter : public Tier2Parameter {
 public:
-    KnobParameter(int role, const juce::String &id, const juce::String &knobLabel, const juce::String &shortLabel);
+    KnobParameter(int role, const juce::String &id, const juce::String &fixedName);
 
     int role() const { return role_; }
     bool isRelative() const { return relative_.load(std::memory_order_acquire); }
@@ -113,25 +118,34 @@ public:
     bool relativeOffCentre() const { return isRelative() && getValue() != 0.5f; }
     void recentre();                                      // the audio thread: value 0.5 (the host is told by the drain)
     uint32_t hostSeq() const { return hostSeq_.load(); }  // moves with every host write
+    // what the host was last told or wrote (getValue() is what the processor holds: a re-centre or a retarget sets it
+    // before the drain tells the host)
+    float hostValue() const { return hostValue_.load(); }
     // the message thread: the host told the slot's value is x (0.5: relative), without making it a host change
     void setNormFromFirmware(float x);
+    // the message thread: a device turn of a relative knob shown to the host (x: 0.5 + detents / kDefaultDetents),
+    // inside a gesture; the next host change counts its detents from x
+    void nudge(float x);
+    // what the knob does now ("Voicing", "Strum Rate"; "" relative): the value text's prefix, the panel's caption
+    juce::String functionName() const;
 
     void setValue(float newValue) override;
-    float getDefaultValue() const override;
+    float getDefaultValue() const override { return 0.5f; }
     juce::String getName(int maximumStringLength) const override;
     juce::String getText(float normalisedValue, int maximumStringLength) const override;
     float getValueForText(const juce::String &text) const override;
-    int getNumSteps() const override;
-    bool isDiscrete() const override;
-    juce::StringArray getAllValueStrings() const override;
+    int getNumSteps() const override { return juce::AudioProcessor::getDefaultNumParameterSteps(); }
+    bool isDiscrete() const override { return false; }
+    juce::StringArray getAllValueStrings() const override { return {}; }
 
     static constexpr uint32_t kRecentreMs = 400;          // device ms without a host change
     static constexpr int kDefaultDetents = 24;            // detents per full travel (FM1Processor's setting)
 
 private:
     const int role_;
-    const juce::String label_, short_;
+    const juce::String name_;
     std::atomic<bool> relative_{true}, relPending_{false};
     std::atomic<double> relBase_{0.5};
     std::atomic<uint32_t> hostSeq_{0};
+    std::atomic<float> hostValue_{0.5f};
 };

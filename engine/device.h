@@ -37,6 +37,9 @@ public:
     void buttons(uint32_t label_mask);      // bit i: label EMU_B_i held (FX SEL .. OCT+), via hal->btn_id
     void buttons_tap(uint32_t label_mask);
     void enc(int role, int32_t detents);    // EMU_E_* role, + clockwise; MASTER: detents x 16 of 1023
+    // every detent enc() gave a knob role since power-on (SELECT .. KNOB4; 0 for MASTER): whoever turned it (the
+    // plugin tells its own turns from the host's by this)
+    int32_t enc_total(int role) const { return role >= 0 && role < EMU_NE - 1 ? enc_total_[role] : 0; }
     void master(int32_t v);                 // the MASTER pot, 0..1023
     int midi_in(uint32_t pkt);              // one USB-MIDI packet in; 0: no room (retry later)
     int midi_out_take(uint32_t *pkt);       // one USB-MIDI packet out; 0: none
@@ -89,6 +92,7 @@ private:
     bool booted_ = false;
     uint32_t dev_ms_ = 0, last_frame_ = 0;
     uint64_t frames_done_ = 0;
+    int32_t enc_total_[EMU_NE - 1] = {};
     int16_t ring_[RING * 2];
     uint32_t ring_w_ = 0, ring_r_ = 0;
     Lagrange4 rs_;

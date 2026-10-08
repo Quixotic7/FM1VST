@@ -68,6 +68,8 @@ public:
     const Layout &layout() const { return lay_; }
     juce::Point<int> keyLedPx(int key) const;      // the centre of key's LED slot (physical, in the component)
     juce::Point<int> playGreenPx() const;          // the centre of PLAY's green LED (physical)
+    juce::Rectangle<int> knobBoxPx(int role) const;   // a knob's body (EMU_E_* role; physical, in the component)
+    float knobAngle(int role) const { return role >= 0 && role < EMU_NE ? knobAngle_[(size_t)role] : 0.f; }
     const juce::Image &lcdImage() const { return lcd240_; }   // the 240 x 240 LCD as last converted
 
     // ---- juce::Component ----
@@ -142,6 +144,8 @@ private:
     std::array<uint8_t, EMU_NKEY> keySrc_{};
     std::array<uint8_t, EMU_NB> btnSrc_{};
     std::array<float, EMU_NE> knobAngle_{};
+    std::array<int32_t, EMU_NE - 1> turnsSeen_{};   // the snapshot's detent counts last seen
+    bool turnsInit_ = false;
     int selKnob_ = EMU_E_PRESETS;
     int mouseKind_ = -1, mouseIdx_ = 0, dragKnob_ = -1;
     float dragAcc_ = 0, wheelAcc_ = 0, dragY_ = 0;

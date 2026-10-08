@@ -135,8 +135,8 @@ int main(int argc, char **argv)
                (!(P[i].flags & FM1P_META) == !P[i].target);
     }
     std::printf("  %u parameters, %u with a host slot (the rest FM1P_HIDDEN: knob targets only)\n\n", n, visible);
-    // (plugin/Tier2Parameter.h FM1_TIER2_SLOTS: 8 knobs + 79 + the 41 panel booleans = Live's 128)
-    check(visible <= 79, "the visible entries fit the plugin's 79 Tier 2 slots (" + std::to_string(visible) + ")");
+    // (plugin/Tier2Parameter.h: the opt-in -DFM1_TIER2_SLOTS=79: 8 knobs + 79 + the 41 panel booleans = Live's 128)
+    check(visible <= 79, "the visible entries fit the plugin's opt-in 79 Tier 2 slots (" + std::to_string(visible) + ")");
     check(names.size() == n, "the names are unique");
     check(longest <= 16, "no name longer than 16 characters (longest " + std::to_string(longest) + ")");
     check(fnOk, "every entry has get / set / text, min <= def <= max, target exactly on the meta entries");
