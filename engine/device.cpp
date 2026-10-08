@@ -20,6 +20,19 @@ void Device::boot(const char *flash_path, bool ram_only)
     booted_ = true;
 }
 
+void Device::boot_from(const uint8_t *bytes, uint32_t n)
+{
+    if (booted_)
+        return;
+    c_->flash_stage(bytes, bytes ? n : 0u);
+    c_->options(FM1CORE_FLASH_STAGED, 0, 0, 1);
+    if (c_->boot_options)
+        c_->boot_options(-1, nullptr, -1);
+    c_->hal->ready = 2;
+    c_->init(0);
+    booted_ = true;
+}
+
 // ------------------------------------------------------------------ input ---
 void Device::keys(uint32_t m)
 {

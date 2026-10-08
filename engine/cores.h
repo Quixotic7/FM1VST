@@ -5,7 +5,7 @@
 // (emu_hal, the engine, the UI, the flash image). dyld maps a given file once per process however often it is
 // dlopen'ed (it recognises the path and the file's inode), so two instruments loading the same file would share
 // one firmware. load() therefore copies the module to a unique path first,
-//     ~/Library/Caches/fm1emu/instances/<uuid>/<name>.fm1core
+//     ~/Library/Caches/fm1emu/instances/<uuid>/<name>.fm1core   (FM1EMU_HOME: <FM1EMU_HOME>/Caches/fm1emu/...)
 // and dlopens the copy: a new file is a new image with its own globals. The copy (and its folder) is deleted when
 // the LoadedCore goes away. RTLD_LOCAL keeps one copy's symbols from binding another's (the module exports only
 // fm1core_get anyway).
@@ -41,7 +41,11 @@ private:
 
 class CoreLoader {
 public:
-    // ~/Library/Application Support/fm1emu/cores, created if missing ("" if HOME is unknown)
+    // ~/Library/Application Support, or $FM1EMU_HOME when set ("" if neither is known)
+    static std::string app_support_dir();
+    // ~/Library/Caches, or $FM1EMU_HOME/Caches when FM1EMU_HOME is set
+    static std::string caches_dir();
+    // <app_support_dir>/fm1emu/cores, created if missing ("" if HOME is unknown)
     static std::string default_user_dir();
     // ~/Library/Caches/fm1emu/instances (the per-instance copies live in a fresh folder under it)
     static std::string instances_dir();

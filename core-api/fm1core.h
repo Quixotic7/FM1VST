@@ -33,7 +33,9 @@ extern "C" {
 #endif
 #include "../cores/ChoralRootFM1/tools/emu/emu_hooks.h"
 
-#define FM1CORE_ABI 1u
+#define FM1CORE_ABI 2u
+/* the flash_path to pass to options() to boot from the bytes given to flash_stage() (ABI 2) */
+#define FM1CORE_FLASH_STAGED "fm1core:staged"
 #define FM1CORE_SYMBOL "fm1core_get"
 #define FM1CORE_SUFFIX ".fm1core"
 
@@ -80,6 +82,21 @@ typedef struct {
                                      * idempotent */
     int (*halted)(void);            /* 0 while running; after the firmware called exit(code) (a reboot, UBOOT):
                                      * 0x100 | (code & 0xFF) */
+
+    /* ---- the flash image (ABI 2). A core keeps its whole flash (flash_size bytes) as a RAM image; the host owns
+     * persistence: it reads the image and stores it (plugin state, flash.bin, presets), and boots from bytes.
+     * BOOTING FROM BYTES: flash_stage(bytes, n) before options(), then options(FM1CORE_FLASH_STAGED, 0, 0, 1) and
+     * init: the power-on reads the staged bytes (short: padded with 0xFF; n = 0 or bytes = NULL: a fresh, erased
+     * flash) and nothing is ever written to a file. (A real file path in options() still works as before: the
+     * image is read from it and every erase / program written through.) */
+    int (*flash_stage)(const uint8_t *bytes, uint32_t n);   /* copied; call before init; 1: staged */
+    uint8_t *(*flash)(void);        /* the live image, flash_size bytes (valid for the module's lifetime; read it on
+                                     * the clock's thread or with the clock stopped) */
+    uint32_t (*flash_dirty)(void);  /* a counter that moves on every erase / program (persist when it changed) */
+    int (*flash_sync)(void);        /* write what the firmware would save lazily (ChoralRoot: the settings record
+                                     * after its quiet time) now, so the image is current before it is read;
+                                     * 1: current, 0: a save is still deferred by the firmware (a loop playing).
+                                     * May erase a sector (the emulated erase stall: ~45 ms of silence). */
 } fm1core_t;
 
 typedef const fm1core_t *(*fm1core_get_fn)(uint32_t abi_version);

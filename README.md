@@ -5,26 +5,75 @@ planned as VST3, AU and Standalone. The emulator compiles the firmware's own C s
 HAL, so the plugin plays exactly what the device plays. The plan, the architecture and the phases are
 in [FM1-VST-PLAN.md](FM1-VST-PLAN.md).
 
-Status: phase 1. The ChoralRoot firmware builds as a loadable core module (`build/cores/choralroot.fm1core`)
-behind a versioned C ABI, and a JUCE-free engine loads it, runs its device clock and resamples its output to the
-host rate. The emulator's own headless scripts replay through the engine bit for bit. No plugin yet (phase 2).
+Status: phase 2, first half. The ChoralRoot firmware builds as a loadable core module
+(`build/cores/choralroot.fm1core`) behind a versioned C ABI, a JUCE-free engine loads it, runs its device clock and
+resamples its output to the host rate, and a JUCE plugin (AU, VST3, Standalone) plays it with the panel's 42
+controls as host parameters, MIDI in and out, the flash image as its state, and presets per firmware. The firmware's
+own parameters as host parameters (the Roto-Control map, plan 4.5) and the panel GUI (phase 3) are next.
 
 ## Layout
 
 | path | what |
 |---|---|
-| `core-api/fm1core.h` | the core ABI (`FM1CORE_ABI 1`): the descriptor `fm1core_t` (id, name, version, source, flash size, button labels, parameter map, the panel state `emu_hal_t`, every `emu_fw_*` entry point, `shutdown`, `halted`) and the one symbol a module exports, `fm1core_get`. The threading contract is in its header comment. |
+| `core-api/fm1core.h` | the core ABI (`FM1CORE_ABI 2`): the descriptor `fm1core_t` (id, name, version, source, flash size, button labels, parameter map, the panel state `emu_hal_t`, every `emu_fw_*` entry point, `shutdown`, `halted`, and the flash image: `flash`, `flash_dirty`, `flash_stage` to boot from bytes, `flash_sync`) and the one symbol a module exports, `fm1core_get`. The threading contract is in its header comment. |
 | `core-glue/choralroot/` | the ChoralRoot core: `core_choralroot.c` (the submodule's `tools/emu/emu_fw.c`, unmodified, with `exit` / `atexit` redirected so a firmware reboot halts the core instead of the host) and `core_choralroot_desc.c` (the descriptor) |
+| `plugin/` | the JUCE plugin: `Processor.{h,cpp}` (`FM1Processor`: the core and its `Device` on the audio thread, parameters, MIDI, state, presets, the firmware switch; the threading and file layout are in its header comment) and `Editor.{h,cpp}` (a plain settings bar over JUCE's generic parameter editor; phase 3 replaces it) |
 | `engine/` | C++17, no JUCE: `cores.{h,cpp}` (find and load modules, one private copy per instance), `device.{h,cpp}` (the single-thread device clock, input, LEDs, LCD, `render` at any host rate), `resampler.h` (4-point Lagrange) |
-| `tests/` | `core_smoke`, `replay_test`, `double_load_test`, `halt_test`, and `script_runner` (the emulator's script grammar on a `Device`) |
+| `tests/` | `core_smoke`, `replay_test`, `double_load_test`, `halt_test`, `plugin_test`, and `script_runner` (the emulator's script grammar on a `Device`) |
 
 ## Cores
 
-A core is the firmware compiled as a module (`*.fm1core`, a Mach-O bundle exporting only `fm1core_get`). The engine
-looks for them in a bundled folder (the build's `build/cores/`; later the plugin's `Contents/Resources/cores/`) and in
-the user folder `~/Library/Application Support/fm1emu/cores/` (created when first scanned): dropping a module there
-installs it. Because the firmware's state is C globals, every loaded instance runs its own copy of the module,
-copied to `~/Library/Caches/fm1emu/instances/<uuid>/` and deleted when the instance goes away.
+A core is the firmware compiled as a module (`*.fm1core`, a Mach-O bundle exporting only `fm1core_get`). The plugin
+looks for them in its bundle (`<bundle>/Contents/Resources/cores/`; the build puts `build/cores/*.fm1core` there, and
+a test or a dev build falls back to `build/cores/`) and in the user folder
+`~/Library/Application Support/fm1emu/cores/` (created when first scanned): dropping a module there installs it (a user
+module with the same id as a bundled one replaces it). Because the firmware's state is C globals, every loaded
+instance runs its own copy of the module, copied to `~/Library/Caches/fm1emu/instances/<uuid>/` and deleted when the
+instance goes away.
+
+## The plugin
+
+`FM1VST` as **AU** (`aumu Fm1v Qx7u`, an instrument with MIDI out), **VST3** (Instrument|Synth) and a **Standalone**
+app. The build installs the plugins (ad-hoc signed, with the cores inside) to
+`~/Library/Audio/Plug-Ins/VST3/FM1VST.vst3` and `~/Library/Audio/Plug-Ins/Components/FM1VST.component`; the
+Standalone stays in `build/FM1VST_artefacts/Standalone/`.
+
+**In Live:** add FM1VST (VST3 or AU) to a MIDI track and play notes 53..79 (F3..G5): they press the FM-1's 27 keys,
+so ChoralRoot plays its chords as on the device. The firmware needs under a second to power on after the plugin
+is loaded. The track's MIDI output carries what the firmware sends (ChoralRoot by default: the chord stream on channel 1; the
+bass on channel 2 once a bass sound is chosen), so it can drive other instruments.
+
+- **Parameters (42):** the 14 buttons (`btn_fx` .. `btn_octup`, momentary: on = held; named with the firmware's role
+  and the printed label, e.g. "KEY (SEL)"), the 27 keys (`key_00` .. `key_26`, named by note, "F3" .. "G5"; a key is
+  held when its parameter or a MIDI note holds it) and `master` (the MASTER pot, 0..1023, default 724 as the
+  emulator powers on). The encoders are not parameters (they are relative; the panel GUI drives them).
+- **MIDI in:** with **MIDI notes play keys** on (default), note n on any channel holds key `n - 53 + 12 x Transpose`
+  (Transpose: -2..+2 octaves; velocity 0 is a release). Every other message (CCs, program changes, clock, SysEx, and
+  notes outside the keys or with the setting off) goes to the firmware's own MIDI in as USB-MIDI packets. A note that
+  played a key is not also sent to the firmware (ChoralRoot's CHORD channel is 1, so it would sound twice); the toggle
+  "... and go to the firmware's MIDI in" sends it as well.
+- **MIDI out:** the firmware's USB-MIDI packets, decoded (SysEx reassembled), at the position in the block where they
+  were produced.
+- **State:** the firmware's id and version, the settings (transpose, the MIDI toggles, the theme) and the whole 1 MiB
+  flash image, gzip-compressed (a few KB), so a Live set reopens with the unit exactly as it was saved.
+- **Firmware dropdown:** every core found in the two folders; switching saves the old one's flash, loads the new one
+  and powers it on from its own flash.
+- **Presets per firmware** (the preset dropdown, Save / Save as / Rename / Delete / Reset flash / Export / Import, and
+  the host's program list):
+
+  ```
+  ~/Library/Application Support/fm1emu/
+    cores/                       user-installed *.fm1core
+    <core-id>/flash.bin          the working flash: what a new instance of that firmware starts from (written when
+                                 an instance is released or closed, before a firmware switch, and on Save)
+    <core-id>/presets/*.fm1preset  a snapshot of the whole flash
+    <core-id>/backups/*.fm1preset  written before a preset load or a flash reset (the newest 50 kept)
+  ```
+
+  A `.fm1preset` is one line of JSON (`{"fm1preset":1,"core":"choralroot","version":"0.1","name":"..","date":"..",
+  "size":1048576}`), a newline, then the flash image gzip-compressed (`tail -n +2 X.fm1preset | gunzip > flash.bin`).
+- **`FM1EMU_HOME`:** when set, it replaces `~/Library/Application Support` (data under `$FM1EMU_HOME/fm1emu/`) and
+  `~/Library/Caches` (`$FM1EMU_HOME/Caches/fm1emu/`). The tests set it to a folder in the build.
 
 ## Building
 
@@ -51,6 +100,10 @@ The tests:
   each equal to its single-load run (separate globals); one unloaded while the other plays on.
 - `halt_test`: the firmware's two `exit()` paths (the boot guard's UBOOT, SAFE MODE's Flash Data reboot) halt the
   core and leave the host running.
+- `plugin_test`: the plugin's processor, headless: MIDI notes press the keys and sound at 48 and 44.1 kHz, the panel
+  parameters reach the HAL, MIDI out is well formed, the flash survives the state round trip, presets save / reset /
+  load / rename / export / import / delete with backups, and the installed bundles resolve their cores folder.
+  After the build, `auval -v aumu Fm1v Qx7u` validates the installed AU.
 
 **The reference emulator.** `replay_test` compares against the submodule's own headless emulator,
 `cores/ChoralRootFM1/build/host/emu --headless --script ... --wav ...`. The build target `reference_emu` builds it
@@ -59,7 +112,7 @@ the submodule's gitignored `build/`), and the test runs it to make `build/refere
 stale. Without SDL2, configure with `-DFM1_REFERENCE_TESTS=OFF` (or it is turned off with a warning) and
 `replay_test` is not built.
 
-Requirements: CMake 3.22+, clang, a C++17 standard library (macOS only for now: the core uses `os/lock.h`, the
+Requirements: CMake 3.22+, clang, network access on the first configure (JUCE 8.0.15 via FetchContent), a C++17 standard library (macOS only for now: the core uses `os/lock.h`, the
 loader `dlopen` and `<uuid/uuid.h>`), SDL2 from Homebrew for the reference emulator, and a `python3` with
 Pillow for the submodule's header generators (`tools/build.py` `generate()`; CMake picks the first
 `python3` on `PATH` that has Pillow, or pass `-DCR_PYTHON=/path/to/python3`). The generated headers go to

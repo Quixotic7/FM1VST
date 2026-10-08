@@ -23,12 +23,38 @@ static std::string home_dir()
     return pw && pw->pw_dir ? pw->pw_dir : "";
 }
 
+// FM1EMU_HOME (when set and not empty) relocates everything: it stands for ~/Library/Application Support (the
+// data: <FM1EMU_HOME>/fm1emu/...) and <FM1EMU_HOME>/Caches for ~/Library/Caches. Tests set it to a scratch folder.
+static std::string emu_home_override()
+{
+    const char *h = std::getenv("FM1EMU_HOME");
+    return h && *h ? h : "";
+}
+
+std::string CoreLoader::app_support_dir()
+{
+    const std::string o = emu_home_override();
+    if (!o.empty())
+        return o;
+    const std::string home = home_dir();
+    return home.empty() ? "" : (fs::path(home) / "Library" / "Application Support").string();
+}
+
+std::string CoreLoader::caches_dir()
+{
+    const std::string o = emu_home_override();
+    if (!o.empty())
+        return (fs::path(o) / "Caches").string();
+    const std::string home = home_dir();
+    return (home.empty() ? fs::temp_directory_path() : fs::path(home) / "Library" / "Caches").string();
+}
+
 std::string CoreLoader::default_user_dir()
 {
-    const std::string home = home_dir();
-    if (home.empty())
+    const std::string base = app_support_dir();
+    if (base.empty())
         return "";
-    const fs::path p = fs::path(home) / "Library" / "Application Support" / "fm1emu" / "cores";
+    const fs::path p = fs::path(base) / "fm1emu" / "cores";
     std::error_code ec;
     fs::create_directories(p, ec);
     return p.string();
@@ -36,9 +62,7 @@ std::string CoreLoader::default_user_dir()
 
 std::string CoreLoader::instances_dir()
 {
-    const std::string home = home_dir();
-    const fs::path base = home.empty() ? fs::temp_directory_path() : fs::path(home) / "Library" / "Caches";
-    return (base / "fm1emu" / "instances").string();
+    return (fs::path(caches_dir()) / "fm1emu" / "instances").string();
 }
 
 static const fm1core_t *open_core(const std::string &path, void **handle, std::string *error)

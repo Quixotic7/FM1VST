@@ -16,6 +16,10 @@
 
 int fm1core_cr_halted(void);              /* core_choralroot.c */
 void fm1core_cr_shutdown(void);
+uint8_t *fm1core_cr_flash(void);
+uint32_t fm1core_cr_flash_dirty(void);
+int fm1core_cr_flash_stage(const uint8_t *bytes, uint32_t n);
+int fm1core_cr_flash_sync(void);
 
 static void w_tick(uint32_t ms)
 {
@@ -77,6 +81,10 @@ static const fm1core_t CORE = {
     .ui_info = emu_fw_ui_info,
     .shutdown = fm1core_cr_shutdown,
     .halted = fm1core_cr_halted,
+    .flash_stage = fm1core_cr_flash_stage,
+    .flash = fm1core_cr_flash,
+    .flash_dirty = fm1core_cr_flash_dirty,
+    .flash_sync = fm1core_cr_flash_sync,
 };
 
 FM1CORE_EXPORT const fm1core_t *fm1core_get(uint32_t abi_version)

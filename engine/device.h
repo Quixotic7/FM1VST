@@ -25,6 +25,9 @@ public:
     // power-on: options (flash_path NULL or ram_only: a RAM-only flash, fresh every boot), the default boot guard,
     // hal->ready = 2 (simulated time, before init, exactly as web_boot), init
     void boot(const char *flash_path, bool ram_only);
+    // power-on from a flash image in memory (ABI 2 flash_stage): n bytes (short: padded with 0xFF; nullptr / 0: a
+    // fresh flash); nothing is written to any file afterwards, the image lives in the core (flash())
+    void boot_from(const uint8_t *bytes, uint32_t n);
     bool booted() const { return booted_; }
     bool halted() const { return c_->halted && c_->halted() != 0; }
 
@@ -47,6 +50,12 @@ public:
     int led_key(int key) const { return led_of(14 + key); }
     int led_button(int label) const;        // EMU_B_* label
     int led_play_green() const;             // PLAY's green LED: 0 or 2
+
+    // ---- the flash image (ABI 2) ----
+    uint8_t *flash() const { return c_->flash ? c_->flash() : nullptr; }      // flash_size() bytes, the live image
+    uint32_t flash_size() const { return c_->flash ? c_->flash_size : 0; }
+    uint32_t flash_dirty() const { return c_->flash_dirty ? c_->flash_dirty() : 0; }   // moves on erase / program
+    bool flash_sync() { return booted_ && c_->flash_sync ? c_->flash_sync() != 0 : true; }   // see fm1core.h
 
     // ---- the clock ----
     uint32_t ms() const { return dev_ms_; }

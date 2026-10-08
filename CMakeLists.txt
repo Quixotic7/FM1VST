@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # FM1VST: the FM-1 emulator from ChoralRoot FM-1 as a plugin (see FM1-VST-PLAN.md).
 # Phase 1: the ChoralRoot core as a loadable module, the engine (core loader, device clock, resampler), replay tests.
+# Phase 2: the JUCE plugin (plugin/): AU, VST3, Standalone.
 cmake_minimum_required(VERSION 3.22)
-project(FM1VST C CXX)
+project(FM1VST VERSION 0.2.0 LANGUAGES C CXX)
 
 set(CR ${CMAKE_CURRENT_SOURCE_DIR}/cores/ChoralRootFM1)
 if(NOT EXISTS ${CR}/tools/emu/emu_fw.c)
@@ -102,7 +103,61 @@ target_compile_features(fm1engine PUBLIC cxx_std_17)
 target_compile_options(fm1engine PRIVATE -Wall -Wextra)
 target_link_libraries(fm1engine PUBLIC ${CMAKE_DL_LIBS})
 
-# phase 2: JUCE via FetchContent
+# ---- the plugin (phase 2): JUCE via FetchContent, AU + VST3 + Standalone
+include(FetchContent)
+set(FM1_JUCE_TAG 8.0.15)
+FetchContent_Declare(JUCE GIT_REPOSITORY https://github.com/juce-framework/JUCE.git GIT_TAG ${FM1_JUCE_TAG}
+                     GIT_SHALLOW TRUE GIT_PROGRESS FALSE)
+FetchContent_MakeAvailable(JUCE)
+
+set(FM1_VST3_DIR "$ENV{HOME}/Library/Audio/Plug-Ins/VST3")
+set(FM1_AU_DIR "$ENV{HOME}/Library/Audio/Plug-Ins/Components")
+# COPY_PLUGIN_AFTER_BUILD is done by juce_enable_copy_plugin_step below, AFTER the cores are put into each bundle and
+# the bundle is signed (juce_add_plugin's own TRUE would add the copy step before ours)
+juce_add_plugin(FM1VST
+    COMPANY_NAME "Quixotic7"
+    BUNDLE_ID com.quixotic7.fm1vst
+    PLUGIN_MANUFACTURER_CODE Qx7u
+    PLUGIN_CODE Fm1v
+    FORMATS AU VST3 Standalone
+    PRODUCT_NAME "FM1VST"
+    DESCRIPTION "The FM-1 emulator (ChoralRoot and other Felucca-family firmwares)"
+    IS_SYNTH TRUE
+    NEEDS_MIDI_INPUT TRUE
+    NEEDS_MIDI_OUTPUT TRUE
+    IS_MIDI_EFFECT FALSE
+    EDITOR_WANTS_KEYBOARD_FOCUS FALSE
+    VST3_CATEGORIES Instrument Synth
+    AU_MAIN_TYPE kAudioUnitType_MusicDevice
+    COPY_PLUGIN_AFTER_BUILD FALSE
+    VST3_COPY_DIR "${FM1_VST3_DIR}"
+    AU_COPY_DIR "${FM1_AU_DIR}")
+target_sources(FM1VST PRIVATE plugin/Processor.cpp plugin/Editor.cpp)
+target_include_directories(FM1VST PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/plugin)
+target_compile_features(FM1VST PUBLIC cxx_std_17)
+target_compile_definitions(FM1VST PUBLIC
+    JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0
+    FM1_CORES_DIR="${CMAKE_BINARY_DIR}/cores")
+target_link_libraries(FM1VST
+    PRIVATE juce::juce_audio_utils fm1engine
+    PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
+add_dependencies(FM1VST choralroot_core)
+
+# each format's bundle gets the built cores in Contents/Resources/cores and an ad-hoc signature, then is copied to
+# ~/Library/Audio/Plug-Ins (VST3, Components)
+foreach(_fmt VST3 AU Standalone)
+    set(_t FM1VST_${_fmt})
+    add_dependencies(${_t} choralroot_core)
+    add_custom_command(TARGET ${_t} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_DIR:${_t}>/Contents/Resources/cores"
+        COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:choralroot_core>"
+                "$<TARGET_BUNDLE_DIR:${_t}>/Contents/Resources/cores/"
+        COMMAND codesign --force -s - "$<TARGET_BUNDLE_DIR:${_t}>/Contents/Resources/cores/$<TARGET_FILE_NAME:choralroot_core>"
+        COMMAND codesign --force --deep -s - "$<TARGET_BUNDLE_DIR:${_t}>"
+        COMMENT "FM1VST ${_fmt}: cores into the bundle, ad-hoc signed"
+        VERBATIM)
+endforeach()
+juce_enable_copy_plugin_step(FM1VST)
 
 # ---- the reference emulator (build/host/emu inside the submodule, gitignored there): the replay test's ground
 # truth. Built by the submodule's own tools/emu/build.sh (needs SDL2 from Homebrew) when missing.
@@ -156,3 +211,14 @@ if(FM1_REFERENCE_TESTS)
     add_test(NAME replay_test COMMAND replay_test)
     set_tests_properties(replay_test PROPERTIES RESOURCE_LOCK fm1_reference)
 endif()
+
+# the plugin's processor, headless, on the plugin's shared code (FM1VST: a static library). The JUCE modules are the
+# library's PRIVATE sources: their include paths and definitions are taken from it, not linked in a second time.
+add_executable(plugin_test tests/plugin_test.cpp)
+target_link_libraries(plugin_test PRIVATE FM1VST fm1engine)
+target_include_directories(plugin_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
+target_compile_definitions(plugin_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS>
+    FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/plugin_test_home"
+    FM1_INSTALLED_VST3="${FM1_VST3_DIR}/FM1VST.vst3" FM1_INSTALLED_AU="${FM1_AU_DIR}/FM1VST.component")
+add_dependencies(plugin_test choralroot_core FM1VST_VST3 FM1VST_AU)
+add_test(NAME plugin_test COMMAND plugin_test)
