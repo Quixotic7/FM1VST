@@ -1,3 +1,9 @@
 [submodule "cores/ChoralRootFM1"]
 	path = cores/ChoralRootFM1
 	url = https://github.com/Quixotic7/ChoralRootFM1.git
+[submodule "cores/Felucca"]
+	path = cores/Felucca
+	url = https://github.com/hugelton/Felucca.git
+[submodule "cores/melodee"]
+	path = cores/melodee
+	url = https://github.com/keremimo/melodee.git

@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The plugin's processor, headless (no editor, no window): MIDI notes to keys, sound at 48 and 44.1 kHz, a panel
 // button parameter reaching the HAL, MIDI out decoding, the state round trip of the flash, presets, the cores
-// folders and the bundle path logic. FM1EMU_HOME points at a scratch folder under the build (set here, before any
+// folders and the bundle path logic, the firmware switch (ChoralRoot -> Felucca -> Melodee -> ChoralRoot: the button
+// labels, the Tier 2 slots rebound, a note on each, ChoralRoot's working flash back). FM1EMU_HOME points at a scratch folder under the build (set here, before any
 // processor exists), so nothing is written to ~/Library/Application Support or ~/Library/Caches.
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -117,13 +119,16 @@ int main()
             const juce::File exe = b.getChildFile("Contents/MacOS/FM1VST");
             const juce::File d = FM1Processor::bundledCoresDirFor(exe);
             check(exe.existsAsFile() && d == b.getChildFile("Contents/Resources/cores") &&
-                      d.getChildFile("choralroot.fm1core").existsAsFile(),
+                      d.getChildFile("choralroot.fm1core").existsAsFile() &&
+                      d.getChildFile("felucca.fm1core").existsAsFile() && d.getChildFile("melodee.fm1core").existsAsFile(),
                   "installed " + b.getFileName().toStdString() + ": cores resolve to " + d.getFullPathName().toStdString() +
-                      " (choralroot.fm1core there)");
+                      " (choralroot, felucca, melodee .fm1core there)");
             if (d.isDirectory()) {
                 const std::vector<CoreInfo> in = CoreLoader::scan({d.getFullPathName().toStdString()});
-                check(in.size() == 1 && in[0].id == "choralroot", "  ... and the module there loads (" +
-                                                                       (in.empty() ? std::string("none") : in[0].name + " " + in[0].version) + ")");
+                std::string ids;
+                for (const CoreInfo &ci : in)
+                    ids += " " + ci.id + " (" + ci.name + " " + ci.version + ")";
+                check(in.size() == 3, "  ... and the modules there load:" + ids);
             }
         }
         check(FM1Processor::bundledCoresDirFor(juce::File("/tmp/plugin_test")) == juce::File(),
@@ -314,6 +319,88 @@ int main()
     a.releaseResources();
     check(a.workingFlashFile().existsAsFile() && a.workingFlashFile().getSize() == 0x100000,
           "releaseResources wrote the working flash " + a.workingFlashFile().getFullPathName().toStdString());
+
+    // ---- (h) the firmware switch: ChoralRoot -> Felucca -> Melodee -> ChoralRoot
+    {
+        a.workingFlashFile().deleteFile();
+        FM1Processor s;
+        Host hs(s, 48000.0, 256);
+        hs.run_ms(600);
+        Tier2Parameter *tempo = s.tier2Param(5);                  // ("Tempo": a setting ChoralRoot keeps in its flash)
+        tempo->setValueNotifyingHost(tempo->toNorm(133));
+        hs.run_ms(100);
+        const std::vector<uint8_t> crFlash = s.currentFlash();
+        const std::vector<uint8_t> crFresh = freshFlash;
+        auto slotNames = [&](int n) {
+            std::string out;
+            for (int i = 0; i < n; i++)
+                out += (i ? " | " : "") + s.tier2Param(i)->getName(100).toStdString();
+            return out;
+        };
+        auto names = [&]() {
+            std::string out;
+            for (const juce::String &b : s.buttonNames())
+                out += " " + b.toStdString();
+            return out;
+        };
+        const std::string crSlots = slotNames(8), crButtons = names();
+        const int crBound = s.tier2Bound();
+        std::printf("        (choralroot: %d Tier 2 slots bound, page 1: %s; buttons%s)\n", crBound, crSlots.c_str(),
+                    crButtons.c_str());
+        check(tempo->getName(100) == "Tempo" && tempo->entry()->get() == 133 && diffBytes(crFlash, crFresh) != 0 &&
+                  diffBytes(crFlash, crFresh) != (size_t)-1,
+              "choralroot: host Tempo 133, its flash differs from a fresh unit's (" +
+                  std::to_string(diffBytes(crFlash, crFresh)) + " bytes)");
+        for (const char *id : {"felucca", "melodee"}) {
+            const bool ok = s.switchCore(id);
+            const FM1Processor::CoreStatus st = s.getCoreInfo();
+            hs.peak = 0.0f;
+            hs.run_ms(700);                       // (the power-on and its 430 ms splash; the first read-backs)
+            s.drainTier2();
+            const fm1core_t *c = s.deviceForTest() ? s.deviceForTest()->core() : nullptr;
+            const std::string sl = slotNames(8), bn = names();
+            std::printf("        (%s: %d Tier 2 slots bound, page 1: %s; buttons%s)\n", id, s.tier2Bound(), sl.c_str(),
+                        bn.c_str());
+            check(ok && st.loaded && st.info.id == id && c && !std::strcmp(c->id, id) && !s.getCoreInfo().halted,
+                  std::string("switchCore(\"") + id + "\"): loaded and powered on (" + st.info.name + " " + st.info.version + ")");
+            check(s.buttonParam(EMU_B_SEL)->getName(100) == "SEL (SEL)" && s.buttonNames()[EMU_B_ARP] == "ARP" &&
+                      s.buttonParam(EMU_B_PLAY)->getName(100) == "PLAY (PLAY)" && bn != crButtons,
+                  std::string(id) + ": the button parameters relabelled (\"" +
+                      s.buttonParam(EMU_B_SEL)->getName(100).toStdString() + "\", was \"KEY (SEL)\")");
+            check(c && s.tier2Bound() == (int)c->nparams && s.tier2Param(4)->getName(100) == "Level" &&
+                      s.tier2Param(0)->getName(100).startsWith("K1 ") && sl != crSlots &&
+                      s.tier2Param((int)c->nparams)->getName(100) == "(unused)",
+                  std::string(id) + ": the Tier 2 slots rebound to its " + std::to_string(c ? c->nparams : 0) +
+                      " entries (slot 0 \"" + s.tier2Param(0)->getName(100).toStdString() + "\", the rest unused)");
+            hs.note(true, 62);
+            hs.run_ms(300);
+            check(hs.peak > 0.01f && keyHeld(s, 9), std::string(id) + ": note 62 plays key 9 and sounds (peak " +
+                                                        std::to_string(hs.peak) + ")");
+            hs.note(false, 62);
+            hs.run_ms(100);
+        }
+        const juce::File crWorking = FM1Processor::home().getChildFile("choralroot/flash.bin");
+        juce::MemoryBlock saved;
+        crWorking.loadFileAsData(saved);
+        const std::vector<uint8_t> savedV((const uint8_t *)saved.getData(), (const uint8_t *)saved.getData() + saved.getSize());
+        check(diffBytes(savedV, crFlash) == 0, "the switch away saved ChoralRoot's flash: " +
+                                                   crWorking.getFullPathName().toStdString() + " equals it");
+        check(s.switchCore("choralroot"), "switchCore(\"choralroot\")");
+        const std::vector<uint8_t> back = flashOf(s);
+        check(diffBytes(back, crFlash) == 0, "back on choralroot: it booted on its working flash (the bytes saved before "
+                                             "the switch, " + std::to_string(back.size()) + ")");
+        hs.run_ms(700);
+        s.drainTier2();
+        check(slotNames(8) == crSlots && s.tier2Bound() == crBound && names() == crButtons &&
+                  s.tier2Param(5)->entry()->get() == 133 && s.tier2Param(5)->plainValue() == 133,
+              "  ... its labels and its " + std::to_string(crBound) + " Tier 2 slots again, Tempo 133 (firmware and host)");
+        hs.peak = 0.0f;
+        hs.note(true, 62);
+        hs.run_ms(300);
+        check(hs.peak > 0.01f, "  ... and it plays (peak " + std::to_string(hs.peak) + ")");
+        hs.note(false, 62);
+        hs.run_ms(50);
+    }
 
     std::printf("plugin_test: %s\n", fails ? "FAIL" : "PASS");
     return fails ? 1 : 0;

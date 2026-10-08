@@ -2,7 +2,9 @@
 // The plugin's Tier 2 parameters (FM1-VST-PLAN.md 4.5), headless, on the plugin's shared code: the slots and their
 // names, a host write reaching the firmware (and not echoed back), a panel turn reaching the host (with a gesture),
 // the full report after a state restore and a preset load (no gestures), a meta slot ("Perf Knob 1") relabelled when
-// the perform mode changes on the panel, the value texts. The message thread's feedback timer is not running here
+// the perform mode changes on the panel, the value texts; (6) after switchCore("felucca"): Felucca's map on the same
+// slots, a host write, the part selected on the panel (ALGORITHM) relabelling the HOME knob and engine slots (an engine
+// slot's range follows the engine: ANALOG's WAVE 5 values, FM6's ALG 33). The message thread's feedback timer is not running here
 // (no message loop): the test calls the drain itself between blocks. FM1EMU_HOME points under the build.
 #include <cstdio>
 #include <cstdlib>
@@ -287,6 +289,52 @@ int main()
         p.drainTier2();
         check(u->entry() == nullptr && w.changes.empty() && u->getText(0.7f, 100).isEmpty(),
               "an \"(unused)\" slot: a write does nothing, no text");
+    }
+
+    // ---- (6) Felucca's map on the same slots
+    {
+        check(p.switchCore("felucca"), "switchCore(\"felucca\")");
+        w.clear();
+        h.run_ms(700);
+        p.drainTier2();
+        const int nf = p.tier2Bound();
+        const fm1core_t *c = p.deviceForTest()->core();
+        Tier2Parameter *k1 = p.tier2Param(0), *e1 = slotNamed(p, "E1 WAVE"), *lvl = slotNamed(p, "Level");
+        std::printf("        (felucca's live page: ");
+        for (int i = 0; i < 8; i++)
+            std::printf("%s%s", i ? " | " : "", p.tier2Param(i)->getName(100).toRawUTF8());
+        std::printf(")\n");
+        check(nf == (int)c->nparams && k1->getName(100) == "K1 E5 CUT" && e1 && lvl && w.infoChanged > 0,
+              std::to_string(nf) + " slots bound to Felucca's map; slot 0 \"" + k1->getName(100).toStdString() +
+                  "\" (the HOME knob: ANALOG's CUT), \"E1 WAVE\", \"Level\"");
+        if (e1 && lvl) {
+            check(e1->getNumSteps() == 5 && e1->isDiscrete() && e1->getCurrentValueAsText() == "SAW",
+                  "E1 WAVE: 5 values, discrete, \"" + e1->getCurrentValueAsText().toStdString() + "\"");
+            lvl->setValueNotifyingHost(lvl->toNorm(90));
+            h.run_ms(60);
+            check(lvl->entry()->get() == 90, "host Level 90: the part's level " + std::to_string(lvl->entry()->get()) +
+                                                 " (\"" + lvl->getCurrentValueAsText().toStdString() + "\")");
+            w.clear();
+            p.deviceForTest()->enc(EMU_E_ALGO, 1);       // ALGORITHM +1: part 2 (FM6)
+            h.run_ms(200);
+            p.drainTier2();
+            check(k1->getName(100) == "K1 E3 MLVL" && slotNamed(p, "E1 ALG") == e1 && e1->getNumSteps() == 33 &&
+                      w.infoChanged > 0 && w.changes.count(idx(lvl)),
+                  "ALGORITHM +1 (part 2, FM6): slot 0 \"" + k1->getName(100).toStdString() + "\", the engine slot \"" +
+                      e1->getName(100).toStdString() + "\" with " + std::to_string(e1->getNumSteps()) +
+                      " steps, parameterInfoChanged, Level reports part 2's (" + std::to_string(lvl->plainValue()) + ")");
+            k1->setValueNotifyingHost(k1->toNorm(20));
+            h.run_ms(60);
+            p.drainTier2();
+            Tier2Parameter *mlvl = slotNamed(p, "E3 MLVL");
+            check(mlvl && mlvl->entry()->get() == 20 && k1->plainValue() == 20,
+                  "host K1 = 20: FM6's MLVL is 20 (\"" + (mlvl ? mlvl->getCurrentValueAsText().toStdString() : "?") + "\")");
+        }
+        check(p.switchCore("choralroot"), "switchCore(\"choralroot\"): back");
+        h.run_ms(700);
+        p.drainTier2();
+        check(p.tier2Bound() == n && p.tier2Param(0)->getName(100).startsWith("K1 "), "ChoralRoot's map again (" +
+                                                                                        p.tier2Param(0)->getName(100).toStdString() + ")");
     }
 
     p.removeListener(&w);

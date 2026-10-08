@@ -10,10 +10,14 @@
 //   (c) every preset's derived palette keeps the contrast floors (label / plate, pointer / knob cap, LED-off / cap,
 //       pressed / cap), printed as a table;
 //   (d) a custom theme: saved, listed, the default for a new instance; a state naming it restores its colours into
-//       the editor after its file is deleted.
+//       the editor after its file is deleted;
+//   (e) every other core: build/panel/core-<id>.png (switchCore, 1.5 s after the power-on, then D4 held 300 ms; the
+//       Emulator theme): its screen and its button labels; the LCD region (at lcd-1x's layout) equals its
+//       framebuffer.
 // FM1EMU_HOME points at a scratch folder under the build.
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -280,6 +284,45 @@ int main()
                     distinct += lcd.getPixelAt(x, y) != c0;
             check(distinct > 50, "the LCD shows the firmware's screen (" + std::to_string(distinct) + " sampled pixels differ from the corner)");
         }
+    }
+
+    // ---- (e) the other cores: their screen and labels on the panel
+    for (const char *id : {"felucca", "melodee"}) {
+        FM1Processor p;
+        Host h(p, 44100.0, 256);
+        const bool ok = p.switchCore(id);
+        h.run_ms(1500);
+        Device *dev = p.deviceForTest();
+        const int D4 = 62 - FM1Processor::kNoteBase;
+        p.panelKey(D4, true);
+        h.run_ms(300);
+        PanelComponent panel(p);
+        panel.setButtonNames(p.buttonNames());
+        panel.setBounds(0, 0, 904, 566);
+        panel.setTheme(ThemeStore::preset("Emulator").value_or(Theme{}));
+        const juce::Image img = render(panel, 2.0f);
+        const juce::File f = out.getChildFile(juce::String("core-") + id + ".png");
+        std::string labels;
+        for (const juce::String &b : p.buttonNames())
+            labels += " " + b.toStdString();
+        check(ok && dev && dev->booted() && !dev->halted() && !std::strcmp(dev->core()->id, id) && writePng(img, f),
+              std::string(id) + ": wrote " + f.getFullPathName().toStdString() + " (buttons" + labels + ")");
+        check(dev && dev->led_key(D4) == 2 && ((dev->hal()->keys >> D4) & 1u), std::string(id) + ": D4 held, its LED lit");
+        if (dev) {
+            int worst = 0, bad = 0;
+            panel.setBounds(0, 0, 1402, 861);            // (lcd-1x's layout: the LCD at an integer scale)
+            const juce::Image one = render(panel, 1.0f);
+            const PanelComponent::Layout &L = panel.layout();
+            compareLcd(one, L.lcdSmall, L.nSmall, dev->lcd(), worst, bad);
+            int distinct = 0;
+            for (int i = 0; i < EMU_LCD_W * EMU_LCD_H; i += 37)
+                distinct += dev->lcd()[i] != dev->lcd()[0];
+            check(L.nSmall > 0 && bad == 0 && distinct > 50, std::string(id) + ": the LCD region equals its framebuffer at " +
+                                                                 std::to_string(L.nSmall) + "x (worst " + std::to_string(worst) +
+                                                                 "), the screen is drawn (" + std::to_string(distinct) + ")");
+        }
+        p.panelKey(D4, false);
+        h.run_ms(50);
     }
 
     // ---- (c) the contrast floors, every preset (and the custom theme)

@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The Tier 2 parameter map of the ChoralRoot core (FM1-VST-PLAN.md 4.5), headless, on a Device and the loaded module
-// (no JUCE): every entry driven to min, max and its default through set() and read back with get(); the value texts;
-// the CR_TRACE lines a panel turn prints (one parameter per group, stdout captured); the flash image changes for the
-// entries the settings record holds (FM1P_PERSIST) and only for those; the meta entries follow the perform mode.
-// Prints the map as a table. FM1EMU_HOME points under the build (the per-instance copy of the module goes there).
+// The Tier 2 parameter map of one core (FM1-VST-PLAN.md 4.5): param_test [MODULE.fm1core] (default: the ChoralRoot
+// module), headless, on a Device and the loaded module (no JUCE). For every core: every entry driven to min, max and
+// its default through set() and read back with get(); the value texts; the flash image changes for the entries the
+// settings record holds (FM1P_PERSIST) and only for those. ChoralRoot: also the CR_TRACE lines a panel turn prints
+// (one parameter per group, stdout captured) and the meta entries following the perform mode. Felucca / Melodee:
+// the meta entries (HOME knobs, engine entries) following the selected part and its engine, and the texts of the
+// firmware's param_format. Prints the map as a table. FM1EMU_HOME points under the build (the per-instance copy of
+// the module goes there).
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -74,18 +77,27 @@ static std::string flags(uint32_t f)
     return s;
 }
 
-int main()
+int main(int argc, char **argv)
 {
-    const std::string home = FM1_SCRATCH_DIR;
+    const std::string module = argc > 1 ? argv[1] : core_module();
+    std::string home = FM1_SCRATCH_DIR;
+    mkdir(home.c_str(), 0755);
+    {
+        const std::string base = module.substr(module.rfind('/') + 1);
+        home += "/" + base.substr(0, base.find('.'));        // (one folder per core: ctest may run them in turn)
+    }
     mkdir(home.c_str(), 0755);
     setenv("FM1EMU_HOME", home.c_str(), 1);
     std::string err;
-    std::unique_ptr<LoadedCore> lc = CoreLoader::load(core_module(), &err);
+    std::unique_ptr<LoadedCore> lc = CoreLoader::load(module, &err);
     if (!lc) {
         std::printf("param_test: %s\n", err.c_str());
         return 1;
     }
     const fm1core_t *c = lc->core();
+    const bool cr = !std::strcmp(c->id, "choralroot");
+    const bool fam = !std::strcmp(c->id, "felucca") || !std::strcmp(c->id, "melodee");   // (the same map layout)
+    std::printf("param_test: core %s (%s)\n", c->id, module.c_str());
     const fm1param_t *P = c->params;
     const uint32_t n = c->nparams;
     check(P && n > 0 && c->param_epoch, "the descriptor has a map (" + std::to_string(n) + " entries) and param_epoch");
@@ -99,6 +111,8 @@ int main()
     };
     auto range = [&](uint32_t i, int32_t &lo, int32_t &hi, int32_t &def) {   // a meta entry: its target's
         const fm1param_t *e = &P[i];
+        if (c->param_epoch)
+            c->param_epoch();                            // (a meta entry's target and descriptor are the epoch's)
         if ((e->flags & FM1P_META) && e->target && e->target() >= 0)
             e = &P[e->target()];
         lo = e->min, hi = e->max, def = e->def;
@@ -117,7 +131,11 @@ int main()
         fnOk = fnOk && P[i].get && P[i].set && P[i].text && P[i].min <= P[i].def && P[i].def <= P[i].max &&
                (!(P[i].flags & FM1P_META) == !P[i].target);
     }
-    std::printf("  %u parameters (FM1_EXPOSE_EDITOR %s)\n\n", n, n > 80 ? "on" : "off");
+    if (cr)
+        std::printf("  %u parameters (FM1_EXPOSE_EDITOR %s)\n\n", n, n > 80 ? "on" : "off");
+    else
+        std::printf("  %u parameters\n\n", n);
+    check(n <= 86, "the map fits the plugin's 86 Tier 2 slots");
     check(names.size() == n, "the names are unique");
     check(longest <= 16, "no name longer than 16 characters (longest " + std::to_string(longest) + ")");
     check(fnOk, "every entry has get / set / text, min <= def <= max, target exactly on the meta entries");
@@ -164,7 +182,7 @@ int main()
         Capture quiet2(fwlog + ".2");
         // values in between (not on a knob's step grid): one detent lands on them exactly
         bad.clear();
-        for (const char *nm : {"Strum Rate", "Arp Gate", "Slop Amount", "Chord Reverb", "Bass Level", "Reverb Size",
+        for (const char *nm : !cr ? std::initializer_list<const char *>{} : std::initializer_list<const char *>{"Strum Rate", "Arp Gate", "Slop Amount", "Chord Reverb", "Bass Level", "Reverb Size",
                                "Click Level", "Tempo", "Voicing", "Transpose", "Key Tonic"}) {
             const int i = find(nm);
             if (i < 0) {
@@ -206,6 +224,16 @@ int main()
             const int i = find(nm);
             return i < 0 ? std::string("?") : txt(P[i], v);
         };
+        if (fam) {
+            std::printf("        (texts: Attack 10 \"%s\", Level 104 \"%s\", Tempo 120 \"%s\", Arp Rate 2 \"%s\", LFO Rate 60 "
+                        "\"%s\", Env>Filter 32 \"%s\", Part 1 \"%s\", Delay Time 1 \"%s\")\n",
+                        show("Attack", 10).c_str(), show("Level", 104).c_str(), show("Tempo", 120).c_str(),
+                        show("Arp Rate", 2).c_str(), show("LFO Rate", 60).c_str(), show("Env>Filter", 32).c_str(),
+                        show("Part", 1).c_str(), show("Delay Time", 1).c_str());
+            check(show("Tempo", 120) == "120 BPM" && show("Arp Rate", 2) == "1/16" && show("Env>Filter", 32) == "+50 %",
+                  "param_format's texts: \"120 BPM\", \"1/16\", \"+50 %\"");
+        }
+        if (cr) {
         std::printf("        (texts: Strum Rate 40 \"%s\", Arp Division 6 \"%s\", Arp Dir 2 \"%s\", Pattern Type 2 \"%s\", "
                     "Chord Level 92 \"%s\", Delay Time 1 \"%s\", Chorus Rate 40 \"%s\", Tempo 120 \"%s\", Voicing -3 \"%s\")\n",
                     show("Strum Rate", 40).c_str(), show("Arp Division", 6).c_str(), show("Arp Dir", 2).c_str(),
@@ -213,10 +241,11 @@ int main()
                     show("Chorus Rate", 40).c_str(), show("Tempo", 120).c_str(), show("Voicing", -3).c_str());
         check(show("Arp Division", 6) == "1/8" && show("Strum Rate", 120) == "120 ms" && show("Strum Dir", 0) == "Up",
               "the knob row's texts: \"1/8\", \"120 ms\", \"Up\"");
+        }
     }
 
     // ---- the trace: one parameter per group, the line a panel turn prints
-    {
+    if (cr) {
         struct T { const char *name; int32_t v; const char *line; } cases[] = {
             {"Strum Rate", 7, "perf: knob Strum rate 7"},          // the current mode, KNOB 1
             {"Arp Division", 3, "perf: knob Arp division 3"},      // another mode: switched for the call
@@ -259,7 +288,7 @@ int main()
     }
 
     // ---- the meta entries follow the perform mode
-    {
+    if (cr) {
         const int pm = find("Perform Mode"), k1 = find("Perf Knob 1"), ad = find("Arp Division"), sr = find("Strum Rate");
         const uint32_t e0 = c->param_epoch();
         const int t0 = P[k1].target();
@@ -286,6 +315,52 @@ int main()
         P[find("Perform")].set(0);
         P[find("Arp Range")].set(P[find("Arp Range")].def);   // (Arp 2 Octaves set the range)
         run(dev, 30);
+    }
+    // ---- Felucca / Melodee: the meta entries follow the selected part and its engine
+    if (fam) {
+        const int part = find("Part"), h1 = find("Home Knob 1"), e1 = find("E1");   // ("E1": the name before boot)
+        int ed1 = -1;
+        for (uint32_t i = 0; i < n; i++)
+            if (!std::strncmp(P[i].name, "E1 ", 3))
+                ed1 = (int)i;
+        const uint32_t ep0 = c->param_epoch();
+        const std::string name0 = ed1 >= 0 ? P[ed1].name : "?";
+        const int t0 = h1 >= 0 ? P[h1].target() : -2;
+        const std::string tn0 = t0 >= 0 ? P[t0].name : "?";
+        check(part >= 0 && h1 >= 0 && ed1 >= 0 && e1 < 0, "Part, Home Knob 1 and the engine entries (\"" + name0 +
+                                                             "\") are in the map");
+        if (part >= 0 && h1 >= 0 && ed1 >= 0) {
+            const int32_t lvl0 = P[find("Level")].get();
+            P[part].set(1);                                // part 2 (FM6 on a fresh unit)
+            run(dev, 30);
+            const uint32_t ep1 = c->param_epoch();
+            const int t1 = P[h1].target();
+            const std::string name1 = P[ed1].name, tn1 = t1 >= 0 ? P[t1].name : "?";
+            std::printf("        (part 1: E1 \"%s\", K1 -> \"%s\"; part 2: E1 \"%s\" %d..%d, K1 -> \"%s\"; epoch %u -> %u)\n",
+                        name0.c_str(), tn0.c_str(), name1.c_str(), P[ed1].min, P[ed1].max, tn1.c_str(), ep0, ep1);
+            check(P[part].get() == 1 && ep1 != ep0 && name1 != name0 && t1 >= 0,
+                  "Part 2: the epoch moved, the engine entries renamed (\"" + name1 + "\"), Home Knob 1 retargeted (\"" +
+                      tn1 + "\")");
+            // the HOME knob acts on its target
+            const int32_t want = (P[t1].min + P[t1].max) / 2 + 1;
+            P[h1].set(want);
+            run(dev, 20);
+            check(P[t1].get() == want && P[h1].get() == want, "Home Knob 1 set " + std::to_string(want) +
+                                                                  ": its target reads it");
+            P[t1].set(P[t1].def);
+            P[find("Level")].set(lvl0 + 1 <= P[find("Level")].max ? lvl0 + 1 : lvl0 - 1);
+            run(dev, 20);
+            const int32_t lvl2 = P[find("Level")].get();
+            P[part].set(0);
+            run(dev, 30);
+            check(P[find("Level")].get() == lvl0 && c->param_epoch() != ep1 && std::string(P[ed1].name) == name0,
+                  "back on part 1: its own level (part 2's was " + std::to_string(lvl2) + "), the names back");
+            P[part].set(1);
+            run(dev, 10);
+            P[find("Level")].set(lvl0);                    // (part 2's level as it was: the flash test below starts clean)
+            P[part].set(0);
+            run(dev, 30);
+        }
     }
     std::printf("        (the firmware's own lines: %s*)\n", fwlog.c_str());
 
@@ -314,7 +389,7 @@ int main()
             if (changed != want)
                 (want ? wrongP : wrongN) += std::string(" ") + P[i].name;
             P[i].set(cur);
-            if (!std::strcmp(P[i].name, "Key Tonic"))       // (the tonic's knob turned Key Mode on)
+            if (cr && !std::strcmp(P[i].name, "Key Tonic"))  // (the tonic's knob turned Key Mode on)
                 P[find("Key Mode")].set(0);
             run(dev, 30);
             sync();

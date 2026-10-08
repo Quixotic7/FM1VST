@@ -116,6 +116,38 @@ int main()
         else
             std::printf("  (no reference WAV: skipped the comparison with build/host/emu)\n");
     }
+    // two different firmwares at once: ChoralRoot and Felucca loaded side by side, their clocks interleaved; each plays
+    // D4 (key 9, 600..900 ms) and sounds; neither one's globals reach the other (Felucca's descriptor is its own)
+    {
+        const std::string fe = std::string(FM1_CORES_BUILD_DIR) + "/felucca.fm1core";
+        std::unique_ptr<LoadedCore> lc = CoreLoader::load(core_module(), &err), lf = CoreLoader::load(fe, &err);
+        check(lc && lf && !std::strcmp(lc->core()->id, "choralroot") && !std::strcmp(lf->core()->id, "felucca") &&
+                  lc->core()->hal != lf->core()->hal,
+              "choralroot and felucca loaded together (two descriptors, two hals)");
+        if (lc && lf) {
+            Device dc(lc->core()), df(lf->core());
+            dc.boot(nullptr, true);
+            df.boot(nullptr, true);
+            uint64_t nzc = 0, nzf = 0, nzc0 = 0, nzf0 = 0;
+            int16_t buf[1024];
+            for (uint32_t ms = 0; ms < 1500u; ms++) {
+                const uint32_t k = ms >= 600u && ms < 900u ? 1u << 9 : 0u;
+                dc.keys(k);
+                df.keys(k);
+                dc.run_ms();
+                df.run_ms();
+                for (uint32_t got; (got = dc.take_s16(buf, 512)) > 0;)
+                    for (uint32_t i = 0; i < 2 * got; i++)
+                        (ms < 600u ? nzc0 : nzc) += buf[i] != 0;
+                for (uint32_t got; (got = df.take_s16(buf, 512)) > 0;)
+                    for (uint32_t i = 0; i < 2 * got; i++)
+                        (ms < 600u ? nzf0 : nzf) += buf[i] != 0;
+            }
+            check(nzc > 0 && nzf > 0 && !dc.halted() && !df.halted(),
+                  "both play D4: choralroot " + std::to_string(nzc) + " non-zero samples (before the key " +
+                      std::to_string(nzc0) + "), felucca " + std::to_string(nzf) + " (before " + std::to_string(nzf0) + ")");
+        }
+    }
     std::printf("double_load_test: %s\n", fails ? "FAIL" : "PASS");
     return fails ? 1 : 0;
 }
