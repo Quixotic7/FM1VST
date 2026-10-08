@@ -236,6 +236,34 @@ and the big LCD toggle. The plugin window is resizable with the same letterboxed
 Considered and rejected: a JUCE 8 WebView reusing `tools/emu/web/index.html`. It saves drawing code but
 pushes a framebuffer through a JS bridge at 60 fps and adds a second runtime to debug.
 
+**Colour themes.** The real FM-1 ships in several colours, and the emulator draws one (dark grey:
+`emu.c` lines 300-310, `C_PLATE`, `C_BED`, `C_EDGE`, `C_CAP`, `C_LEDOFF`, `C_LABEL`, plus the knob cap
+`0x35353C` and the pressed key `0x45454E`). The port replaces those constants with a theme:
+
+```c
+typedef struct {
+    uint32_t base;         /* the body plate (bed and edge lines are derived: darker / lighter) */
+    uint32_t membrane;     /* the silicone keys and buttons; pressed = lightened, LED-off = darkened */
+    uint32_t knob;         /* the encoder and pot caps; the pointer line is derived for contrast */
+    uint32_t label;        /* optional: printed labels; auto-contrast against base when unset */
+} fm1theme_t;
+```
+
+Three colours are what the user picks (base, membrane, knobs); everything else is derived so that a
+theme always stays legible: bed and edge from the base, pressed and LED-off from the membrane, the
+pointer and labels by contrast. Advanced overrides for the derived colours live in the theme file but
+not in the picker.
+
+- **Presets:** the shipped set is sampled from product photos of the real colour variants (the lineup
+  is not reliably documented online; the black unit is confirmed, the others get named after what the
+  photos show), plus the emulator's current dark grey as "Emulator".
+- **Custom:** a colour picker per group in the plugin's settings bar; custom themes are saved as JSON in
+  `~/Library/Application Support/fm1emu/themes/<name>.json` and listed with the presets.
+- **State:** the theme name and its three colours are stored in the plugin state next to the flash
+  image, so a Live set reopens with the instrument looking as it was saved, even if that custom theme
+  file is gone. A global default theme for new instances is a user preference.
+- The LEDs' lit colours (white, red, orange, green) stay fixed: they are the LEDs, not the paint.
+
 ### 4.9 Formats and targets
 VST3 + AU + Standalone through JUCE's CMake API; CLAP via `clap-juce-extensions` once the rest works.
 macOS arm64 first (this machine; Live 12 Suite and REAPER are installed for testing). Linux and Windows
@@ -265,9 +293,12 @@ Roto-Control's motor; loading a preset sweeps the knobs; no dropouts at 64-sampl
 minutes. A headless test drives each mapped parameter min to max and back and checks `get()` equals
 what was set and that the firmware's settings record changed accordingly.
 
-**Phase 3: the panel GUI (2-4 days).** Port `draw_panel`, LEDs, LCD, mouse and keyboard. Check: the
-panel matches the emulator window pixel-for-pixel at integer scales (screenshot diff against
-`build/emu/test/*.ppm` for the LCD region).
+**Phase 3: the panel GUI (3-5 days).** Port `draw_panel`, LEDs, LCD, mouse and keyboard, with the
+colours routed through `fm1theme_t`; the theme presets, the three-colour picker, custom theme files, and
+the theme in the plugin state. Check: with the "Emulator" theme the panel matches the emulator window
+pixel-for-pixel at integer scales (screenshot diff against `build/emu/test/*.ppm` for the LCD region);
+each preset renders without any derived colour falling below a contrast floor (an automated check over
+the preset list); a custom theme survives save, reopen and a deleted theme file.
 
 **Phase 4: more cores (1-2 days each).** Felucca, then Melodee: a glue `emu_fw.c` per repo built from
 `tests/ui_test.c`'s stubs and `tests/hostsim.c`. Core selection in the plugin. Sloop if it builds on the
