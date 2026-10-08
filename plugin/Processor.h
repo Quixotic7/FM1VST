@@ -12,15 +12,30 @@
 //   - Host parameter values (Tier 1) are atomics (JUCE's parameters) read once at the start of each block.
 //   - The non-automatable settings the audio thread needs (transpose, "MIDI notes play keys") are atomics.
 //
-// THE TIER 2 SEAM (the second half of phase 2)
-//   applyHostParameters()  audio thread, devLock_ held, at the start of every block after the Tier 1 values were
-//                          applied: write host changes of the firmware's parameters into the core.
-//   readBackParameters()   audio thread, devLock_ held, once per device UI frame (every 15 ms of device time, from
-//                          Device::set_between with frame == true, i.e. right before that ms's frame()): compare the
-//                          core's values with what the host last saw and report the differences.
-//   Both are empty here. Parameters are created once, in the constructor (createTier1Parameters(); a
-//   createTier2Parameters() goes right after it): hosts expect a fixed parameter list, so a core switch relabels
-//   (PanelBoolParameter::setDisplayName + updateHostDisplay(parameterInfoChanged)) rather than adding or removing.
+// TIER 2: THE FIRMWARE'S PARAMETERS (plan 4.5; the slots: Tier2Parameter.h)
+//   Parameters are created once, in the constructor, Tier 2 first (so a Roto-Control's first page is the map's
+//   first eight entries, the live page), then Tier 1: hosts expect a fixed list, so a core switch rebinds the
+//   FM1_TIER2_SLOTS slots to the new core's map and relabels (updateHostDisplay(parameterInfoChanged)) rather than
+//   adding or removing. Binding: bindTier2Locked() after every module load, unbindTier2Locked() before every unload
+//   (the slots must never call into an unloaded image).
+//   host -> firmware   a host change (Tier2Parameter::setValue, any thread) stores the target in the slot (atomic,
+//                      pending); applyHostParameters() (audio thread, devLock_ held, block start, after Tier 1)
+//                      calls the map's set() for each pending slot and records the value as the host's (so the
+//                      read-back does not echo it; kHoldoffFrames frames of read-back are skipped for the slot).
+//   firmware -> host   readBackParameters() (audio thread, devLock_ held, once per device UI frame: Device's
+//                      between hook with frame == true, i.e. every 15 ms of device time right before frame()) calls
+//                      get() on every bound slot and pushes what differs from the last reported value into a
+//                      lock-free FIFO (juce::AbstractFifo, slot + value); the message thread's timer (30 Hz,
+//                      drainTier2) coalesces it (one update per slot per drain) and calls setValueNotifyingHost,
+//                      inside beginChangeGesture .. endChangeGesture for the burst (a knob turned on the device is a
+//                      touch to Live: it moves the Roto-Control's motor and records automation when armed). The
+//                      feedback never runs inside setValue (plan 4.5's automation caveat).
+//   the meta slots     ("Perf Knob 1..4"): when the core's param_epoch() moved (the perform mode changed), the
+//                      read-back retargets them (name "K1 Arp Division", range, texts follow) and the drain
+//                      announces parameterInfoChanged before pushing their new values (without a gesture).
+//   the full sweep     after every power-on (boot, preset load, state restore, flash reset, core switch) the first
+//                      read-back reports every bound slot, without gestures (a preset load is not a touch). Tier 2
+//                      values are not stored in the plugin state: the flash image is the truth.
 //
 // FILES (everything under home() = <FM1EMU_HOME or ~/Library/Application Support>/fm1emu)
 //   cores/                     user-installed *.fm1core modules (the bundled ones: <bundle>/Contents/Resources/cores)
@@ -44,6 +59,7 @@
 #include <string>
 #include <vector>
 
+#include "Tier2Parameter.h"
 #include "cores.h"
 #include "device.h"
 
@@ -65,7 +81,7 @@ struct FM1Theme {                       // stored in the state only (phase 3 dra
     juce::String base = "#1C1C20", membrane = "#2B2B31", bed = "#141417", knob = "#35353C";
 };
 
-class FM1Processor : public juce::AudioProcessor, private juce::AsyncUpdater {
+class FM1Processor : public juce::AudioProcessor, private juce::AsyncUpdater, private juce::Timer {
 public:
     FM1Processor();
     ~FM1Processor() override;
@@ -151,6 +167,13 @@ public:
     PanelBoolParameter *buttonParam(int label) { return btn_[(size_t)label]; }
     PanelBoolParameter *keyParam(int key) { return key_[(size_t)key]; }
     juce::AudioParameterInt *masterParam() { return master_; }
+    Tier2Parameter *tier2Param(int slot) { return slot >= 0 && slot < kTier2Slots ? t2_[(size_t)slot] : nullptr; }
+    int tier2Bound() const { return t2Bound_; }      // slots bound to the loaded core's map
+    // the feedback drain (the timer's work; message thread): tests call it instead of running the message loop
+    void drainTier2();
+
+    static constexpr int kTier2Slots = FM1_TIER2_SLOTS;
+    static constexpr int kHoldoffFrames = 2;         // read-backs skipped after a host write (30 ms of device time)
 
     static constexpr int kNoteBase = 53;             // MIDI note of key 0 (F3)
     static const char *const kPanelLabels[EMU_NB];   // the printed labels: FX SEL ENV .. OCT+
@@ -162,6 +185,11 @@ private:
     void readBackParameters();
 
     void createTier1Parameters();
+    void createTier2Parameters();
+    void bindTier2Locked();                          // devLock_ held: the slots onto loaded_'s map
+    void unbindTier2Locked();
+    bool pushTier2(int slot, int32_t v, uint8_t kind);   // audio thread -> the FIFO; false: full
+    void timerCallback() override { drainTier2(); }
     void relabelParameters();
     juce::String buttonName(int i) const;
 
@@ -205,6 +233,27 @@ private:
     std::array<PanelBoolParameter *, EMU_NB> btn_{};
     std::array<PanelBoolParameter *, EMU_NKEY> key_{};
     juce::AudioParameterInt *master_ = nullptr;
+    std::array<Tier2Parameter *, FM1_TIER2_SLOTS> t2_{};
+    int t2Bound_ = 0;                                    // (written with devLock_ held and the audio stopped)
+
+    // Tier 2 feedback: audio-thread state (devLock_ held) and the FIFO to the message thread
+    enum : uint8_t { kT2Change, kT2Sweep, kT2Relabel };
+    struct T2Msg {
+        int16_t slot;
+        uint8_t kind;
+        uint32_t gen;                                    // t2Gen_ when pushed: a rebind drops older messages
+        int32_t value;
+    };
+    static constexpr int kT2Fifo = 1024;
+    juce::AbstractFifo t2Fifo_{kT2Fifo};
+    std::array<T2Msg, kT2Fifo> t2Buf_{};
+    std::atomic<uint32_t> t2Gen_{0};
+    std::atomic<bool> t2Sweep_{true};                    // the next read-back reports every slot
+    std::array<int32_t, FM1_TIER2_SLOTS> t2Reported_{};  // the value the host was last told (or wrote)
+    std::array<bool, FM1_TIER2_SLOTS> t2Valid_{};
+    std::array<uint8_t, FM1_TIER2_SLOTS> t2Holdoff_{};
+    uint32_t t2Epoch_ = 0;
+    bool t2EpochValid_ = false;
 
     // settings
     std::atomic<int> transpose_{0};

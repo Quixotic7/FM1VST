@@ -123,6 +123,7 @@ FM1Editor::FM1Editor(FM1Processor &p) : juce::AudioProcessorEditor(p), proc_(p)
 
     generic_ = std::make_unique<juce::GenericAudioProcessorEditor>(p);
     addAndMakeVisible(*generic_);
+    proc_.addListener(this);
 
     refreshCores();
     refreshPresets();
@@ -133,7 +134,18 @@ FM1Editor::FM1Editor(FM1Processor &p) : juce::AudioProcessorEditor(p), proc_(p)
     startTimerHz(4);
 }
 
-FM1Editor::~FM1Editor() { stopTimer(); }
+FM1Editor::~FM1Editor()
+{
+    stopTimer();
+    proc_.removeListener(this);
+}
+
+void FM1Editor::rebuildGeneric()
+{
+    generic_ = std::make_unique<juce::GenericAudioProcessorEditor>(proc_);
+    addAndMakeVisible(*generic_);
+    resized();
+}
 
 void FM1Editor::paint(juce::Graphics &g)
 {
@@ -203,6 +215,8 @@ void FM1Editor::refreshStatus()
 
 void FM1Editor::timerCallback()
 {
+    if (paramsChanged_.exchange(false))
+        rebuildGeneric();
     refreshStatus();
     const juce::StringArray p = proc_.listPresets();
     if (p != presetList_ || presets_.getText() != proc_.currentPresetName())

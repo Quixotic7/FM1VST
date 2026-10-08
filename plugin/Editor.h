@@ -6,12 +6,13 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#include <atomic>
 #include <memory>
 #include <vector>
 
 #include "Processor.h"
 
-class FM1Editor : public juce::AudioProcessorEditor, private juce::Timer {
+class FM1Editor : public juce::AudioProcessorEditor, private juce::Timer, private juce::AudioProcessorListener {
 public:
     explicit FM1Editor(FM1Processor &p);
     ~FM1Editor() override;
@@ -20,6 +21,15 @@ public:
 
 private:
     void timerCallback() override;
+    // a Tier 2 slot was relabelled (a meta knob's target, a core switch): the generic editor is rebuilt (its
+    // components read a parameter's name and kind once)
+    void audioProcessorChanged(juce::AudioProcessor *, const ChangeDetails &d) override
+    {
+        if (d.parameterInfoChanged)
+            paramsChanged_.store(true);
+    }
+    void audioProcessorParameterChanged(juce::AudioProcessor *, int, float) override {}
+    void rebuildGeneric();
     void refreshCores();
     void refreshPresets();
     void refreshStatus();
@@ -36,4 +46,5 @@ private:
     juce::StringArray presetList_;
     std::unique_ptr<juce::FileChooser> chooser_;
     juce::String lastStatus_;
+    std::atomic<bool> paramsChanged_{false};
 };

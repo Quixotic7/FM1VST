@@ -74,6 +74,12 @@ target_include_directories(core_choralroot_obj PRIVATE ${CR_GEN} ${CR}/firmware/
 target_compile_options(core_choralroot_obj PRIVATE -O2 -fvisibility=hidden)
 target_compile_definitions(core_choralroot_obj PRIVATE FM1CORE_CR_VERSION="${CR_VERSION}" FM1CORE_CR_COMMIT="${CR_COMMIT}")
 set_target_properties(core_choralroot_obj PROPERTIES POSITION_INDEPENDENT_CODE ON C_STANDARD 11)
+# the Tier 2 parameter map (core-glue/choralroot/core_choralroot_params.c): the sound editor's pages too (30 more
+# host parameters; the plugin then needs -DFM1_TIER2_SLOTS=116 or more)
+option(FM1_EXPOSE_EDITOR "ChoralRoot's Tier 2 map: also the sound editor's ENV / LFO / MOD / MIX pages" OFF)
+if(FM1_EXPOSE_EDITOR)
+    target_compile_definitions(core_choralroot_obj PRIVATE FM1_EXPOSE_EDITOR=1)
+endif()
 add_dependencies(core_choralroot_obj gen_choralroot)
 # the firmware's own code: warnings off (as build.sh); the generated headers are included by the unit: rebuild it
 # when they change
@@ -132,12 +138,14 @@ juce_add_plugin(FM1VST
     COPY_PLUGIN_AFTER_BUILD FALSE
     VST3_COPY_DIR "${FM1_VST3_DIR}"
     AU_COPY_DIR "${FM1_AU_DIR}")
-target_sources(FM1VST PRIVATE plugin/Processor.cpp plugin/Editor.cpp)
+target_sources(FM1VST PRIVATE plugin/Processor.cpp plugin/Tier2Parameter.cpp plugin/Editor.cpp)
 target_include_directories(FM1VST PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/plugin)
 target_compile_features(FM1VST PUBLIC cxx_std_17)
+# the Tier 2 host parameter slots (plugin/Tier2Parameter.h): 86 + the 42 panel parameters = Live's 128
+set(FM1_TIER2_SLOTS 86 CACHE STRING "Tier 2 host parameter slots (the firmware's parameters)")
 target_compile_definitions(FM1VST PUBLIC
     JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0
-    FM1_CORES_DIR="${CMAKE_BINARY_DIR}/cores")
+    FM1_CORES_DIR="${CMAKE_BINARY_DIR}/cores" FM1_TIER2_SLOTS=${FM1_TIER2_SLOTS})
 target_link_libraries(FM1VST
     PRIVATE juce::juce_audio_utils fm1engine
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
@@ -204,6 +212,12 @@ target_link_libraries(halt_test PRIVATE fm1testlib)
 add_dependencies(halt_test choralroot_core)
 add_test(NAME halt_test COMMAND halt_test)
 
+add_executable(param_test tests/param_test.cpp)
+target_link_libraries(param_test PRIVATE fm1testlib)
+target_compile_definitions(param_test PRIVATE FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/param_test_home")
+add_dependencies(param_test choralroot_core)
+add_test(NAME param_test COMMAND param_test)
+
 if(FM1_REFERENCE_TESTS)
     add_executable(replay_test tests/replay_test.cpp)
     target_link_libraries(replay_test PRIVATE fm1testlib)
@@ -222,3 +236,12 @@ target_compile_definitions(plugin_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_
     FM1_INSTALLED_VST3="${FM1_VST3_DIR}/FM1VST.vst3" FM1_INSTALLED_AU="${FM1_AU_DIR}/FM1VST.component")
 add_dependencies(plugin_test choralroot_core FM1VST_VST3 FM1VST_AU)
 add_test(NAME plugin_test COMMAND plugin_test)
+
+# the Tier 2 parameters on the plugin's processor (headless, as plugin_test)
+add_executable(tier2_test tests/tier2_test.cpp)
+target_link_libraries(tier2_test PRIVATE FM1VST fm1engine)
+target_include_directories(tier2_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
+target_compile_definitions(tier2_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS>
+    FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/tier2_test_home")
+add_dependencies(tier2_test choralroot_core)
+add_test(NAME tier2_test COMMAND tier2_test)

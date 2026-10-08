@@ -156,12 +156,18 @@ FM1Processor::FM1Processor()
         const juce::ScopedLock l(devLock_);
         loadCoreLocked(coreId_);                 // (named buttons for the parameters; booted in prepareToPlay)
     }
+    createTier2Parameters();                     // first: the Roto-Control's first page is the map's live page
     createTier1Parameters();
-    // Tier 2 (second half of phase 2): createTier2Parameters() here, after Tier 1
+    {
+        const juce::ScopedLock l(devLock_);
+        bindTier2Locked();
+    }
+    startTimerHz(30);                            // the Tier 2 feedback drain
 }
 
 FM1Processor::~FM1Processor()
 {
+    stopTimer();
     cancelPendingUpdate();
     const juce::ScopedLock l(devLock_);
     saveWorkingFlashLocked();
@@ -185,6 +191,173 @@ void FM1Processor::createTier1Parameters()
     // the emulator's power-on value: emu_fw_init sets emu_hal.master = 724 when the host left it 0
     master_ = new juce::AudioParameterInt(juce::ParameterID{"master", 1}, "MASTER", 0, 1023, 724);
     addParameter(master_);
+}
+
+// ============================================================== Tier 2 ===
+void FM1Processor::createTier2Parameters()
+{
+    for (int i = 0; i < kTier2Slots; i++) {
+        auto *p = new Tier2Parameter(i);
+        t2_[(size_t)i] = p;
+        addParameter(p);
+    }
+}
+
+void FM1Processor::bindTier2Locked()
+{
+    if (!t2_[0])
+        return;                                  // (the constructor: the slots come after the first load)
+    const fm1core_t *c = loaded_ ? loaded_->core() : nullptr;
+    const uint32_t n = c && c->params ? std::min<uint32_t>(c->nparams, (uint32_t)kTier2Slots) : 0u;
+    int meta = 0;
+    for (int i = 0; i < kTier2Slots; i++) {
+        const fm1param_t *e = (uint32_t)i < n ? &c->params[i] : nullptr;
+        t2_[(size_t)i]->bind(e, e && (e->flags & FM1P_META) ? meta++ : -1);
+    }
+    t2Bound_ = (int)n;
+    t2Gen_.fetch_add(1);
+    t2Reported_.fill(0);
+    t2Valid_.fill(false);
+    t2Holdoff_.fill(0);
+    t2EpochValid_ = false;
+    t2Sweep_.store(true);
+    if (c && c->nparams > (uint32_t)kTier2Slots)
+        message_ = juce::String(c->name) + ": " + juce::String(c->nparams) + " firmware parameters, " +
+                   juce::String(kTier2Slots) + " host slots (build with -DFM1_TIER2_SLOTS)";
+}
+
+void FM1Processor::unbindTier2Locked()
+{
+    for (Tier2Parameter *p : t2_)
+        if (p)
+            p->unbind();
+    t2Bound_ = 0;
+    t2Gen_.fetch_add(1);
+}
+
+bool FM1Processor::pushTier2(int slot, int32_t v, uint8_t kind)
+{
+    int s1, n1, s2, n2;
+    t2Fifo_.prepareToWrite(1, s1, n1, s2, n2);
+    if (n1 + n2 < 1)
+        return false;
+    t2Buf_[(size_t)(n1 ? s1 : s2)] = T2Msg{(int16_t)slot, kind, t2Gen_.load(std::memory_order_relaxed), v};
+    t2Fifo_.finishedWrite(1);
+    return true;
+}
+
+void FM1Processor::applyHostParameters()
+{
+    for (int i = 0; i < t2Bound_; i++) {
+        Tier2Parameter *p = t2_[(size_t)i];
+        int32_t v;
+        if (!p->takePending(v))
+            continue;
+        if (const fm1param_t *e = p->entry())
+            e->set(v);
+        t2Reported_[(size_t)i] = v;              // the host's own value: not echoed
+        t2Valid_[(size_t)i] = true;
+        t2Holdoff_[(size_t)i] = (uint8_t)kHoldoffFrames;
+    }
+}
+
+void FM1Processor::readBackParameters()
+{
+    if (!t2Bound_ || !dev_ || dev_->halted())
+        return;
+    const fm1core_t *c = dev_->core();
+    // the meta slots: the perform mode changed (or the first frame after a bind): their targets
+    if (c->param_epoch) {
+        const uint32_t e = c->param_epoch();
+        if (!t2EpochValid_ || e != t2Epoch_) {
+            bool ok = true;
+            for (int i = 0; i < t2Bound_; i++) {
+                Tier2Parameter *p = t2_[(size_t)i];
+                const fm1param_t *own = p->entry();
+                if (!p->isMeta() || !own || !own->target)
+                    continue;
+                const int32_t t = own->target();
+                p->retarget(t >= 0 && (uint32_t)t < c->nparams ? &c->params[t] : own);
+                const int32_t v = own->get();
+                if (pushTier2(i, v, kT2Relabel)) {
+                    t2Reported_[(size_t)i] = v;
+                    t2Valid_[(size_t)i] = true;
+                } else {
+                    ok = false;
+                }
+            }
+            t2Epoch_ = e;
+            t2EpochValid_ = ok;                  // (the FIFO full: retried next frame)
+        }
+    }
+    const bool sweep = t2Sweep_.load();
+    bool swept = true;
+    for (int i = 0; i < t2Bound_; i++) {
+        const fm1param_t *own = t2_[(size_t)i]->entry();
+        if (!own)
+            continue;
+        if (!sweep && t2Holdoff_[(size_t)i]) {
+            t2Holdoff_[(size_t)i]--;
+            continue;
+        }
+        const int32_t v = own->get();
+        if (!sweep && t2Valid_[(size_t)i] && v == t2Reported_[(size_t)i])
+            continue;
+        if (pushTier2(i, v, sweep ? kT2Sweep : kT2Change)) {
+            t2Reported_[(size_t)i] = v;
+            t2Valid_[(size_t)i] = true;
+        } else {
+            swept = false;                       // (full: what was not reported is retried next frame)
+        }
+    }
+    if (sweep && swept)
+        t2Sweep_.store(false);
+}
+
+void FM1Processor::drainTier2()
+{
+    struct Acc {
+        bool any = false, gesture = true;
+        int32_t v = 0;
+    };
+    std::array<Acc, FM1_TIER2_SLOTS> acc{};
+    const uint32_t gen = t2Gen_.load();
+    bool any = false, relabel = false;
+    for (;;) {
+        int s1, n1, s2, n2;
+        t2Fifo_.prepareToRead(kT2Fifo, s1, n1, s2, n2);
+        if (n1 + n2 == 0)
+            break;
+        auto take = [&](int start, int cnt) {
+            for (int k = 0; k < cnt; k++) {
+                const T2Msg &m = t2Buf_[(size_t)(start + k)];
+                if (m.gen != gen || m.slot < 0 || m.slot >= kTier2Slots)
+                    continue;                    // (from before a rebind)
+                Acc &a = acc[(size_t)m.slot];
+                a.any = any = true;
+                a.v = m.value;                   // coalesced: the latest
+                if (m.kind != kT2Change)
+                    a.gesture = false;
+                relabel = relabel || m.kind == kT2Relabel;
+            }
+        };
+        take(s1, n1);
+        take(s2, n2);
+        t2Fifo_.finishedRead(n1 + n2);
+    }
+    if (!any)
+        return;
+    if (relabel)
+        updateHostDisplay(ChangeDetails().withParameterInfoChanged(true));
+    for (int i = 0; i < kTier2Slots; i++)
+        if (acc[(size_t)i].any && acc[(size_t)i].gesture)
+            t2_[(size_t)i]->beginChangeGesture();
+    for (int i = 0; i < kTier2Slots; i++)
+        if (acc[(size_t)i].any)
+            t2_[(size_t)i]->setFromFirmware(acc[(size_t)i].v, false);
+    for (int i = 0; i < kTier2Slots; i++)
+        if (acc[(size_t)i].any && acc[(size_t)i].gesture)
+            t2_[(size_t)i]->endChangeGesture();
 }
 
 juce::String FM1Processor::buttonName(int i) const
@@ -263,6 +436,7 @@ bool FM1Processor::loadCoreLocked(const juce::String &id)
         coreInfo_ = c;
         coreId_ = id;
         message_.clear();
+        bindTier2Locked();
         return true;
     }
     message_ = "firmware \"" + id + "\" is not installed";
@@ -289,12 +463,15 @@ void FM1Processor::bootLocked()
     });
     dev_->boot_from(bytes.empty() ? nullptr : bytes.data(), (uint32_t)bytes.size());
     resetAudioState();
+    t2Sweep_.store(true);                        // the first read-back reports every Tier 2 value
+    t2EpochValid_ = false;
     halted_.store(dev_->halted());
     haltCode_.store(loaded_->core()->halted ? loaded_->core()->halted() : 0);
 }
 
 void FM1Processor::teardownLocked()
 {
+    unbindTier2Locked();                         // (before the module goes: no slot may call into it)
     dev_.reset();
     loaded_.reset();                             // shutdown, unload, the per-instance copy deleted
 }
@@ -359,6 +536,7 @@ bool FM1Processor::powerCycleLocked(std::optional<std::vector<uint8_t>> bytes)
         message_ = juce::String(err);
         return false;
     }
+    bindTier2Locked();                           // (a new image: new entries)
     pendingFlash_ = std::move(bytes);
     halted_.store(false);
     haltCode_.store(0);
@@ -769,16 +947,6 @@ bool FM1Processor::isBusesLayoutSupported(const BusesLayout &layouts) const
 {
     const auto out = layouts.getMainOutputChannelSet();
     return layouts.inputBuses.isEmpty() && (out == juce::AudioChannelSet::stereo() || out == juce::AudioChannelSet::mono());
-}
-
-void FM1Processor::applyHostParameters()
-{
-    // Tier 2 (second half of phase 2): host changes of the firmware's parameters -> fm1param_t::set
-}
-
-void FM1Processor::readBackParameters()
-{
-    // Tier 2 (second half of phase 2): fm1param_t::get -> setValueNotifyingHost for what changed
 }
 
 void FM1Processor::pushKeys()

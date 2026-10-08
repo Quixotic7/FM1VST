@@ -129,16 +129,21 @@ int main()
         check(FM1Processor::bundledCoresDirFor(juce::File("/tmp/plugin_test")) == juce::File(),
               "an executable outside a bundle has no bundled cores dir");
 
-        // the parameters: 42, the ids in order, the names
+        // the parameters: the Tier 2 slots t2_00 .., then the 42 of Tier 1, the ids in order, the names
         const auto &ps = p.getParameters();
-        bool idsOk = ps.size() == 42;
+        const int t2 = FM1Processor::kTier2Slots;
+        bool idsOk = ps.size() == t2 + 42;
+        for (int i = 0; idsOk && i < t2; i++)
+            idsOk = dynamic_cast<juce::AudioProcessorParameterWithID *>(ps[i])->getParameterID() ==
+                    juce::String::formatted("t2_%02d", i);
         for (int i = 0; idsOk && i < 14; i++)
-            idsOk = dynamic_cast<juce::AudioProcessorParameterWithID *>(ps[i])->getParameterID() == FM1Processor::kButtonIds[i];
+            idsOk = dynamic_cast<juce::AudioProcessorParameterWithID *>(ps[t2 + i])->getParameterID() == FM1Processor::kButtonIds[i];
         for (int k = 0; idsOk && k < 27; k++)
-            idsOk = dynamic_cast<juce::AudioProcessorParameterWithID *>(ps[14 + k])->getParameterID() ==
+            idsOk = dynamic_cast<juce::AudioProcessorParameterWithID *>(ps[t2 + 14 + k])->getParameterID() ==
                     juce::String::formatted("key_%02d", k);
-        idsOk = idsOk && dynamic_cast<juce::AudioProcessorParameterWithID *>(ps[41])->getParameterID() == "master";
-        check(idsOk, "42 Tier 1 parameters: btn_fx .. btn_octup, key_00 .. key_26, master");
+        idsOk = idsOk && dynamic_cast<juce::AudioProcessorParameterWithID *>(ps[t2 + 41])->getParameterID() == "master";
+        check(idsOk, std::to_string(t2) + " Tier 2 slots t2_00 .., then 42 Tier 1 parameters: btn_fx .. btn_octup, "
+                     "key_00 .. key_26, master (" + std::to_string(ps.size()) + " in all)");
         check(p.buttonParam(EMU_B_SEL)->getName(100) == "KEY (SEL)" && p.keyParam(9)->getName(100) == "D4" &&
                   p.keyParam(0)->getName(100) == "F3" && p.masterParam()->get() == 724,
               "names: \"" + p.buttonParam(EMU_B_SEL)->getName(100).toStdString() + "\", key_09 \"" +

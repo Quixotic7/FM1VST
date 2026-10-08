@@ -20,6 +20,8 @@ uint8_t *fm1core_cr_flash(void);
 uint32_t fm1core_cr_flash_dirty(void);
 int fm1core_cr_flash_stage(const uint8_t *bytes, uint32_t n);
 int fm1core_cr_flash_sync(void);
+const fm1param_t *fm1core_cr_params(uint32_t *n);   /* core_choralroot_params.c (in the firmware unit) */
+uint32_t fm1core_cr_param_epoch(void);
 
 static void w_tick(uint32_t ms)
 {
@@ -52,7 +54,7 @@ static int w_midi_out_take(uint32_t *pkt)
     return fm1core_cr_halted() ? 0 : emu_fw_midi_out_take(pkt);
 }
 
-static const fm1core_t CORE = {
+static fm1core_t CORE = {
     .abi_version = FM1CORE_ABI,
     .id = "choralroot",
     .name = "ChoralRoot",
@@ -85,9 +87,14 @@ static const fm1core_t CORE = {
     .flash = fm1core_cr_flash,
     .flash_dirty = fm1core_cr_flash_dirty,
     .flash_sync = fm1core_cr_flash_sync,
+    .param_epoch = fm1core_cr_param_epoch,
 };
 
 FM1CORE_EXPORT const fm1core_t *fm1core_get(uint32_t abi_version)
 {
-    return abi_version == FM1CORE_ABI ? &CORE : NULL;
+    if (abi_version != FM1CORE_ABI)
+        return NULL;
+    if (!CORE.params)                         /* (the map's ranges come from the firmware's tables: filled once) */
+        CORE.params = fm1core_cr_params(&CORE.nparams);
+    return &CORE;
 }

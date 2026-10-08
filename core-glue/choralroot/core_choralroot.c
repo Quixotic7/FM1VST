@@ -156,3 +156,6 @@ int fm1core_cr_flash_sync(void)
     cr_settings_save();
     return crs_pending ? 0 : 1;
 }
+
+/* ---- the Tier 2 parameter map (in this unit: it reaches the firmware's statics) ---- */
+#include "core_choralroot_params.c"

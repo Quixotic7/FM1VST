@@ -33,21 +33,42 @@ extern "C" {
 #endif
 #include "../cores/ChoralRootFM1/tools/emu/emu_hooks.h"
 
-#define FM1CORE_ABI 2u
+#define FM1CORE_ABI 3u
 /* the flash_path to pass to options() to boot from the bytes given to flash_stage() (ABI 2) */
 #define FM1CORE_FLASH_STAGED "fm1core:staged"
 #define FM1CORE_SYMBOL "fm1core_get"
 #define FM1CORE_SUFFIX ".fm1core"
 
-/* one firmware parameter exposed to the host (plan 4.5): an absolute value with a range, read and written on the
- * clock's thread through the firmware's own path */
+/* one firmware parameter exposed to the host (plan 4.5, the Tier 2 map): an absolute value with a range, read and
+ * written through the firmware's own path.
+ * THREADS: get, set and target run on the clock's thread between device milliseconds (in the plugin: the audio
+ * thread; the device clock is stopped while they run): they are cheap and never block. text only formats its
+ * argument from constant tables and may be called from any thread. */
+enum {
+    FM1P_ENUM = 1u,                 /* names[] holds max - min + 1 value names (also text()'s) */
+    FM1P_META = 2u,                 /* stands for another entry, which target() names; it changes when the core's
+                                     * param_epoch() moves (ChoralRoot: "Perf Knob 1..4" = the current perform mode's
+                                     * KNOB 1..4). get / set act on the current target. */
+    FM1P_PERSIST = 4u,              /* the firmware's settings record holds it: a change reaches the flash image */
+    FM1P_EDITOR = 8u,               /* a sound editor parameter (the part's sound; persisted only by SAVE on the
+                                     * device) */
+    FM1P_SOUND = 16u,               /* the value comes with the part's sound (a sound load sets it): def is the
+                                     * parameter's own, not what a fresh unit's default sound brings */
+};
 typedef struct {
-    const char *name;               /* "Strum Rate", "Arp Division", "Chord Level" */
-    int32_t min, max, def;          /* the firmware's own range and default */
+    const char *name;               /* "Strum Rate", "Arp Division", "Chord Level" (<= 16 characters) */
+    int32_t min, max, def;          /* the firmware's own range (integer steps) and default */
     const char *const *names;       /* enum value names ("1/8", "UP", ..), max - min + 1 of them, or NULL */
-    const char *unit;               /* "ms", "%", "dB", "" */
+    const char *unit;               /* "ms", "%", "dB", "": informational (text() already carries it) */
     int32_t (*get)(void);           /* the firmware's current value */
-    void (*set)(int32_t v);         /* write it as a panel change would */
+    void (*set)(int32_t v);         /* write it as a panel change would (clamped to min..max) */
+    /* ABI 3 */
+    void (*text)(int32_t v, char *buf, uint32_t n);   /* the firmware's own value text for v ("1/8", "120 ms", "Up"),
+                                                       * NUL-terminated in n bytes */
+    int32_t (*target)(void);        /* FM1P_META: the index in params of the entry it stands for now, -1 none; NULL
+                                     * otherwise */
+    uint32_t flags;                 /* FM1P_* */
+    const char *path;               /* documentation: how set() reaches the firmware ("perf: cu_layer_knob ..") */
 } fm1param_t;
 
 typedef struct {
@@ -97,6 +118,10 @@ typedef struct {
                                      * after its quiet time) now, so the image is current before it is read;
                                      * 1: current, 0: a save is still deferred by the firmware (a loop playing).
                                      * May erase a sector (the emulated erase stall: ~45 ms of silence). */
+
+    /* ---- the parameter map's epoch (ABI 3): a counter that moves when an FM1P_META entry's target changed (the
+     * host re-reads target() and relabels). Clock thread. NULL: the map has no meta entries. */
+    uint32_t (*param_epoch)(void);
 } fm1core_t;
 
 typedef const fm1core_t *(*fm1core_get_fn)(uint32_t abi_version);

@@ -5,21 +5,22 @@ planned as VST3, AU and Standalone. The emulator compiles the firmware's own C s
 HAL, so the plugin plays exactly what the device plays. The plan, the architecture and the phases are
 in [FM1-VST-PLAN.md](FM1-VST-PLAN.md).
 
-Status: phase 2, first half. The ChoralRoot firmware builds as a loadable core module
+Status: phase 2. The ChoralRoot firmware builds as a loadable core module
 (`build/cores/choralroot.fm1core`) behind a versioned C ABI, a JUCE-free engine loads it, runs its device clock and
-resamples its output to the host rate, and a JUCE plugin (AU, VST3, Standalone) plays it with the panel's 42
-controls as host parameters, MIDI in and out, the flash image as its state, and presets per firmware. The firmware's
-own parameters as host parameters (the Roto-Control map, plan 4.5) and the panel GUI (phase 3) are next.
+resamples its output to the host rate, and a JUCE plugin (AU, VST3, Standalone) plays it with the firmware's own
+parameters (77, absolute and bidirectional: the Roto-Control map, plan 4.5) and the panel's 42 controls as host
+parameters, MIDI in and out, the flash image as its state, and presets per firmware. The panel GUI (phase 3) is
+next.
 
 ## Layout
 
 | path | what |
 |---|---|
-| `core-api/fm1core.h` | the core ABI (`FM1CORE_ABI 2`): the descriptor `fm1core_t` (id, name, version, source, flash size, button labels, parameter map, the panel state `emu_hal_t`, every `emu_fw_*` entry point, `shutdown`, `halted`, and the flash image: `flash`, `flash_dirty`, `flash_stage` to boot from bytes, `flash_sync`) and the one symbol a module exports, `fm1core_get`. The threading contract is in its header comment. |
-| `core-glue/choralroot/` | the ChoralRoot core: `core_choralroot.c` (the submodule's `tools/emu/emu_fw.c`, unmodified, with `exit` / `atexit` redirected so a firmware reboot halts the core instead of the host) and `core_choralroot_desc.c` (the descriptor) |
-| `plugin/` | the JUCE plugin: `Processor.{h,cpp}` (`FM1Processor`: the core and its `Device` on the audio thread, parameters, MIDI, state, presets, the firmware switch; the threading and file layout are in its header comment) and `Editor.{h,cpp}` (a plain settings bar over JUCE's generic parameter editor; phase 3 replaces it) |
+| `core-api/fm1core.h` | the core ABI (`FM1CORE_ABI 3`): the descriptor `fm1core_t` (id, name, version, source, flash size, button labels, the parameter map `fm1param_t` and `param_epoch`, the panel state `emu_hal_t`, every `emu_fw_*` entry point, `shutdown`, `halted`, and the flash image: `flash`, `flash_dirty`, `flash_stage` to boot from bytes, `flash_sync`) and the one symbol a module exports, `fm1core_get`. The threading contract is in its header comment. |
+| `core-glue/choralroot/` | the ChoralRoot core: `core_choralroot.c` (the submodule's `tools/emu/emu_fw.c`, unmodified, with `exit` / `atexit` redirected so a firmware reboot halts the core instead of the host), `core_choralroot_params.c` (the Tier 2 parameter map, included into the same unit so it reaches the firmware's UI code) and `core_choralroot_desc.c` (the descriptor) |
+| `plugin/` | the JUCE plugin: `Processor.{h,cpp}` (`FM1Processor`: the core and its `Device` on the audio thread, parameters and the Tier 2 feedback loop, MIDI, state, presets, the firmware switch; the threading and file layout are in its header comment), `Tier2Parameter.{h,cpp}` (a rebindable host parameter slot) and `Editor.{h,cpp}` (a plain settings bar over JUCE's generic parameter editor; phase 3 replaces it) |
 | `engine/` | C++17, no JUCE: `cores.{h,cpp}` (find and load modules, one private copy per instance), `device.{h,cpp}` (the single-thread device clock, input, LEDs, LCD, `render` at any host rate), `resampler.h` (4-point Lagrange) |
-| `tests/` | `core_smoke`, `replay_test`, `double_load_test`, `halt_test`, `plugin_test`, and `script_runner` (the emulator's script grammar on a `Device`) |
+| `tests/` | `core_smoke`, `replay_test`, `double_load_test`, `halt_test`, `param_test`, `plugin_test`, `tier2_test`, and `script_runner` (the emulator's script grammar on a `Device`) |
 
 ## Cores
 
@@ -43,10 +44,33 @@ so ChoralRoot plays its chords as on the device. The firmware needs under a seco
 is loaded. The track's MIDI output carries what the firmware sends (ChoralRoot by default: the chord stream on channel 1; the
 bass on channel 2 once a bass sound is chosen), so it can drive other instruments.
 
-- **Parameters (42):** the 14 buttons (`btn_fx` .. `btn_octup`, momentary: on = held; named with the firmware's role
-  and the printed label, e.g. "KEY (SEL)"), the 27 keys (`key_00` .. `key_26`, named by note, "F3" .. "G5"; a key is
-  held when its parameter or a MIDI note holds it) and `master` (the MASTER pot, 0..1023, default 724 as the
-  emulator powers on). The encoders are not parameters (they are relative; the panel GUI drives them).
+- **Parameters (128):** first 86 Tier 2 slots (`t2_00` .. `t2_85`: the firmware's own parameters, below), then the
+  42 Tier 1 panel controls: the 14 buttons (`btn_fx` .. `btn_octup`, momentary: on = held; named with the firmware's
+  role and the printed label, e.g. "KEY (SEL)"), the 27 keys (`key_00` .. `key_26`, named by note, "F3" .. "G5"; a
+  key is held when its parameter or a MIDI note holds it) and `master` (the MASTER pot, 0..1023, default 724 as the
+  emulator powers on). The encoders are not parameters (they are relative; the panel GUI drives them). 128 is Live's
+  limit for showing a plugin's parameters without configuring them.
+- **The firmware's parameters (Tier 2, plan 4.5).** Absolute values with the firmware's own ranges and value texts
+  ("1/8", "120 ms", "Up-down", "-10.0dB"), read from and written to the running firmware, so a motorised controller
+  such as the Melbourne Instruments Roto-Control follows them. A host change goes through the firmware's own panel
+  code (the screen, the knob row's hot cell, the settings record and the trace behave as for a knob turned on the
+  unit); a change on the firmware's side (its knobs, a preset, a MIDI CC, a mode change) moves the host's value, as a
+  touch (inside a change gesture). After every power-on (a preset load, a state restore, a flash reset) every value
+  is reported once, without gestures, so the controller sweeps to the unit's real state. The values are not stored
+  separately in the plugin state: the flash image is the truth. Slots beyond a core's map are "(unused)". The order
+  is a Roto-Control's page order (eight knobs a page):
+
+  | page | parameters |
+  |---|---|
+  | 1, the live page | `K1`..`K4` (the meta knobs "Perf Knob 1..4": whatever KNOB 1..4 of the current perform mode carry, renamed when the mode changes, e.g. "K1 Strum Rate" -> "K1 Arp Division"), Voicing, Tempo, Transpose, Chord Level |
+  | 2..5 | the perform parameters of every mode, the ones its engine uses: Strum (Rate, Dir, Range, Hold), Slop (Amount, Rate, Dir, Range, Hold), Arp (Division, Dir, Gate, Swing, Range, Retrig, Hold), Pattern (Type, Div, Gate, Swing, Range, Rotate, Retrig, Hold), Harp (Rate, Dir, Gate, Range, Hold) |
+  | 5..8 | chord and global: Perform, Perform Mode, Latch, Key Mode, Key Tonic, Key Scale, Single Notes, Split Point, Play Style, Ext Addition, Secret Chords, Velocity, Bass, Bass Mode, Bass Register, Bass Level, Metronome, Click Level, Time Signature, Loop Length, Loop Quantize, Count-In, Loop Level |
+  | 8..10 | FX: FX on, the chord part's sends (Chord Drive / Chorus / Delay / Reverb: the FX amounts), the bass part's sends, the shared buses (Reverb Size / Damp / Type, Chorus Rate / Depth, Delay Time / Feedback / Colour) |
+
+  `param_test` prints the whole map with ranges and the firmware path each entry is written through.
+  **`-DFM1_EXPOSE_EDITOR=ON`** (off by default) appends the sound editor's ENV, LFO, MOD and MIX pages for the chord
+  and the bass part (30 more, 107 in all); build the plugin with `-DFM1_TIER2_SLOTS=116` (or more) to give them
+  slots (that goes past Live's 128). A sound edit is kept only by SAVE on the unit.
 - **MIDI in:** with **MIDI notes play keys** on (default), note n on any channel holds key `n - 53 + 12 x Transpose`
   (Transpose: -2..+2 octaves; velocity 0 is a release). Every other message (CCs, program changes, clock, SysEx, and
   notes outside the keys or with the setting off) goes to the firmware's own MIDI in as USB-MIDI packets. A note that
@@ -100,6 +124,13 @@ The tests:
   each equal to its single-load run (separate globals); one unloaded while the other plays on.
 - `halt_test`: the firmware's two `exit()` paths (the boot guard's UBOOT, SAFE MODE's Flash Data reboot) halt the
   core and leave the host running.
+- `param_test`: the ChoralRoot parameter map on a `Device`: every entry set to min, max and its default reads back
+  at once and 50 ms later, off-grid targets land exactly, the enum texts are distinct, one entry per group prints the
+  trace line a panel turn prints, exactly the entries the settings record holds reach the flash image, the meta
+  entries follow the perform mode; it prints the map.
+- `tier2_test`: the Tier 2 slots on the plugin's processor: a host write reaches the firmware and is not echoed, a
+  panel turn reaches the host (coalesced, inside a gesture), a state restore and a preset load report every slot
+  without gestures, a meta slot relabels when the perform mode is picked on the panel.
 - `plugin_test`: the plugin's processor, headless: MIDI notes press the keys and sound at 48 and 44.1 kHz, the panel
   parameters reach the HAL, MIDI out is well formed, the flash survives the state round trip, presets save / reset /
   load / rename / export / import / delete with backups, and the installed bundles resolve their cores folder.

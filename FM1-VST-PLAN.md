@@ -197,10 +197,11 @@ For ChoralRoot the map is built from tables that already exist in the firmware, 
 
 | group | source in the firmware | count |
 |---|---|---|
-| perform parameters per mode (Strum, Slop, Arp, Pattern, Harp): rate, division, direction, range, gate, swing, retrig, pattern, rotate, amount, hold | `cr_engine.h` `cr_param_t`, `CR_PAR_MIN` / `CR_PAR_MAX`, `cr_set_param` / `cr_get_param` | up to 55, pruned to the ones each mode uses (`CU_PERF_KNOB` in `cr_ui.c` says which four each mode puts on its knobs) |
-| chord and global: voicing, transpose, Single Notes, bass voicing, BPM, Key Mode, scale, sticky / latch | `cr_settings.h` `cr_settings_t` and the engine's setters (`cr_set_sticky`, the tempo setter) | about 12 |
-| FX: the chord part's sends (drive, chorus, delay, reverb), the bass part's, the shared bus parameters | Felucca's `params.c` table `TP` (`param_desc_t`: label, format, min, max, default) and the FX layer's knob row (`cr_ui.c` line 378) | about 12 |
-| sound editor pages (ENV, LFO, MOD, MIX, the engine's eight): chord part and bass part | `cr_pages.c` `CP_PAGES` / `CP_LABEL` over `TP` | 2 x 32, **off by default** (a build flag / an "Expose editor" setting), to stay well under Live's 128 |
+| perform parameters per mode (Strum, Slop, Arp, Pattern, Harp): rate, division, direction, range, gate, swing, retrig, pattern, rotate, amount, hold | `cr_engine.h` `cr_param_t`, `CR_PAR_MIN` / `CR_PAR_MAX`, `cr_set_param` / `cr_get_param` | **29** of 55 (the ones each mode's engine uses: Strum 4, Slop 5, Arp 7, Pattern 8, Harp 5), plus **4** meta parameters "Perf Knob 1..4" (the current mode's `CU_PERF_KNOB` row, relabelled on a mode change) |
+| chord and global: voicing, transpose, Single Notes, bass voicing, BPM, Key Mode, scale, sticky / latch | `cr_settings.h` `cr_settings_t` and the engine's setters (`cr_set_sticky`, the tempo setter) | **27**: Voicing, Tempo, Transpose, Chord Level (the live page), then Perform, Perform Mode, Latch, Key Mode / Tonic / Scale, Single Notes, Split Point, Play Style, Ext Addition, Secret Chords, Velocity, Bass, Bass Mode / Register / Level, Metronome, Click Level, Time Signature, Loop Length / Quantize / Count-In / Level |
+| FX: the chord part's sends (drive, chorus, delay, reverb), the bass part's, the shared bus parameters | Felucca's `params.c` table `TP` (`param_desc_t`: label, format, min, max, default) and the FX layer's knob row (`cr_ui.c` line 378) | **17**: FX on, 4 chord sends, 4 bass sends, 8 bus parameters |
+| sound editor pages (ENV, LFO, MOD, MIX, the engine's eight): chord part and bass part | `cr_pages.c` `CP_PAGES` / `CP_LABEL` over `TP` | **2 x 15 = 30** (ENV, LFO, MOD, MIX without Level), **off by default** (`-DFM1_EXPOSE_EDITOR=ON`), to stay under Live's 128 |
+| **total** (built) | | **77** with the editor off (107 on), in 86 host slots: 42 + 86 = 128 |
 
 Target: about 80 Tier 2 parameters for ChoralRoot with the editor off, 42 + 80 = 122 in total.
 Order: the perform parameters of the current mode first (so the Roto-Control's first page is the four
