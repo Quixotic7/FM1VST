@@ -67,3 +67,6 @@
 [submodule "cores/fm-106"]
 	path = cores/fm-106
 	url = https://github.com/PatttF/fm-106.git
+[submodule "cores/fm1-emu"]
+	path = cores/fm1-emu
+	url = https://github.com/joakimeriksson/fm1-emu

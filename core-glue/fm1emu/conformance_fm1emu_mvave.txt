@@ -1,0 +1,17 @@
+# fm1emu with M-VAVE's stock FM-1 V15 (FM1EMU_FWSC): tests/core_conformance.cpp's script (see its header)
+# (it draws within ~0.4 s and a key sounds within ~70 ms; the boot is given room)
+boot_ms 10000
+settle_ms 3000
+# the flash round trip: PRESETS turned on (patch 001 EMU E.PNO -> 002 EMU BASS), then SAVE ("All Data Saved": the
+# firmware writes its state record into the USR area, sector 0xFB000, over SPI); after the reboot (case 2: the image
+# with its package) the stock firmware comes up on patch 002, not 001
+save wait 3000
+save knob PRESETS +3
+save wait 2000
+save btn SAVE 100
+save wait 3000
+save quit
+saved wait 4000
+saved quit
+saved-lcd-differs
+reboot none fm1-soc models no reset: a firmware's UBOOT / reboot request has nothing to reach

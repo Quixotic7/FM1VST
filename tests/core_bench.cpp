@@ -5,7 +5,8 @@
 // (D4 F#4 A4, velocity 100; X0X: its steps) while the plugin's path renders SECONDS (10) of audio: Device::render at
 // 48 kHz in 512-frame host blocks (the device clock, the firmware, the resampler), as the Standalone's audio
 // callback drives it. Prints the wall time and the real-time factor (rendered seconds per wall second: 50x = one
-// core takes 2 % of one CPU core). Not a ctest: the numbers depend on the machine and its load.
+// core takes 2 % of one CPU core). Not a ctest: the numbers depend on the machine and its load. FM1_BENCH_INFO=1:
+// each core's ui_info after its run too (tests/fm1emu_bench.sh).
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -81,6 +82,11 @@ int main(int argc, char **argv)
         d.keys(0);
         std::printf("%-14s %-22s %10.2f %10.3f %8.1f%s\n", lc->core()->id, lc->core()->version, rendered, wall,
                     rendered / wall, peak > 0 ? "" : "  (silent)");
+        if (std::getenv("FM1_BENCH_INFO") && lc->core()->ui_info) {   // (the core's own view: fm1emu's speed, H, L)
+            char info[512];
+            lc->core()->ui_info(info, sizeof info);
+            std::printf("    ui_info: %s\n", info);
+        }
         std::fflush(stdout);
     }
     return bad ? 1 : 0;
