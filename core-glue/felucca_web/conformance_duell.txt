@@ -1,0 +1,20 @@
+# DUELL 0.2.20-beta: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: a fresh unit shows the first-start GUIDE after its splash (~2 s); HOME closes it and the
+# settings record keeps "seen"; KNOB 4 turns MORPH's AMOUNT. After the reboot no GUIDE: MORPH at once
+save wait 2500
+save btn HOME 100
+save wait 500
+save knob KNOB4 +5
+save wait 500
+save quit
+saved wait 3000
+saved quit
+saved-lcd-differs
+# the boot guard: a second failed boot in a row enters UBOOT (exit(3), fw_core.h as main.c fm1_cstart)
+reboot-guard 2
+# OCT- + OCT+ held 5 s: UBOOT (fw_core.h, main.c's countdown)
+reboot wait 2500
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

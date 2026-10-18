@@ -1,9 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The Felucca core's Tier 2 parameter map (FM1-VST-PLAN.md 4.5; core-api/fm1core.h fm1param_t).
  *
- * NOT A TRANSLATION UNIT OF ITS OWN: core_felucca.c includes this file after the firmware unit (felucca_fw.c), so
- * the firmware's statics (params.c's TP / GP tables, param_format, track_desc, the tracks, the song, ui.c's
- * track_select, motion.c's motion_capture) are in scope. Nothing in the submodule is modified.
+ * NOT A TRANSLATION UNIT OF ITS OWN: core_felucca.c includes this file after the firmware unit (fw_core.h with
+ * Felucca's web/emu/felucca_web.c), so the firmware's statics (params.c's TP / GP tables, param_format, track_desc,
+ * the tracks, the song, ui.c's track_select, motion.c's motion_capture) are in scope. Nothing in the submodule is
+ * modified. Written for Felucca 1.0.1, ported to 1.6.1 (2026-10-18): the knob dispatch follows 1.6.1's ui_input.c /
+ * ui_layer.c (SELECT's MENU modes and BPM LOCK, HOME LEVELS, the step locks and LFO MOMENTARY, the AUTOMATION / SONG /
+ * TOOLS / operator pages, the SEQ and REC layers); every entry of 1.0.1's map still exists in 1.6.1 (the names kept:
+ * plugin states and host automation map by them).
  *
  * WHAT IS MAPPED: the selected part's parameters, as the device's pages show them (params.c PAGES): the level and
  * sends, ENV, ENV DEST, the engine's EDIT 1 / EDIT 2, LFO, LFO DEST, VOICE, ARP, SCL / CHORD,
@@ -17,7 +21,12 @@
  * motion_capture (motion.c: a live edit becomes the motion sequencer's new base value; recorded as a motion event
  * while the part records). The audio ISR reads the arrays as they are (it is what the knob does). Pattern LEN / DIV
  * / SWING / GATE refuse while a song chain plays ("STOP TO EDIT", as the knob). Nothing here is in the settings
- * record (no FM1P_PERSIST): parts and song are the project, saved by SAVE > PROJECT on the device.
+ * record: parts and song are the project, saved by SAVE > PROJECT on the device, and (1.2 on) the AUTOSAVE: project.c
+ * writes the music as a project holds it (every part's parameters, the song's GLOBAL / FX values) to its own record
+ * when it changed and all is quiet, and restores it at power-on (MENU > RESTORE LAST ON, the default). flash_sync
+ * writes it at once (fw_core.h), so every entry the autosave holds is FM1P_PERSIST: the part and song values, the
+ * engine entries, T1..T4 Level and the page cells. Not the Part selection (autosave_sig leaves the selected track
+ * out) nor the FX macros (perform.c's, never saved).
  *
  * THE META ENTRIES (FM1P_META): "E1".."E8", the selected part's engine parameters (EDIT 1 / EDIT 2). Their range,
  *   names and label depend on the engine (FM6's ALG is 0..32, ANALOG's WAVE an enum of 5), so these entries target
@@ -29,20 +38,26 @@
  * the pot everywhere.
  *   screen                     SELECT     PRESETS        ALGORITHM   KNOB1..4
  *   HOME                       Tempo      turn (sounds)  Part        the engine's four HOME knobs (home_param: ANALOG E5 CUT,
- *                                                                        E6 RES, Attack, Release; FM6 E3 MLVL ..)
+ *                                                                        E6 RES, Attack, Release; FM6 E3 MLVL ..); HOME
+ *                                                                        LEVELS: T1 Level .. T4 Level (H)
  *   a page (ENV, ENV DEST, LFO, LFO DEST, FX, DLY, REVERB, CHORUS, SCL, CHORD, EDIT 1 / 2, VOICE, VOICE 2, GLOBAL,
- *   SYSTEM, ARP, ARP 2, PATTERN, SLICER, OP ENV ..)
+ *   ARP, ARP 2, SLICER, INSERT, FILTER, LANES, OPn ENV, VOICE 3 ..)
  *                              (as HOME)  turn           Part        the page's four parameters: their entries, else
  *                                                                    the hidden "Knob 1..4" cells (rewritten from
  *                                                                    page_desc: "SLICER SLCR"); an empty column: turn
  *   MOD                                                              KNOB1 turn (the slot), 2..4 the slot's SRC DST AMT
  *   MIXER                                                            Level, Pan, Reverb Send, Mute
- *   PRESETS, USER, PHRASES, SONG, STEP, CHANCE, MOTION, TOOLS, PROJECT's actions: turn (lists, cursors, actions)
+ *   PRESETS, USER, PHRASES, SONG, STEP, AUTOMATION (EVENTS), TOOLS' KNOB 2, OPERATOR / OP ENV (FM6's bytes), SLICES'
+ *   KNOB 1 / 2, PROJECT's actions: turn (lists, cursors, actions)
+ *   a step held (its locks), LFO held (MOMENTARY): KNOB1..4 turn
  *   FX held                    (as HOME)  turn           turn        FX Filter, FX Crush, FX Throw, FX Depth (H, perf_k)
  *   GLO held                                                         T1 Level .. T4 Level (H)
- *   SCL held                                                         Scale Root, Scale, Chord, Chord Voicing
- *   EDIT held                                                        turn (ENG, No., FAV)
- *   the menu, a dialog, NAME   turn       turn           turn        turn
+ *   SCL / SEQ held                                                   their page's four (ly_page: LY_SCL, LY_SEQ)
+ *   other layers held                                                the first page of their family
+ *   EDIT / REC held, EUCLID                                          turn (ENG, No., FAV; CLICK ..; HITS STEPS ROT)
+ *   SELECT, 1.6.1               Tempo (GLO + SELECT, or MENU > SELECT BPM without BPM LOCK); turn (PAGE, MODW, VEL,
+ *                               BPM LOCK)
+ *   the menu, a dialog, NAME, the UBOOT countdown: every knob turn
  *   (H): FM1P_HIDDEN, a knob target only.
  *   param_epoch moves when the selected part, its engine, one of its engine descriptors (a mode-dependent label,
  *   engine_t.desc), or any knob's target (or a rewritten cell) changed: the targets are computed afresh at every call.
@@ -53,7 +68,7 @@
 
 #define FE_MELODEE 0
 #define FE_SLICE FELUCCA_SLICE
-#define FE_SELECT_TARGET fe_index_of(FEK_GP, G_BPM)   /* SELECT: the global tempo, everywhere but the menu, a dialog, NAME */
+#define FE_SELECT_TARGET fe_select_target()          /* SELECT: the global tempo (ui_input.c, below) */
 
 static int32_t fe_clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; }
 
@@ -396,6 +411,9 @@ static void fe_params_init(void)
             break;
         default: break;
         }
+        if (FE_SRC[i].kind == FEK_TP || FE_SRC[i].kind == FEK_GP || FE_SRC[i].kind == FEK_ED ||
+            FE_SRC[i].kind == FEK_TLV || FE_SRC[i].kind == FEK_KNOB)
+            p->flags |= FM1P_PERSIST;             /* (the autosave holds it: above) */
         if (d) {
             p->min = d->min;
             p->max = d->max;
@@ -447,9 +465,10 @@ static int32_t fe_page_target(const page_t *pg, uint32_t k, int layer)   /* edit
     int16_t *vp;
     const param_desc_t *d;
     k &= 3u;
-    if (pg->graph == GR_CHANCE || pg->graph == GR_MOTION || pg->graph == GR_SONG || pg->scope == SC_STEP ||
-        pg->graph == GR_BROWSE || pg->graph == GR_USER || pg->graph == GR_PATS || (pg->graph == GR_MOD && !k))
-        return -1;                                /* a cursor, a row, a slot, a preset list: turned */
+    if (pg->graph == GR_EVENTS || pg->graph == GR_SONG || pg->scope == SC_STEP || pg->graph == GR_BROWSE ||
+        pg->graph == GR_USER || pg->graph == GR_PATS || fop_page(pg->graph) || (pg->graph == GR_MOD && !k) ||
+        (pg->graph == GR_TOOLS && k == 1u))
+        return -1;                                /* a cursor, a row, a slot, a preset list, an operator: turned */
 #if FE_SLICE
     if (pg->graph == GR_SLICES && k < 2u)
         return -1;
@@ -467,36 +486,51 @@ static int32_t fe_page_target(const page_t *pg, uint32_t k, int layer)   /* edit
         return -1;
     return fe_cell_target(pg, k, d, vp);
 }
+/* SELECT (ui_input.c): GLO + SELECT is the tempo; else MENU > CONTROL > SELECT's mode: BPM (the tempo, unless MENU >
+ * BPM LOCK: then nothing), PAGE (the pages), MODW / VEL (it plays): turned */
+static int32_t fe_select_target(void)
+{
+    const int glo = layer_held() && ui.ly == LAYER_GLO;
+    if (!glo && (sel_mode() >= SEL_MODW || sel_mode() == SEL_PAGE || (ui_prefs & PREF_BPM_LOCK)))
+        return -1;
+    return fe_index_of(FEK_GP, G_BPM);
+}
 static int32_t fe_knob_compute(uint32_t role)
 {
     int16_t *vp;
     const param_desc_t *d;
     uint32_t l;
-    if (role >= NE || ui.menu || ui.confirm || name_on())
-        return -1;                                /* the menu, a dialog, NAME: their own (turned) */
-    if (layer_held()) {                           /* a layer's button held: KNOB 1..4 are the layer's */
+    if (role >= NE || ui.menu || ui.confirm || name_on() || ui.uboot)
+        return -1;                                /* the menu, a dialog, NAME, the UBOOT countdown: their own */
+    if (role == EN_SELECT)
+        return FE_SELECT_TARGET;
+    if (layer_held()) {                           /* a layer's button held: KNOB 1..4 are the layer's (layer_knob) */
         l = ui.ly % LAYER_N;
-        if (role == EN_SELECT)
-            return FE_SELECT_TARGET;
         if (role < EN_K1)
-            return -1;                            /* (PRESETS / ALGORITHM: swallowed) */
+            return -1;                            /* (PRESETS: FX's assign or nobody's; ALGORITHM: swallowed) */
         if (l == LAYER_FX)
             return fe_index_of(FEK_FXM, (int32_t)(role - EN_K1));
         if (l == LAYER_GLO)
             return fe_index_of(FEK_TLV, (int32_t)(role - EN_K1));
-        if (l == LAYER_EDIT)
-            return -1;                            /* ENG, No., FAV: lists */
-        return fe_page_target(l == LAYER_SCL ? &LY_SCL : &PAGES[page_first(LAYERS[l].fam)], role - EN_K1, 1);
+        if (l == LAYER_EDIT || l == LAYER_REC || (l == LAYER_SEQ && eu.on))
+            return -1;                            /* ENG, No., FAV; CLICK, COUNT-IN, LEVEL; EUCLID: lists, steps */
+        return fe_page_target(ly_page(l) ? ly_page(l) : &PAGES[page_first(LAYERS[l].fam)], role - EN_K1, 1);
     }
     switch (role) {
-    case EN_SELECT: return FE_SELECT_TARGET;
     case EN_ALGO: return fe_index_of(FEK_LIT, 0);   /* the selected part, on every page */
     case EN_PRESET: return -1;                    /* the sounds (HOME, PRESETS): a list */
     default: break;
     }
+    if (lock_held() || mom_down())
+        return -1;                                /* a step held (its lock), LFO held (MOMENTARY): not the page's */
     if (ui.home) {
-        d = home_param(role - EN_K1, &vp);
-        return d && vp && d->max > d->min ? fe_cell_target(0, role - EN_K1, d, vp) : -1;
+        const uint32_t k = role - EN_K1;
+        d = home_param(k, &vp);
+        if (!d || !vp || d->max <= d->min)
+            return -1;
+        if (home_trk(k) != TSEL)                  /* HOME LEVELS: KNOB k is part k's level */
+            return fe_index_of(FEK_TLV, (int32_t)k);
+        return fe_cell_target(0, k, d, vp);
     }
     return fe_page_target(cur_page(), role - EN_K1, 0);
 }
@@ -561,7 +595,7 @@ static int fe_knobs_update(void)
 static uint32_t fe_param_epoch(void)
 {
     uint32_t b, sig, moved = 0;
-    if (emu_hal.ready != 1u)
+    if (fm1core_fw_ready != 1u)
         return fe_epoch;                          /* (before the power-on: the tables as initialised) */
     b = (fe_edcur & 1u) ^ 1u;
     fe_ed_snap(b);

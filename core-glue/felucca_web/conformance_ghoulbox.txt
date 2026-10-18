@@ -1,0 +1,18 @@
+# GHOULBOX 2.3.2: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: the autosave (project.c, 1.2): KNOB 1 turned on HOME changes part 1's sound (GURDY BUZZ);
+# flash_sync writes the autosave at once (its quiet time waived: fw_core.h); the second unit restores it at power-on
+# ("RESTORED", the knob's new value on HOME)
+save wait 1500
+save knob KNOB1 +8
+save wait 400
+save quit
+saved wait 1500
+saved quit
+saved-lcd-differs
+# (no reboot-guard: GHOULBOX's own guard starts the USB RESCUE, not emulated: boot_options NULL)
+# OCT- + OCT+ held 5 s: UBOOT (fw_core.h, main.c's countdown)
+reboot wait 1500
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

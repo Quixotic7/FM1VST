@@ -1,0 +1,30 @@
+# JIANT FM 0.8.5: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# its signature splash runs ~2 s (SPL_WRITE + SPL_HOLD) with the keys held off (kb_boot_hold): the key after it
+settle_ms 2500
+# the flash round trip: DISPLAY > LARGE (the settings record; the autosave is off by default in JIANT): HOME held opens
+# the menu at DISPLAY > COLOR, PRESETS two rows down to LARGE, OCT+ turns it ON, HOME closes it; after the reboot HOME
+# shows the large text. (Not the palette: JIANT 0.6.81 sets a saved record without its JIANT_PAL_SEEN mark back to
+# the JIANT palette once, and a fresh unit's first record has no mark: settings_persist.c settings_jiant_once)
+save wait 2500
+save btn HOME down
+save wait 1200
+save btn HOME up
+save wait 400
+save knob PRESETS +2
+save wait 300
+save btn OCT+ 100
+save wait 400
+save btn HOME 100
+save wait 600
+save quit
+saved wait 2500
+saved quit
+saved-lcd-differs
+# the boot guard: a second failed boot in a row enters UBOOT (exit(3), fw_core.h as main.c fm1_cstart)
+reboot-guard 2
+# OCT- + OCT+ held 5 s: UBOOT (fw_core.h, main.c's countdown)
+reboot wait 2500
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

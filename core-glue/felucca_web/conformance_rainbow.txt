@@ -1,0 +1,27 @@
+# Rainbow Mode 1.1.5-rb: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# Rainbow mode (kid.c) runs from power-up and takes the frame: a key plays the friend's sound (the hello ends)
+# the flash round trip: the grown-ups' VOLUME (kept over power-off in the settings record: kid.c KID_VOL_BYTE):
+# HOME held 1 s opens it, OCT+ twice raises it (6 -> 8); after the reboot HOME held shows the VOLUME at 8
+save wait 1500
+save btn HOME down
+save wait 1300
+save btn OCT+ 100
+save wait 300
+save btn OCT+ 100
+save wait 300
+save btn HOME up
+save wait 800
+save quit
+saved wait 1500
+saved btn HOME down
+saved wait 1300
+saved quit
+saved-lcd-differs
+# the boot guard: a second failed boot in a row enters UBOOT (exit(3), fw_core.h as main.c fm1_cstart)
+reboot-guard 2
+# OCT- + OCT+ held 5 s: UBOOT (fw_core.h, main.c's countdown)
+reboot wait 1500
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

@@ -10,3 +10,15 @@
 [submodule "remote/RemoteFM1"]
 	path = remote/RemoteFM1
 	url = https://github.com/Quixotic7/RemoteFM1.git
+[submodule "cores/felucca-rainbow"]
+	path = cores/felucca-rainbow
+	url = https://github.com/joshbartlettband-web/felucca-rainbow
+[submodule "cores/ghoulbox-fm1-dungeon-synth"]
+	path = cores/ghoulbox-fm1-dungeon-synth
+	url = https://github.com/jasonpersinger/ghoulbox-fm1-dungeon-synth
+[submodule "cores/DUELL"]
+	path = cores/DUELL
+	url = https://github.com/oscillr/DUELL
+[submodule "cores/JIANT"]
+	path = cores/JIANT
+	url = https://github.com/juanjiant-bit/JIANT
