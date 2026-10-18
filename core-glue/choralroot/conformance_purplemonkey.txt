@@ -1,0 +1,4 @@
+# PurpleMonkey 0.11: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# nothing is stored (purplemonkey.c: the flash is the update's; tools/emu/pm_emu_fw.c keeps the image in RAM)
+flash none PurpleMonkey saves nothing to flash (its emulator keeps the image in RAM, the device unit writes none)
+# no boot guard, no reboot path (no exit() reachable from the emulator unit)

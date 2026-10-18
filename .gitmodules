@@ -22,3 +22,9 @@
 [submodule "cores/JIANT"]
 	path = cores/JIANT
 	url = https://github.com/juanjiant-bit/JIANT
+[submodule "cores/PurpleMonkeyFM1"]
+	path = cores/PurpleMonkeyFM1
+	url = https://github.com/Quixotic7/PurpleMonkeyFM1
+[submodule "cores/CoralFlower"]
+	path = cores/CoralFlower
+	url = https://github.com/FicusFicusov/CoralFlower

@@ -1,0 +1,16 @@
+# CoralFlower 0.2, the golden check (crf_golden_test.cpp): the core and tools/emu/emu (its build.sh) run this; every
+# shot must be the same picture and the run the same samples. After the splash (whose version line differs: build.sh
+# passes "ChoralRoot 0.22", the core the hub's "CoralFlower 0.2"): the chord sound list, a chord, PRESETS turned
+wait 3000
+shot home
+key C4 down
+key E4 down
+wait 400
+shot chord
+key C4 up
+key E4 up
+wait 300
+knob PRESETS +2
+wait 600
+shot presets
+quit

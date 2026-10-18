@@ -1,0 +1,21 @@
+# ChoralRoot 0.25.1: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: saving is manual since 0.18 (docs/SETTINGS.md): the tempo one detent up (SELECT on the view,
+# 120 -> 121 BPM), then the global save (SAVE held past the hold time: cr_settings_commit, the block and the session);
+# the second unit boots at 121 BPM
+save wait 600
+save knob SELECT +1
+save wait 300
+save btn SAVE 1000
+save wait 600
+save quit
+saved-param Tempo 121
+# the boot guard: three failed boots after a watchdog reset enter UBOOT (emu_fw.c emu_boot_guard: exit(3))
+reboot-guard 3 wdt
+# the update gesture: OCT- + OCT+ + HOME held 5 s leaves for the ROM's USB boot (cr_backup.c cr_update_poll:
+# CRB_UBOOT_GO, the emulator's exit(0))
+reboot wait 600
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot btn HOME down
+reboot wait 6500
+reboot quit

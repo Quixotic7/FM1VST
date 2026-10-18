@@ -1,0 +1,24 @@
+# PurpleMonkey 0.11, the golden check (crf_golden_test.cpp): the core and tools/emu/pm_emu run this; every shot must be
+# the same picture and the run the same samples. The pet on its world, a key (the synth), DRUMS and a beat, PET turned,
+# a knob
+wait 600
+shot boot
+key C4 down
+wait 300
+shot c4
+key C4 up
+wait 200
+btn FX
+wait 300
+btn PLAY
+wait 900
+shot drums
+btn PLAY
+wait 200
+knob SELECT +1
+wait 500
+shot pet
+knob KNOB1 +3
+wait 400
+shot knob1
+quit
