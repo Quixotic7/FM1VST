@@ -9,6 +9,8 @@
 # without the two banks (the firmware has no switch for that today).
 fm1_add_core(melodee ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/melodee UNIT core_melodee.c
              DESC core_melodee_desc.c PREFIX ME FAMILY melodee LICENSE GPL-3.0-only
+             CREDITS "The CZ engine's phase functions, envelope rate law and amplitude curve: adapted from the MAME uPD933 device model by Devin Acker, BSD-3-Clause:"
+             CREDITS_FILES LICENSES/BSD-3-Clause-uPD933.txt
              GATED "bundles Casio CZ-1 preset tones and Sequential Prophet-5 factory programs with no licence granted (LICENSING.md)"
              GEN ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h melodee_tables.h melodee_fm6.h melodee_cz1.h
                  melodee_prophet_factory.h x0x_drum_tables.h

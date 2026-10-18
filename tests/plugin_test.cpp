@@ -140,6 +140,11 @@ int main()
                     std::unique_ptr<LoadedCore> lc = CoreLoader::load(ci.path);
                     if (lc && lc->core()->gated)
                         gated += " " + ci.id;
+                    if (ci.id == "jiant")   // (the About box's credits: CoreInfo from the descriptor, ABI 6)
+                        check(ci.abi == FM1CORE_ABI && ci.credits.find("Carnegie Mellon University") != std::string::npos &&
+                                  ci.credits.find("Redistributions in binary form") != std::string::npos,
+                              "  ... jiant's credits carry the CMUdict BSD-2 notice (" + std::to_string(ci.credits.size()) +
+                                  " bytes)");
                 }
                 check(files == built && ids == built,
                       "  ... the bundle holds exactly the " + std::to_string(built.size()) + " cores built, and they load:" +

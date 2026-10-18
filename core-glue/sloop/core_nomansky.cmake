@@ -13,6 +13,7 @@
 # rights (or a build with the sprites left out: the generators write empty headers without the PNGs).
 fm1_add_core(nomansky ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/nomanskyFM/firmware UNIT core_nomansky.c
              DESC core_nomansky_desc.c FAMILY sloop LICENSE GPL-3.0-only
+             CREDITS "No Man Sky FM by Hericdk (github.com/hericdk/nomanskyFM): its author asks for this credit.\nBuilt on SLOOP by isod89, itself built on Felucca by Leo Kuroshita (Hugelton Instruments).\nA fan-made demake inspired by No Man's Sky: not affiliated with Hello Games."
              GATED "a fan-made demake of No Man's Sky (Hello Games): its sprite art (assets/*.png, one the game's key art redrawn) has no licence statement"
              GEN felucca_font.h felucca_tables.h felucca_samples.h felucca_drumkits.h felucca_fm6.h nms_abertura.h
                  nms_nave.h nms_decolagem.h nms_nave_cima.h nms_anao.h nms_nebulosa.h nms_nave_lado.h nms_cabine.h

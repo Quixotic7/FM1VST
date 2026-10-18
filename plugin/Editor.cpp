@@ -182,7 +182,7 @@ FM1Editor::FM1Editor(FM1Processor &p)
         }
     };
 
-    for (auto *b : {&save_, &saveAs_, &rename_, &delete_, &reset_, &export_, &import_, &power_, &bigLcd_})
+    for (auto *b : {&save_, &saveAs_, &rename_, &delete_, &reset_, &export_, &import_, &power_, &bigLcd_, &info_})
         addAndMakeVisible(*b);
     save_.onClick = [this] {
         const juce::String n = proc_.currentPresetName();
@@ -263,6 +263,8 @@ FM1Editor::FM1Editor(FM1Processor &p)
     bigLcd_.setTooltip("Show the LCD big above the panel (` key)");
     bigLcd_.setToggleState(proc_.getBigLcd(), juce::dontSendNotification);
     bigLcd_.onClick = [this] { setBigLcd(bigLcd_.getToggleState()); };
+    info_.setTooltip("About the firmware: its version, licence, source and credits");
+    info_.onClick = [this] { showFirmwareInfo(); };
 
     addAndMakeVisible(transpose_);
     for (int o = -2; o <= 2; o++)
@@ -340,7 +342,7 @@ FM1Editor::FM1Editor(FM1Processor &p)
     // the bar's controls never take the keyboard focus: a click on them leaves the computer keys on the panel
     for (juce::Component *c : std::initializer_list<juce::Component *>{
              &cores_, &presets_, &transpose_, &themes_, &buttonMode_, &encMode_, &encSteps_, &save_, &saveAs_, &rename_, &delete_, &reset_,
-             &export_, &import_, &power_, &bigLcd_, &notesPlayKeys_, &keyNotesToFw_, &remote_, &remoteMenu_}) {
+             &export_, &import_, &power_, &bigLcd_, &info_, &notesPlayKeys_, &keyNotesToFw_, &remote_, &remoteMenu_}) {
         c->setWantsKeyboardFocus(false);
         c->setMouseClickGrabsKeyboardFocus(false);
     }
@@ -414,6 +416,8 @@ void FM1Editor::resized()
     themes_.setBounds(row2.removeFromLeft(150));
     row2.removeFromLeft(4);
     bigLcd_.setBounds(row2.removeFromLeft(70));
+    row2.removeFromLeft(4);
+    info_.setBounds(row2.removeFromLeft(56));
     row2.removeFromLeft(8);
     status_.setBounds(row2);
     panel_.setBounds(r);
@@ -561,6 +565,45 @@ void FM1Editor::refreshStatus()
         lastCore_ = juce::String(s.info.id);
         panel_.setButtonNames(proc_.buttonNames());
     }
+}
+
+void FM1Editor::showFirmwareInfo()
+{
+    const FM1Processor::CoreStatus s = proc_.getCoreInfo();
+    const CoreInfo &c = s.info;
+    auto u = [](const std::string &t) { return juce::String::fromUTF8(t.c_str()); };
+    juce::String t;
+    if (!s.loaded) {
+        t << "No firmware loaded." << (s.message.isNotEmpty() ? "\n" + s.message : juce::String());
+    } else {
+        t << u(c.name) << " " << u(c.version) << "\n";
+        t << "Core: " << u(c.id) << " (" << (c.family.empty() ? u(c.id) : u(c.family)) << " glue, core ABI "
+          << (int)c.abi << ")\n";
+        t << "Licence: " << (c.license.empty() ? juce::String("(not given)") : u(c.license)) << "\n";
+        t << "Source: " << u(c.source_url) << "\n";
+        if (!c.gated.empty())
+            t << "Left out of public FM1VST builds: " << u(c.gated) << "\n";
+        t << "Module: " << u(c.path) << "\n";
+        t << "\nCredits and notices\n";
+        t << (c.credits.empty() ? juce::String("(none beyond the licence)") : u(c.credits)) << "\n";
+    }
+    t << "\nFM1VST " << JucePlugin_VersionString << ": the FM-1 emulator, GPL-3.0-only.";
+    auto *ed = new juce::TextEditor();
+    ed->setMultiLine(true, true);
+    ed->setReadOnly(true);
+    ed->setScrollbarsShown(true);
+    ed->setCaretVisible(false);
+    ed->setFont(juce::FontOptions(13.0f));
+    ed->setText(t, false);
+    ed->setSize(560, 420);
+    juce::DialogWindow::LaunchOptions o;
+    o.content.setOwned(ed);
+    o.dialogTitle = "About " + (s.loaded ? u(c.name) : juce::String("the firmware"));
+    o.componentToCentreAround = this;
+    o.escapeKeyTriggersCloseButton = true;
+    o.useNativeTitleBar = true;
+    o.resizable = true;
+    o.launchAsync();
 }
 
 void FM1Editor::refreshRemote()

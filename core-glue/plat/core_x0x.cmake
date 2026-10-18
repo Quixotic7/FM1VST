@@ -6,6 +6,7 @@ fm1_add_core(x0x ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_x0x} UNIT core_x0x.c DESC c
              EXTRA_SOURCES x0x_drum909.c x0x_drum808.c x0x_bass303.c x0x_breaks.c x0x_fxbus.c x0x_master.c
                            x0x_sequencer.c x0x_tb3po.c x0x_pattern.c x0x_motion.c x0x_engine.c
              FAMILY plat LICENSE GPL-3.0-only
+             CREDITS "The break generator: ported from schwung-breakbeat (BB Gen) by mestela, used with the author's permission (that repository carries no licence file)."
              GEN felucca_font.h x0x_drum_samples.h ann_words.h x0x_break_bank.h PYTHON_NEEDS raqm
              VERSION 1.1.0
              FLAGS -ffp-contract=off

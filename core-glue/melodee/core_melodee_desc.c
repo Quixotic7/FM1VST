@@ -39,6 +39,7 @@ static fm1core_t CORE = {
     .family = FM1CORE_FAMILY,
     .license = FM1CORE_LICENSE,
     .gated = FM1CORE_GATED_OR_NULL,
+    .credits = FM1CORE_CREDITS_OR_NULL,
     .flash_size = 0x100000u,
     /* the printed labels, FM1P_B_* order. firmware/src/panel.c B_NAME calls the second one SCL (the scale layer);
      * tests/plugin_test.cpp expects "SEL" for the Felucca-family cores, so it stays SEL until that test moves */

@@ -14,6 +14,11 @@
  * every family's planes (lit / mid / dim / faint / glow / breath / backlight) map onto one array. fm1panel_t's layout
  * and the descriptor's are the ABI: a change to either bumps FM1CORE_ABI.
  *
+ * ABI 6 (2026-10-18): the descriptor gains `credits` at its end (the firmware's credits and third-party notices, for
+ * the plugin's firmware info). The descriptor carries no size, so only the version tells a host whether the field
+ * is there: hence the bump. Nothing else moved, so an ABI 5 descriptor is ABI 6's prefix and the host still loads ABI
+ * 5 modules (FM1CORE_ABI_MIN), without credits: read the field through fm1core_credits(), never directly.
+ *
  * THREADING CONTRACT
  *   - Every entry point of one core (and every read or write of its panel) is made from ONE thread at a time, in
  *     order; the core never starts a thread or a timer of its own. In the plugin that is the audio thread (the
@@ -120,7 +125,8 @@ typedef struct {
                                                  * change it during init (1: up) */
 } fm1panel_t;
 
-#define FM1CORE_ABI 5u
+#define FM1CORE_ABI 6u
+#define FM1CORE_ABI_MIN 5u   /* the oldest the host loads: ABI 5 is ABI 6 without credits */
 /* the flash_path to pass to options() to boot from the bytes given to flash_stage() (ABI 2) */
 #define FM1CORE_FLASH_STAGED "fm1core:staged"
 #define FM1CORE_SYMBOL "fm1core_get"
@@ -233,7 +239,23 @@ typedef struct {
      * turns it as a relative control (panel->enc detents). MASTER is the panel's absolute pot (panel->master): -1. Valid
      * as of the last param_epoch() call (call that first). Clock thread. NULL: every knob relative. */
     int32_t (*knob_target)(int role);
+
+    /* ---- ABI 6 ---- */
+    /* NULL, or the firmware's credits and the notices its licences ask a binary to carry (a credit line its author
+     * requests, a BSD / MIT notice for code or data it compiles in), as plain text: lines separated by '\n', a blank
+     * line between notices. The host shows it in its firmware info. Read it with fm1core_credits(). */
+    const char *credits;
 } fm1core_t;
+
+/* the descriptor's credits, NULL for none or for an ABI 5 core (whose descriptor ends before the field) */
+static inline const char *fm1core_credits(const fm1core_t *c)
+{
+#ifdef __cplusplus
+    return c && c->abi_version >= 6u ? c->credits : nullptr;
+#else
+    return c && c->abi_version >= 6u ? c->credits : (const char *)0;
+#endif
+}
 
 typedef const fm1core_t *(*fm1core_get_fn)(uint32_t abi_version);
 

@@ -18,6 +18,8 @@
 struct CoreInfo {
     std::string path;       // the module file as found
     std::string id, name, version, source_url;
+    std::string family, license, gated, credits;   // (gated, credits: "" for none; credits from ABI 6)
+    uint32_t abi = 0;
     uint32_t flash_size = 0;
 };
 
@@ -56,7 +58,7 @@ public:
     // read one module's descriptor without keeping it loaded
     static bool probe(const std::string &path, CoreInfo &out, std::string *error = nullptr);
 
-    // a private copy of the module, loaded (RTLD_NOW | RTLD_LOCAL), its ABI checked (FM1CORE_ABI only: a core built
-    // for an older ABI is refused with an error naming its ABI); nullptr on failure
+    // a private copy of the module, loaded (RTLD_NOW | RTLD_LOCAL), its ABI checked (FM1CORE_ABI_MIN .. FM1CORE_ABI:
+    // a core built for another ABI is refused with an error naming its ABI); nullptr on failure
     static std::unique_ptr<LoadedCore> load(const std::string &path, std::string *error = nullptr);
 };

@@ -86,6 +86,7 @@ private:
     void refreshStatus();
     void refreshRemote();
     void showRemoteMenu();
+    void showFirmwareInfo();                     // About: the loaded firmware's version, licence, source, credits
     void refreshThemes();
     void applyTheme(const Theme &t);
     void openThemeEditor();
@@ -98,7 +99,7 @@ private:
     Constrainer constrainer_;
     juce::ComboBox cores_, presets_, transpose_, themes_, buttonMode_, encMode_, encSteps_;
     juce::TextButton save_{"Save"}, saveAs_{"Save as"}, rename_{"Rename"}, delete_{"Delete"}, reset_{"Reset flash"},
-        export_{"Export"}, import_{"Import"}, power_{"Power on"}, bigLcd_{"Big LCD"};
+        export_{"Export"}, import_{"Import"}, power_{"Power on"}, bigLcd_{"Big LCD"}, info_{"About"};
     juce::ToggleButton notesPlayKeys_{"MIDI notes play keys"}, keyNotesToFw_{"... and go to the firmware's MIDI in"};
     juce::Label status_;
     // Remote FM-1: the toggle (saved in the state), its menu (the MIDI option, diagnostics), the link's status

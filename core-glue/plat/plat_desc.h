@@ -40,6 +40,7 @@ static fm1core_t CORE = {
     .family = FM1CORE_FAMILY,
     .license = FM1CORE_LICENSE,
     .gated = FM1CORE_GATED_OR_NULL,
+    .credits = FM1CORE_CREDITS_OR_NULL,
     .flash_size = 0x100000u,
     .button_names = FM1CORE_PL_BUTTONS,
     .params = NULL,

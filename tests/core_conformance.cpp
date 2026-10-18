@@ -4,10 +4,10 @@
 //   core_conformance MODULE.fm1core ID FAMILY LICENSE [CONFORMANCE.txt] [OUT_DIR]
 //
 // On the loaded module, through the engine's Device as the plugin drives it:
-//   1. descriptor  ABI 5, id / name / version / source_url / family / license filled (family and licence as CMake's
+//   1. descriptor  ABI 6, id / name / version / source_url / family / license filled (family and licence as CMake's
 //                  fm1_add_core gave them), gated NULL or a reason, the 14 button names, the keymap (every key id
-//                  0..40 once on rows 1..4), the required entry points, a 1 MiB flash; after init the panel table
-//                  (btn_id a permutation of 0..13, enc_id of 0..6, enc_dir +-1)
+//                  0..40 once on rows 1..4), the required entry points, a 1 MiB flash, the credits NULL or text;
+//                  after init the panel table (btn_id a permutation of 0..13, enc_id of 0..6, enc_dir +-1)
 //   2. screen      boots from a fresh flash (the staged boot, as the plugin does); the LCD is not blank (two or more
 //                  colours) within boot_ms (3 s) of device time; written to OUT_DIR/<id>.ppm
 //   3. sound       after the `sound` script (if any) and settle_ms of device time (1 s), the note key (D4) is held
@@ -182,6 +182,12 @@ int main(int argc, char **argv)
         check(filled(c->license) && want_license == c->license,
               std::string("license \"") + (c->license ? c->license : "") + "\" (CMake: " + want_license + ")");
         check(!c->gated || *c->gated, std::string("gated: ") + (c->gated ? c->gated : "no"));
+        {
+            const char *cr = fm1core_credits(c);
+            const std::string first = cr ? std::string(cr).substr(0, std::string(cr).find('\n')) : "";
+            check(!cr || *cr, std::string("credits (ABI 6): ") +
+                                  (cr ? std::to_string(std::strlen(cr)) + " bytes, \"" + first.substr(0, 90) + "\"" : "none"));
+        }
         bool names = true;
         std::string all;
         for (int i = 0; i < FM1P_NB; i++) {

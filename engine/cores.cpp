@@ -82,16 +82,22 @@ static const fm1core_t *open_core(const std::string &path, void **handle, std::s
         dlclose(h);
         return nullptr;
     }
-    const fm1core_t *c = get(FM1CORE_ABI);
-    if (!c || c->abi_version != FM1CORE_ABI) {
+    // this host's ABI, else an older one it still loads (ABI 5: ABI 6's descriptor without credits, fm1core.h)
+    const fm1core_t *c = nullptr;
+    for (uint32_t v = FM1CORE_ABI; v >= FM1CORE_ABI_MIN && !c; v--) {
+        c = get(v);
+        if (c && c->abi_version != v)
+            c = nullptr;
+    }
+    if (!c) {
         // which ABI it was built for (asking an older module for its own ABI only returns a pointer: nothing runs)
         uint32_t built = 0;
         for (uint32_t v = 1; v < 64 && !built; v++)
-            if (v != FM1CORE_ABI && get(v))
+            if ((v < FM1CORE_ABI_MIN || v > FM1CORE_ABI) && get(v))
                 built = v;
         if (error)
             *error = path + ": " + (built ? "a core for ABI " + std::to_string(built) : std::string("a core for another ABI")) +
-                     "; this host loads ABI " + std::to_string(FM1CORE_ABI) +
+                     "; this host loads ABI " + std::to_string(FM1CORE_ABI_MIN) + ".." + std::to_string(FM1CORE_ABI) +
                      " cores only (rebuild the core against this FM1VST's core-api/fm1core.h)";
         dlclose(h);
         return nullptr;
@@ -113,6 +119,11 @@ bool CoreLoader::probe(const std::string &path, CoreInfo &out, std::string *erro
     out.name = str(c->name);
     out.version = str(c->version);
     out.source_url = str(c->source_url);
+    out.family = str(c->family);
+    out.license = str(c->license);
+    out.gated = str(c->gated);
+    out.credits = str(fm1core_credits(c));
+    out.abi = c->abi_version;
     out.flash_size = c->flash_size;
     dlclose(h);                  // nothing was initialised: no shutdown needed
     return true;
