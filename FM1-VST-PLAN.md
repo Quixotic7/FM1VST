@@ -459,6 +459,10 @@ statically. `plugin/RemoteLink` is fm1remote's design inside a plugin:
   audio thread publishes the LCD + LEDs into a lock-free triple buffer at block end (at most every 50 device ms, only
   when `lcd_writes` or an LED changed; at once after a power-on, whose new screen the session resends whole).
   start / stop never block; the destructor joins the thread after SESSION 0 (at most 600 ms).
+- **Discovery touches only an FM-1.** FM1VST builds its own CoreMIDI back end (`plugin/RemoteMidi.c` in place of
+  RemoteFM1's `coremidi.c`): HELLO goes only to devices with USB IDs 1209:0001 (Apple's USB MIDI driver's
+  "USBVendorProduct"), or, without that property, an "FM-1" name; never to other hardware; nothing when there is no
+  candidate.
 - **One owner per unit.** An exclusive `flock` on `<fm1emu home>/remote.lock` (a second instance or the Standalone
   next to Live: "in use", retried every second).
 - **The merge.** The unit is one more input source, merged like the panel GUI: keys in the OR of key masks, buttons

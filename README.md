@@ -353,8 +353,11 @@ play the core, and the core's screen and LEDs show on the unit. It needs:
 
 Frames go over the unit's vendor bulk interface when it answers (libusb, linked statically: the bundles need no
 Homebrew library), else over SysEx; the panel events always come as plain MIDI. While searching, the plugin sends
-RemoteFM1's HELLO (a SysEx with the non-commercial ID `7D`) once a second to each USB-MIDI port pair, the way the
-protocol finds the unit. The physical knobs are device turns for the knob parameters (the host feedback and a
+RemoteFM1's HELLO (a SysEx with the non-commercial ID `7D`) once a second, and only to what can be an FM-1: a USB-MIDI
+device whose USB IDs are 1209:0001 (RemoteFM1's, shared with ChoralRoot), or, for a device without the USB property,
+one named "FM-1" (`plugin/RemoteMidi.c`, `plugin/RemoteCandidates.h`). Other MIDI hardware (an audio interface, a
+controller, an FM-1 on the stock firmware) never gets a message, and with no candidate nothing is sent at all. libusb
+opens only 1209:0001 with a vendor-class interface. The physical knobs are device turns for the knob parameters (the host feedback and a
 Roto-Control's motor follow them as they follow a turn on the plugin's panel); MASTER moves the "Knob Master"
 parameter. The design (threads, the merge with the panel GUI, the parameters and MIDI) is in `plugin/Processor.h` and
 `plugin/RemoteLink.h`, and in FM1-VST-PLAN.md 4.10.
@@ -456,7 +459,9 @@ The tests:
   its framebuffer.
 
 - `remote_test`: Remote FM-1 against libremotefm1's in-process fake unit (`FM1EMU_REMOTE_FAKE=1`: no USB or CoreMIDI
-  device is opened): the host MIDI filter (exactly the unit's panel messages and RemoteFM1 SysEx); the unit lock
+  device is opened): the host MIDI filter (exactly the unit's panel messages and RemoteFM1 SysEx); discovery's
+  candidates (a table of endpoints with and without the USB property: only 1209:0001, or an "FM-1" name without the
+  property, never an updater port, never the Onyx, a Roto-Control or a stock FM-1); the unit lock
   (two links on one lock file: the second is *in use* and sends nothing, then takes over when the first stops); the
   processor with Remote on, in real time: the session starts on the (fake) bulk pipe, the unit's shadow equals
   `hal->lcd` once settled, the LEDs equal `hal->led` / `led_dim`, a key, a button, an encoder (PRESETS: a device

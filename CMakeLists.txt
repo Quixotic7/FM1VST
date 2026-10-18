@@ -159,9 +159,13 @@ if(NOT EXISTS ${RFM}/host/src/session.c)
     message(FATAL_ERROR "${RFM} is empty: run git submodule update --init --recursive")
 endif()
 file(GLOB RFM_SOURCES ${RFM}/host/src/*.c)
+# The CoreMIDI back end is FM1VST's own, plugin/RemoteMidi.c (RemoteFM1's coremidi.c with discovery limited to what can
+# be an FM-1: USB IDs 1209:0001, else an "FM-1" name; plugin/RemoteCandidates.h), so HELLO never reaches other MIDI
+# hardware. host.c (the glue) and usb.c (libusb: only 1209:0001 with a vendor-class interface) are RemoteFM1's.
 file(GLOB RFM_MAC_SOURCES ${RFM}/host/src/macos/*.c)
-add_library(remotefm1 STATIC ${RFM_SOURCES} ${RFM_MAC_SOURCES})
-target_include_directories(remotefm1 PUBLIC ${RFM}/host/include ${RFM}/proto
+list(FILTER RFM_MAC_SOURCES EXCLUDE REGEX "/coremidi\\.c$")
+add_library(remotefm1 STATIC ${RFM_SOURCES} ${RFM_MAC_SOURCES} plugin/RemoteMidi.c)
+target_include_directories(remotefm1 PUBLIC ${RFM}/host/include ${RFM}/proto ${CMAKE_CURRENT_SOURCE_DIR}/plugin
                            PRIVATE ${RFM}/firmware/src ${RFM}/host/src/macos)
 set_target_properties(remotefm1 PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED ON POSITION_INDEPENDENT_CODE ON)
 target_compile_options(remotefm1 PRIVATE -O2 -Wall -Wextra -Wno-deprecated-declarations -Wno-unused-parameter)

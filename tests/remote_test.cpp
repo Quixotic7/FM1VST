@@ -3,6 +3,8 @@
 // loopback at the M0 rates): FM1EMU_REMOTE_FAKE=1 is set here before anything else, so nothing on USB or CoreMIDI is
 // ever opened (every link is checked to be the fake before it is started).
 // (m) the host MIDI filter: the unit's own panel events and RemoteFM1 SysEx, nothing else;
+// (c) discovery's candidates (plugin/RemoteMidi.c): only what can be an FM-1 ever gets HELLO (its USB IDs; a name only
+//     without the USB property; never an updater port);
 // (l) the unit lock: two links on one lock file, the second "in use" (touching nothing) until the first lets go, then
 //     it takes over;
 // (p) the processor with Remote on, ChoralRoot booted, paced in real time (the session runs on the wall clock): the
@@ -22,6 +24,7 @@
 #include <thread>
 
 #include "Processor.h"
+#include "RemoteCandidates.h"
 #include "rfm/fake.h"
 
 static int fails = 0;
@@ -184,6 +187,39 @@ int main()
         for (const Case &c : cases)
             check(FM1Processor::isRemotePanelMidi(c.m) == c.drop,
                   std::string(c.what) + (c.drop ? ": dropped" : ": passed"));
+    }
+
+    // ---- (c) discovery: which CoreMIDI endpoints get RemoteFM1's HELLO
+    {
+        std::printf("(c) discovery's candidates\n");
+        const int32_t fm1 = FM1_REMOTE_USB_ID, onyx = (int32_t)0x0A73001F, stock = (int32_t)0x4C4AC755, roto = (int32_t)(0x1D50u << 16 | 0x6189u);
+        struct Ep { int hasUsb; int32_t usb; const char *dev, *ep; bool want; const char *what; };
+        const Ep eps[] = {
+            {1, fm1, "RemoteFM1", "RemoteFM1", true, "USB 1209:0001 \"RemoteFM1\""},
+            {1, fm1, "ChoralRoot FM-1", "ChoralRoot FM-1", true, "USB 1209:0001 with the stale ChoralRoot name"},
+            {1, fm1, "FM-1_015", "FM-1_015", true, "USB 1209:0001 \"FM-1_015\""},
+            {1, fm1, "Mystery", "Port 1", true, "USB 1209:0001 with any name"},
+            {1, fm1, "FM-1", "FM-1 Update", false, "USB 1209:0001's updater port"},
+            {1, onyx, "Onyx Producer 2x2", "Onyx Producer 2x2", false, "an Onyx Producer (its USB IDs)"},
+            {1, stock, "FM-1", "FM-1", false, "an FM-1 on the stock firmware (M-VAVE's IDs 4c4a:c755)"},
+            {1, (int32_t)0x12090106, "FM-106", "FM-106", false, "1209:0106 \"FM-106\""},
+            {1, (int32_t)0x12090002, "Felucca Update", "Felucca Update", false, "1209:0002 \"Felucca Update\""},
+            {1, roto, "Roto-Control", "Roto-Control", false, "a Roto-Control"},
+            {1, onyx, "My FM-1 rack", "FM-1 thru", false, "another USB device named FM-1: its IDs win"},
+            {1, (int32_t)(0x1209u << 16 | 0x0002u), "FM-1", "FM-1", false, "1209:0002 (another pid.codes device)"},
+            {1, (int32_t)(0x1208u << 16 | 0x0001u), "FM-1", "FM-1", false, "1208:0001"},
+            {0, 0, "ChoralRoot FM-1", "ChoralRoot FM-1", true, "no USB property, \"ChoralRoot FM-1\""},
+            {0, 0, "M-VAVE fm-1", "Port 1", true, "no USB property, \"fm-1\" in the device's name"},
+            {0, 0, "Device", "FM-1 MIDI", true, "no USB property, \"FM-1\" in the endpoint's name"},
+            {0, 0, "Onyx Producer 2x2", "Onyx Producer 2x2", false, "no USB property, an Onyx"},
+            {0, 0, "FM1VST", "FM1", false, "no USB property, \"FM1\" (no dash)"},
+            {0, 0, "FM-1", "FM-1 Update", false, "no USB property, an FM-1 updater port"},
+            {0, 0, nullptr, nullptr, false, "no USB property, no names"},
+            {0, 0, "", "", false, "no USB property, empty names"},
+        };
+        for (const Ep &e : eps)
+            check((fm1_remote_midi_candidate(e.hasUsb, e.usb, e.dev, e.ep) != 0) == e.want,
+                  std::string(e.what) + (e.want ? ": a candidate" : ": never touched"));
     }
 
     // ---- (l) the unit lock
