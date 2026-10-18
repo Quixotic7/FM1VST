@@ -9,10 +9,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <set>
 #include <string>
 #include <vector>
 
 #include "Processor.h"
+#include "built_cores.h"
 
 static int fails = 0;
 static void check(bool c, const std::string &what)
@@ -110,10 +112,13 @@ int main()
     {
         FM1Processor p;
         const std::vector<CoreInfo> cores = p.listCores();
+        const std::set<std::string> built = built_cores();
         bool found = false;
         for (const CoreInfo &c : cores)
-            found = found || c.id == "choralroot";
-        check(found, "listCores() finds choralroot (bundled dir " + FM1Processor::bundledCoresDir().getFullPathName().toStdString() + ")");
+            found = found || c.id == FM1_DEFAULT_CORE;
+        check(found && p.getCoreInfo().loaded && p.getCoreInfo().info.id == FM1_DEFAULT_CORE,
+              std::string("listCores() finds the default firmware, " FM1_DEFAULT_CORE ", and a new instance loads it (bundled dir ") +
+                  FM1Processor::bundledCoresDir().getFullPathName().toStdString() + ")");
         check(FM1Processor::userCoresDir().isDirectory() &&
                   FM1Processor::userCoresDir().isAChildOf(scratch),
               "the user cores folder is under FM1EMU_HOME: " + FM1Processor::userCoresDir().getFullPathName().toStdString());
@@ -121,21 +126,41 @@ int main()
             const juce::File b(bundle);
             const juce::File exe = b.getChildFile("Contents/MacOS/FM1VST");
             const juce::File d = FM1Processor::bundledCoresDirFor(exe);
-            check(exe.existsAsFile() && d == b.getChildFile("Contents/Resources/cores") &&
-                      d.getChildFile("choralroot.fm1core").existsAsFile() &&
-                      d.getChildFile("felucca.fm1core").existsAsFile() && d.getChildFile("melodee.fm1core").existsAsFile(),
-                  "installed " + b.getFileName().toStdString() + ": cores resolve to " + d.getFullPathName().toStdString() +
-                      " (choralroot, felucca, melodee .fm1core there)");
+            check(exe.existsAsFile() && d == b.getChildFile("Contents/Resources/cores"),
+                  "installed " + b.getFileName().toStdString() + ": cores resolve to " + d.getFullPathName().toStdString());
             if (d.isDirectory()) {
-                const std::vector<CoreInfo> in = CoreLoader::scan({d.getFullPathName().toStdString()});
-                std::string ids;
-                for (const CoreInfo &ci : in)
-                    ids += " " + ci.id + " (" + ci.name + " " + ci.version + ")";
-                check(in.size() == 3, "  ... and the modules there load:" + ids);
+                // exactly the cores CMake built (FM1_PUBLIC_BUILD: the gated ones left out), each file loading
+                std::set<std::string> files, ids;
+                for (const juce::File &f : d.findChildFiles(juce::File::findFiles, false, "*" FM1CORE_SUFFIX))
+                    files.insert(f.getFileNameWithoutExtension().toStdString());
+                std::string list, gated;
+                for (const CoreInfo &ci : CoreLoader::scan({d.getFullPathName().toStdString()})) {
+                    ids.insert(ci.id);
+                    list += " " + ci.id + " (" + ci.name + " " + ci.version + ")";
+                    std::unique_ptr<LoadedCore> lc = CoreLoader::load(ci.path);
+                    if (lc && lc->core()->gated)
+                        gated += " " + ci.id;
+                }
+                check(files == built && ids == built,
+                      "  ... the bundle holds exactly the " + std::to_string(built.size()) + " cores built, and they load:" +
+                          list);
+#if FM1_PUBLIC_BUILD
+                check(gated.empty(), "  ... a public build: no gated core in it" + (gated.empty() ? "" : ":" + gated));
+#else
+                std::printf("        (gated, left out of a public build:%s)\n", gated.c_str());
+#endif
             }
         }
         check(FM1Processor::bundledCoresDirFor(juce::File("/tmp/plugin_test")) == juce::File(),
               "an executable outside a bundle has no bundled cores dir");
+        // the rest drives ChoralRoot, Felucca and Melodee: a public build leaves two of them out
+        if (!core_built("choralroot") || !core_built("felucca") || !core_built("melodee")) {
+            if (fails) {
+                std::printf("plugin_test: FAIL\n");
+                return 1;
+            }
+            require_cores("plugin_test", {"choralroot", "felucca", "melodee"});
+        }
 
         // the parameters: the eight knobs, the Tier 2 slots t2_00 .., then the 41 of Tier 1, the ids in order
         const auto &ps = p.getParameters();
@@ -235,11 +260,18 @@ int main()
     a.masterParam()->setValueNotifyingHost(a.masterParam()->convertTo0to1(724));
     ha.block();
 
-    // a setting the firmware persists (OCT+ moves the keyboard's octave): makes the flash differ from a fresh one
+    // a setting the firmware persists, saved: OCT+ moves the keyboard's octave, then the global save (SAVE held past
+    // its hold time: ChoralRoot saves manually since 0.18, docs/SETTINGS.md); makes the flash differ from a fresh one
     a.buttonParam(EMU_B_OCTUP)->setValueNotifyingHost(1.0f);
     ha.run_ms(60);
     a.buttonParam(EMU_B_OCTUP)->setValueNotifyingHost(0.0f);
     ha.run_ms(100);
+    a.setButtonMode(FM1Processor::kButtonHold);   // (the value is the held state: SAVE held 1 s)
+    a.buttonParam(EMU_B_SAVE)->setValueNotifyingHost(1.0f);
+    ha.run_ms(1000);
+    a.buttonParam(EMU_B_SAVE)->setValueNotifyingHost(0.0f);
+    ha.run_ms(300);
+    a.setButtonMode(FM1Processor::kButtonTap);
 
     // ---- (b) 44.1 kHz: sound too (the resampler bypassed)
     std::vector<uint8_t> freshFlash;
@@ -265,7 +297,7 @@ int main()
     check(flashA.size() == 0x100000u, "flash image " + std::to_string(flashA.size()) + " bytes; state " +
                                           std::to_string(state.getSize()) + " bytes");
     const size_t dFresh = diffBytes(flashA, freshFlash);
-    check(dFresh != 0 && dFresh != (size_t)-1, "the flash after OCT+ differs from a fresh unit's (" + std::to_string(dFresh) + " bytes)");
+    check(dFresh != 0 && dFresh != (size_t)-1, "the flash after OCT+ and the global save differs from a fresh unit's (" + std::to_string(dFresh) + " bytes)");
     {
         FM1Processor c;
         c.setStateInformation(state.getData(), (int)state.getSize());
@@ -334,10 +366,16 @@ int main()
         FM1Processor s;
         Host hs(s, 48000.0, 256);
         hs.run_ms(600);
-        // Knob Select is "Tempo" on the view (a setting ChoralRoot keeps in its flash)
+        // Knob Select is "Tempo" on the view (a setting ChoralRoot keeps in its flash, by the global save)
         KnobParameter *tempo = s.knobParam(EMU_E_SELECT);
         tempo->setValueNotifyingHost(tempo->toNorm(133));
         hs.run_ms(100);
+        s.setButtonMode(FM1Processor::kButtonHold);   // (the value is the held state: SAVE held 1 s)
+        s.buttonParam(EMU_B_SAVE)->setValueNotifyingHost(1.0f);
+        hs.run_ms(1000);
+        s.buttonParam(EMU_B_SAVE)->setValueNotifyingHost(0.0f);
+        hs.run_ms(300);
+        s.setButtonMode(FM1Processor::kButtonTap);
         const std::vector<uint8_t> crFlash = s.currentFlash();
         const std::vector<uint8_t> crFresh = freshFlash;
         // the Tier 2 slots' names (none by default) and the knobs' functions (their names never change)

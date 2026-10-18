@@ -5,6 +5,7 @@
 // WAV when it exists), A and B must differ. Then A is unloaded while B keeps running: B still plays, unchanged.
 #include <string>
 
+#include "built_cores.h"
 #include "test_util.h"
 
 static std::string replace_all(std::string s, const std::string &from, const std::string &to)
@@ -16,6 +17,7 @@ static std::string replace_all(std::string s, const std::string &from, const std
 
 int main()
 {
+    require_cores("double_load_test", {"choralroot", "felucca"});
     std::string err, text;
     Script sa, sb;
     int fails = 0;

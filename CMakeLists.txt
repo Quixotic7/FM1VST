@@ -39,12 +39,29 @@ foreach(_f IN LISTS FM1_CORE_CMAKES)
     include(${_f})
 endforeach()
 message(STATUS "cores: ${FM1_CORE_IDS}")
-# ChoralRoot's tree: the reference emulator and the replay tests below are its own
+# ChoralRoot's tree: the reference emulator and the replay tests below are its own. They need the choralroot core,
+# which a public build leaves out (gated): then they are not built, and the tests that need it skip (77, saying so).
 set(CR ${CMAKE_CURRENT_SOURCE_DIR}/cores/ChoralRootFM1)
-set(CR_GEN_NAMES ui_fonts.h cr_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h felucca_tables.h felucca_fm6.h
-                 melodee_cz1.h felucca_samples.h)
+set(FM1_HAVE_CR OFF)
+if(choralroot IN_LIST FM1_CORE_IDS)
+    set(FM1_HAVE_CR ON)
+endif()
+# (its generate step's outputs: the GEN list of core-glue/choralroot/core_choralroot.cmake)
+set(CR_GEN_NAMES ui_fonts.h cr_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h felucca_tables.h cr_layouts.h
+                 felucca_fm6.h melodee_cz1.h melodee_prophet_factory.h felucca_samples.h)
 set(CR_GEN_HEADERS ${CR_GEN_NAMES})
 list(TRANSFORM CR_GEN_HEADERS PREPEND ${CR}/build/gen/)
+# the cores this build makes, for the tests (tests/built_cores.h: the bundle holds exactly these), and the plugin's
+# default firmware: ChoralRoot, else (a public build) Felucca, else the first built
+string(REPLACE ";" "," FM1_BUILT_CORES "${FM1_CORE_IDS}")
+if(FM1_HAVE_CR)
+    set(FM1_DEFAULT_CORE choralroot)
+elseif(felucca IN_LIST FM1_CORE_IDS)
+    set(FM1_DEFAULT_CORE felucca)
+else()
+    list(GET FM1_CORE_IDS 0 FM1_DEFAULT_CORE)
+endif()
+message(STATUS "cores: the plugin's default firmware: ${FM1_DEFAULT_CORE}")
 
 # ---- the engine (C++17, no JUCE): core loading, the device clock, the resampler
 add_library(fm1engine STATIC engine/cores.cpp engine/device.cpp)
@@ -128,7 +145,8 @@ target_compile_features(FM1VST PUBLIC cxx_std_17)
 set(FM1_TIER2_SLOTS 0 CACHE STRING "Tier 2 host parameter slots (the firmware's parameters; 0: none, 79: the opt-in)")
 target_compile_definitions(FM1VST PUBLIC
     JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0
-    FM1_CORES_DIR="${CMAKE_BINARY_DIR}/cores" FM1_TIER2_SLOTS=${FM1_TIER2_SLOTS})
+    FM1_CORES_DIR="${CMAKE_BINARY_DIR}/cores" FM1_TIER2_SLOTS=${FM1_TIER2_SLOTS}
+    FM1_DEFAULT_CORE="${FM1_DEFAULT_CORE}")
 target_link_libraries(FM1VST
     PRIVATE juce::juce_audio_utils fm1engine FM1VST_Themes remotefm1
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
@@ -141,7 +159,8 @@ add_dependencies(FM1VST ${FM1_CORE_TARGETS})
 foreach(_fmt VST3 AU Standalone)
     set(_t FM1VST_${_fmt})
     set(_dst "$<TARGET_BUNDLE_DIR:${_t}>/Contents/Resources/cores")
-    set(_cmds COMMAND ${CMAKE_COMMAND} -E make_directory "${_dst}")
+    # (emptied first: the bundle holds exactly this build's cores, never one a reconfigure left out)
+    set(_cmds COMMAND ${CMAKE_COMMAND} -E remove_directory "${_dst}" COMMAND ${CMAKE_COMMAND} -E make_directory "${_dst}")
     foreach(_c IN LISTS FM1_CORE_TARGETS)
         list(APPEND _cmds COMMAND ${CMAKE_COMMAND} -E copy "$<TARGET_FILE:${_c}>" "${_dst}/"
                           COMMAND codesign --force -s - "${_dst}/$<TARGET_FILE_NAME:${_c}>")
@@ -174,6 +193,10 @@ endif()
 # truth. Built by the submodule's own tools/emu/build.sh (needs SDL2 from Homebrew) when missing.
 option(FM1_REFERENCE_TESTS "build the reference emulator and run the replay tests against it" ON)
 set(CR_EMU ${CR}/build/host/emu)
+if(FM1_REFERENCE_TESTS AND NOT FM1_HAVE_CR)
+    message(STATUS "no choralroot core in this build: no reference emulator, replay_test left out")
+    set(FM1_REFERENCE_TESTS OFF)
+endif()
 if(FM1_REFERENCE_TESTS AND NOT EXISTS /opt/homebrew/bin/sdl2-config AND NOT EXISTS ${CR_EMU})
     message(WARNING "SDL2 (Homebrew) not found: the reference emulator cannot be built; replay_test is skipped "
                     "(brew install sdl2, or -DFM1_REFERENCE_TESTS=OFF)")
@@ -188,6 +211,9 @@ if(FM1_REFERENCE_TESTS)
         COMMENT "ChoralRoot: building the reference emulator (tools/emu/build.sh -> build/host/emu)"
         VERBATIM)
     add_custom_target(reference_emu ALL DEPENDS ${CR_EMU})
+    if(TARGET gen_choralroot)
+        add_dependencies(reference_emu gen_choralroot)
+    endif()
 endif()
 
 # ---- tests
@@ -201,22 +227,34 @@ foreach(_t fifo coro nor)
     add_test(NAME common_${_t}_test COMMAND common_${_t}_test ${CMAKE_BINARY_DIR}/common_${_t}_test.bin)
 endforeach()
 # every core: boots, draws, sounds (core_smoke_<id>), and its parameter map (param_test_<id>), on the loaded module
-add_executable(core_smoke tests/core_smoke.c)
-target_include_directories(core_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/core-api)
-target_link_libraries(core_smoke PRIVATE ${CMAKE_DL_LIBS})
-add_dependencies(core_smoke ${FM1_CORE_TARGETS})
-foreach(_id IN LISTS FM1_CORE_IDS)
-    add_test(NAME core_smoke_${_id} COMMAND core_smoke $<TARGET_FILE:${_id}_core> ${CMAKE_BINARY_DIR}/cores/${_id}.ppm)
-endforeach()
+# (each with its conformance file: the `sound` prelude, the settle time and the key; tests/conformance_conf.h)
+function(fm1_conformance_file id out)
+    get_property(_glue GLOBAL PROPERTY FM1_CORE_GLUE_${id})
+    set(_conf ${_glue}/conformance_${id}.txt)
+    if(NOT EXISTS ${_conf})
+        set(_conf ${_glue}/conformance.txt)
+    endif()
+    set(${out} ${_conf} PARENT_SCOPE)
+endfunction()
 
 add_library(fm1testlib STATIC tests/script_runner.cpp)
 target_link_libraries(fm1testlib PUBLIC fm1engine)
 target_include_directories(fm1testlib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/tests)
 target_compile_options(fm1testlib PRIVATE -Wall -Wextra)
 target_compile_definitions(fm1testlib PUBLIC
-    FM1_CR_DIR="${CR}" FM1_CORE_MODULE="$<TARGET_FILE:choralroot_core>" FM1_REF_EMU="${CR_EMU}"
-    FM1_CORES_BUILD_DIR="${CMAKE_BINARY_DIR}/cores"
+    FM1_CR_DIR="${CR}" FM1_CORE_MODULE="$<$<BOOL:${FM1_HAVE_CR}>:$<TARGET_FILE:choralroot_core>>"
+    FM1_REF_EMU="${CR_EMU}" FM1_CORES_BUILD_DIR="${CMAKE_BINARY_DIR}/cores" FM1_BUILT_CORES="${FM1_BUILT_CORES}"
     FM1_REF_OUT="${CMAKE_BINARY_DIR}/reference")
+
+add_executable(core_smoke tests/core_smoke.cpp)
+target_link_libraries(core_smoke PRIVATE fm1testlib ${CMAKE_DL_LIBS})
+target_compile_options(core_smoke PRIVATE -Wall -Wextra)
+add_dependencies(core_smoke ${FM1_CORE_TARGETS})
+foreach(_id IN LISTS FM1_CORE_IDS)
+    fm1_conformance_file(${_id} _conf)
+    add_test(NAME core_smoke_${_id}
+             COMMAND core_smoke $<TARGET_FILE:${_id}_core> ${CMAKE_BINARY_DIR}/cores/${_id}.ppm ${_conf})
+endforeach()
 
 # the conformance test every core passes (tests/core_conformance.cpp: boots, draws, sounds, the flash round trip, a
 # double load, a scripted reboot, the descriptor), each with its glue folder's conformance_<id>.txt or conformance.txt
@@ -226,13 +264,9 @@ target_compile_options(core_conformance PRIVATE -Wall -Wextra)
 add_dependencies(core_conformance ${FM1_CORE_TARGETS})
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/conformance)
 foreach(_id IN LISTS FM1_CORE_IDS)
-    get_property(_glue GLOBAL PROPERTY FM1_CORE_GLUE_${_id})
     get_property(_fam GLOBAL PROPERTY FM1_CORE_FAMILY_${_id})
     get_property(_lic GLOBAL PROPERTY FM1_CORE_LICENSE_${_id})
-    set(_conf ${_glue}/conformance_${_id}.txt)
-    if(NOT EXISTS ${_conf})
-        set(_conf ${_glue}/conformance.txt)
-    endif()
+    fm1_conformance_file(${_id} _conf)
     add_test(NAME core_conformance_${_id}
              COMMAND core_conformance $<TARGET_FILE:${_id}_core> ${_id} ${_fam} ${_lic} ${_conf}
                      ${CMAKE_BINARY_DIR}/conformance)
@@ -244,12 +278,13 @@ add_executable(double_load_test tests/double_load_test.cpp)
 target_link_libraries(double_load_test PRIVATE fm1testlib)
 add_dependencies(double_load_test ${FM1_CORE_TARGETS})
 add_test(NAME double_load_test COMMAND double_load_test)
-set_tests_properties(double_load_test PROPERTIES RESOURCE_LOCK fm1_reference)
+set_tests_properties(double_load_test PROPERTIES RESOURCE_LOCK fm1_reference SKIP_RETURN_CODE 77)
 
 add_executable(halt_test tests/halt_test.cpp)
 target_link_libraries(halt_test PRIVATE fm1testlib)
 add_dependencies(halt_test ${FM1_CORE_TARGETS})
 add_test(NAME halt_test COMMAND halt_test)
+set_tests_properties(halt_test PROPERTIES SKIP_RETURN_CODE 77)
 
 add_executable(param_test tests/param_test.cpp)
 target_link_libraries(param_test PRIVATE fm1testlib)
@@ -257,12 +292,13 @@ target_compile_definitions(param_test PRIVATE FM1_SCRATCH_DIR="${CMAKE_BINARY_DI
 add_dependencies(param_test ${FM1_CORE_TARGETS})
 foreach(_id IN LISTS FM1_CORE_IDS)
     add_test(NAME param_test_${_id} COMMAND param_test $<TARGET_FILE:${_id}_core>)
+    set_tests_properties(param_test_${_id} PROPERTIES SKIP_RETURN_CODE 77)   # (a core without a parameter map)
 endforeach()
 
 if(FM1_REFERENCE_TESTS)
     add_executable(replay_test tests/replay_test.cpp)
     target_link_libraries(replay_test PRIVATE fm1testlib)
-    add_dependencies(replay_test choralroot_core reference_emu)
+    add_dependencies(replay_test ${FM1_CORE_TARGETS} reference_emu)
     add_test(NAME replay_test COMMAND replay_test)
     set_tests_properties(replay_test PROPERTIES RESOURCE_LOCK fm1_reference)
 endif()
@@ -272,40 +308,43 @@ endif()
 add_executable(plugin_test tests/plugin_test.cpp)
 target_link_libraries(plugin_test PRIVATE FM1VST fm1engine)
 target_include_directories(plugin_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
-target_compile_definitions(plugin_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS>
+target_compile_definitions(plugin_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS> FM1_BUILT_CORES="${FM1_BUILT_CORES}"
     FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/plugin_test_home"
-    FM1_INSTALLED_VST3="${FM1_TEST_VST3}" FM1_INSTALLED_AU="${FM1_TEST_AU}")
+    FM1_INSTALLED_VST3="${FM1_TEST_VST3}" FM1_INSTALLED_AU="${FM1_TEST_AU}" FM1_PUBLIC_BUILD=$<BOOL:${FM1_PUBLIC_BUILD}>)
 add_dependencies(plugin_test ${FM1_CORE_TARGETS} FM1VST_VST3 FM1VST_AU)
 add_test(NAME plugin_test COMMAND plugin_test)
+set_tests_properties(plugin_test PROPERTIES SKIP_RETURN_CODE 77)   # (a public build: the cores it needs left out)
 
 # the Tier 2 parameters on the plugin's processor (headless, as plugin_test)
 add_executable(tier2_test tests/tier2_test.cpp)
 target_link_libraries(tier2_test PRIVATE FM1VST fm1engine)
 target_include_directories(tier2_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
-target_compile_definitions(tier2_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS>
+target_compile_definitions(tier2_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS> FM1_BUILT_CORES="${FM1_BUILT_CORES}"
     FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/tier2_test_home")
 add_dependencies(tier2_test ${FM1_CORE_TARGETS})
 add_test(NAME tier2_test COMMAND tier2_test)
-set_tests_properties(tier2_test PROPERTIES SKIP_RETURN_CODE 77)   # (FM1_TIER2_SLOTS 0: nothing to test)
+set_tests_properties(tier2_test PROPERTIES SKIP_RETURN_CODE 77)   # (FM1_TIER2_SLOTS 0: nothing to test; or a public build)
 
 # the eight physical knobs as host parameters, following the firmware's screens (headless, as tier2_test)
 add_executable(knob_test tests/knob_test.cpp)
 target_link_libraries(knob_test PRIVATE FM1VST fm1engine)
 target_include_directories(knob_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
-target_compile_definitions(knob_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS>
+target_compile_definitions(knob_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS> FM1_BUILT_CORES="${FM1_BUILT_CORES}"
     FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/knob_test_home")
 add_dependencies(knob_test ${FM1_CORE_TARGETS})
 add_test(NAME knob_test COMMAND knob_test)
+set_tests_properties(knob_test PROPERTIES SKIP_RETURN_CODE 77)   # (a public build: the cores it needs left out)
 
 # the panel GUI, headless (phase 3): the panel rendered offscreen to build/panel/*.png for every theme preset, the LCD
 # region against the device's framebuffer, a key's LED, the contrast floors, the custom theme round trip
 add_executable(panel_render_test tests/panel_render_test.cpp)
 target_link_libraries(panel_render_test PRIVATE FM1VST fm1engine)
 target_include_directories(panel_render_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
-target_compile_definitions(panel_render_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS>
+target_compile_definitions(panel_render_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS> FM1_BUILT_CORES="${FM1_BUILT_CORES}"
     FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/panel_test_home" FM1_PANEL_OUT="${CMAKE_BINARY_DIR}/panel")
 add_dependencies(panel_render_test ${FM1_CORE_TARGETS})
 add_test(NAME panel_render_test COMMAND panel_render_test)
+set_tests_properties(panel_render_test PROPERTIES SKIP_RETURN_CODE 77)   # (a public build: the cores it needs left out)
 
 # Remote FM-1 (plugin/RemoteLink) against libremotefm1's in-process fake unit (FM1EMU_REMOTE_FAKE=1: nothing on USB or
 # CoreMIDI is opened): the processor with Remote on (frames, LEDs, keys / buttons / encoders / MASTER, a core switch's
@@ -313,8 +352,9 @@ add_test(NAME panel_render_test COMMAND panel_render_test)
 add_executable(remote_test tests/remote_test.cpp)
 target_link_libraries(remote_test PRIVATE FM1VST fm1engine remotefm1)
 target_include_directories(remote_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
-target_compile_definitions(remote_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS>
+target_compile_definitions(remote_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS> FM1_BUILT_CORES="${FM1_BUILT_CORES}"
     FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/remote_test_home")
 add_dependencies(remote_test ${FM1_CORE_TARGETS})
 add_test(NAME remote_test COMMAND remote_test)
+set_tests_properties(remote_test PROPERTIES SKIP_RETURN_CODE 77)   # (a public build: the cores it needs left out)
 set_tests_properties(remote_test PROPERTIES ENVIRONMENT "FM1EMU_REMOTE_FAKE=1" TIMEOUT 180)

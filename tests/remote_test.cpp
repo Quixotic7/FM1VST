@@ -23,6 +23,7 @@
 #include <string>
 #include <thread>
 
+#include "built_cores.h"
 #include "Processor.h"
 #include "RemoteCandidates.h"
 #include "rfm/fake.h"
@@ -143,6 +144,7 @@ static juce::MidiBuffer one(const juce::MidiMessage &m)
 
 int main()
 {
+    require_cores("remote_test", {"choralroot", "felucca"});
     const juce::File scratch(FM1_SCRATCH_DIR);
     scratch.deleteRecursively();
     scratch.createDirectory();

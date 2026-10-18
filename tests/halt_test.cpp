@@ -5,10 +5,12 @@
 //   2. CR_REBOOT after SAFE MODE's Options > Flash Data (scripts/cr_safe_erase.txt with --boot-fail 1
 //      --reset-reason wdt: the emulator prints "reboot:" and exits 0)
 // Each: halted() reports the code, the clock entry points do nothing, the audio is silence, shutdown is safe.
+#include "built_cores.h"
 #include "test_util.h"
 
 int main()
 {
+    require_cores("halt_test", {"choralroot"});
     int fails = 0;
     std::string err;
     auto check = [&](bool c, const std::string &what) {

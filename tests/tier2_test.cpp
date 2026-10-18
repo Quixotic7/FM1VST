@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "built_cores.h"
 #include "Processor.h"
 
 static int fails = 0;
@@ -80,6 +81,7 @@ static Tier2Parameter *slotNamed(FM1Processor &p, const juce::String &name)
 
 int main()
 {
+    require_cores("tier2_test", {"choralroot", "felucca"});
     if (FM1Processor::kTier2Slots == 0) {             // (the default: no slots; the knobs are knob_test's)
         std::printf("tier2_test: SKIP (FM1_TIER2_SLOTS 0: no Tier 2 slots; configure with -DFM1_TIER2_SLOTS=79)\n");
         return 77;

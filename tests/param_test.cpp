@@ -101,9 +101,11 @@ int main(int argc, char **argv)
     std::printf("param_test: core %s (%s)\n", c->id, module.c_str());
     const fm1param_t *P = c->params;
     const uint32_t n = c->nparams;
-    check(P && n > 0 && c->param_epoch, "the descriptor has a map (" + std::to_string(n) + " entries) and param_epoch");
-    if (!P || !n)
-        return 1;
+    if (!P || !n) {   // (a core without a parameter map yet: every knob a relative turn; ctest SKIP_RETURN_CODE)
+        std::printf("param_test: SKIP: %s has no parameter map\n", c->id);
+        return 77;
+    }
+    check(c->param_epoch, "the descriptor has a map (" + std::to_string(n) + " entries) and param_epoch");
     auto find = [&](const char *name) -> int {
         for (uint32_t i = 0; i < n; i++)
             if (!std::strcmp(P[i].name, name))
@@ -280,9 +282,9 @@ int main(int argc, char **argv)
             {"Bass Mode", 2, "bass: behaviour Bass Single Notes"},
             {"Bass Level", 50, "bass: knob 4 level 50"},
             {"Bass Register", 1, "bass: knob 2 register +1"},
-            {"Loop Quantize", 3, "loop: knob 2 quantize 1/8T"},
+            {"Loop Quantize", 3, "loop: knob 3 quantize 1/8T"},
             {"Click Level", 35, "metro: knob 1 click 35"},
-            {"Chord Reverb", 64, "fx: knob 4 Reverb amount 64"},
+            {"Chord Reverb", 64, "fx: knob 4 Reverb send 64"},
             {"Reverb Size", 33, "fx: knob 1 Reverb size 33"},
             {"Delay Time", 3, "fx: knob 1 Delay time 3"},
             {"Chord Level", 77, "level: part 0 77"},

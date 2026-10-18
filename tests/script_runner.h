@@ -4,7 +4,7 @@
 //
 // Supported: wait MS|MSms|Ss, frames N, key NAME down|up|[MS], btn NAME down|up|[MS], press / tap / hold / down /
 // release / up (the older forms), knob|turn NAME +-N, master ADC, midi HEX [HEX [HEX]] [xN MS], expect led NAME
-// on|lit|dim|off, expect sound|silence, quit, a leading "<ms>" (absolute time), '#' comments. The computer keys
+// on|lit|mid|dim|faint|off (the level's fm1p_led_class, emu.c's planes), expect sound|silence, quit, a leading "<ms>" (absolute time), '#' comments. The computer keys
 // are keymap.c's table by name (cap) with emu.c's aliases (SHIFT, ENTER), including SELECT / PAGE DOWN / PAGE UP /
 // UP / DOWN and Shift + Up / Down (the fine turn: GLO held around the detent, emu.c fine_turn / fine_frame).
 // Parsed and ignored (they only look, or need a window): shot, window, dump, rec, and the keys F12 (dump),

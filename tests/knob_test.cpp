@@ -30,6 +30,7 @@
 #include <string>
 #include <vector>
 
+#include "built_cores.h"
 #include "Processor.h"
 
 static int fails = 0;
@@ -111,6 +112,7 @@ static std::string fn(KnobParameter *k)
 
 int main()
 {
+    require_cores("knob_test", {"choralroot", "felucca", "melodee"});
     const juce::File scratch(FM1_SCRATCH_DIR);
     scratch.deleteRecursively();
     scratch.createDirectory();

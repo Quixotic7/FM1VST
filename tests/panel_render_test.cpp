@@ -28,6 +28,7 @@
 #include <string>
 #include <vector>
 
+#include "built_cores.h"
 #include "Editor.h"
 #include "PanelComponent.h"
 #include "Processor.h"
@@ -128,6 +129,7 @@ static uint32_t lcdChecksum(const uint16_t *fb)
 
 int main()
 {
+    require_cores("panel_render_test", {"choralroot", "felucca", "melodee"});
     const juce::File scratch(FM1_SCRATCH_DIR);
     scratch.deleteRecursively();
     scratch.createDirectory();

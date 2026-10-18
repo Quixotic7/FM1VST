@@ -222,14 +222,16 @@ bool parse_script_text(const std::string &text, const std::string &name, Script 
                        (resolve(arg2, km, kind, idx, true) && (kind == KM_KEY || kind == KM_BTN)))) {
                 if (!strcasecmp(arg2, "GREEN"))
                     kind = -1;                    // PLAY's green LED
-                const int lv = !std::strcmp(arg3, "on") || !std::strcmp(arg3, "lit") ? 2
-                             : !std::strcmp(arg3, "dim") ? 1 : !std::strcmp(arg3, "off") ? 0 : -1;
+                // the level's class (fm1p_led_class), as emu.c's four planes: on (lit), mid, dim, faint, off
+                const int lv = !std::strcmp(arg3, "on") || !std::strcmp(arg3, "lit") ? FM1P_LC_LIT
+                             : !std::strcmp(arg3, "mid") ? FM1P_LC_MID : !std::strcmp(arg3, "dim") ? FM1P_LC_DIM
+                             : !std::strcmp(arg3, "faint") ? FM1P_LC_FAINT : !std::strcmp(arg3, "off") ? FM1P_LC_OFF : -1;
                 if (lv < 0)
-                    bad(std::string("expect led ") + arg2 + ": on, dim or off, not \"" + arg3 + "\"");
+                    bad(std::string("expect led ") + arg2 + ": on, mid, dim, faint or off, not \"" + arg3 + "\"");
                 else
                     add(cur, OP_EXPECT_LED, -1, kind, idx, lv, std::string("led ") + arg2 + " " + arg3);
             } else {
-                bad("expect: \"sound\", \"silence\" or \"led KEY on|dim|off\" (a key or a button)");
+                bad("expect: \"sound\", \"silence\" or \"led KEY on|mid|dim|faint|off\" (a key or a button)");
             }
             continue;
         }
@@ -423,11 +425,14 @@ void ScriptRunner::apply(uint32_t ms)              // emu.c run_script(ms)
             }
             break;
         case OP_EXPECT_LED: {
-            const int lv = e.kind < 0 ? dev_.led_play_green()
-                         : dev_.led_of(e.kind == KM_KEY ? 14 + e.idx : dev_.panel()->btn_id[e.idx]);
+            const int level = e.kind < 0 ? dev_.led_play_green_level()
+                            : dev_.led_level(e.kind == KM_KEY ? 14 + e.idx : dev_.panel()->btn_id[e.idx]);
+            const int lv = fm1p_led_class((uint8_t)level);
             const bool ok = lv == e.n;
+            static const char *const cls[] = {"off", "faint", "dim", "mid", "lit"};   // (emu.c's words: replay_test
+                                                                                        // compares the lines)
             std::snprintf(buf, sizeof buf, "expect %s at %u ms: %s (the LED is %s)", e.name.c_str(), (unsigned)ms,
-                          ok ? "ok" : "FAILED", lv == 2 ? "lit" : lv == 1 ? "dim" : "off");
+                          ok ? "ok" : "FAILED", cls[lv]);
             log_.push_back(buf);
             (ok ? expect_ok_ : expect_fail_)++;
             break;

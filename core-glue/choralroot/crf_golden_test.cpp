@@ -8,13 +8,10 @@
 //
 // The script is the emulator's grammar (tests/script_runner.h). Each `shot X` is rewritten to build/emu/crf/<stem>_<n>.ppm for
 // the reference; the core's LCD at the same moment (emu.c: a shot at ms T runs after tick(T), before frame(T): the
-// screen as ms T-1 left it) is converted as emu_img.c does (RGB565 big-endian -> RGB888) and compared. The levels
-// FM1VST's script runner does not parse (`expect led NAME faint|mid`, ChoralRoot 0.25.1's four LED levels) are left
-// out of the core's run and checked here instead against the panel (fm1p_led_class): the reference checks them
-// itself. The environment: EMU_C1=thread is set before the core is loaded, and the process must have no more threads
+// screen as ms T-1 left it) is converted as emu_img.c does (RGB565 big-endian -> RGB888) and compared. The
+// script's `expect led` lines (ChoralRoot 0.25.1's four levels too) are checked by both runs. The environment: EMU_C1=thread is set before the core is loaded, and the process must have no more threads
 // after the run than before it (crf_env.h: the core reads no environment).
 #include <mach/mach.h>
-#include <strings.h>
 #include <sys/wait.h>
 
 #include <cstdio>
@@ -62,18 +59,6 @@ int thread_count()
     return (int)n;
 }
 
-int note_key(const char *s)                      // "F3" .. "G5" -> 0 .. 26, -1 none
-{
-    static const char *const N[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-    for (int k = 0; k < FM1P_NKEY; k++) {
-        const int m = FM1P_NOTE0 + k;
-        const std::string nm = std::string(N[m % 12]) + std::to_string(m / 12 - 1);
-        if (!strcasecmp(s, nm.c_str()))
-            return k;
-    }
-    return -1;
-}
-
 // emu.c wav_header's RIFF: the int16 interleaved samples of its data chunk
 bool read_wav(const std::string &path, std::vector<int16_t> &pcm)
 {
@@ -109,12 +94,6 @@ struct Shot {
     uint32_t ms = 0;
     std::string path;
 };
-struct LedCheck {
-    int line;
-    uint32_t ms = 0;
-    int key = -1, cls = 0;
-    std::string text;
-};
 
 }  // namespace
 
@@ -140,14 +119,13 @@ int main(int argc, char **argv)
     stem = stem.substr(0, stem.rfind('.'));
     std::printf("crf_golden_test %s: %s against %s\n", stem.c_str(), module.c_str(), ref.c_str());
 
-    // ---- the script: the reference's (shots into OUT), the core's (the four-level LED expects left out)
+    // ---- the script: the reference's (shots into OUT), the core's
     std::string text;
     if (!read_file(script, text)) {
         std::printf("cannot read %s\n", script.c_str());
         return 1;
     }
     std::vector<Shot> shots;
-    std::vector<LedCheck> leds;
     std::ostringstream rs, cs;
     {
         std::istringstream in(text);
@@ -170,18 +148,6 @@ int main(int argc, char **argv)
                 cs << line << "\n";
                 continue;
             }
-            if (nw >= 4 && !std::strcmp(w[0], "expect") && !std::strcmp(w[1], "led") &&
-                (!std::strcmp(w[3], "faint") || !std::strcmp(w[3], "mid"))) {
-                LedCheck c;
-                c.line = ln;
-                c.key = note_key(w[2]);
-                c.cls = !std::strcmp(w[3], "faint") ? FM1P_LC_FAINT : FM1P_LC_MID;
-                c.text = std::string("led ") + w[2] + " " + w[3];
-                leds.push_back(c);
-                rs << line << "\n";
-                cs << "dump  # (" << w[2] << " " << w[3] << ": checked by crf_golden_test)\n";
-                continue;
-            }
             rs << line << "\n";
             cs << line << "\n";
         }
@@ -195,16 +161,11 @@ int main(int argc, char **argv)
         std::printf("%s", err.c_str());
         return 1;
     }
-    // the ms of each shot / LED check: the event parsed from its line (a shot and the LED lines' stand-in, a dump,
-    // are kept as ignored events)
-    for (const ScriptEvent &e : s.ev) {
+    // the ms of each shot: the event parsed from its line (a shot is kept as an ignored event)
+    for (const ScriptEvent &e : s.ev)
         for (Shot &sh : shots)
             if (sh.line == e.line)
                 sh.ms = e.ms;
-        for (LedCheck &c : leds)
-            if (c.line == e.line)
-                c.ms = e.ms;
-    }
 
     // ---- the reference
     {
@@ -271,13 +232,6 @@ int main(int argc, char **argv)
                                       : diff ? std::to_string(diff) + " pixels differ, the first at (" +
                                                    std::to_string(first % 240) + ", " + std::to_string(first / 240) + ")"
                                              : std::string("the same 57600 pixels")));
-            }
-            for (const LedCheck &c : leds) {
-                if (c.ms != m)
-                    continue;
-                const int lv = c.key >= 0 ? dev.led_key_level(c.key) : -1;
-                check(lv >= 0 && fm1p_led_class((uint8_t)lv) == c.cls,
-                      "expect " + c.text + " at " + std::to_string(m) + " ms: the panel's level " + std::to_string(lv));
             }
             r.step();
         }

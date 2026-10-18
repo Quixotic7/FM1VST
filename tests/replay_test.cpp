@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstring>
 
+#include "built_cores.h"
 #include "test_util.h"
 
 static const char *const SCRIPTS[] = {"cr_dmaj.txt", "cr_allsynth.txt"};
@@ -161,6 +162,7 @@ static bool test_script(const char *name)
 
 int main()
 {
+    require_cores("replay_test", {"choralroot"});
     int fails = 0;
     for (const char *name : SCRIPTS)
         fails += !test_script(name);

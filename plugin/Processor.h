@@ -101,6 +101,10 @@
 #include <vector>
 
 #include "HostRefresh.h"
+
+#ifndef FM1_DEFAULT_CORE
+#define FM1_DEFAULT_CORE "choralroot"   // the firmware a new instance loads (CMakeLists.txt sets it)
+#endif
 #include "RemoteLink.h"
 #include "Theme.h"
 #include "Tier2Parameter.h"
@@ -390,7 +394,8 @@ private:
     std::unique_ptr<LoadedCore> loaded_;
     std::unique_ptr<Device> dev_;
     CoreInfo coreInfo_;
-    juce::String coreId_ = "choralroot", requestedCore_ = "choralroot";
+    juce::String coreId_ = FM1_DEFAULT_CORE, requestedCore_ = FM1_DEFAULT_CORE;   // (CMake: ChoralRoot, or Felucca in a
+                                                                                // public build, which leaves it out)
     std::optional<std::vector<uint8_t>> pendingFlash_;   // the next boot's flash (state, preset, reset)
     double sampleRate_ = 44100.0;
     bool prepared_ = false;
