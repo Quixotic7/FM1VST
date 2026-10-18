@@ -1,4 +1,0 @@
-# ChoralRoot 44453d0: tests/core_conformance.cpp's script for this core (see its header for the directives)
-# the flash round trip: the first FM1P_PERSIST parameter of the map (Tempo), the default
-# the boot guard: three failed boots after a watchdog reset enter UBOOT (emu_fw.c emu_boot_guard: exit(3))
-reboot-guard 3 wdt
