@@ -149,6 +149,14 @@ static juce::String legalName(const juce::String &name)
 FM1Processor::FM1Processor()
     : juce::AudioProcessor(BusesProperties().withOutput("Output", juce::AudioChannelSet::stereo(), true))
 {
+    // Remote FM-1: the link exists from the start (its thread starts with the first enable); the unit lock lives with
+    // every other fm1emu file (FM1EMU_HOME relocates it)
+    {
+        RemoteLink::Options ro;
+        ro.backend = RemoteLink::defaultBackend();
+        ro.lockPath = home().getChildFile("remote.lock").getFullPathName().toStdString();
+        remote_ = std::make_unique<RemoteLink>(ro);
+    }
     for (auto &ch : noteKey_)
         ch.fill(-1);
     sysexOut_.reserve(4096);
@@ -171,6 +179,7 @@ FM1Processor::~FM1Processor()
 {
     stopTimer();
     cancelPendingUpdate();
+    remote_.reset();                             // SESSION 0 (the unit back on its waiting screen), the thread joined
     const juce::ScopedLock l(devLock_);
     saveWorkingFlashLocked();
     teardownLocked();
@@ -559,6 +568,12 @@ void FM1Processor::readBackParameters()
 // (the knobs' names, ranges and steps never change).
 void FM1Processor::drainTier2()
 {
+    // the unit's MASTER (Remote FM-1): the parameter follows the pot, inside a gesture (as the panel's MASTER)
+    if (const int rm = remoteMasterReq_.exchange(-1); rm >= 0 && rm != master_->get()) {
+        master_->beginChangeGesture();
+        master_->setValueNotifyingHost(master_->convertTo0to1((float)rm));
+        master_->endChangeGesture();
+    }
     struct Acc {
         bool any = false, gesture = false, allChange = true;
         uint8_t kind = kT2Change;
@@ -748,6 +763,9 @@ void FM1Processor::bootLocked()
     t2EpochValid_ = false;
     halted_.store(dev_->halted());
     haltCode_.store(loaded_->core()->halted ? loaded_->core()->halted() : 0);
+    remotePubValid_ = false;                     // (a new device: published at once, and the unit's screen resent whole)
+    if (remote_)
+        remote_->invalidateScreen();
 }
 
 void FM1Processor::teardownLocked()
@@ -1237,7 +1255,7 @@ bool FM1Processor::getPanelView(PanelView &out) const
 // the audio thread (devLock_ held): param | panel | the fine-turn GLO onto the device's buttons
 void FM1Processor::applyButtons()
 {
-    const uint32_t b = paramButtons_ | panelButtonsCur_ | (fineGlo_ ? 1u << EMU_B_GLO : 0u);
+    const uint32_t b = paramButtons_ | panelButtonsCur_ | remoteButtons_ | (fineGlo_ ? 1u << EMU_B_GLO : 0u);
     if (b != appliedButtons_) {
         dev_->buttons(b);
         appliedButtons_ = b;
@@ -1456,7 +1474,7 @@ void FM1Processor::snapshotPanel()
 // ---------------------------------------------------------------- state ---
 // A ValueTree "FM1VST" (binary): stateVersion, core, coreVersion, transpose, midiNotesPlayKeys, keyNotesToFirmware,
 // master, preset, editorW, editorH, bigLcd, knobDetents, buttonMode (0 Tap, 1 Hold, 2 Toggle-hold), buttonTapMs,
-// encoderMode (0 Absolute, 1 Stepped), encoderSteps (8..64), a child "theme" (name base membrane knob, and bed / label when the theme
+// encoderMode (0 Absolute, 1 Stepped), encoderSteps (8..64), remote (Remote FM-1 on), remoteIgnoreMidi, a child "theme" (name base membrane knob, and bed / label when the theme
 // sets them; "#RRGGBB") and "flash": the image gzip-compressed (a MemoryBlock property; absent when the instance
 // never had one, i.e. a fresh flash).
 void FM1Processor::getStateInformation(juce::MemoryBlock &dest)
@@ -1485,6 +1503,8 @@ void FM1Processor::getStateInformation(juce::MemoryBlock &dest)
     t.setProperty("buttonTapMs", btnTapMs_.load(), nullptr);
     t.setProperty("encoderMode", encMode_.load(), nullptr);
     t.setProperty("encoderSteps", encSteps_.load(), nullptr);
+    t.setProperty("remote", remoteOn_.load(), nullptr);
+    t.setProperty("remoteIgnoreMidi", remoteIgnoreMidi_.load(), nullptr);
     const Theme th = getTheme();
     juce::ValueTree tt("theme");
     tt.setProperty("name", th.name, nullptr);
@@ -1534,6 +1554,8 @@ void FM1Processor::setStateInformation(const void *data, int sizeInBytes)
     setButtonTapMs((int)t.getProperty("buttonTapMs", kDefaultTapMs));
     encSteps_.store(juce::jlimit(kMinEncSteps, kMaxEncSteps, (int)t.getProperty("encoderSteps", kDefaultEncSteps)));
     setEncoderMode((int)t.getProperty("encoderMode", kEncAbsolute));
+    setRemoteIgnoreMidi((bool)t.getProperty("remoteIgnoreMidi", true));
+    setRemoteEnabled((bool)t.getProperty("remote", false));   // (on: the unit lock decides who drives the unit)
     const juce::String id = t.getProperty("core", "choralroot").toString();
     std::optional<std::vector<uint8_t>> bytes;
     if (const juce::MemoryBlock *z = t.getProperty("flash").getBinaryData()) {
@@ -1579,7 +1601,7 @@ bool FM1Processor::isBusesLayoutSupported(const BusesLayout &layouts) const
 
 void FM1Processor::pushKeys()
 {
-    const uint32_t m = paramKeys_ | midiKeys_ | panelKeysCur_;
+    const uint32_t m = paramKeys_ | midiKeys_ | panelKeysCur_ | remoteKeys_;
     if (m != appliedKeys_) {
         dev_->keys(m);
         appliedKeys_ = m;
@@ -1594,7 +1616,8 @@ void FM1Processor::applyTier1()
             k |= 1u << i;
     // the panel GUI's held source (merged, never written into the parameters) and its taps: a press released
     // before this block reaches the firmware as a tap (emu.c hold_key / hold_btn set keys_tap / buttons_tap)
-    const uint32_t btnTaps = panelBtnTaps_.exchange(0), keyTaps = panelKeyTaps_.exchange(0);
+    uint32_t btnTaps = panelBtnTaps_.exchange(0), keyTaps = panelKeyTaps_.exchange(0);
+    applyRemote(keyTaps, btnTaps);               // (the unit's held keys / buttons, its taps, its turns)
     panelButtonsCur_ = panelButtons_.load();
     panelKeysCur_ = panelKeys_.load();
     buttonParamsToDevice();                      // (the btn_* parameters, as the Button params mode says)
@@ -1617,11 +1640,166 @@ void FM1Processor::applyTier1()
     for (int r = 0; r < EMU_NE - 1; r++)         // (MASTER: the parameter, below)
         if (const int32_t n = panelEnc_[(size_t)r].exchange(0))
             dev_->enc(r, n);
+    applyMaster();
+}
+
+// MASTER: the parameter's value, unless the unit's pot moved it and the parameter has not caught up yet (the message
+// thread sets it from remoteMasterReq_): its older values are not applied back; a new device takes the parameter's
+void FM1Processor::applyMaster()
+{
     const int m = master_->get();
+    if (remoteMasterAwait_ && appliedMaster_ >= 0) {
+        if (m == remoteMaster_ || dev_->ms() - remoteMasterMs_ >= kRemoteMasterWaitMs) {
+            remoteMasterAwait_ = false;
+            appliedMaster_ = m;                  // (the device keeps the pot's value: the parameter followed it)
+        }
+        return;
+    }
+    remoteMasterAwait_ = false;
     if (m != appliedMaster_) {
         dev_->master(m);
         appliedMaster_ = m;
     }
+}
+
+// ============================================================ Remote FM-1 ===
+void FM1Processor::setRemoteEnabled(bool on)
+{
+    remoteOn_.store(on);
+    if (on)
+        remote_->start();
+    else
+        remote_->stop();
+}
+
+bool FM1Processor::isRemotePanelMidi(const uint8_t *d, int n)
+{
+    if (!d || n < 2)
+        return false;
+    if (d[0] == 0xF0)                            // RemoteFM1's own SysEx (F0 7D 52 46 ..): the session's, not the core's
+        return n >= 4 && d[1] == 0x7D && d[2] == 0x52 && d[3] == 0x46;
+    const uint8_t st = d[0] & 0xF0, ch = d[0] & 0x0F, a = d[1];
+    if (st == 0x90 || st == 0x80) {
+        if (ch == RFM_MIDI_KEY_CH && a >= RFM_MIDI_KEY_NOTE0 && a < RFM_MIDI_KEY_NOTE0 + RFM_NKEYS)
+            return true;                         // a note key: 53..79 on channel 16
+        return ch == RFM_MIDI_BTN_CH && a < RFM_NBTN;   // a button: 0..13 on channel 15
+    }
+    if (st == 0xB0 && ch == RFM_MIDI_BTN_CH)     // MASTER (CC 7 / 39), the encoders (CC 16..22), channel 15
+        return a == RFM_MIDI_MASTER_MSB || a == RFM_MIDI_MASTER_LSB ||
+               (a >= RFM_MIDI_ENC_CC0 && a < RFM_MIDI_ENC_CC0 + RFM_NENC);
+    return false;
+}
+
+// block start (devLock_ held): the unit's events, matrix ids, in the order they came. Keys and buttons are a held
+// source (a press and its release in one block still tap); a matrix encoder is its knob role's Device::enc (a device
+// turn: enc_total moves, the host's own detents do not), moved by exactly the unit's detents; MASTER is the pot.
+void FM1Processor::applyRemote(uint32_t &keyTaps, uint32_t &btnTaps)
+{
+    emu_hal_t *h = dev_->hal();
+    rfm_event_t e;
+    for (int n = 0; n < 4096 && remote_->popEvent(e); n++) {
+        switch (e.type) {
+        case RFM_EV_KEY:
+            if (e.index < EMU_NKEY) {
+                const uint32_t bit = 1u << e.index;
+                if (e.value) {
+                    remoteKeys_ |= bit;
+                    keyTaps |= bit;
+                } else {
+                    remoteKeys_ &= ~bit;
+                }
+            }
+            break;
+        case RFM_EV_BUTTON: {
+            int label = -1;                      // matrix id -> label (hal->btn_id: the firmware's panel.c)
+            for (int l = 0; l < EMU_NB && label < 0; l++)
+                if (h->btn_id[l] == e.index)
+                    label = l;
+            if (label >= 0) {
+                const uint32_t bit = 1u << label;
+                if (e.value) {
+                    remoteButtons_ |= bit;
+                    btnTaps |= bit;
+                } else {
+                    remoteButtons_ &= ~bit;
+                }
+            }
+            break;
+        }
+        case RFM_EV_ENC:
+            if (e.index < EMU_NENC && e.value) {
+                int role = -1;                   // matrix encoder -> knob role (hal->enc_id)
+                for (int r = 0; r < EMU_NE - 1 && role < 0; r++)
+                    if (h->enc_id[r] == e.index)
+                        role = r;
+                if (role >= 0)                   // (Device::enc multiplies by enc_dir: undone, so the matrix
+                    dev_->enc(role, e.value * (h->enc_dir[role] < 0 ? -1 : 1));   // encoder moves by e.value)
+                else
+                    h->enc[e.index] += e.value;
+            }
+            break;
+        case RFM_EV_MASTER: {
+            const int v = juce::jlimit(0, 1023, (int)e.value);
+            dev_->master(v);
+            remoteMaster_ = v;
+            remoteMasterAwait_ = true;
+            remoteMasterMs_ = dev_->ms();
+            remoteMasterReq_.store(v);
+            break;
+        }
+        case RemoteLink::kEvRelease:             // the session ended / the unit was lost: nothing is held any more
+            remoteKeys_ = remoteButtons_ = 0;
+            break;
+        default:
+            break;
+        }
+    }
+}
+
+// The LED levels a core's emu_hal_t has: this core-api (ABI 4) has led and led_dim; a newer emu_hooks.h adds led_mid
+// and led_faint (RemoteFM1's LEDS carries all four): copied when the header has them
+template <typename H> static auto copyLedMid(const H *h, uint8_t *out, int) -> decltype(h->led_mid, void())
+{
+    std::memcpy(out, h->led_mid, RFM_NCOL);
+}
+template <typename H> static void copyLedMid(const H *, uint8_t *out, long) { std::memset(out, 0, RFM_NCOL); }
+template <typename H> static auto copyLedFaint(const H *h, uint8_t *out, int) -> decltype(h->led_faint, void())
+{
+    std::memcpy(out, h->led_faint, RFM_NCOL);
+}
+template <typename H> static void copyLedFaint(const H *, uint8_t *out, long) { std::memset(out, 0, RFM_NCOL); }
+
+// block end (devLock_ held): the LCD and the LEDs to the unit, at most every kPeriodMs device ms and only when they
+// changed (lcd_writes moved, an LED differs), or at once after a new device / a new session
+void FM1Processor::publishRemote()
+{
+    if (!remote_->engaged()) {
+        remotePubValid_ = false;
+        return;
+    }
+    static_assert(sizeof(RemoteSnapshot::lcd) == sizeof(emu_hal_t::lcd), "the LCD layouts differ");
+    const emu_hal_t *h = dev_->hal();
+    const bool full = remote_->takeFullRequest() || !remotePubValid_;
+    const uint32_t ms = dev_->ms();
+    if (!full && ms - remotePubMs_ < RemoteLink::kPeriodMs)
+        return;
+    rfm_leds_t l;
+    std::memcpy(l.lit, h->led, RFM_NCOL);
+    copyLedMid(h, l.mid, 0);
+    std::memcpy(l.dim, h->led_dim, RFM_NCOL);
+    copyLedFaint(h, l.faint, 0);
+    l.flags = dev_->led_play_green() ? RFM_LEDS_F_PLAY_GREEN : 0;
+    if (!full && h->lcd_writes == remotePubWrites_ && rfm_leds_equal(&l, &remotePubLeds_))
+        return;
+    RemoteSnapshot &s = remote_->back();
+    std::memcpy(s.lcd, h->lcd, sizeof s.lcd);
+    s.leds = l;
+    s.seq = ++remotePubs_;
+    remote_->publish();
+    remotePubMs_ = ms;
+    remotePubWrites_ = h->lcd_writes;
+    remotePubLeds_ = l;
+    remotePubValid_ = true;
 }
 
 void FM1Processor::handleMidi(const juce::MidiMessage &m)
@@ -1806,7 +1984,11 @@ void FM1Processor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuff
         return;
     }
     int pos = 0;
+    // the unit's own panel events, also seen by the host on its MIDI port: they arrive through the session already
+    const bool dropUnitMidi = remoteIgnoreMidi_.load() && remote_->engaged();
     for (const auto meta : midi) {               // MidiBuffer iterates in sample order
+        if (dropUnitMidi && isRemotePanelMidi(meta.data, meta.numBytes))
+            continue;
         const int at = juce::jlimit(0, n, meta.samplePosition);
         if (at > pos) {
             renderSegment(L, R, pos, at);
@@ -1827,6 +2009,7 @@ void FM1Processor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuff
         buffer.clear();
     }
     snapshotPanel();
+    publishRemote();
     midi.swapWith(midiOut_);
 }
 

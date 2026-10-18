@@ -449,6 +449,24 @@ macOS arm64 first (this machine; Live 12 Suite and REAPER are installed for test
 need only the glue's few POSIX / `os/lock.h` bits replaced, which the web build's `compat/` already shows
 how to stub.
 
+### 4.10 Remote FM-1 (RemoteFM1 M3)
+A real FM-1 running [RemoteFM1](https://github.com/Quixotic7/RemoteFM1) becomes the panel of the core in the plugin
+(the editor's "Remote FM-1" toggle, saved in the state). libremotefm1 comes from the `remote/RemoteFM1` submodule
+(read-only): its portable sources and macOS back ends are compiled into the static library `remotefm1`, libusb linked
+statically. `plugin/RemoteLink` is fm1remote's design inside a plugin:
+- **Threads.** The session runs on the link's own thread (discovery by HELLO, SESSION, frames, LEDs, PANEL_R). Panel
+  events reach the audio thread through a lock-free SPSC queue, drained at block start with `devLock_` held; the
+  audio thread publishes the LCD + LEDs into a lock-free triple buffer at block end (at most every 50 device ms, only
+  when `lcd_writes` or an LED changed; at once after a power-on, whose new screen the session resends whole).
+  start / stop never block; the destructor joins the thread after SESSION 0 (at most 600 ms).
+- **One owner per unit.** An exclusive `flock` on `<fm1emu home>/remote.lock` (a second instance or the Standalone
+  next to Live: "in use", retried every second).
+- **The merge.** The unit is one more input source, merged like the panel GUI: keys in the OR of key masks, buttons
+  in the button OR (taps kept), encoders as `Device::enc` detents of their knob role (a device turn: the knob
+  feedback, the Roto-Control's motor), MASTER the absolute pot with "Knob Master" following from the message thread.
+- **MIDI.** The unit's port is also a DAW MIDI input: while the link holds the unit, "Ignore the FM-1's own MIDI"
+  drops its panel messages from the host MIDI (RemoteFM1 docs/PROTOCOL.md section 4) and its SysEx.
+
 ## 5. Phases
 
 Each phase ends with something runnable and a check that proves it.

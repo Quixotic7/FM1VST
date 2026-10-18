@@ -14,6 +14,10 @@
 //   - The panel GUI (PanelComponent): its held keys / buttons, encoder detents and fine turns are atomics taken at
 //     block start (panelKey ..); what it shows (LCD, LEDs, held state, MASTER) is a PanelView snapshot the audio
 //     thread writes after a block in which it changed, under viewLock_, which the audio thread only tries.
+//   - Remote FM-1 (RemoteLink.h): a real FM-1 on the RemoteFM1 firmware as a second panel. Its session runs on the
+//     link's own thread; its panel events reach the audio thread through a lock-free queue (drained at block start,
+//     devLock_ held: applyRemote), the LCD + LEDs go back through a lock-free triple buffer (publishRemote, at block
+//     end, at most every 50 device ms and only when they changed). See "REMOTE FM-1" below.
 //
 // THE HOST PARAMETERS (plan 4.5), created once, in this order (hosts expect a fixed list: a core switch rebinds and
 // relabels, updateHostDisplay(parameterInfoChanged), it never adds or removes):
@@ -70,6 +74,17 @@
 //   themes/NAME.json, settings.json     custom colour themes and the default theme (Theme.h: ThemeStore)
 // The per-instance copies of the module go to <FM1EMU_HOME>/Caches/fm1emu/instances (else ~/Library/Caches/...).
 //
+// REMOTE FM-1 (setRemoteEnabled; the toggle is in the state): the unit's input merges with the others exactly as the
+// panel GUI's does: its held keys are one more source in the OR of key masks (param | MIDI | panel | remote), its
+// held buttons one more in the button OR (param | panel | remote | fine-turn GLO), a press released within a block
+// still taps. Its encoders are Device::enc detents (the matrix encoder through hal->enc_id / enc_dir): a device turn
+// for the knob logic (enc_total moves, the host's own detents do not), so the host parameter feedback and a
+// Roto-Control's motor follow a physical turn exactly as a panel turn. MASTER (the unit's absolute pot) sets the
+// device's pot at once and the "Knob Master" parameter follows from the message thread (a gesture, as the panel's
+// MASTER); until the parameter has caught up, the parameter's older value is not applied back. "Ignore the FM-1's own
+// MIDI" (default on): while the link holds the unit, host MIDI that is the unit's own panel events (the unit's port is
+// also a MIDI input of the DAW: Live's "All Ins") and RemoteFM1 SysEx is dropped (isRemotePanelMidi).
+//
 // THE .fm1preset FORMAT: one line of JSON, a '\n', then the flash image gzip-compressed (RFC 1952: `tail -n +2 F |
 // gunzip` gives the raw image):
 //   {"fm1preset":1,"core":"choralroot","version":"0.1","name":"Warm Pads","date":"2026-10-07T12:00:00.000+02:00",
@@ -86,6 +101,7 @@
 #include <vector>
 
 #include "HostRefresh.h"
+#include "RemoteLink.h"
 #include "Theme.h"
 #include "Tier2Parameter.h"
 #include "cores.h"
@@ -286,8 +302,23 @@ public:
     // the current flash image (synced first when the device runs); empty = a fresh flash
     std::vector<uint8_t> currentFlash();
 
+    // ---- Remote FM-1 (message thread; stored in the state). On: the link takes the unit lock and runs; off: SESSION 0,
+    // the unit back on its waiting screen. Neither blocks.
+    void setRemoteEnabled(bool on);
+    bool getRemoteEnabled() const { return remoteOn_.load(); }
+    void setRemoteIgnoreMidi(bool on) { remoteIgnoreMidi_.store(on); }
+    bool getRemoteIgnoreMidi() const { return remoteIgnoreMidi_.load(); }
+    RemoteLink::Status remoteStatus() const { return remote_->status(); }
+    // the unit's own panel events as they reach a DAW from its MIDI port (RemoteFM1 docs/PROTOCOL.md section 4): note
+    // on / off 53..79 on channel 16 (keys), 0..13 on channel 15 (buttons), CC 7 / 39 / 16..22 on channel 15 (MASTER,
+    // the encoders); and RemoteFM1's SysEx (F0 7D 52 46)
+    static bool isRemotePanelMidi(const uint8_t *d, int n);
+    static bool isRemotePanelMidi(const juce::MidiMessage &m) { return isRemotePanelMidi(m.getRawData(), m.getRawDataSize()); }
+
     // ---- for tests (call only between processBlock calls, on the thread that calls them) ----
     Device *deviceForTest() { return dev_.get(); }
+    RemoteLink *remoteForTest() { return remote_.get(); }
+    uint32_t remotePublished() const { return remotePubs_; }     // snapshots given to the link
     PanelBoolParameter *buttonParam(int label) { return btn_[(size_t)label]; }
     PanelBoolParameter *keyParam(int key) { return key_[(size_t)key]; }
     juce::AudioParameterInt *masterParam() { return master_; }
@@ -347,6 +378,9 @@ private:
     void decodePacket(uint32_t pkt, int samplePos);
     void renderSegment(float *L, float *R, int from, int to);
     void resetAudioState();
+    void applyRemote(uint32_t &keyTaps, uint32_t &btnTaps);   // the unit's events (block start)
+    void applyMaster();
+    void publishRemote();                            // the LCD + LEDs to the unit (block end)
 
     void handleAsyncUpdate() override;               // the firmware rebooted itself (exit(0)): power on again
 
@@ -477,4 +511,19 @@ private:
     bool sysexOutOverflow_ = false;
     juce::MidiBuffer midiOut_;
     std::vector<float> scratch_;                         // the right channel when the host gives only one
+
+    // Remote FM-1 (see the top): the link (created with the processor; its thread starts with the first enable)
+    std::unique_ptr<RemoteLink> remote_;
+    std::atomic<bool> remoteOn_{false}, remoteIgnoreMidi_{true};
+    // the audio thread's side: what the unit holds (keys; buttons as label bits), its MASTER until the parameter
+    // follows, what was last published
+    uint32_t remoteKeys_ = 0, remoteButtons_ = 0;
+    int remoteMaster_ = -1;
+    bool remoteMasterAwait_ = false;
+    uint32_t remoteMasterMs_ = 0;
+    static constexpr uint32_t kRemoteMasterWaitMs = 1000;   // the parameter not caught up by then: it is left alone
+    std::atomic<int> remoteMasterReq_{-1};               // the unit's MASTER for the parameter (message thread)
+    bool remotePubValid_ = false;
+    uint32_t remotePubMs_ = 0, remotePubWrites_ = 0, remotePubs_ = 0;
+    rfm_leds_t remotePubLeds_{};
 };

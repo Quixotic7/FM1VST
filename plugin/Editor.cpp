@@ -320,10 +320,27 @@ FM1Editor::FM1Editor(FM1Processor &p)
     addAndMakeVisible(status_);
     status_.setJustificationType(juce::Justification::centredLeft);
 
+    addAndMakeVisible(remote_);
+    remote_.setToggleState(proc_.getRemoteEnabled(), juce::dontSendNotification);
+    remote_.setTooltip("Remote FM-1: a real FM-1 running the RemoteFM1 firmware, on USB, becomes this panel: its keys, "
+                       "buttons, knobs and MASTER play the firmware here, and this screen and its LEDs show on the "
+                       "unit. One FM1VST at a time drives the unit (another instance or the Standalone shows \"in "
+                       "use\" and takes over when that one lets go). Saved with the set.");
+    remote_.onClick = [this] {
+        proc_.setRemoteEnabled(remote_.getToggleState());
+        refreshRemote();
+    };
+    addAndMakeVisible(remoteMenu_);
+    remoteMenu_.setTooltip("Remote FM-1 options");
+    remoteMenu_.onClick = [this] { showRemoteMenu(); };
+    addAndMakeVisible(remoteStatus_);
+    remoteStatus_.setJustificationType(juce::Justification::centredLeft);
+    remoteStatus_.setFont(juce::FontOptions(12.0f));
+
     // the bar's controls never take the keyboard focus: a click on them leaves the computer keys on the panel
     for (juce::Component *c : std::initializer_list<juce::Component *>{
              &cores_, &presets_, &transpose_, &themes_, &buttonMode_, &encMode_, &encSteps_, &save_, &saveAs_, &rename_, &delete_, &reset_,
-             &export_, &import_, &power_, &bigLcd_, &notesPlayKeys_, &keyNotesToFw_}) {
+             &export_, &import_, &power_, &bigLcd_, &notesPlayKeys_, &keyNotesToFw_, &remote_, &remoteMenu_}) {
         c->setWantsKeyboardFocus(false);
         c->setMouseClickGrabsKeyboardFocus(false);
     }
@@ -332,6 +349,7 @@ FM1Editor::FM1Editor(FM1Processor &p)
     refreshPresets();
     refreshThemes();
     refreshStatus();
+    refreshRemote();
     lastCore_ = juce::String(proc_.getCoreInfo().info.id);
 
     constrainer_.bigLcd = [this] { return panel_.bigLcd(); };
@@ -370,11 +388,17 @@ void FM1Editor::resized()
     cores_.setBounds(row1.removeFromLeft(170));
     row1.removeFromLeft(4);
     presets_.setBounds(row1.removeFromLeft(180));
+    row1.removeFromLeft(6);
+    remote_.setBounds(row1.removeFromLeft(104));
+    remoteMenu_.setBounds(row1.removeFromLeft(22));
     power_.setBounds(row1.removeFromRight(80));
     row1.removeFromRight(4);
+    row1.removeFromLeft(4);                      // the status: what the preset buttons leave (their full 84 points first)
+    remoteStatus_.setBounds(row1.removeFromLeft(juce::jlimit(0, 230, row1.getWidth() - 7 * 88)));
+    const int bw = juce::jmin(84, juce::jmax(40, row1.getWidth() / 7 - 4));   // (the seven alike)
     for (auto *b : {&save_, &saveAs_, &rename_, &delete_, &reset_, &export_, &import_}) {
         row1.removeFromLeft(4);
-        b->setBounds(row1.removeFromLeft(juce::jmin(84, juce::jmax(40, row1.getWidth() / 7))));
+        b->setBounds(row1.removeFromLeft(bw));
     }
     transpose_.setBounds(row2.removeFromLeft(130));
     row2.removeFromLeft(4);
@@ -539,9 +563,52 @@ void FM1Editor::refreshStatus()
     }
 }
 
+void FM1Editor::refreshRemote()
+{
+    const RemoteLink::Status st = proc_.remoteStatus();
+    const bool on = proc_.getRemoteEnabled();
+    if (remote_.getToggleState() != on)
+        remote_.setToggleState(on, juce::dontSendNotification);   // (a state restore)
+    const juce::String t = on || st.state != RemoteLink::kOff ? juce::String(st.text) : juce::String();
+    if (t == lastRemote_)
+        return;
+    lastRemote_ = t;
+    remoteStatus_.setText(t, juce::dontSendNotification);
+    remoteStatus_.setTooltip(t + (st.lastLog.empty() ? juce::String() : "\n" + juce::String(st.lastLog)));
+    const juce::Colour c = st.state == RemoteLink::kConnected ? juce::Colour(0xFF7FE08A)
+                           : st.state == RemoteLink::kInUse || st.state == RemoteLink::kError || st.state == RemoteLink::kLost
+                               ? juce::Colours::orange
+                               : juce::Colours::lightgrey;
+    remoteStatus_.setColour(juce::Label::textColourId, c);
+}
+
+void FM1Editor::showRemoteMenu()
+{
+    const RemoteLink::Status st = proc_.remoteStatus();
+    juce::PopupMenu m;
+    m.addSectionHeader("Remote FM-1");
+    m.addItem(1, "Ignore the FM-1's own MIDI (its notes and knobs on the DAW's MIDI input, e.g. Live's All Ins)", true,
+              proc_.getRemoteIgnoreMidi());
+    m.addSeparator();
+    m.addItem(2, "Status: " + juce::String(st.text.empty() ? "off" : st.text), false, false);
+    if (!st.lastLog.empty())
+        m.addItem(3, "Last: " + juce::String(st.lastLog), false, false);
+    if (st.sessions || st.frames)
+        m.addItem(4, juce::String::formatted("Sessions %u, frames %u (acknowledged %u), panel events %u", st.sessions,
+                                             st.frames, st.acks, st.eventsIn), false, false);
+    if (!RemoteLink::hasBulk())
+        m.addItem(5, "Built without libusb: frames go over SysEx only", false, false);
+    juce::Component::SafePointer<FM1Editor> self(this);
+    m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&remoteMenu_), [self](int r) {
+        if (self && r == 1)
+            self->proc_.setRemoteIgnoreMidi(!self->proc_.getRemoteIgnoreMidi());
+    });
+}
+
 void FM1Editor::timerCallback()
 {
     refreshStatus();
+    refreshRemote();
     const juce::StringArray p = proc_.listPresets();
     if (p != presetList_ || presets_.getText() != proc_.currentPresetName())
         refreshPresets();

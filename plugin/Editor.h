@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The plugin's editor (phase 3): a slim settings bar on top (firmware, presets and their buttons, transpose, the
+// The plugin's editor (phase 3): a slim settings bar on top (firmware, presets, Remote FM-1 (the toggle, its menu and
+// status), the preset buttons, transpose, the
 // button parameters' mode (Button params: Tap / Hold / Toggle-hold), the two MIDI toggles, the theme, the big LCD view, the status with Power on) and the FM-1 panel (PanelComponent) filling
 // the rest. Resizable, the panel's aspect kept (with the big LCD shown the frame letterboxes instead); the last size
 // is remembered per instance in the plugin state. The host parameters have no generic list any more: they remain
@@ -83,6 +84,8 @@ private:
     void refreshCores();
     void refreshPresets();
     void refreshStatus();
+    void refreshRemote();
+    void showRemoteMenu();
     void refreshThemes();
     void applyTheme(const Theme &t);
     void openThemeEditor();
@@ -98,6 +101,11 @@ private:
         export_{"Export"}, import_{"Import"}, power_{"Power on"}, bigLcd_{"Big LCD"};
     juce::ToggleButton notesPlayKeys_{"MIDI notes play keys"}, keyNotesToFw_{"... and go to the firmware's MIDI in"};
     juce::Label status_;
+    // Remote FM-1: the toggle (saved in the state), its menu (the MIDI option, diagnostics), the link's status
+    juce::ToggleButton remote_{"Remote FM-1"};
+    juce::TextButton remoteMenu_{juce::String::fromUTF8("\xe2\x96\xbe")};
+    juce::Label remoteStatus_;
+    juce::String lastRemote_;
     std::unique_ptr<ThemeEditorPanel> themeEditor_;
     std::vector<CoreInfo> coreList_;
     juce::StringArray presetList_;

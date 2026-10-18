@@ -21,9 +21,10 @@ The editor is the FM-1 panel itself (phase 3): LEDs, LCD, mouse and keyboard as 
 | `core-glue/choralroot/` | the ChoralRoot core: `core_choralroot.c` (the submodule's `tools/emu/emu_fw.c`, unmodified, with `exit` / `atexit` redirected so a firmware reboot halts the core instead of the host), `core_choralroot_params.c` (the Tier 2 parameter map and the knobs' targets, included into the same unit so it reaches the firmware's UI code) and `core_choralroot_desc.c` (the descriptor) |
 | `core-glue/felucca/`, `core-glue/melodee/` | the Felucca and Melodee cores, the same three files (`core_<id>.c`, `core_<id>_params.c`, `core_<id>_desc.c`) plus, because these firmwares have no emulator of their own, its equivalent written here: `<id>_fw.c` (the `emu_fw_*` hooks, as ChoralRoot's `emu_fw.c`), `<id>_firmware.h` (the include list, as `emu_firmware.h`) and `<id>_hal.h` (the HAL on the host, as `emu_hal_fw.h`) |
 | `cores/` | the firmwares, git submodules, read-only, pinned (below) |
-| `plugin/` | the JUCE plugin: `Processor.{h,cpp}` (`FM1Processor`: the core and its `Device` on the audio thread, parameters and the Tier 2 feedback loop, MIDI, state, presets, the firmware switch; the threading and file layout are in its header comment), `Tier2Parameter.{h,cpp}` (a rebindable host parameter slot, and `KnobParameter`: a physical knob that follows the firmware's screen), `Editor.{h,cpp}` (the settings bar and the panel; the theme picker), `PanelComponent.{h,cpp}` (the FM-1 panel: the emulator's drawing, layout, mouse and key map) and `Theme.{h,cpp}` (colour themes: the derived palette, the presets, custom theme files) |
+| `remote/RemoteFM1` | [RemoteFM1](https://github.com/Quixotic7/RemoteFM1) (submodule, pinned at `acd77af`, read-only): the protocol and libremotefm1, the host library behind Remote FM-1 (below) |
+| `plugin/` | the JUCE plugin: `Processor.{h,cpp}` (`FM1Processor`: the core and its `Device` on the audio thread, parameters and the Tier 2 feedback loop, MIDI, state, presets, the firmware switch; the threading and file layout are in its header comment), `Tier2Parameter.{h,cpp}` (a rebindable host parameter slot, and `KnobParameter`: a physical knob that follows the firmware's screen), `Editor.{h,cpp}` (the settings bar and the panel; the theme picker), `PanelComponent.{h,cpp}` (the FM-1 panel: the emulator's drawing, layout, mouse and key map), `Theme.{h,cpp}` (colour themes: the derived palette, the presets, custom theme files) and `RemoteLink.{h,cpp}` (Remote FM-1: the session thread, the unit lock, the event queue and the screen snapshot) |
 | `engine/` | C++17, no JUCE: `cores.{h,cpp}` (find and load modules, one private copy per instance), `device.{h,cpp}` (the single-thread device clock, input, LEDs, LCD, `render` at any host rate), `resampler.h` (4-point Lagrange) |
-| `tests/` | `core_smoke` and `param_test` (per core), `replay_test`, `double_load_test`, `halt_test`, `plugin_test`, `tier2_test`, `panel_render_test`, and `script_runner` (the emulator's script grammar on a `Device`) |
+| `tests/` | `core_smoke` and `param_test` (per core), `replay_test`, `double_load_test`, `halt_test`, `plugin_test`, `tier2_test`, `panel_render_test`, `remote_test`, and `script_runner` (the emulator's script grammar on a `Device`) |
 
 ## Cores
 
@@ -330,6 +331,34 @@ membrane, the knob pointer by contrast with the knob, the text on caps and beds 
 - **In the state:** the theme's name and colours are stored with the instance, so a set reopens looking the same even
   when its custom theme file is gone (the menu then lists it as "<name> (this set)").
 
+## Remote FM-1
+
+A real M-VAVE FM-1 can be the panel of the firmware running inside the plugin: its keys, buttons, knobs and MASTER
+play the core, and the core's screen and LEDs show on the unit. It needs:
+
+- **The unit on the RemoteFM1 firmware** ([RemoteFM1](https://github.com/Quixotic7/RemoteFM1), installed with its
+  `fm1_install.py`), on USB. Without a session it shows "REMOTE FM1 / WAITING FOR HOST".
+- **The toggle:** "Remote FM-1" in the editor's top bar. The status next to it says *searching*, *connected (bulk |
+  MIDI, N fps)*, *unit lost: searching*, or *in use by another instance*. The toggle is saved with the plugin state,
+  so a Live set reopens with it on. Off (or the instance deleted, the plugin unloaded, the host quitting) ends the
+  session and the unit goes back to its waiting screen.
+- **One driver at a time:** a lock file (`~/Library/Application Support/fm1emu/remote.lock`) lets exactly one FM1VST
+  on the Mac drive the unit; another instance, or the Standalone next to Live, shows *in use* and takes over when the
+  owner lets go.
+- **Live's MIDI:** the unit's USB-MIDI port is also a MIDI input of the DAW, and its panel sends plain MIDI (notes
+  53..79 on channel 16, buttons as notes 0..13 on channel 15, CC 7 / 39 / 16..22 on channel 15). With "All Ins" on
+  the track, the plugin would see each key twice; "Ignore the FM-1's own MIDI" (the ▾ menu next to the toggle, on by
+  default) drops exactly those messages (and RemoteFM1's SysEx) while this instance drives the unit. Any other input
+  plays as before. To keep the unit off the track entirely, pick another MIDI input than "All Ins".
+
+Frames go over the unit's vendor bulk interface when it answers (libusb, linked statically: the bundles need no
+Homebrew library), else over SysEx; the panel events always come as plain MIDI. While searching, the plugin sends
+RemoteFM1's HELLO (a SysEx with the non-commercial ID `7D`) once a second to each USB-MIDI port pair, the way the
+protocol finds the unit. The physical knobs are device turns for the knob parameters (the host feedback and a
+Roto-Control's motor follow them as they follow a turn on the plugin's panel); MASTER moves the "Knob Master"
+parameter. The design (threads, the merge with the panel GUI, the parameters and MIDI) is in `plugin/Processor.h` and
+`plugin/RemoteLink.h`, and in FM1-VST-PLAN.md 4.10.
+
 ## Building
 
 The firmware sources come in as a git submodule, so clone recursively:
@@ -344,6 +373,11 @@ Then:
 ```sh
 cmake -B build && cmake --build build && ctest --test-dir build --output-on-failure
 ```
+
+The build installs the VST3 and the AU into `~/Library/Audio/Plug-Ins` after each build. `-DFM1_COPY_PLUGIN=OFF`
+leaves them in the build folder (a second build tree next to a working install; `plugin_test` then checks the built
+bundles). Remote FM-1's vendor bulk transport links Homebrew's static `libusb-1.0.a` (`brew install libusb`); without
+it the plugin builds with SysEx frames only.
 
 The Tier 2 slots (the firmware's parameters by name) are off by default; `cmake -B build -DFM1_TIER2_SLOTS=79` turns
 them on (`FM1_TIER2_SLOTS` is a cache variable: a build folder configured before the default became 0 keeps 79 until
@@ -420,6 +454,15 @@ The tests:
   degrees per detent the host gives it. And one picture per other core,
   `build/panel/core-felucca.png` and `core-melodee.png` (1.5 s after the power-on, D4 held), its LCD checked against
   its framebuffer.
+
+- `remote_test`: Remote FM-1 against libremotefm1's in-process fake unit (`FM1EMU_REMOTE_FAKE=1`: no USB or CoreMIDI
+  device is opened): the host MIDI filter (exactly the unit's panel messages and RemoteFM1 SysEx); the unit lock
+  (two links on one lock file: the second is *in use* and sends nothing, then takes over when the first stops); the
+  processor with Remote on, in real time: the session starts on the (fake) bulk pipe, the unit's shadow equals
+  `hal->lcd` once settled, the LEDs equal `hal->led` / `led_dim`, a key, a button, an encoder (PRESETS: a device
+  turn, reported on Knob Presets inside a gesture, no host detents) and MASTER (the parameter follows) from the
+  unit reach the core, the MIDI filter on and off, a firmware switch resends the screen whole (Felucca's screen on
+  the unit), a second processor restored from the state is *in use*, the toggle off sends SESSION 0.
 
 **The reference emulator.** `replay_test` compares against the submodule's own headless emulator,
 `cores/ChoralRootFM1/build/host/emu --headless --script ... --wav ...`. The build target `reference_emu` builds it

@@ -149,6 +149,35 @@ target_compile_features(fm1engine PUBLIC cxx_std_17)
 target_compile_options(fm1engine PRIVATE -Wall -Wextra)
 target_link_libraries(fm1engine PUBLIC ${CMAKE_DL_LIBS})
 
+# ---- Remote FM-1 (RemoteFM1 M3, plugin/RemoteLink): libremotefm1 from the RemoteFM1 submodule (remote/RemoteFM1,
+# unmodified), its portable sources (host/src/*.c) and its macOS back ends (host/src/macos/*.c: CoreMIDI, libusb)
+# compiled here into one static library. (Not add_subdirectory(host): that CMake builds fm1remote and its tests.)
+# libusb is linked STATICALLY (Homebrew's libusb-1.0.a), so the bundles depend on no Homebrew dylib. Without it the
+# vendor bulk transport is left out (RFM_NO_LIBUSB) and frames go over SysEx; the editor says so.
+set(RFM ${CMAKE_CURRENT_SOURCE_DIR}/remote/RemoteFM1)
+if(NOT EXISTS ${RFM}/host/src/session.c)
+    message(FATAL_ERROR "${RFM} is empty: run git submodule update --init --recursive")
+endif()
+file(GLOB RFM_SOURCES ${RFM}/host/src/*.c)
+file(GLOB RFM_MAC_SOURCES ${RFM}/host/src/macos/*.c)
+add_library(remotefm1 STATIC ${RFM_SOURCES} ${RFM_MAC_SOURCES})
+target_include_directories(remotefm1 PUBLIC ${RFM}/host/include ${RFM}/proto
+                           PRIVATE ${RFM}/firmware/src ${RFM}/host/src/macos)
+set_target_properties(remotefm1 PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED ON POSITION_INDEPENDENT_CODE ON)
+target_compile_options(remotefm1 PRIVATE -O2 -Wall -Wextra -Wno-deprecated-declarations -Wno-unused-parameter)
+target_link_libraries(remotefm1 PUBLIC "-framework CoreMIDI" "-framework CoreFoundation" pthread)
+find_path(FM1_LIBUSB_INCLUDE libusb.h PATHS /opt/homebrew/include/libusb-1.0 /usr/local/include/libusb-1.0
+          NO_DEFAULT_PATH)
+find_library(FM1_LIBUSB_STATIC NAMES libusb-1.0.a PATHS /opt/homebrew/lib /usr/local/lib NO_DEFAULT_PATH)
+if(FM1_LIBUSB_INCLUDE AND FM1_LIBUSB_STATIC)
+    message(STATUS "Remote FM-1: vendor bulk with libusb, static (${FM1_LIBUSB_STATIC})")
+    target_include_directories(remotefm1 PRIVATE ${FM1_LIBUSB_INCLUDE})
+    target_link_libraries(remotefm1 PUBLIC ${FM1_LIBUSB_STATIC} "-framework IOKit" "-framework Security")
+else()
+    message(WARNING "Remote FM-1: libusb-1.0.a not found (brew install libusb): no vendor bulk, frames over SysEx only")
+    target_compile_definitions(remotefm1 PRIVATE RFM_NO_LIBUSB=1 PUBLIC FM1_REMOTE_NO_BULK=1)
+endif()
+
 # ---- the plugin (phase 2): JUCE via FetchContent, AU + VST3 + Standalone
 include(FetchContent)
 set(FM1_JUCE_TAG 8.0.15)
@@ -179,7 +208,7 @@ juce_add_plugin(FM1VST
     VST3_COPY_DIR "${FM1_VST3_DIR}"
     AU_COPY_DIR "${FM1_AU_DIR}")
 target_sources(FM1VST PRIVATE plugin/Processor.cpp plugin/Tier2Parameter.cpp plugin/HostRefresh.cpp plugin/Editor.cpp plugin/Theme.cpp
-                              plugin/PanelComponent.cpp)
+                              plugin/PanelComponent.cpp plugin/RemoteLink.cpp)
 # the theme presets (themes/presets.json), embedded: BinaryData::presets_json
 juce_add_binary_data(FM1VST_Themes HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES themes/presets.json)
 set_target_properties(FM1VST_Themes PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -193,7 +222,7 @@ target_compile_definitions(FM1VST PUBLIC
     JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0
     FM1_CORES_DIR="${CMAKE_BINARY_DIR}/cores" FM1_TIER2_SLOTS=${FM1_TIER2_SLOTS})
 target_link_libraries(FM1VST
-    PRIVATE juce::juce_audio_utils fm1engine FM1VST_Themes
+    PRIVATE juce::juce_audio_utils fm1engine FM1VST_Themes remotefm1
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
 set(FM1_CORE_TARGETS ${FM1_CORE_IDS})
 list(TRANSFORM FM1_CORE_TARGETS APPEND _core)
@@ -215,7 +244,18 @@ foreach(_fmt VST3 AU Standalone)
         COMMENT "FM1VST ${_fmt}: the cores (${FM1_CORE_IDS}) into the bundle, ad-hoc signed"
         VERBATIM)
 endforeach()
-juce_enable_copy_plugin_step(FM1VST)
+# the install: the VST3 and the AU copied to ~/Library/Audio/Plug-Ins after each build (the default). OFF: the bundles
+# stay in the build (a second build tree next to a working install; plugin_test then checks the built bundles)
+option(FM1_COPY_PLUGIN "copy the built VST3 / AU to ~/Library/Audio/Plug-Ins after each build" ON)
+if(FM1_COPY_PLUGIN)
+    juce_enable_copy_plugin_step(FM1VST)
+    set(FM1_TEST_VST3 "${FM1_VST3_DIR}/FM1VST.vst3")
+    set(FM1_TEST_AU "${FM1_AU_DIR}/FM1VST.component")
+else()
+    message(STATUS "FM1_COPY_PLUGIN OFF: the plugin is not installed into ~/Library/Audio/Plug-Ins")
+    set(FM1_TEST_VST3 "$<TARGET_BUNDLE_DIR:FM1VST_VST3>")
+    set(FM1_TEST_AU "$<TARGET_BUNDLE_DIR:FM1VST_AU>")
+endif()
 
 # ---- the reference emulator (build/host/emu inside the submodule, gitignored there): the replay test's ground
 # truth. Built by the submodule's own tools/emu/build.sh (needs SDL2 from Homebrew) when missing.
@@ -291,7 +331,7 @@ target_link_libraries(plugin_test PRIVATE FM1VST fm1engine)
 target_include_directories(plugin_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
 target_compile_definitions(plugin_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS>
     FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/plugin_test_home"
-    FM1_INSTALLED_VST3="${FM1_VST3_DIR}/FM1VST.vst3" FM1_INSTALLED_AU="${FM1_AU_DIR}/FM1VST.component")
+    FM1_INSTALLED_VST3="${FM1_TEST_VST3}" FM1_INSTALLED_AU="${FM1_TEST_AU}")
 add_dependencies(plugin_test ${FM1_CORE_TARGETS} FM1VST_VST3 FM1VST_AU)
 add_test(NAME plugin_test COMMAND plugin_test)
 
@@ -323,3 +363,15 @@ target_compile_definitions(panel_render_test PRIVATE $<TARGET_PROPERTY:FM1VST,CO
     FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/panel_test_home" FM1_PANEL_OUT="${CMAKE_BINARY_DIR}/panel")
 add_dependencies(panel_render_test ${FM1_CORE_TARGETS})
 add_test(NAME panel_render_test COMMAND panel_render_test)
+
+# Remote FM-1 (plugin/RemoteLink) against libremotefm1's in-process fake unit (FM1EMU_REMOTE_FAKE=1: nothing on USB or
+# CoreMIDI is opened): the processor with Remote on (frames, LEDs, keys / buttons / encoders / MASTER, a core switch's
+# full resend, SESSION 0 at the toggle off), the unit lock between two links, the host MIDI filter
+add_executable(remote_test tests/remote_test.cpp)
+target_link_libraries(remote_test PRIVATE FM1VST fm1engine remotefm1)
+target_include_directories(remote_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
+target_compile_definitions(remote_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS>
+    FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/remote_test_home")
+add_dependencies(remote_test ${FM1_CORE_TARGETS})
+add_test(NAME remote_test COMMAND remote_test)
+set_tests_properties(remote_test PROPERTIES ENVIRONMENT "FM1EMU_REMOTE_FAKE=1" TIMEOUT 180)
