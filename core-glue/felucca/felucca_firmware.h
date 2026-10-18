@@ -20,8 +20,9 @@
 #define FELUCCA_UAC 0
 /* the 1 MiB NOR as RAM (felucca_hal.h): declared first, the SAMPLE engine's user slots are read from it in place
  * (eng_sample.c SMP_USER_XIP: on the device the plain XIP window over flash 0xA0000..) */
-#define EMU_FLASH_SIZE 0x100000u
-static uint8_t emu_flash[EMU_FLASH_SIZE];
+#include "nor.h"                                  /* (core-glue/common) */
+#define EMU_FLASH_SIZE FM1NOR_SIZE
+#define emu_flash fm1nor_image
 #define SMP_USER_XIP(k) ((const uint8_t *)emu_flash + 0xA0000u + (uint32_t)(k) * 0x14000u)
 #define main hostsim_main
 #include "../../cores/Felucca/tests/hostsim.c"

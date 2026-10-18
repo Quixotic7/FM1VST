@@ -15,7 +15,7 @@ void Device::boot(const char *flash_path, bool ram_only)
     c_->options(ram ? nullptr : flash_path, ram ? 1 : 0, 0, 1);   // (headless = 1: never the default file)
     if (c_->boot_options)
         c_->boot_options(-1, nullptr, -1);  // a power-on with a clean guard record (emu.c's defaults)
-    c_->hal->ready = 2;                     // simulated time (fm1_ticks = the device clock), before init
+    c_->panel->ready = 2;                   // simulated time (fm1_ticks = the device clock), before init
     c_->init(0);
     booted_ = true;
 }
@@ -28,7 +28,7 @@ void Device::boot_from(const uint8_t *bytes, uint32_t n)
     c_->options(FM1CORE_FLASH_STAGED, 0, 0, 1);
     if (c_->boot_options)
         c_->boot_options(-1, nullptr, -1);
-    c_->hal->ready = 2;
+    c_->panel->ready = 2;
     c_->init(0);
     booted_ = true;
 }
@@ -36,14 +36,24 @@ void Device::boot_from(const uint8_t *bytes, uint32_t n)
 // ------------------------------------------------------------------ input ---
 void Device::keys(uint32_t m)
 {
-    emu_hal_t *h = c_->hal;
-    m &= (1u << EMU_NKEY) - 1u;
+    fm1panel_t *h = c_->panel;
+    m &= (1u << FM1P_NKEY) - 1u;
     h->keys_tap |= m & ~h->keys;
     h->keys = m;
 }
-void Device::keys_tap(uint32_t m) { c_->hal->keys_tap |= m & ((1u << EMU_NKEY) - 1u); }
+void Device::keys_tap(uint32_t m) { c_->panel->keys_tap |= m & ((1u << FM1P_NKEY) - 1u); }
+void Device::key_vel(int key, int vel)
+{
+    if (key >= 0 && key < FM1P_NKEY)
+        c_->panel->key_vel[key] = (uint8_t)(vel < 0 ? 0 : vel > 127 ? 127 : vel);
+}
+void Device::key_lean(int key, int pct)
+{
+    if (key >= 0 && key < FM1P_NKEY)
+        c_->panel->key_lean[key] = (uint8_t)(pct < 0 ? 0 : pct > 100 ? 100 : pct);
+}
 
-static uint32_t btn_matrix(const emu_hal_t *h, uint32_t m)   // label bits (EMU_B_*) -> matrix bits
+static uint32_t btn_matrix(const fm1panel_t *h, uint32_t m)   // label bits (EMU_B_*) -> matrix bits
 {
     uint32_t b = 0;
     for (uint32_t i = 0; i < EMU_NB; i++)
@@ -53,16 +63,16 @@ static uint32_t btn_matrix(const emu_hal_t *h, uint32_t m)   // label bits (EMU_
 }
 void Device::buttons(uint32_t m)
 {
-    emu_hal_t *h = c_->hal;
+    fm1panel_t *h = c_->panel;
     const uint32_t b = btn_matrix(h, m);
     h->buttons_tap |= b & ~h->buttons;
     h->buttons = b;
 }
-void Device::buttons_tap(uint32_t m) { c_->hal->buttons_tap |= btn_matrix(c_->hal, m); }
+void Device::buttons_tap(uint32_t m) { c_->panel->buttons_tap |= btn_matrix(c_->panel, m); }
 
 void Device::enc(int role, int32_t n)
 {
-    emu_hal_t *h = c_->hal;
+    fm1panel_t *h = c_->panel;
     if (role == EMU_E_MASTER) {
         const int32_t m = h->master + n * 16;
         h->master = m < 0 ? 0 : m > 1023 ? 1023 : m;
@@ -71,29 +81,27 @@ void Device::enc(int role, int32_t n)
         enc_total_[role] += n;
     }
 }
-void Device::master(int32_t v) { c_->hal->master = v < 0 ? 0 : v > 1023 ? 1023 : v; }
+void Device::master(int32_t v) { c_->panel->master = v < 0 ? 0 : v > 1023 ? 1023 : v; }
 int Device::midi_in(uint32_t pkt) { return booted_ ? c_->midi_in(pkt) : 0; }
 int Device::midi_out_take(uint32_t *pkt) { return booted_ ? c_->midi_out_take(pkt) : 0; }
 
 // ----------------------------------------------------------------- output ---
-int Device::led_of(int id) const              // emu_web.c led_of
+int Device::led_level(int id) const           // emu_web.c led_of, as a level
 {
-    const emu_hal_t *h = c_->hal;
-    for (int r = 1; r < 5; r++)
-        for (int col = 0; col < EMU_NCOL; col++)
-            if (c_->keymap[r * EMU_NCOL + col] == id)
-                return (h->led[col] >> r) & 1u ? 2 : (h->led_dim[col] >> r) & 1u ? 1 : 0;
+    const fm1panel_t *h = c_->panel;
+    for (int r = 1; r <= FM1P_NLINE; r++)
+        for (int col = 0; col < FM1P_NCOL; col++)
+            if (c_->keymap[r * FM1P_NCOL + col] == id)
+                return h->led[col][r - 1];
     return 0;
 }
-int Device::led_button(int label) const
+int Device::led_button_level(int label) const
 {
-    return label >= 0 && label < EMU_NB ? led_of(c_->hal->btn_id[label]) : 0;
+    return label >= 0 && label < EMU_NB ? led_level(c_->panel->btn_id[label]) : 0;
 }
-int Device::led_play_green() const
-{
-    const uint32_t q = c_->hal->led_play_green;
-    return (int)(((c_->hal->led[q >> 3] >> (q & 7u)) & 1u) * 2u);
-}
+int Device::led_of(int id) const { return led_lv(led_level(id)); }
+int Device::led_button(int label) const { return led_lv(led_button_level(label)); }
+int Device::led_play_green() const { return led_lv(c_->panel->led_play_green) == 2 ? 2 : 0; }
 
 // ------------------------------------------------------------------ clock ---
 void Device::run_ms(const Between &between)   // emu_web.c run_ms (emu.c bench: tick, script, frame, audio)

@@ -61,7 +61,7 @@ int main()
     }
     std::printf("double_load_test: A %s\n                  B %s\n", la->copy_path().c_str(), lb->copy_path().c_str());
     check(la->core() != lb->core(), "two descriptors");
-    check(la->core()->hal != lb->core()->hal, "two hal pointers (separate globals)");
+    check(la->core()->panel != lb->core()->panel, "two panel pointers (separate globals)");
     check(la->core()->tick != lb->core()->tick, "two copies of the code");
 
     Device da(la->core()), db(lb->core());
@@ -122,8 +122,8 @@ int main()
         const std::string fe = std::string(FM1_CORES_BUILD_DIR) + "/felucca.fm1core";
         std::unique_ptr<LoadedCore> lc = CoreLoader::load(core_module(), &err), lf = CoreLoader::load(fe, &err);
         check(lc && lf && !std::strcmp(lc->core()->id, "choralroot") && !std::strcmp(lf->core()->id, "felucca") &&
-                  lc->core()->hal != lf->core()->hal,
-              "choralroot and felucca loaded together (two descriptors, two hals)");
+                  lc->core()->panel != lf->core()->panel,
+              "choralroot and felucca loaded together (two descriptors, two panels)");
         if (lc && lf) {
             Device dc(lc->core()), df(lf->core());
             dc.boot(nullptr, true);

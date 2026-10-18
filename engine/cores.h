@@ -2,7 +2,7 @@
 // Core modules (FM1-VST-PLAN.md 4.3): finding *.fm1core files and loading one per instrument.
 //
 // WHY EACH LOAD IS A COPY. A core is the firmware compiled as one translation unit: all of its state is C globals
-// (emu_hal, the engine, the UI, the flash image). dyld maps a given file once per process however often it is
+// (the panel, the engine, the UI, the flash image). dyld maps a given file once per process however often it is
 // dlopen'ed (it recognises the path and the file's inode), so two instruments loading the same file would share
 // one firmware. load() therefore copies the module to a unique path first,
 //     ~/Library/Caches/fm1emu/instances/<uuid>/<name>.fm1core   (FM1EMU_HOME: <FM1EMU_HOME>/Caches/fm1emu/...)
@@ -56,6 +56,7 @@ public:
     // read one module's descriptor without keeping it loaded
     static bool probe(const std::string &path, CoreInfo &out, std::string *error = nullptr);
 
-    // a private copy of the module, loaded (RTLD_NOW | RTLD_LOCAL), its ABI checked; nullptr on failure
+    // a private copy of the module, loaded (RTLD_NOW | RTLD_LOCAL), its ABI checked (FM1CORE_ABI only: a core built
+    // for an older ABI is refused with an error naming its ABI); nullptr on failure
     static std::unique_ptr<LoadedCore> load(const std::string &path, std::string *error = nullptr);
 };

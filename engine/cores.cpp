@@ -84,8 +84,15 @@ static const fm1core_t *open_core(const std::string &path, void **handle, std::s
     }
     const fm1core_t *c = get(FM1CORE_ABI);
     if (!c || c->abi_version != FM1CORE_ABI) {
+        // which ABI it was built for (asking an older module for its own ABI only returns a pointer: nothing runs)
+        uint32_t built = 0;
+        for (uint32_t v = 1; v < 64 && !built; v++)
+            if (v != FM1CORE_ABI && get(v))
+                built = v;
         if (error)
-            *error = path + ": built for another core ABI (this host: " + std::to_string(FM1CORE_ABI) + ")";
+            *error = path + ": " + (built ? "a core for ABI " + std::to_string(built) : std::string("a core for another ABI")) +
+                     "; this host loads ABI " + std::to_string(FM1CORE_ABI) +
+                     " cores only (rebuild the core against this FM1VST's core-api/fm1core.h)";
         dlclose(h);
         return nullptr;
     }

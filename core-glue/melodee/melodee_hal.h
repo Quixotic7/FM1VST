@@ -15,7 +15,9 @@
  *     (a plane lit every frame, mask 0, is a lit LED: emu_hal.led) after every ui_leds;
  *   - Melodee's storage.c also needs the flash part's JEDEC id (persist_boot: fl_jedec_ram() == 0x856014, else it
  *     stays RAM only), irq_save / irq_restore, FL_FAR and fl_plain_window_init (the XIP plaintext window);
- *   - the emu_hal_t struct is ChoralRoot's emu_hooks.h (through core-api/fm1core.h): not duplicated. */
+ *   - emu_hal_t is core-glue/common/panel.h's fm1p_emu_hal_t (ChoralRoot's ABI 1..4 emu_hal_t): the glue translates
+ *     it to and from the ABI's fm1panel_t (core_melodee.c);
+ *   - the NOR image is core-glue/common/nor.c's (fm1nor_image, the stage, the file, the erase stall). */
 
 /* -------------------------------------------------------- time --- */
 #define FM1_TICKS_PER_US 1u                       /* fm1_ticks: microseconds */
@@ -128,78 +130,15 @@ static void fm1_audio_init(int32_t *b, uint32_t n, void (*isr)(void), int prio) 
 void isr_alnk0(void) {}
 
 /* ------------------------------------------------ flash (storage.c's hooks) --- */
-/* The FM-1's 1 MiB SPI NOR as a RAM image (emu_flash[], declared in melodee_firmware.h before the sound side: the
- * SAMPLE engine reads its user slots from it), optionally backed by a file: loaded at power-on, every erase /
- * program written through at once. The NOR's rules hold: an erase sets a 4 KiB sector to 0xFF, a program can only
- * clear bits and must not cross a 256-byte page. */
-static char emu_flash_path[1024];                 /* "": RAM only */
-static FILE *emu_flash_f;
-static uint32_t emu_flash_writes;                 /* erases + programs (the descriptor's flash_dirty) */
-
-static void emu_flash_open(void)
-{
-    memset(emu_flash, 0xFF, sizeof emu_flash);
-    if (!emu_flash_path[0])
-        return;
-    emu_flash_f = fopen(emu_flash_path, "r+b");
-    if (emu_flash_f) {
-        size_t n = fread(emu_flash, 1, sizeof emu_flash, emu_flash_f);
-        if (n < sizeof emu_flash)                 /* short (or new): pad the file to the full image */
-            memset(emu_flash + n, 0xFF, sizeof emu_flash - n);
-    } else {
-        emu_flash_f = fopen(emu_flash_path, "w+b");
-    }
-    if (!emu_flash_f) {
-        fprintf(stderr, "melodee: flash file %s: cannot open (RAM only)\n", emu_flash_path);
-        return;
-    }
-    fseek(emu_flash_f, 0, SEEK_SET);
-    fwrite(emu_flash, 1, sizeof emu_flash, emu_flash_f);
-    fflush(emu_flash_f);
-}
-static void emu_flash_sync(uint32_t off, uint32_t n)
-{
-    emu_flash_writes++;
-    if (!emu_flash_f)
-        return;
-    fseek(emu_flash_f, (long)off, SEEK_SET);
-    fwrite(emu_flash + off, 1, n, emu_flash_f);
-    fflush(emu_flash_f);
-}
+/* The FM-1's 1 MiB SPI NOR: core-glue/common/nor.c's image (fm1nor_image = emu_flash, declared through melodee_firmware.h
+ * before the sound side), optionally backed by a file (every erase / program written through at once) or booted from
+ * the staged bytes. The NOR's rules hold: an erase sets a 4 KiB sector to 0xFF (and stalls the audio ~45 ms, as the
+ * device's erase does: the glue's audio() plays fm1nor_stall_take()'s blocks as silence), a program can only clear
+ * bits and must not cross a 256-byte page. */
 static uint8_t flash_ok;                          /* storage_hw.c's: the part answered (persist_boot sets it) */
 static uint32_t fl_jedec_ram(void) { return 0x856014u; }   /* the FM-1's 1 MiB part (storage_hw.c's check) */
 #define FL_FAR(fn) (fn)
 static void fl_plain_window_init(void) {}         /* (the image is plaintext) */
-static int st_read(uint32_t off, void *dst, uint32_t n)
-{
-    if (off > EMU_FLASH_SIZE || n > EMU_FLASH_SIZE - off)
-        return -8;
-    memcpy(dst, emu_flash + off, n);
-    return 0;
-}
-/* the device's erase (storage_hw.c st_erase): the audio buffer zeroed and every IRQ off for the 4 KiB erase (typ.
- * ~45 ms on the FM-1's NOR): no render, the DMA loops silence. The core plays the same hole, as ChoralRoot's
- * emulator does: EMU_ERASE_MS of zero blocks, the firmware's audio ISR not run meanwhile (emu_fw_audio) */
-#define EMU_ERASE_MS 45u
-static uint32_t emu_stall_blocks, emu_stalls, emu_stall_blocks_all;
-static int st_erase(uint32_t off)
-{
-    off &= ~0xFFFu;
-    if (off >= EMU_FLASH_SIZE)
-        return -8;
-    emu_stall_blocks += (EMU_ERASE_MS * 44100u / 1000u + HALF_FRAMES - 1u) / HALF_FRAMES;
-    emu_stalls++;
-    memset(emu_flash + off, 0xFF, 0x1000u);
-    emu_flash_sync(off, 0x1000u);
-    return 0;
-}
-static int st_prog(uint32_t off, const void *src, uint32_t n)
-{
-    uint32_t i;
-    if (off > EMU_FLASH_SIZE || n > EMU_FLASH_SIZE - off || (off & 0xFFu) + n > 256u)
-        return -8;                                /* (a page program must not wrap: the device's rule) */
-    for (i = 0; i < n; i++)
-        emu_flash[off + i] &= ((const uint8_t *)src)[i];
-    emu_flash_sync(off, n);
-    return 0;
-}
+static int st_read(uint32_t off, void *dst, uint32_t n) { return fm1nor_read(off, dst, n); }
+static int st_erase(uint32_t off) { return fm1nor_erase(off); }
+static int st_prog(uint32_t off, const void *src, uint32_t n) { return fm1nor_prog(off, src, n); }

@@ -42,7 +42,7 @@ static void run_ms(void)
     }
 }
 
-static void write_ppm(const char *path, const emu_hal_t *hal)
+static void write_ppm(const char *path, const fm1panel_t *hal)
 {
     FILE *f = fopen(path, "wb");
     uint32_t i;
@@ -61,7 +61,7 @@ static void write_ppm(const char *path, const emu_hal_t *hal)
 int main(int argc, char **argv)
 {
     const uint32_t key = 9;                       /* D4 */
-    emu_hal_t *hal;
+    fm1panel_t *hal;
     void *h;
     fm1core_get_fn get;
     if (argc < 2) {
@@ -79,7 +79,7 @@ int main(int argc, char **argv)
         printf("core_smoke: fm1core_get: no descriptor, or one for the wrong ABI: FAIL\n");
         return 1;
     }
-    hal = core->hal;
+    hal = core->panel;
     printf("core_smoke: core %s \"%s\" %s (%s), flash %u bytes, %u parameters, buttons %s %s .. %s\n", core->id,
            core->name, core->version, core->source_url, (unsigned)core->flash_size, (unsigned)core->nparams,
            core->button_names[0], core->button_names[1], core->button_names[EMU_NB - 1]);

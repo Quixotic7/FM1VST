@@ -168,7 +168,7 @@ int main()
         h.run_ms(300);
         check(dev->led_key(D4) == 2, "D4 held through panelKey: its LED is lit on the device (led_key " +
                                          std::to_string(dev->led_key(D4)) + ")");
-        check(((dev->hal()->keys >> D4) & 1u) != 0, "D4 held through panelKey: the HAL holds the key");
+        check(((dev->panel()->keys >> D4) & 1u) != 0, "D4 held through panelKey: the HAL holds the key");
         check(!p.keyParam(D4)->get(), "the key_09 host parameter did not move (the panel is its own source)");
         juce::Image held = render(panel, 2.0f);
         const juce::Point<int> led = panel.keyLedPx(D4);
@@ -224,19 +224,19 @@ int main()
         // a button through the panel: SEL (ChoralRoot KEY) reaches the HAL, its parameter does not move
         p.panelButton(EMU_B_SEL, true);
         h.run_ms(50);
-        const bool selDown = (dev->hal()->buttons >> dev->hal()->btn_id[EMU_B_SEL]) & 1u;
+        const bool selDown = (dev->panel()->buttons >> dev->panel()->btn_id[EMU_B_SEL]) & 1u;
         p.panelButton(EMU_B_SEL, false);
         h.run_ms(50);
-        const bool selUp = !((dev->hal()->buttons >> dev->hal()->btn_id[EMU_B_SEL]) & 1u);
+        const bool selUp = !((dev->panel()->buttons >> dev->panel()->btn_id[EMU_B_SEL]) & 1u);
         check(selDown && selUp && !p.buttonParam(EMU_B_SEL)->get(), "panelButton holds and releases SEL on the HAL; btn_sel unmoved");
         // MASTER from the panel moves the master parameter (16 per detent)
         {
             const int m0 = p.masterParam()->get();
             p.panelEnc(EMU_E_MASTER, -2);
             h.run_ms(20);
-            check(p.masterParam()->get() == m0 - 32 && dev->hal()->master == m0 - 32,
+            check(p.masterParam()->get() == m0 - 32 && dev->panel()->master == m0 - 32,
                   "panelEnc(MASTER, -2): the master parameter and the HAL move by 32 (" + std::to_string(m0) + " -> " +
-                      std::to_string(dev->hal()->master) + ")");
+                      std::to_string(dev->panel()->master) + ")");
         }
 
         // ---- (r) the face knobs follow what they control: Knob 1 (Voicing on the view) written by the host to 0.25,
@@ -368,7 +368,7 @@ int main()
             labels += " " + b.toStdString();
         check(ok && dev && dev->booted() && !dev->halted() && !std::strcmp(dev->core()->id, id) && writePng(img, f),
               std::string(id) + ": wrote " + f.getFullPathName().toStdString() + " (buttons" + labels + ")");
-        check(dev && dev->led_key(D4) == 2 && ((dev->hal()->keys >> D4) & 1u), std::string(id) + ": D4 held, its LED lit");
+        check(dev && dev->led_key(D4) == 2 && ((dev->panel()->keys >> D4) & 1u), std::string(id) + ": D4 held, its LED lit");
         if (dev) {
             int worst = 0, bad = 0;
             panel.setBounds(0, 0, 1402, 861);            // (lcd-1x's layout: the LCD at an integer scale)
@@ -393,7 +393,7 @@ int main()
         Host h(p, 44100.0, 256);
         h.run_ms(600);
         Device *dev = p.deviceForTest();
-        emu_hal_t *hal = dev->hal();
+        fm1panel_t *hal = dev->panel();
         PanelComponent panel(p);
         panel.setBounds(0, 0, 904, 566);
         std::set<int> down;                       // the keys physically down

@@ -20,8 +20,9 @@
 #define MELODEE_CDC 0
 /* the 1 MiB NOR as RAM (melodee_hal.h), declared before the sound side as the Felucca core does (Melodee's
  * eng_sample.c is gone, SMP_USER_XIP is unused) */
-#define EMU_FLASH_SIZE 0x100000u
-static uint8_t emu_flash[EMU_FLASH_SIZE];
+#include "nor.h"                                  /* (core-glue/common) */
+#define EMU_FLASH_SIZE FM1NOR_SIZE
+#define emu_flash fm1nor_image
 #define main hostsim_main
 #include "../../cores/melodee/tests/hostsim.c"
 #undef main

@@ -204,7 +204,7 @@ void FM1Processor::createTier1Parameters()
 // the eight physical knobs in panel order: MASTER (the pot) then SELECT PRESETS ALGORITHM KNOB1..4
 void FM1Processor::createKnobParameters()
 {
-    // the emulator's power-on value: emu_fw_init sets emu_hal.master = 724 when the host left it 0
+    // the emulator's power-on value: a core sets panel->master = 724 at init when the host left it 0
     // (the value text carries the function, as the other knobs': "Master: 724")
     master_ = new juce::AudioParameterInt(
         juce::ParameterID{"knob_master", 1}, "Knob Master", 0, 1023, 724,
@@ -1421,11 +1421,13 @@ void FM1Processor::fineFrame()
 void FM1Processor::snapshotPanel()
 {
     const bool running = dev_ && dev_->booted() && !dev_->halted();
-    const emu_hal_t *h = dev_ ? dev_->hal() : nullptr;
+    const fm1panel_t *h = dev_ ? dev_->panel() : nullptr;
     const uint32_t keys = appliedKeys_ == 0xFFFFFFFFu ? 0u : appliedKeys_;
     const uint32_t buttons = appliedButtons_ == 0xFFFFFFFFu ? 0u : appliedButtons_;
     const bool lcdMoved = h && h->lcd_writes != view_.lcdWrites;
-    const bool ledsMoved = h && (std::memcmp(viewLeds_, h->led, EMU_NCOL) || std::memcmp(viewLeds_ + EMU_NCOL, h->led_dim, EMU_NCOL));
+    static_assert(sizeof viewLeds_ == sizeof h->led + 1, "viewLeds_: the panel's LEDs and PLAY green");
+    const bool ledsMoved = h && (std::memcmp(viewLeds_, h->led, sizeof h->led) ||
+                                 viewLeds_[sizeof h->led] != h->led_play_green);
     // the knobs: what each is bound to and where its value is (the firmware's own, whoever moved it)
     std::array<PanelView::Knob, EMU_NE - 1> kv{};
     for (int r = 0; r < kKnobs; r++) {
@@ -1453,13 +1455,13 @@ void FM1Processor::snapshotPanel()
             view_.lcdWrites = h->lcd_writes;
             view_.lcdSeq++;
         }
-        std::memcpy(viewLeds_, h->led, EMU_NCOL);
-        std::memcpy(viewLeds_ + EMU_NCOL, h->led_dim, EMU_NCOL);
+        std::memcpy(viewLeds_, h->led, sizeof h->led);
+        viewLeds_[sizeof h->led] = h->led_play_green;
         for (int k = 0; k < EMU_NKEY; k++)
-            view_.keyLed[(size_t)k] = (uint8_t)dev_->led_key(k);
+            view_.keyLed[(size_t)k] = (uint8_t)dev_->led_key_level(k);
         for (int b = 0; b < EMU_NB; b++)
-            view_.btnLed[(size_t)b] = (uint8_t)dev_->led_button(b);
-        view_.playGreen = (uint8_t)dev_->led_play_green();
+            view_.btnLed[(size_t)b] = (uint8_t)dev_->led_button_level(b);
+        view_.playGreen = (uint8_t)dev_->led_play_green_level();
         view_.master = h->master;
         viewMaster_ = h->master;
     }
@@ -1599,10 +1601,17 @@ bool FM1Processor::isBusesLayoutSupported(const BusesLayout &layouts) const
     return layouts.inputBuses.isEmpty() && (out == juce::AudioChannelSet::stereo() || out == juce::AudioChannelSet::mono());
 }
 
+// a key newly down gets its velocity first (panel->key_vel): the MIDI note's that pressed it, the unit's (RemoteFM1
+// sends no velocity yet: its fixed 100), else 0 (the firmware's own default: a panel click, a parameter)
+static constexpr int kRemoteVel = 100;
 void FM1Processor::pushKeys()
 {
     const uint32_t m = paramKeys_ | midiKeys_ | panelKeysCur_ | remoteKeys_;
     if (m != appliedKeys_) {
+        const uint32_t down = m & ~(appliedKeys_ == 0xFFFFFFFFu ? 0u : appliedKeys_);
+        for (int k = 0; k < EMU_NKEY; k++)
+            if ((down >> k) & 1u)
+                dev_->key_vel(k, (midiKeys_ >> k) & 1u ? midiVel_[(size_t)k] : (remoteKeys_ >> k) & 1u ? kRemoteVel : 0);
         dev_->keys(m);
         appliedKeys_ = m;
     }
@@ -1635,8 +1644,13 @@ void FM1Processor::applyTier1()
     }
     lastNotesPlayKeys_ = np;
     pushKeys();
-    if (const uint32_t t = keyTaps & ~appliedKeys_)
+    if (const uint32_t t = keyTaps & ~appliedKeys_) {
+        for (int key = 0; key < EMU_NKEY; key++)
+            if ((t >> key) & 1u)
+                dev_->key_vel(key, (remoteKeyTaps_ >> key) & 1u ? kRemoteVel : 0);
         dev_->keys_tap(t);
+    }
+    remoteKeyTaps_ = 0;
     for (int r = 0; r < EMU_NE - 1; r++)         // (MASTER: the parameter, below)
         if (const int32_t n = panelEnc_[(size_t)r].exchange(0))
             dev_->enc(r, n);
@@ -1695,7 +1709,7 @@ bool FM1Processor::isRemotePanelMidi(const uint8_t *d, int n)
 // turn: enc_total moves, the host's own detents do not), moved by exactly the unit's detents; MASTER is the pot.
 void FM1Processor::applyRemote(uint32_t &keyTaps, uint32_t &btnTaps)
 {
-    emu_hal_t *h = dev_->hal();
+    fm1panel_t *h = dev_->panel();
     rfm_event_t e;
     for (int n = 0; n < 4096 && remote_->popEvent(e); n++) {
         switch (e.type) {
@@ -1705,13 +1719,14 @@ void FM1Processor::applyRemote(uint32_t &keyTaps, uint32_t &btnTaps)
                 if (e.value) {
                     remoteKeys_ |= bit;
                     keyTaps |= bit;
+                    remoteKeyTaps_ |= bit;
                 } else {
                     remoteKeys_ &= ~bit;
                 }
             }
             break;
         case RFM_EV_BUTTON: {
-            int label = -1;                      // matrix id -> label (hal->btn_id: the firmware's panel.c)
+            int label = -1;                      // matrix id -> label (panel->btn_id: the firmware's panel.c)
             for (int l = 0; l < EMU_NB && label < 0; l++)
                 if (h->btn_id[l] == e.index)
                     label = l;
@@ -1728,7 +1743,7 @@ void FM1Processor::applyRemote(uint32_t &keyTaps, uint32_t &btnTaps)
         }
         case RFM_EV_ENC:
             if (e.index < EMU_NENC && e.value) {
-                int role = -1;                   // matrix encoder -> knob role (hal->enc_id)
+                int role = -1;                   // matrix encoder -> knob role (panel->enc_id)
                 for (int r = 0; r < EMU_NE - 1 && role < 0; r++)
                     if (h->enc_id[r] == e.index)
                         role = r;
@@ -1756,18 +1771,24 @@ void FM1Processor::applyRemote(uint32_t &keyTaps, uint32_t &btnTaps)
     }
 }
 
-// The LED levels a core's emu_hal_t has: this core-api (ABI 4) has led and led_dim; a newer emu_hooks.h adds led_mid
-// and led_faint (RemoteFM1's LEDS carries all four): copied when the header has them
-template <typename H> static auto copyLedMid(const H *h, uint8_t *out, int) -> decltype(h->led_mid, void())
+// The panel's LED levels as RemoteFM1's LEDS planes (packed row bits per column, like the firmware's fm1_led): each
+// LED in the one plane of its class (fm1core.h fm1p_led_class: lit, mid, dim, faint)
+void FM1Processor::remoteLeds(const fm1panel_t *h, rfm_leds_t &l)
 {
-    std::memcpy(out, h->led_mid, RFM_NCOL);
+    std::memset(&l, 0, sizeof l);
+    for (int c = 0; c < (int)RFM_NCOL && c < FM1P_NCOL; c++)
+        for (int r = 0; r < FM1P_NLINE; r++) {
+            const uint8_t bit = (uint8_t)(1u << (r + 1));
+            switch (fm1p_led_class(h->led[c][r])) {
+            case FM1P_LC_LIT: l.lit[c] |= bit; break;
+            case FM1P_LC_MID: l.mid[c] |= bit; break;
+            case FM1P_LC_DIM: l.dim[c] |= bit; break;
+            case FM1P_LC_FAINT: l.faint[c] |= bit; break;
+            default: break;
+            }
+        }
+    l.flags = fm1p_led_class(h->led_play_green) == FM1P_LC_LIT ? RFM_LEDS_F_PLAY_GREEN : 0;
 }
-template <typename H> static void copyLedMid(const H *, uint8_t *out, long) { std::memset(out, 0, RFM_NCOL); }
-template <typename H> static auto copyLedFaint(const H *h, uint8_t *out, int) -> decltype(h->led_faint, void())
-{
-    std::memcpy(out, h->led_faint, RFM_NCOL);
-}
-template <typename H> static void copyLedFaint(const H *, uint8_t *out, long) { std::memset(out, 0, RFM_NCOL); }
 
 // block end (devLock_ held): the LCD and the LEDs to the unit, at most every kPeriodMs device ms and only when they
 // changed (lcd_writes moved, an LED differs), or at once after a new device / a new session
@@ -1777,18 +1798,14 @@ void FM1Processor::publishRemote()
         remotePubValid_ = false;
         return;
     }
-    static_assert(sizeof(RemoteSnapshot::lcd) == sizeof(emu_hal_t::lcd), "the LCD layouts differ");
-    const emu_hal_t *h = dev_->hal();
+    static_assert(sizeof(RemoteSnapshot::lcd) == sizeof(fm1panel_t::lcd), "the LCD layouts differ");
+    const fm1panel_t *h = dev_->panel();
     const bool full = remote_->takeFullRequest() || !remotePubValid_;
     const uint32_t ms = dev_->ms();
     if (!full && ms - remotePubMs_ < RemoteLink::kPeriodMs)
         return;
     rfm_leds_t l;
-    std::memcpy(l.lit, h->led, RFM_NCOL);
-    copyLedMid(h, l.mid, 0);
-    std::memcpy(l.dim, h->led_dim, RFM_NCOL);
-    copyLedFaint(h, l.faint, 0);
-    l.flags = dev_->led_play_green() ? RFM_LEDS_F_PLAY_GREEN : 0;
+    remoteLeds(h, l);
     if (!full && h->lcd_writes == remotePubWrites_ && rfm_leds_equal(&l, &remotePubLeds_))
         return;
     RemoteSnapshot &s = remote_->back();
@@ -1811,6 +1828,7 @@ void FM1Processor::handleMidi(const juce::MidiMessage &m)
             const int note = m.getNoteNumber(), key = note - kNoteBase + 12 * transpose_.load();
             if (noteKey_[(size_t)ch][(size_t)note] < 0 && key >= 0 && key < EMU_NKEY) {
                 noteKey_[(size_t)ch][(size_t)note] = (int8_t)key;
+                midiVel_[(size_t)key] = (uint8_t)juce::jlimit(1, 127, (int)m.getVelocity());   // (pushKeys: key_vel)
                 keyCount_[(size_t)key]++;
                 midiKeys_ |= 1u << key;
                 keyNote = true;

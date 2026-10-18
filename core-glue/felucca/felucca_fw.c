@@ -7,8 +7,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "fm1core.h"                      /* emu_hooks.h: emu_hal_t, the hooks; before hostsim's __attribute__ */
+#include "fm1core.h"                      /* the panel's constants (EMU_*); before hostsim's __attribute__ */
+#include "panel.h"                        /* (core-glue/common) fm1p_emu_hal_t */
 
+/* the firmware's own panel state, as ChoralRoot's emulator keeps it (core_felucca.c translates it to the ABI's
+ * fm1panel_t) */
+typedef fm1p_emu_hal_t emu_hal_t;
 emu_hal_t emu_hal;
 /* hal/fm1_input.h FM1_KEYMAP: key id at (physical column, packed row bit), -1 = none */
 const int8_t emu_keymap[6][EMU_NCOL] = {
@@ -27,10 +31,8 @@ static uint8_t emu_save_on_exit;
 void emu_fw_options(const char *flash_path, int no_flash, int save_on_exit, int headless)
 {
     emu_save_on_exit = (uint8_t)(save_on_exit != 0);
-    if (no_flash || (headless && !flash_path))
-        emu_flash_path[0] = 0;                    /* RAM only: a fresh flash each run */
-    else
-        snprintf(emu_flash_path, sizeof emu_flash_path, "%s", flash_path ? flash_path : "build/felucca/flash.bin");
+    /* RAM only (a fresh flash each run) when no_flash or headless without a path; FM1CORE_FLASH_STAGED: the stage */
+    fm1nor_options(flash_path, no_flash, headless, "build/felucca/flash.bin");
 }
 
 /* the boot-loop guard (main.c fm1_cstart): a run that died before its 30 s mark leaves bootguard.pending in .noinit;
@@ -123,7 +125,7 @@ void emu_fw_init(int demo)
      * settings, projects, user presets), the settings applied, the splash, the panel table, the parts, the audio,
      * USB */
     emu_boot_guard();
-    emu_flash_open();
+    fm1nor_open();                                /* (common/nor.c: erased, then the stage or the file) */
     persist_boot();
     settings_init();
     lcd_fill(0, 0, 240, 240, T_BG);
@@ -281,9 +283,7 @@ void emu_fw_audio(int16_t *out, uint32_t frames)  /* the ALNK0 ISR, one half buf
     uint32_t f, i;
     for (f = 0; f + HALF_FRAMES <= frames; f += HALF_FRAMES) {
         const int32_t *h;
-        if (emu_stall_blocks) {                   /* a flash erase on the device: IRQs off, the buffer zeroed */
-            emu_stall_blocks--;
-            emu_stall_blocks_all++;
+        if (fm1nor_stall_take()) {                /* a flash erase on the device: IRQs off, the buffer zeroed */
             for (i = 0; i < HALF_WORDS; i++)
                 out[2u * f + i] = 0;
             continue;
@@ -336,8 +336,8 @@ void emu_fw_dump(void)
            (int)song.g[G_BPM], (unsigned)ui.page, (unsigned)ui.home, (unsigned)song.master_q12,
            (unsigned)(song.cpu_q8 * 100u / 256u), (unsigned)(mi_w - mi_r), (unsigned)(mo_w - mo_r));
     printf("  flash: %s, %u writes, %u erases with the audio stalled (%u blocks)%s\n",
-           emu_flash_path[0] ? emu_flash_path : "RAM only", (unsigned)emu_flash_writes, (unsigned)emu_stalls,
-           (unsigned)emu_stall_blocks_all, persist_pending ? ", a settings save pending" : "");
+           fm1nor_path()[0] ? fm1nor_path() : "RAM only", (unsigned)fm1nor_dirty(), (unsigned)fm1nor_stalls(),
+           (unsigned)fm1nor_stall_blocks(), persist_pending ? ", a settings save pending" : "");
 }
 
 void emu_fw_ui_info(char *buf, uint32_t n)        /* the screen the last frame drew */

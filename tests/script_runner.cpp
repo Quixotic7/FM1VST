@@ -415,7 +415,7 @@ void ScriptRunner::apply(uint32_t ms)              // emu.c run_script(ms)
                 sel_knob_ = e.idx;
             break;
         case OP_TURN: turn(e.idx, e.n); break;
-        case OP_MASTER: dev_.hal()->master = e.n; break;   // (emu.c: as given, no clamp)
+        case OP_MASTER: dev_.panel()->master = e.n; break;   // (emu.c: as given, no clamp)
         case OP_MIDI:
             if (!dev_.midi_in((uint32_t)e.n)) {
                 std::snprintf(buf, sizeof buf, "script: midi in full at %u ms", (unsigned)ms);
@@ -424,7 +424,7 @@ void ScriptRunner::apply(uint32_t ms)              // emu.c run_script(ms)
             break;
         case OP_EXPECT_LED: {
             const int lv = e.kind < 0 ? dev_.led_play_green()
-                         : dev_.led_of(e.kind == KM_KEY ? 14 + e.idx : dev_.hal()->btn_id[e.idx]);
+                         : dev_.led_of(e.kind == KM_KEY ? 14 + e.idx : dev_.panel()->btn_id[e.idx]);
             const bool ok = lv == e.n;
             std::snprintf(buf, sizeof buf, "expect %s at %u ms: %s (the LED is %s)", e.name.c_str(), (unsigned)ms,
                           ok ? "ok" : "FAILED", lv == 2 ? "lit" : lv == 1 ? "dim" : "off");

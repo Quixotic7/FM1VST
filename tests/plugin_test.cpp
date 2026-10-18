@@ -77,7 +77,7 @@ struct Host {
     }
 };
 
-static bool keyHeld(FM1Processor &p, int key) { return (p.deviceForTest()->hal()->keys >> key) & 1u; }
+static bool keyHeld(FM1Processor &p, int key) { return (p.deviceForTest()->panel()->keys >> key) & 1u; }
 
 static std::vector<uint8_t> flashOf(FM1Processor &p)
 {
@@ -204,7 +204,7 @@ int main()
 
     // ---- (c) btn_sel held for 200 ms: the button bit reaches hal->buttons; the LED of KEY (SEL)
     {
-        emu_hal_t *h = a.deviceForTest()->hal();
+        fm1panel_t *h = a.deviceForTest()->panel();
         const uint32_t bit = 1u << h->btn_id[EMU_B_SEL];
         const int ledBefore = a.deviceForTest()->led_button(EMU_B_SEL);
         a.buttonParam(EMU_B_SEL)->setValueNotifyingHost(1.0f);
@@ -230,8 +230,8 @@ int main()
     // MASTER
     a.masterParam()->setValueNotifyingHost(a.masterParam()->convertTo0to1(300));
     ha.block();
-    check(a.deviceForTest()->hal()->master == 300, "master parameter 300 -> hal->master " +
-                                                       std::to_string(a.deviceForTest()->hal()->master));
+    check(a.deviceForTest()->panel()->master == 300, "master parameter 300 -> hal->master " +
+                                                       std::to_string(a.deviceForTest()->panel()->master));
     a.masterParam()->setValueNotifyingHost(a.masterParam()->convertTo0to1(724));
     ha.block();
 
@@ -432,7 +432,7 @@ int main()
         Host hq(q, 48000.0, 256);
         hq.run_ms(700);
         Device *d = q.deviceForTest();
-        emu_hal_t *h = d->hal();
+        fm1panel_t *h = d->panel();
         struct Press {
             uint32_t down, up;                    // device ms (up: 0 while still down)
         };

@@ -225,17 +225,31 @@ juce::Image softwareImage(int w, int h)
 }
 
 // ---- the drawing of one control (emu.c draw_panel), with the palette
+// an LED's brightness (fm1core.h FM1P_LED_* level 0..255) as the alpha of its colour over the LED-off colour:
+// piecewise linear through FAINT .2, DIM .38 (emu.c's dim blend), MID .62, LIT 1
+float ledAlpha(int level)
+{
+    static const float X[] = {0, FM1P_LED_FAINT, FM1P_LED_DIM, FM1P_LED_MID, FM1P_LED_LIT};
+    static const float Y[] = {0, .2f, .38f, .62f, 1.f};
+    const float v = (float)juce::jlimit(0, 255, level);
+    for (int i = 1; i < 5; i++)
+        if (v <= X[i])
+            return Y[i - 1] + (Y[i] - Y[i - 1]) * (v - X[i - 1]) / (X[i] - X[i - 1]);
+    return 1.f;
+}
+bool ledLit(int level) { return fm1p_led_class((uint8_t)juce::jlimit(0, 255, level)) == FM1P_LC_LIT; }
+
 void drawKey(Canvas &c, const Palette &p, int k, bool held, int lv)
 {
     const R r = geo().key[k];
     const float cx = r.x + KEY_W / 2;
     c.rrect(r, 21, held ? p.pressed : p.cap);
     c.rrectLine(r, 21, held ? p.hint : p.capOutline, 1, held ? 1.5f : 1);
-    if (lv == 2)
-        c.rrect(R{cx - 9, r.y + 9, 18, 40}, 9, p.white, .16f);
+    if (ledLit(lv))
+        c.rrect(R{cx - 9, r.y + 9, 18, 40}, 9, p.white, .16f * ledAlpha(lv));
     c.rrect(R{cx - 4, r.y + 14, 8, 30}, 4, p.ledOff);
     if (lv)
-        c.rrect(R{cx - 4, r.y + 14, 8, 30}, 4, p.white, lv == 2 ? 1.f : .38f);
+        c.rrect(R{cx - 4, r.y + 14, 8, 30}, 4, p.white, ledAlpha(lv));
     c.text(cx, r.y + 50, 6.5f, noteName(k).c_str(), p.noteText);
     const juce::String h = PanelComponent::keymapHintText(PanelComponent::KM_KEY, k);
     if (h.isNotEmpty())
@@ -250,20 +264,24 @@ void drawButton(Canvas &c, const Palette &p, int i, const juce::String &name, bo
     const float rad = oct ? 6 : 5;
     c.rrect(r, rad, p.cap);
     if (lv)
-        c.rrect(r, rad, col, lv == 2 ? 1.f : .38f);
+        c.rrect(r, rad, col, ledAlpha(lv));
     c.rrectLine(r, rad, held ? p.hint : p.capOutline, 1, held ? 2 : 1);
     const juce::String n = name.toUpperCase();
     const float size = fitSize(n.toRawUTF8(), oct ? 6.5f : 7.5f, r.w - 5);
     c.text(r.x + r.w / 2, r.y + (oct ? 7.5f : 11) + ((oct ? 6.5f : 7.5f) - size) / 2, size, n.toRawUTF8(),
-           lv == 2 ? p.litText : lv == 1 ? p.capTextDim : p.capText);
+           ledLit(lv) ? p.litText : lv ? p.capTextDim : p.capText);
     const juce::String hs = PanelComponent::keymapHintText(PanelComponent::KM_BTN, i);
     const char *h = hs.toRawUTF8();
     if (hs.isNotEmpty() && !oct)
-        c.text(r.x + r.w / 2, r.y + 25, 5, h, lv == 2 ? p.hintLit : lv == 1 ? p.hintDim : p.hint, .9f);
+        c.text(r.x + r.w / 2, r.y + 25, 5, h, ledLit(lv) ? p.hintLit : lv ? p.hintDim : p.hint, .9f);
     else if (hs.isNotEmpty())
         c.text(r.x + r.w / 2, r.y + r.h + 4, 5, h, p.hintBed, .9f);
     if (i == EMU_B_PLAY)                          // the green LED
-        c.circle(r.x + 6, r.y + r.h - 6, 3.2f, green ? p.green : p.ledOff);
+    {
+        c.circle(r.x + 6, r.y + r.h - 6, 3.2f, p.ledOff);
+        if (green)
+            c.circle(r.x + 6, r.y + r.h - 6, 3.2f, p.green, ledAlpha(green));
+    }
 }
 
 // a knob; fn: what it does now (the firmware value it is bound to), a small caption under its printed name

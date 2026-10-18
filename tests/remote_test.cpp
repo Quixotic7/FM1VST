@@ -8,7 +8,7 @@
 // (l) the unit lock: two links on one lock file, the second "in use" (touching nothing) until the first lets go, then
 //     it takes over;
 // (p) the processor with Remote on, ChoralRoot booted, paced in real time (the session runs on the wall clock): the
-//     session starts, the unit's shadow equals hal->lcd once settled, the LEDs equal hal->led / led_dim; a key, a
+//     session starts, the unit's shadow equals panel->lcd once settled, the LEDs equal panel->led / led_dim; a key, a
 //     button, an encoder (a device turn: Knob Presets reported inside a gesture, no host detents) and MASTER (the
 //     parameter follows) injected on the fake reach the core; the host MIDI filter on and off; a core switch resends
 //     the screen whole (Felucca's screen on the unit); a second processor restored from the state is "in use"; the
@@ -88,9 +88,9 @@ struct Host {
     bool until(const std::function<bool()> &cond, int timeoutMs) { return waitFor(cond, timeoutMs, [this] { tick(); }); }
 };
 
-static const emu_hal_t *hal(FM1Processor &p) { return p.deviceForTest()->hal(); }
+static const fm1panel_t *hal(FM1Processor &p) { return p.deviceForTest()->panel(); }
 
-// the device's screen as of one more block goes to the unit (a full publish); then no block runs (hal->lcd stays) and
+// the device's screen as of one more block goes to the unit (a full publish); then no block runs (panel->lcd stays) and
 // the unit must catch up exactly
 static bool shadowSettles(FM1Processor &p, Host &h, int timeoutMs, size_t *diffPx = nullptr)
 {
@@ -116,7 +116,7 @@ static bool shadowSettles(FM1Processor &p, Host &h, int timeoutMs, size_t *diffP
     return same;
 }
 
-static size_t litPixels(const emu_hal_t *h)
+static size_t litPixels(const fm1panel_t *h)
 {
     size_t n = 0;
     for (uint16_t px : h->lcd)
@@ -273,9 +273,9 @@ int main()
               "connected: \"" + rl->status().text + "\"");
         check(rl->status().bulk, "frames over the (fake) bulk pipe");
         h.runMs(1500);                           // (the boot screens)
-        const emu_hal_t *H = hal(p);
+        const fm1panel_t *H = hal(p);
         size_t diff = 0;
-        check(shadowSettles(p, h, 3000, &diff), "the unit's shadow equals hal->lcd once settled (" +
+        check(shadowSettles(p, h, 3000, &diff), "the unit's shadow equals panel->lcd once settled (" +
                                                     std::to_string(diff) + " pixels differ, " +
                                                     std::to_string(litPixels(H)) + " lit on the LCD)");
         {
@@ -291,25 +291,34 @@ int main()
             uint32_t leds = 0;
             rl->withFake([&](rfm_fake_t *f) {
                 const rfm_leds_t *l = rfm_fake_leds(f);
-                same = !std::memcmp(l->lit, H->led, EMU_NCOL) && !std::memcmp(l->dim, H->led_dim, EMU_NCOL) &&
-                       ((l->flags & RFM_LEDS_F_PLAY_GREEN) != 0) == (p.deviceForTest()->led_play_green() != 0);
+                // each LED of the panel (a level 0..255) in the plane of its class, and in no other
+                same = ((l->flags & RFM_LEDS_F_PLAY_GREEN) != 0) == (p.deviceForTest()->led_play_green() != 0);
+                for (int c = 0; c < FM1P_NCOL; c++)
+                    for (int r = 0; r < FM1P_NLINE; r++) {
+                        const int cls = fm1p_led_class(H->led[c][r]), b = 1 << (r + 1);
+                        same = same && ((l->lit[c] & b) != 0) == (cls == FM1P_LC_LIT) &&
+                               ((l->mid[c] & b) != 0) == (cls == FM1P_LC_MID) &&
+                               ((l->dim[c] & b) != 0) == (cls == FM1P_LC_DIM) &&
+                               ((l->faint[c] & b) != 0) == (cls == FM1P_LC_FAINT);
+                    }
                 rfm_fake_stats_t st;
                 rfm_fake_stats(f, &st);
                 leds = st.leds;
             });
             int lit = 0;
-            for (int c = 0; c < EMU_NCOL; c++)
-                lit += __builtin_popcount(H->led[c] | H->led_dim[c]);
-            check(same && leds >= 1, "the unit's LEDs equal hal->led / led_dim / PLAY green (" + std::to_string(leds) +
+            for (int c = 0; c < FM1P_NCOL; c++)
+                for (int r = 0; r < FM1P_NLINE; r++)
+                    lit += H->led[c][r] != 0;
+            check(same && leds >= 1, "the unit's LEDs equal the panel's levels / PLAY green (" + std::to_string(leds) +
                                          " LEDS messages, " + std::to_string(lit) + " LEDs on)");
         }
 
         // input: a key
         rl->withFake([](rfm_fake_t *f) { rfm_fake_key(f, 9, 1); });
-        check(h.until([&] { return (H->keys >> 9) & 1u; }, 1000), "a key held on the unit (key 9, D4): hal->keys bit 9");
+        check(h.until([&] { return (H->keys >> 9) & 1u; }, 1000), "a key held on the unit (key 9, D4): panel->keys bit 9");
         rl->withFake([](rfm_fake_t *f) { rfm_fake_key(f, 9, 0); });
         check(h.until([&] { return !((H->keys >> 9) & 1u); }, 1000), "  ... released: bit 9 clear");
-        // a button (HOME): matrix id via hal->btn_id
+        // a button (HOME): matrix id via panel->btn_id
         {
             const uint32_t id = H->btn_id[EMU_B_HOME];
             rl->withFake([id](rfm_fake_t *f) { rfm_fake_button(f, id, 1); });
@@ -317,7 +326,7 @@ int main()
             PanelView v;
             p.getPanelView(v);
             check(down && ((v.buttons >> EMU_B_HOME) & 1u), "HOME held on the unit (matrix " + std::to_string(id) +
-                                                                 "): hal->buttons, and the panel shows it held");
+                                                                 "): panel->buttons, and the panel shows it held");
             rl->withFake([id](rfm_fake_t *f) { rfm_fake_button(f, id, 0); });
             check(h.until([&] { return !((H->buttons >> id) & 1u); }, 1000), "  ... released");
             h.runMs(300);
@@ -353,7 +362,7 @@ int main()
             w.begins.clear();
             rl->withFake([](rfm_fake_t *f) { rfm_fake_master(f, 300); });
             const bool m300 = h.until([&] { return H->master == 300; }, 1000);
-            check(m300, "MASTER 300 on the unit: hal->master " + std::to_string(H->master) + " (the parameter still " +
+            check(m300, "MASTER 300 on the unit: panel->master " + std::to_string(H->master) + " (the parameter still " +
                             std::to_string(p.masterParam()->get()) + ")");
             h.runMs(100);
             check(H->master == 300, "  ... not undone by the parameter's older value before it follows");
@@ -399,7 +408,7 @@ int main()
             const bool settled = shadowSettles(p, h, 3000, &d2);
             check(st.fullResends > before, "the switch resent the unit's screen whole (full resends " +
                                                std::to_string(before) + " -> " + std::to_string(st.fullResends) + ")");
-            check(settled && litPixels(hal(p)) > 0, "the unit shows Felucca's screen: shadow == hal->lcd (" +
+            check(settled && litPixels(hal(p)) > 0, "the unit shows Felucca's screen: shadow == panel->lcd (" +
                                                         std::to_string(d2) + " pixels differ)");
             check(st.state == RemoteLink::kConnected && st.sessions == 1, "the session kept running (" + st.text + ")");
             check(p.switchCore("choralroot"), "back to ChoralRoot");

@@ -77,7 +77,7 @@
 // REMOTE FM-1 (setRemoteEnabled; the toggle is in the state): the unit's input merges with the others exactly as the
 // panel GUI's does: its held keys are one more source in the OR of key masks (param | MIDI | panel | remote), its
 // held buttons one more in the button OR (param | panel | remote | fine-turn GLO), a press released within a block
-// still taps. Its encoders are Device::enc detents (the matrix encoder through hal->enc_id / enc_dir): a device turn
+// still taps. Its encoders are Device::enc detents (the matrix encoder through panel->enc_id / enc_dir): a device turn
 // for the knob logic (enc_total moves, the host's own detents do not), so the host parameter feedback and a
 // Roto-Control's motor follow a physical turn exactly as a panel turn. MASTER (the unit's absolute pot) sets the
 // device's pot at once and the "Knob Master" parameter follows from the message thread (a gesture, as the panel's
@@ -122,18 +122,18 @@ private:
 };
 
 // What the panel shows, snapshotted on the audio thread at the end of a block when it changed (the GUI never reads
-// the core's hal directly: it copies this under a spin lock the audio thread only ever tries).
+// the core's panel directly: it copies this under a spin lock the audio thread only ever tries).
 struct PanelView {
     uint32_t seq = 0;                                 // moves with every snapshot
     bool running = false;                             // a booted, not halted device
-    uint32_t lcdWrites = 0;                           // hal->lcd_writes when lcd was copied
+    uint32_t lcdWrites = 0;                           // panel->lcd_writes when lcd was copied
     uint32_t lcdSeq = 0;                              // moves with every copy of lcd (a power cycle restarts lcd_writes)
     std::array<uint16_t, EMU_LCD_W * EMU_LCD_H> lcd{};   // RGB565 big-endian, as sent
-    std::array<uint8_t, EMU_NKEY> keyLed{};           // 0 off, 1 dim, 2 lit
+    std::array<uint8_t, EMU_NKEY> keyLed{};           // brightness 0..255 (fm1core.h FM1P_LED_*: the panel's level)
     std::array<uint8_t, EMU_NB> btnLed{};
-    uint8_t playGreen = 0;                            // 0 / 2
+    uint8_t playGreen = 0;                            // 0..255
     uint32_t keys = 0, buttons = 0;                   // what the device holds now (all sources merged; label bits)
-    int master = 724;                                 // hal->master, 0..1023
+    int master = 724;                                 // panel->master, 0..1023
     // the seven knobs (EMU_E_* role, SELECT .. KNOB4): bound to a firmware value (the panel draws the pointer at its
     // place on a 270 degree sweep, as MASTER's) or relative (the pointer turns per detent); the value's place 0..1
     // in its range; every detent the device was given (any source: the panel, the host's relative turns); what the
@@ -381,6 +381,7 @@ private:
     void applyRemote(uint32_t &keyTaps, uint32_t &btnTaps);   // the unit's events (block start)
     void applyMaster();
     void publishRemote();                            // the LCD + LEDs to the unit (block end)
+    static void remoteLeds(const fm1panel_t *h, rfm_leds_t &l);   // the panel's LED levels as the LEDS planes
 
     void handleAsyncUpdate() override;               // the firmware rebooted itself (exit(0)): power on again
 
@@ -492,7 +493,7 @@ private:
     void snapshotPanel();
     mutable juce::SpinLock viewLock_;
     PanelView view_;
-    uint8_t viewLeds_[2 * EMU_NCOL] = {};
+    uint8_t viewLeds_[FM1P_NCOL * FM1P_NLINE + 1] = {};   // the panel's led[][] and PLAY green last snapshotted
     uint32_t viewKeys_ = 0xFFFFFFFFu, viewButtons_ = 0xFFFFFFFFu;
     int viewMaster_ = -1;
     std::array<PanelView::Knob, EMU_NE - 1> viewKnobs_{};
@@ -504,6 +505,8 @@ private:
     bool lastNotesPlayKeys_ = true;
     std::array<std::array<int8_t, 128>, 16> noteKey_{};  // the key a held note pressed, -1 none
     std::array<uint8_t, EMU_NKEY> keyCount_{};           // MIDI notes holding each key
+    std::array<uint8_t, EMU_NKEY> midiVel_{};            // the velocity of the MIDI note that pressed each key
+    uint32_t remoteKeyTaps_ = 0;                         // this block's key taps from the unit (velocity kRemoteVel)
     static constexpr uint32_t kInRing = 1024;
     std::array<uint32_t, kInRing> inRing_{};             // USB-MIDI packets waiting for room in the core
     uint32_t inW_ = 0, inR_ = 0;

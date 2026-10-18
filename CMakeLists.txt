@@ -5,20 +5,9 @@
 cmake_minimum_required(VERSION 3.22)
 project(FM1VST VERSION 0.2.0 LANGUAGES C CXX)
 
-# ---- the cores: fm1_add_core() per firmware (a fourth core is one more call and its core-glue/<id>/ folder)
-#
-# fm1_add_core(<id> <glue_dir>
-#     SOURCE <dir>            the firmware's submodule (cores/<name>, unmodified)
-#     UNIT <file.c>           the glue unit (glue_dir relative): the firmware unit + exit / fopen glue + the map
-#     DESC <file.c>           the descriptor (its own translation unit, -Wall)
-#     PREFIX <XX>             the glue's macro prefix: FM1CORE_<XX>_VERSION / _COMMIT reach the descriptor
-#     GEN <headers..>         what <dir>/tools/build.py generate() writes into <dir>/build/gen (gitignored there)
-#     VERSION_FILE <file>     (dir relative), VERSION_REGEX and [VERSION_GROUP n] (default 1): the firmware's
-#                             version string, the regex's group n on the file's first matching line
-#     [INCLUDES <dirs..>] [DEFINES <defs..>])
-# makes: gen_<id> (the generate step), core_<id>_obj (OBJECT: the unit + descriptor, -O2, hidden, PIC),
-# core_<id> (STATIC, for tests that link a core directly) and <id>_core (MODULE: build/cores/<id>.fm1core, exporting
-# only fm1core_get), and appends <id> to FM1_CORE_IDS (the bundles and the per-core tests take them from there).
+# ---- the cores: one fm1_add_core() per firmware (cmake/FM1Cores.cmake documents it), each in its glue folder:
+# core-glue/<family>/core.cmake (or core_<id>.cmake for a family of several), picked up by the glob below, so a new
+# core is only new files (core-glue/common/README.md "Adding a core").
 # The generators need Pillow (and fontTools): the first python3 on PATH that has it (FindPython3 may pick another);
 # override with -DCR_PYTHON=/path/to/python3
 set(CR_PYTHON "" CACHE FILEPATH "python3 with Pillow, for the cores' generate steps")
@@ -40,107 +29,22 @@ if(NOT CR_PYTHON)
 endif()
 message(STATUS "cores: generate steps with ${CR_PYTHON}")
 find_library(MATH_LIB m)
-set(FM1_CORE_IDS "")
-
-function(fm1_add_core id glue)
-    cmake_parse_arguments(A "" "SOURCE;UNIT;DESC;PREFIX;VERSION_FILE;VERSION_REGEX;VERSION_GROUP" "GEN;INCLUDES;DEFINES"
-                          ${ARGN})
-    if(NOT A_VERSION_GROUP)
-        set(A_VERSION_GROUP 1)
-    endif()
-    set(src ${A_SOURCE})
-    if(NOT EXISTS ${src}/tools/build.py)
-        message(FATAL_ERROR "${src} is empty: run git submodule update --init --recursive")
-    endif()
-    # the generated headers: tools/build.py generate() only (its main() would build the firmware with the JieLi
-    # toolchain); it writes ${src}/build/gen, which is gitignored in the submodule
-    set(gen ${src}/build/gen)
-    list(TRANSFORM A_GEN PREPEND ${gen}/ OUTPUT_VARIABLE gen_headers)
-    file(GLOB gen_scripts CONFIGURE_DEPENDS ${src}/tools/*.py)
-    add_custom_command(
-        OUTPUT ${gen_headers}
-        COMMAND ${CMAKE_COMMAND} -E env DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib PYTHONPATH=${src}/tools
-                ${CR_PYTHON} -c "import build; build.generate()"
-        WORKING_DIRECTORY ${src}
-        DEPENDS ${gen_scripts}
-        COMMENT "${id}: generating build/gen headers (tools/build.py generate)"
-        VERBATIM)
-    add_custom_target(gen_${id} DEPENDS ${gen_headers})
-    # the version (the firmware's own string) and the commit (the submodule's HEAD)
-    set(ver "dev")
-    file(STRINGS ${src}/${A_VERSION_FILE} _v REGEX "${A_VERSION_REGEX}")
-    if(_v)
-        list(GET _v 0 _v)
-        string(REGEX MATCH "${A_VERSION_REGEX}" _m "${_v}")
-        if(_m)
-            set(ver "${CMAKE_MATCH_${A_VERSION_GROUP}}")
-        endif()
-    endif()
-    execute_process(COMMAND git -C ${src} rev-parse HEAD OUTPUT_VARIABLE commit OUTPUT_STRIP_TRAILING_WHITESPACE
-                    ERROR_QUIET RESULT_VARIABLE _rc)
-    if(NOT _rc EQUAL 0 OR NOT commit)
-        set(commit "unknown")
-    endif()
-    message(STATUS "${id} core: version ${ver}, commit ${commit}")
-
-    set(obj core_${id}_obj)
-    add_library(${obj} OBJECT ${glue}/${A_UNIT} ${glue}/${A_DESC})
-    target_include_directories(${obj} PRIVATE ${gen} ${src}/firmware/src ${A_INCLUDES}
-                               ${CMAKE_CURRENT_SOURCE_DIR}/core-api)
-    target_compile_options(${obj} PRIVATE -O2 -fvisibility=hidden)
-    target_compile_definitions(${obj} PRIVATE FM1CORE_${A_PREFIX}_VERSION="${ver}" FM1CORE_${A_PREFIX}_COMMIT="${commit}"
-                               ${A_DEFINES})
-    set_target_properties(${obj} PROPERTIES POSITION_INDEPENDENT_CODE ON C_STANDARD 11)
-    add_dependencies(${obj} gen_${id})
-    # the firmware's own code: warnings off (as its host builds); the generated headers are included by the unit:
-    # rebuild it when they change
-    set_source_files_properties(${glue}/${A_UNIT} PROPERTIES COMPILE_OPTIONS "-w" OBJECT_DEPENDS "${gen_headers}")
-    set_source_files_properties(${glue}/${A_DESC} PROPERTIES COMPILE_OPTIONS "-Wall;-Wextra")
-
-    add_library(core_${id} STATIC $<TARGET_OBJECTS:${obj}>)
-    target_include_directories(core_${id} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/core-api)
-    add_library(${id}_core MODULE $<TARGET_OBJECTS:${obj}>)
-    set_target_properties(${id}_core PROPERTIES PREFIX "" SUFFIX ".fm1core" OUTPUT_NAME ${id}
-                          LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/cores)
-    target_link_options(${id}_core PRIVATE -Wl,-exported_symbol,_fm1core_get)
-    if(MATH_LIB)
-        target_link_libraries(core_${id} PUBLIC ${MATH_LIB})
-        target_link_libraries(${id}_core PRIVATE ${MATH_LIB})
-    endif()
-    set(FM1_CORE_IDS ${FM1_CORE_IDS} ${id} PARENT_SCOPE)
-endfunction()
-
-# ChoralRoot (https://github.com/Quixotic7/ChoralRootFM1): its own emulator's unit, tools/emu/emu_fw.c
+# public builds leave out the cores whose licensing is not settled (fm1_add_core GATED; CORES-PLAN.md 6)
+option(FM1_PUBLIC_BUILD "leave out the cores marked GATED (a build to publish)" OFF)
+include(cmake/FM1Cores.cmake)
+file(GLOB FM1_CORE_CMAKES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/core-glue/*/core.cmake
+                                            ${CMAKE_CURRENT_SOURCE_DIR}/core-glue/*/core_*.cmake)
+list(SORT FM1_CORE_CMAKES)
+foreach(_f IN LISTS FM1_CORE_CMAKES)
+    include(${_f})
+endforeach()
+message(STATUS "cores: ${FM1_CORE_IDS}")
+# ChoralRoot's tree: the reference emulator and the replay tests below are its own
 set(CR ${CMAKE_CURRENT_SOURCE_DIR}/cores/ChoralRootFM1)
 set(CR_GEN_NAMES ui_fonts.h cr_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h felucca_tables.h felucca_fm6.h
                  melodee_cz1.h felucca_samples.h)
 set(CR_GEN_HEADERS ${CR_GEN_NAMES})
 list(TRANSFORM CR_GEN_HEADERS PREPEND ${CR}/build/gen/)
-# the Tier 2 parameter map (core-glue/choralroot/core_choralroot_params.c): the sound editor's pages get host slots
-# of their own too (30 more; off, they are FM1P_HIDDEN: the knobs reach them in the editor). The plugin then needs
-# -DFM1_TIER2_SLOTS=103 or more
-option(FM1_EXPOSE_EDITOR "ChoralRoot's Tier 2 map: also slots for the sound editor's ENV / LFO / MOD / MIX pages" OFF)
-set(_cr_defs "")
-if(FM1_EXPOSE_EDITOR)
-    set(_cr_defs FM1_EXPOSE_EDITOR=1)
-endif()
-# the version: the firmware's own default FELUCCA_VERSION (cr_ui.c "ChoralRoot X"; the emulator unit itself shows
-# "EMU")
-fm1_add_core(choralroot core-glue/choralroot SOURCE ${CR} UNIT core_choralroot.c DESC core_choralroot_desc.c PREFIX CR
-             GEN ${CR_GEN_NAMES} VERSION_FILE firmware/src/cr_ui.c
-             VERSION_REGEX "^#define FELUCCA_VERSION \"(ChoralRoot )?([^\"]*)\"" VERSION_GROUP 2
-             INCLUDES ${CR}/tools/emu DEFINES ${_cr_defs})
-# Felucca (https://github.com/hugelton/Felucca): core-glue/felucca/ is its emulator (felucca_fw.c, felucca_hal.h,
-# felucca_firmware.h) over the unmodified sources
-fm1_add_core(felucca core-glue/felucca SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/cores/Felucca UNIT core_felucca.c
-             DESC core_felucca_desc.c PREFIX FE
-             GEN ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h felucca_tables.h felucca_fm6.h felucca_samples.h
-             VERSION_FILE firmware/src/felucca.c VERSION_REGEX "^#define FELUCCA_VERSION \"v?([^\"]*)\"")
-# Melodee (https://github.com/keremimo/melodee, Felucca's fork with FM6, CZ-1 and USB audio): core-glue/melodee/
-fm1_add_core(melodee core-glue/melodee SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/cores/melodee UNIT core_melodee.c
-             DESC core_melodee_desc.c PREFIX ME
-             GEN ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h melodee_tables.h melodee_fm6.h melodee_cz1.h
-             VERSION_FILE firmware/src/melodee.c VERSION_REGEX "^#define MELODEE_VERSION \"v?([^\"]*)\"")
 
 # ---- the engine (C++17, no JUCE): core loading, the device clock, the resampler
 add_library(fm1engine STATIC engine/cores.cpp engine/device.cpp)
@@ -243,6 +147,11 @@ foreach(_fmt VST3 AU Standalone)
                           COMMAND codesign --force -s - "${_dst}/$<TARGET_FILE_NAME:${_c}>")
     endforeach()
     add_dependencies(${_t} ${FM1_CORE_TARGETS})
+    # a rebuilt core relinks the bundle, so this step (and the install step after it) runs again: the bundle never
+    # keeps a stale core
+    foreach(_id IN LISTS FM1_CORE_IDS)
+        set_property(TARGET ${_t} APPEND PROPERTY LINK_DEPENDS ${CMAKE_BINARY_DIR}/cores/${_id}.fm1core)
+    endforeach()
     add_custom_command(TARGET ${_t} POST_BUILD ${_cmds}
         COMMAND codesign --force --deep -s - "$<TARGET_BUNDLE_DIR:${_t}>"
         COMMENT "FM1VST ${_fmt}: the cores (${FM1_CORE_IDS}) into the bundle, ad-hoc signed"

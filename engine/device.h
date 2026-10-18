@@ -20,10 +20,10 @@ public:
     explicit Device(const fm1core_t *core);
 
     const fm1core_t *core() const { return c_; }
-    emu_hal_t *hal() const { return c_->hal; }
+    fm1panel_t *panel() const { return c_->panel; }   // the core's panel (fm1core.h ABI 5)
 
     // power-on: options (flash_path NULL or ram_only: a RAM-only flash, fresh every boot), the default boot guard,
-    // hal->ready = 2 (simulated time, before init, exactly as web_boot), init
+    // panel->ready = 2 (simulated time, before init, exactly as web_boot), init
     void boot(const char *flash_path, bool ram_only);
     // power-on from a flash image in memory (ABI 2 flash_stage): n bytes (short: padded with 0xFF; nullptr / 0: a
     // fresh flash); nothing is written to any file afterwards, the image lives in the core (flash())
@@ -34,7 +34,11 @@ public:
     // ---- input (web/emu_web.c's exports) ----
     void keys(uint32_t mask);               // bit n: note key n held (0 = F3 .. 26 = G5); a key newly down taps
     void keys_tap(uint32_t mask);           // a press shorter than 1 ms
-    void buttons(uint32_t label_mask);      // bit i: label EMU_B_i held (FX SEL .. OCT+), via hal->btn_id
+    // a key's velocity 1..127 for its next press (0: none given, the firmware's default) and its aftertouch 0..100 %:
+    // set before the key goes down (panel->key_vel / key_lean)
+    void key_vel(int key, int vel);
+    void key_lean(int key, int pct);
+    void buttons(uint32_t label_mask);      // bit i: label EMU_B_i held (FX SEL .. OCT+), via panel->btn_id
     void buttons_tap(uint32_t label_mask);
     void enc(int role, int32_t detents);    // EMU_E_* role, + clockwise; MASTER: detents x 16 of 1023
     // every detent enc() gave a knob role since power-on (SELECT .. KNOB4; 0 for MASTER): whoever turned it (the
@@ -45,14 +49,23 @@ public:
     int midi_out_take(uint32_t *pkt);       // one USB-MIDI packet out; 0: none
 
     // ---- output ----
-    const uint16_t *lcd() const { return c_->hal->lcd; }   // 240 x 240 RGB565, big-endian, as sent
-    uint32_t lcd_writes() const { return c_->hal->lcd_writes; }
-    uint8_t led(uint32_t col) const { return col < EMU_NCOL ? c_->hal->led[col] : 0; }
-    uint8_t led_dim(uint32_t col) const { return col < EMU_NCOL ? c_->hal->led_dim[col] : 0; }
-    int led_of(int id) const;               // key id (0..13 matrix button, 14 + n note key): 0 off, 1 dim, 2 lit
+    const uint16_t *lcd() const { return c_->panel->lcd; }   // 240 x 240 RGB565, big-endian, as sent
+    uint32_t lcd_writes() const { return c_->panel->lcd_writes; }
+    // the LED at (column, line): brightness 0..255 (FM1P_LED_*)
+    uint8_t led(uint32_t col, uint32_t line) const
+    {
+        return col < FM1P_NCOL && line < FM1P_NLINE ? c_->panel->led[col][line] : 0;
+    }
+    int led_level(int id) const;            // key id (0..13 matrix button, 14 + n note key): brightness 0..255
+    int led_key_level(int key) const { return led_level(14 + key); }
+    int led_button_level(int label) const;  // EMU_B_* label
+    // the same as 0 off, 1 dim (any level below lit: faint, dim, mid), 2 lit (fm1p_led_class LIT)
+    int led_of(int id) const;
     int led_key(int key) const { return led_of(14 + key); }
-    int led_button(int label) const;        // EMU_B_* label
-    int led_play_green() const;             // PLAY's green LED: 0 or 2
+    int led_button(int label) const;
+    int led_play_green_level() const { return c_->panel->led_play_green; }
+    int led_play_green() const;             // PLAY's green LED: 0 or 2 (lit)
+    static int led_lv(int level) { return fm1p_led_class((uint8_t)level) == FM1P_LC_LIT ? 2 : level ? 1 : 0; }
 
     // ---- the flash image (ABI 2) ----
     uint8_t *flash() const { return c_->flash ? c_->flash() : nullptr; }      // flash_size() bytes, the live image
