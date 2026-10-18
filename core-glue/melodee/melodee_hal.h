@@ -4,35 +4,43 @@
  * which are unmodified (and the Felucca core's felucca_hal.h, which it follows line for line but for the LEDs). It
  * is modelled on the stubs of Melodee's tests/ui_test.c (time, input, display) and tests/persistence_test.c (the NOR
  * flash hooks of storage.c), but live: the display writes
- * emu_hal.lcd, the LEDs are emu_hal.led / led_dim, the input edges and encoder steps come from emu_fw_tick (the
+ * emu_hal.lcd, the LEDs are fm1_led / fm1_led_dim, the input edges and encoder steps come from emu_fw_tick (the
  * 1 ms timer, as fm1_input_tick delivers them on the device), the flash is a 1 MiB RAM image.
  *
  * Differences from emu_hal_fw.h:
  *   - no CPU lock: the core ABI (core-api/fm1core.h) runs every entry point on one thread, so the "interrupt-off"
  *     sections only count their nesting (there is no realtime mode with a timer thread here);
- *   - Melodee's LEDs have two dim planes, each lit on 1 frame in (mask + 1) (hal/fm1_input.h fm1_led_dim[2][],
- *     fm1_led_dim_mask[2]: the idle keys' level, the idle buttons'): emu_led_sync folds them into emu_hal.led_dim
- *     (a plane lit every frame, mask 0, is a lit LED: emu_hal.led) after every ui_leds;
+ *   - the LEDs are the firmware's own arrays (fm1_led and the three dim planes with their duty masks, below), not
+ *     emu_hal's: core_melodee.c turns them into the panel's levels after every frame;
+ *   - fm1_wdt_feed is where the firmware waits: inside the main loop's coroutine (melodee_fw.c) it yields to the
+ *     host until the next device millisecond (panel_setup's loops feed the watchdog while they wait for a button or
+ *     a knob);
  *   - Melodee's storage.c also needs the flash part's JEDEC id (persist_boot: fl_jedec_ram() == 0x856014, else it
  *     stays RAM only), irq_save / irq_restore, FL_FAR and fl_plain_window_init (the XIP plaintext window);
  *   - emu_hal_t is core-glue/common/panel.h's fm1p_emu_hal_t (ChoralRoot's ABI 1..4 emu_hal_t): the glue translates
  *     it to and from the ABI's fm1panel_t (core_melodee.c);
  *   - the NOR image is core-glue/common/nor.c's (fm1nor_image, the stage, the file, the erase stall). */
+#include "coro.h"                                 /* (core-glue/common) */
 
 /* -------------------------------------------------------- time --- */
-#define FM1_TICKS_PER_US 1u                       /* fm1_ticks: microseconds */
+/* fm1_ticks: TIMER4, 24 MHz (FM1_TICKS_PER_US, melodee_firmware.h); simulated (panel ready == 2: what FM1VST always
+ * runs) it is the device millisecond's start, wrapping as the 32-bit counter does (every 178.9 s) */
 static uint64_t emu_t0_ns;
-static uint32_t emu_sim_us;                       /* simulated time (hal.ready == 2): the device clock */
+static uint32_t emu_sim_ms;                       /* simulated time (hal.ready == 2): the device clock */
 static uint8_t emu_sim;
 static uint32_t fm1_ticks(void)
 {
     struct timespec ts;
     if (emu_sim)
-        return emu_sim_us;
+        return emu_sim_ms * (1000u * FM1_TICKS_PER_US);
     clock_gettime(CLOCK_MONOTONIC, &ts);
-    return (uint32_t)(((uint64_t)ts.tv_sec * 1000000000u + (uint64_t)ts.tv_nsec - emu_t0_ns) / 1000u);
+    return (uint32_t)(((uint64_t)ts.tv_sec * 1000000000u + (uint64_t)ts.tv_nsec - emu_t0_ns) * FM1_TICKS_PER_US / 1000u);
 }
-static void fm1_wdt_feed(void) {}
+static void fm1_wdt_feed(void)                   /* a wait: back to the host (the main loop's coroutine) */
+{
+    if (fm1coro_inside())
+        fm1coro_yield();
+}
 
 /* ------------------------------------------- the CPU lock (ISRs) --- */
 /* one thread runs the whole device (the ABI's threading contract): the timer "ISR", the audio "ISR" and the main
@@ -58,23 +66,14 @@ static void irq_restore(uint32_t f)
 /* --------------------------------------------- keys, LEDs, knobs --- */
 #define FM1_NCOL 11u
 #define FM1_KEYMAP emu_keymap
-#define fm1_led (emu_hal.led)
-static uint8_t fm1_led_dim[2][FM1_NCOL], fm1_led_dim_mask[2];   /* (hal/fm1_input.h: the dim planes) */
-static void emu_led_sync(void)                    /* the planes -> emu_hal.led_dim / led (after ui_leds) */
-{
-    uint32_t c;
-    for (c = 0; c < FM1_NCOL; c++) {
-        uint8_t d = 0, l = 0;
-        uint32_t p;
-        for (p = 0; p < 2u; p++)
-            if (fm1_led_dim_mask[p])
-                d |= fm1_led_dim[p][c];
-            else
-                l |= fm1_led_dim[p][c];
-        emu_hal.led[c] |= l;
-        emu_hal.led_dim[c] = (uint8_t)(d & ~emu_hal.led[c]);
-    }
-}
+/* hal/fm1_input.h's LEDs, as the firmware declares them: fm1_led (lit: full duty), and THREE dim planes, each with
+ * its duty mask (0 full, 1 1/2, 3 1/4, 7 1/8, 0xFF dark): plane 0 the idle keys (LIGHTS), 1 the idle buttons, 2 the
+ * breathing ones (ui_input.c ui_leds: its mask swept 0 1 3 7 FF 7 3 1 over a second). The 0.11 glue declared two
+ * planes and 1.4's ui_leds writes fm1_led_dim[2][c] and fm1_led_dim_mask[2]: past the end, hidden by -w. The
+ * levels the panel gets: core_melodee.c me_leds_out (an LED's brightest plane, as fm1_led_pwm_level drives it) */
+static uint8_t fm1_led[FM1_NCOL];
+static uint8_t fm1_led_dim[3][FM1_NCOL], fm1_led_dim_mask[3];
+_Static_assert(sizeof fm1_led_dim == 3u * FM1_NCOL && sizeof fm1_led_dim_mask == 3u, "hal/fm1_input.h: three planes");
 static uint32_t host_pressed, host_notes;         /* edges since the last take */
 static int32_t host_enc[7];
 static uint32_t fm1_input_edges(uint32_t *released)   /* hal/fm1_input.h (the UI passes 0) */

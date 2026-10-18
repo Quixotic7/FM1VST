@@ -1,8 +1,17 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The firmware side of the Melodee core: the firmware sources (melodee_firmware.h) and the hooks of ChoralRoot's
  * tools/emu/emu_hooks.h (the ABI's emu_fw_* entry points). Melodee has no emulator: this is the equivalent of
- * ChoralRoot's tools/emu/emu_fw.c, written against Melodee's own power-on and main loop (firmware/src/main.c), with
- * nothing of the firmware changed. Everything Melodee-specific the core relies on is in this file's hook bodies. */
+ * ChoralRoot's tools/emu/emu_fw.c, written against Melodee 1.4.3's own power-on and main loop (firmware/src/main.c
+ * fm1_cstart / fm1_main), with nothing of the firmware changed.
+ *
+ * THE MAIN LOOP RUNS ON A COROUTINE (core-glue/common/coro.h). main.c's fm1_main never returns and waits in places:
+ * the splash delays (fm1_delay_ms(30), (400)), the frame pacing (`while (fm1_ms - m < 15) ui_input();`) and
+ * panel_setup (Calibration: OCT- + OCT+ held at power-on, or the menu's entry), whose loops poll the buttons and
+ * knobs and feed the watchdog. me_main below is that loop: the boot's own part runs in emu_fw_init (no waits), the
+ * rest on the coroutine, which yields where the device waits (me_delay; fm1_wdt_feed, melodee_hal.h) and is resumed
+ * once per device millisecond by frame() and idle(). One resume: the loop's work for that millisecond (a UI frame
+ * every 15 ms, else one ui_input pass), as the device does it between its timer ticks. An exit() on it (UBOOT) parks
+ * it: it never runs again (common/exit.h fm1core_exit_park). */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,14 +24,7 @@
 typedef fm1p_emu_hal_t emu_hal_t;
 emu_hal_t emu_hal;
 /* hal/fm1_input.h FM1_KEYMAP: key id at (physical column, packed row bit), -1 = none */
-const int8_t emu_keymap[6][EMU_NCOL] = {
-    {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},          /* PA0: encoders */
-    { 5, 11,  4, 10,  3,  9,  2,  8, -1, -1, -1},          /* PA5 */
-    {34, 35, 36, 37, 38, 40, 39, 13,  7,  6, 12},          /* PA6 */
-    {23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33},          /* PA7 */
-    { 0,  1, 15, 14, 17, 16, 19, 18, 20, 21, 22},          /* PA8 */
-    {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},          /* PB7: encoder 6 */
-};
+const int8_t emu_keymap[6][EMU_NCOL] = FM1P_KEYMAP_INIT;
 
 #include "melodee_firmware.h"
 
@@ -35,34 +37,43 @@ void emu_fw_options(const char *flash_path, int no_flash, int save_on_exit, int 
     fm1nor_options(flash_path, no_flash, headless, "build/melodee/flash.bin");
 }
 
-/* the boot-loop guard (main.c fm1_cstart): a run that died before its 30 s mark leaves bootguard.pending in .noinit;
- * the next reset counts it, and the second failed boot in a row enters UBOOT (the PC tool's mode) instead of the
- * firmware. Melodee has no reset reasons or SAFE MODE (ChoralRoot's cr_bootguard.h): reason and stage are
- * accepted and ignored. fail: the failed boots counted before this reset (< 0: a clean record) */
-static struct { uint32_t failed, pending; } emu_guard;
+/* the boot-loop guard: the firmware's own bootguard record (core.h, .noinit on the device), as main.c fm1_cstart
+ * counts it: a run that died before its 30 s mark left pending set; the next reset counts it, and the second failed
+ * boot in a row enters UBOOT (the PC tool's mode) instead of the firmware. project_boot reads it too (a failed boot
+ * skips the BOOT project). Melodee has no reset reasons or SAFE MODE: reason and stage are accepted and ignored.
+ * fail: the failed boots counted before this reset (< 0: a clean record) */
 int emu_fw_boot_options(int fail, const char *reason, int stage)
 {
     (void)reason;
     (void)stage;
+    bootguard.magic = BOOTGUARD_MAGIC;
     if (fail >= 0) {
-        emu_guard.failed = (uint32_t)fail;
-        emu_guard.pending = 1;                    /* the last run died within 30 s */
+        bootguard.failed = (uint32_t)fail;
+        bootguard.pending = 1;                    /* the last run died within 30 s */
     } else {
-        emu_guard.failed = emu_guard.pending = 0;
+        bootguard.failed = bootguard.pending = 0;
     }
     return 1;
 }
-static void emu_boot_guard(void)                  /* main.c fm1_cstart */
+static int emu_boot_guard(void)                   /* main.c fm1_cstart; 1: UBOOT (halted) */
 {
-    if (emu_guard.pending)
-        emu_guard.failed++;
-    emu_guard.pending = 1;
-    if (emu_guard.failed >= 2u) {
-        emu_guard.failed = emu_guard.pending = 0;
+    if (bootguard.magic != BOOTGUARD_MAGIC) {
+        bootguard.magic = BOOTGUARD_MAGIC;
+        bootguard.failed = 0;
+        bootguard.pending = 0;
+    }
+    if (bootguard.pending)
+        bootguard.failed++;
+    bootguard.pending = 1;
+    if (bootguard.failed >= 2u) {
+        bootguard.failed = 0;
+        bootguard.pending = 0;
         printf("boot: UBOOT (two failed boots in a row)\n");
         fflush(stdout);
         exit(3);                                  /* (the device: fm1_enter_uboot) */
+        return 1;
     }
+    return 0;
 }
 
 /* at exit (the core's shutdown): a settings change the firmware has queued (settings_poll saves only while the
@@ -76,7 +87,7 @@ static void emu_fw_exit(void)
 }
 
 /* main.c melodee_init (static there; main.c itself is the device's boot and cannot be built on the host): the parts
- * with their default sounds (TRK_DEF), the sequencers empty. Verbatim. */
+ * with their default sounds (TRK_DEF), the sequencers empty. Verbatim (1.4.3). */
 static void emu_melodee_init(void)
 {
     uint32_t i;
@@ -94,10 +105,8 @@ static void emu_melodee_init(void)
         apply_preset_to(t, TRK_DEF[i][1]);    /* with its sends */
         t->engine = t->eng_req;
         track_defaults_steps(t);              /* (a sound load never touches them) */
-        if (TRK_DEF[i][2])
-            load_pat16(t, PATTERNS[TRK_DEF[i][2] - 1u].note, PATTERNS[TRK_DEF[i][2] - 1u].flags);
-        pat_sig[i] = steps_sig(t);            /* a default pattern, not the user's */
-        pat_last[i] = TRK_DEF[i][2];
+        pat_sig[i] = steps_sig(t);            /* (empty: not the user's) */
+        pat_last[i] = 0;
     }
     undo_depth--;
     song.sel = 0;
@@ -107,11 +116,109 @@ static void emu_melodee_init(void)
 }
 
 #define EMU_RELEASE_MS 9u            /* hal/fm1_input.h: a release needs ~9 ms open (FM1_DEB_RELEASE) */
-#define EMU_SPLASH_MS 430u           /* main.c: the splash, fm1_delay_ms(30) + fm1_delay_ms(400), then the loop */
 static uint32_t in_btn, in_key;      /* the debounced state the tick delivers */
 static uint32_t btn_ms[32], key_ms[32];/* ms each went down */
-static int32_t master_knob = 512 * 16;
-static uint8_t emu_looping;          /* the splash is over: the main loop runs */
+static uint8_t emu_uboot_left;       /* main.c's OCT- + OCT+ countdown (ui.uboot), for ui_info */
+static fm1coro_t *emu_co;            /* the main loop (me_main) */
+
+static void me_delay(uint32_t ms)    /* fm1_delay_ms on the coroutine: until that many device ms have passed */
+{
+    uint32_t t0 = fm1_ms;
+    while (fm1_ms - t0 < ms)
+        fm1coro_yield();
+}
+
+static void me_uboot(const char *what, const char *log)   /* main.c: the UBOOT screen, then the reset */
+{
+    lcd_fill(0, 0, 240, 240, T_BG);
+    draw_text_box(0, 100, 240, TY_VL, what, T_THEME, 1);
+    reset_intended();                             /* (an intentional reset: not a failed boot) */
+    printf("melodee: %s\n", log);
+    exit(3);                                      /* (the device: usb_detach, fm1_enter_uboot); parks the loop */
+}
+
+/* main.c fm1_main from the timer's start: the waits, Calibration if OCT- + OCT+ are held, the GLO values as last
+ * used and the BOOT project, the splash's end, then the loop. Its body in main.c's order; built out with the
+ * hardware: usb_retry (usb.up is always 1 here: usb_start is the SIE), ua_off_apply (USB audio), ed_service /
+ * ota_service (the editor, the update), cdc_task; the battery ADC (song.batt_raw stays 0: usb.config shows
+ * external power, ui_draw.c batt_shown) */
+static void me_main(void *arg)
+{
+    int32_t knob = 512 * 16;
+    (void)arg;
+    me_delay(30);
+    if ((fm1_in.buttons & 3u) == 3u) {
+        panel_setup();                            /* OCT- + OCT+ held at power-on */
+        settings_save();
+    }
+    glo_restore();                                /* CLK TUNE MIDI ROUT as last used, */
+    project_boot();                               /* then the BOOT project or the template (theirs win) */
+    me_delay(400);
+    if (boot_work.state != 2u)
+        lcd_fill(0, 0, 240, 240, T_BG);
+
+    for (;;) {
+        uint32_t m = fm1_ms;
+        pattern_poll();
+        if (fm1_ms > 30000u && bootguard.pending) {   /* a crash or hang in the first 30 s counts */
+            bootguard.pending = 0;
+            bootguard.failed = 0;
+        }
+        {   /* the MASTER pot (ADC) through its IIR */
+            int32_t a = emu_hal.master;
+            uint32_t k10;
+            a = a < 0 ? 0 : a > 1023 ? 1023 : a;
+            knob += (a * 16 - knob) / 8;
+            k10 = (uint32_t)(knob / 16);
+            song.master_q12 = (k10 * k10) >> 8;   /* 0 .. ~4096 */
+        }
+        {   /* OCT- + OCT+ held 5 s: UBOOT; the countdown shows from 2 s, letting go cancels it */
+            static uint32_t t0;
+            uint32_t both = (1u << panel.btn[B_OCTDN]) | (1u << panel.btn[B_OCTUP]);
+            if ((fm1_in.buttons & both) != both) {
+                if (ui.uboot) {
+                    ui.uboot = 0;
+                    ui.force = 1;
+                    ui_message("UPDATE CANCELLED");
+                }
+                t0 = fm1_ms;
+            } else if (fm1_ms - t0 > 2000u && fm1_ms - t0 <= 5000u) {
+                uint32_t left = (5000u - (fm1_ms - t0) + 999u) / 1000u;
+                if (left != ui.uboot) {
+                    ui.uboot = (uint8_t)left;
+                    ui.force = 1;
+                }
+            } else if (fm1_ms - t0 > 5000u) {
+                scr_wake_now();
+                me_uboot("UBOOT", "OCT- + OCT+ held 5 s: UBOOT");
+                return;
+            }
+            emu_uboot_left = ui.uboot;
+        }
+        cz_service();
+        fm6_service();                            /* DX7 SysEx for FM6, a pending FM6 settings save */
+        if (usb.uboot_req) {                      /* SysEx F0 22 24 35 7D F7 from the host */
+            usb.uboot_req = 0;
+            me_uboot("UBOOT (USB)", "UBOOT requested over USB");
+            return;
+        }
+        melodee_dbg.ui_frames++;
+        melodee_dbg.page = ui.page;
+        melodee_dbg.home = ui.home;
+        melodee_dbg.stage = 1;
+        ui_input();
+        glo_poll();                               /* a kept GLO value changed: the settings, later */
+        settings_poll();                          /* queued settings save: only while stopped */
+        melodee_dbg.stage = 2;
+        ui_leds();
+        ui_draw();
+        melodee_dbg.stage = 9;
+        while (fm1_ms - m < 15u) {                /* ~60 UI frames/s at most */
+            fm1coro_yield();                      /* (the next device ms) */
+            ui_input();
+        }
+    }
+}
 
 void emu_fw_init(int demo)
 {
@@ -122,24 +229,38 @@ void emu_fw_init(int demo)
     emu_t0_ns = (uint64_t)ts.tv_sec * 1000000000u + (uint64_t)ts.tv_nsec;
     if (emu_hal.ready == 2u)                      /* simulated time (set before init) */
         emu_sim = 1;
+    fm1core_exit_park = fm1coro_park;             /* (an exit() on the loop's coroutine: it is never resumed) */
 
-    /* power-on, main.c fm1_cstart + fm1_main's order: the guard, the flash (persist_boot: settings, projects,
-     * pattern banks, user presets, the FM6 bank), the settings applied, the splash, the panel table, the parts, the
-     * audio, USB; then the GLO values as last used and the BOOT project (or the template) */
-    emu_boot_guard();
+    /* power-on, main.c fm1_cstart + fm1_main's order up to the timer's start: the guard, the default palette, the
+     * splash, the flash (persist_boot: settings, projects, pattern banks, user presets, the FM6 / CZ / Prophet
+     * banks; a migration draws its progress, boot_work), the settings applied, the voice budget, the panel table,
+     * the parts, CPU1, the audio, USB. (dsp_tables_init: hostsim.c's constructor ran it when the module loaded.) */
+    if (emu_boot_guard())
+        return;
     fm1nor_open();                                /* (common/nor.c: erased, then the stage or the file) */
+    settings_init();                              /* a readable default palette before loading flash */
+    lcd_fill(0, 0, 240, 240, T_BG);
+    draw_text_box(0, 70, 240, TY_HR, "MELODEE", T_THEME, 1);
+    draw_text_box(0, 140, 240, TY_TX, "Starting up", T_MID, 1);
+    lcd_sync();
     persist_boot();
     settings_init();
-    lcd_fill(0, 0, 240, 240, T_BG);
-    draw_text_box(0, 94, 240, &AF_L, "MELODEE", T_THEME, 1);
-    draw_text_box(0, 134, 240, &AF_S, "MULTI-ENGINE SYNTH", T_MID, 1);
+    vbudget_cpu1 = VBUDGET;                       /* clock_boot: the SPL's 360 MHz (VBUDGET * 360 / 360) */
+    if (boot_work.state != 2u) {
+        lcd_fill(0, 0, 240, 240, T_BG);
+        draw_text_box(0, 70, 240, TY_HR, "MELODEE", T_THEME, 1);
+        draw_text_box(0, 140, 240, TY_TX, "Multi-engine synth", T_MID, 1);
+    }
     if (melodee_dbg.magic != DBG_MAGIC) {
         memset(&melodee_dbg, 0, sizeof melodee_dbg);
         melodee_dbg.magic = DBG_MAGIC;
     }
     melodee_dbg.boots++;
+    melodee_dbg.max_us = 0;
+    melodee_dbg.in_audio = 0;
     panel_init();
     emu_melodee_init();
+    audio_worker_online = 1;                      /* fm1_multicore_start: CPU1 up (its jobs run inline) */
     audio_init();
     atexit(emu_fw_exit);
     usb.up = 1;                                   /* a host is there: MIDI out flows (usb.c midi_out_event) */
@@ -150,15 +271,18 @@ void emu_fw_init(int demo)
         emu_hal.enc_id[i] = panel.enc[i];
         emu_hal.enc_dir[i] = panel.dir[i];
     }
-    glo_restore();                                /* CLK TUNE MIDI ROUT as last used, */
-    project_boot();                               /* then the BOOT project or the template (theirs win) */
     emu_hal.led_play_green = 0;                   /* (Melodee lights no green PLAY LED: column 0, row bit 0 is the
                                                    * encoders' row, never lit) */
     if (!emu_hal.master)
         emu_hal.master = 724;                     /* -> master_q12 2047, as melodee_init's 2048 */
-    master_knob = emu_hal.master * 16;
-    emu_looping = 0;
     emu_hal.ready = 1;
+    emu_co = fm1coro_new(me_main, NULL, 0);
+    if (!emu_co) {
+        printf("melodee: no memory for the main loop's stack\n");
+        exit(1);
+        return;
+    }
+    fm1coro_resume(emu_co);                       /* (up to its first wait: the 30 ms after the timer's start) */
 }
 
 /* the 1 ms timer: what fm1_timer5_irq / fm1_input_tick give the main loop (ChoralRoot's emu_fw.c logic): a press
@@ -168,7 +292,7 @@ void emu_fw_tick(uint32_t ms)
 {
     uint32_t b, k, i, down;
     if (emu_sim)
-        emu_sim_us = ms * 1000u;
+        emu_sim_ms = ms;
     if ((int32_t)(ms - fm1_ms) > 0)
         fm1_ms = ms;
     b = emu_hal.buttons | emu_hal.buttons_tap;
@@ -204,87 +328,18 @@ void emu_fw_tick(uint32_t ms)
     }
 }
 
-static void master_pot(void)                      /* main.c: the MASTER pot (ADC) through its IIR */
+static void emu_fw_run(void)                      /* this device ms of the main loop */
 {
-    int32_t a = emu_hal.master;
-    uint32_t k10;
-    a = a < 0 ? 0 : a > 1023 ? 1023 : a;
-    master_knob += (a * 16 - master_knob) / 8;
-    k10 = (uint32_t)(master_knob / 16);
-    song.master_q12 = (k10 * k10) >> 8;
+    if (emu_co && !fm1core_halted())
+        fm1coro_resume(emu_co);
 }
-
-static uint8_t emu_uboot_left;                    /* main.c's OCT- + OCT+ countdown (ui.uboot) */
-void emu_fw_frame(void)                           /* main.c fm1_main's loop body */
+void emu_fw_frame(void) { emu_fw_run(); }
+void emu_fw_idle(void) { emu_fw_run(); }
+static void emu_fw_free(void)                     /* (shutdown: the loop's stack) */
 {
-    if (!emu_looping) {                           /* the splash (main.c: the delays before the loop) */
-        if (fm1_ms < EMU_SPLASH_MS)
-            return;
-        lcd_fill(0, 0, 240, 240, T_BG);
-        emu_looping = 1;
-    }
-    fm1_wdt_feed();
-    /* (usb_retry: usb.up is always 1 here, and its usb_start is the SIE: not built) */
-    if (fm1_ms > 30000u && emu_guard.pending) {   /* a crash or hang in the first 30 s counts */
-        emu_guard.pending = 0;
-        emu_guard.failed = 0;
-    }
-    master_pot();
-    {   /* OCT- + OCT+ held 5 s: UBOOT (main.c); the countdown shows from 2 s, letting go cancels it */
-        static uint32_t t0;
-        uint32_t both = (1u << panel.btn[B_OCTDN]) | (1u << panel.btn[B_OCTUP]);
-        if ((fm1_in.buttons & both) != both) {
-            if (ui.uboot) {
-                ui.uboot = 0;
-                ui.force = 1;
-                ui_message("UPDATE CANCELLED");
-            }
-            t0 = fm1_ms;
-        } else if (fm1_ms - t0 > 2000u && fm1_ms - t0 <= 5000u) {
-            uint32_t left = (5000u - (fm1_ms - t0) + 999u) / 1000u;
-            if (left != ui.uboot) {
-                ui.uboot = (uint8_t)left;
-                ui.force = 1;
-            }
-        } else if (fm1_ms - t0 > 5000u) {
-            lcd_fill(0, 0, 240, 240, T_BG);
-            draw_text_box(0, 110, 240, &AF_M, "UBOOT", T_THEME, 1);
-            emu_guard.pending = 0;                /* intentional reset: not a failed boot */
-            printf("melodee: OCT- + OCT+ held 5 s: UBOOT\n");
-            exit(3);
-            return;
-        }
-        emu_uboot_left = ui.uboot;
-    }
-    cz_service();
-    fm6_service();                                /* DX7 SysEx for FM6, a pending FM6 settings save */
-    if (usb.uboot_req) {                          /* SysEx F0 22 24 35 7D F7 from the host */
-        usb.uboot_req = 0;
-        lcd_fill(0, 0, 240, 240, T_BG);
-        draw_text_box(0, 110, 240, &AF_M, "UBOOT (USB)", T_THEME, 1);
-        emu_guard.pending = 0;
-        printf("melodee: UBOOT requested over USB\n");
-        exit(3);
-        return;
-    }
-    melodee_dbg.ui_frames++;
-    melodee_dbg.page = ui.page;
-    melodee_dbg.home = ui.home;
-    melodee_dbg.stage = 1;
-    ui_input();
-    glo_poll();                                   /* a kept GLO value changed: the settings, later */
-    settings_poll();                              /* queued settings save: only while stopped */
-    melodee_dbg.stage = 2;
-    ui_leds();
-    emu_led_sync();                               /* (the two dim planes -> emu_hal.led_dim) */
-    ui_draw();
-    melodee_dbg.stage = 9;
-}
-
-void emu_fw_idle(void)                            /* main.c: the input scan while it waits for the next frame */
-{
-    if (emu_looping)
-        ui_input();
+    if (emu_co)
+        fm1coro_free(emu_co);
+    emu_co = 0;
 }
 
 void emu_fw_audio(int16_t *out, uint32_t frames)  /* the ALNK0 ISR, one half buffer per EMU_BLOCK */
@@ -309,7 +364,7 @@ void emu_fw_audio(int16_t *out, uint32_t frames)  /* the ALNK0 ISR, one half buf
 
 int emu_fw_midi_in(uint32_t pkt)
 {
-    if (MQ - (mi_w - mi_r) < 8u)                  /* (usb.c ep1_take: room kept for TRS MIDI) */
+    if (MQ - (mi_w - mi_r) < EP1_ROOM - 16u)      /* (usb.c ep1_take: room kept for TRS MIDI) */
         return 0;
     midi_in_event(pkt);
     return 1;
@@ -332,18 +387,20 @@ void emu_fw_dump(void)
            (unsigned)host_notes);
     printf("  leds:");
     for (c = 0; c < FM1_NCOL; c++)
-        printf(" %02X/%02X/%02X", fm1_led[c], fm1_led_dim[0][c], fm1_led_dim[1][c]);
-    printf("  (lit/dim keys/dim buttons per column)\n");
+        printf(" %02X/%02X/%02X/%02X", fm1_led[c], fm1_led_dim[0][c], fm1_led_dim[1][c], fm1_led_dim[2][c]);
+    printf("  (lit/keys/buttons/breath per column; masks %u %u %u)\n", fm1_led_dim_mask[0], fm1_led_dim_mask[1],
+           fm1_led_dim_mask[2]);
     for (i = 0; i < NTRK; i++) {
         uint32_t v, n = 0;
         for (v = 0; v < NVOICE; v++)
             n += trk[i].v[v].active;
         printf("  part %u%s: %s preset %u, voices %u, level %d\n", (unsigned)i + 1u, i == song.sel ? "*" : "",
-               ENGINES[trk[i].engine]->name, (unsigned)trk[i].preset, (unsigned)n, (int)trk[i].p[P_LEVEL]);
+               ENGINES[eng_idx(trk[i].engine)]->name, (unsigned)trk[i].preset, (unsigned)n, (int)trk[i].p[P_LEVEL]);
     }
-    printf("  playing %u bpm %d page %u home %u master_q12 %u cpu %u%%  midi in %u out %u\n", (unsigned)song.playing,
-           (int)song.g[G_BPM], (unsigned)ui.page, (unsigned)ui.home, (unsigned)song.master_q12,
-           (unsigned)(song.cpu_q8 * 100u / 256u), (unsigned)(mi_w - mi_r), (unsigned)(mo_w - mo_r));
+    printf("  playing %u bpm %d page %u home %u master_q12 %u  midi in %u out %u  cpu1 %s, %u jobs\n",
+           (unsigned)song.playing, (int)song.g[G_BPM], (unsigned)ui.page, (unsigned)ui.home,
+           (unsigned)song.master_q12, (unsigned)(mi_w - mi_r), (unsigned)(mo_w - mo_r),
+           audio_worker_online ? "online (inline)" : "retired", (unsigned)audio_worker.jobs);
     printf("  flash: %s, %u writes, %u erases with the audio stalled (%u blocks)%s\n",
            fm1nor_path()[0] ? fm1nor_path() : "RAM only", (unsigned)fm1nor_dirty(), (unsigned)fm1nor_stalls(),
            (unsigned)fm1nor_stall_blocks(), persist_pending ? ", a settings save pending" : "");

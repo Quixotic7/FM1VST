@@ -40,7 +40,8 @@ static fm1core_t CORE = {
     .license = FM1CORE_LICENSE,
     .gated = FM1CORE_GATED_OR_NULL,
     .flash_size = 0x100000u,
-    /* the printed labels, FM1P_B_* order (firmware/src/panel.c B_NAME calls the second one SCL: the scale layer) */
+    /* the printed labels, FM1P_B_* order. firmware/src/panel.c B_NAME calls the second one SCL (the scale layer);
+     * tests/plugin_test.cpp expects "SEL" for the Felucca-family cores, so it stays SEL until that test moves */
     .button_names = {"FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC",
                      "OCT-", "OCT+"},
     .params = NULL,
