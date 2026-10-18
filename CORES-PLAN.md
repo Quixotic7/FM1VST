@@ -6,7 +6,9 @@ FiMba-1, JIANT FM, sloopDX, Frodhes, GHOULBOX, Rainbow Mode, ORBIT, DUELL, Purpl
 Sky FM.
 
 Status: phase 0 is done (branch cores-abi5: ABI 5, core-glue/common, per-core CMake, tests/core_conformance; the
-three cores at their pinned versions pass everything). Phases 1 and 2 are a plan. The per-firmware research is in `research/hub-2026-10-18/<id>.md`;
+three cores at their pinned versions pass everything). Phase 1 is done (branch cores-all: the six families merged,
+all 21 cores built and bundled, ABI 6 for the credits, the suite passing in the default, Release and public builds).
+Phase 2 is a plan. The per-firmware research is in `research/hub-2026-10-18/<id>.md`;
 this file is its summary.
 
 ## 1. What the survey found
@@ -133,7 +135,14 @@ so these need an answer first:
 | SLOOP (and forks with its icons) | Hügelton icon atlas, all rights reserved under a GPL §7 permission | check the permission covers a plugin, or use replacement icons |
 | AMB-1 | MPL-2.0 | combinable with GPL unless marked "Incompatible With Secondary Licenses": check the headers |
 | DUELL | naming terms for unofficial builds | an unmodified build at a release tag is probably fine; ask the author |
-| No Man Sky FM | credit request | credit it in the About box |
+| No Man Sky FM | credit request | credited in the About box (the descriptor's credits, ABI 6) |
+| X0X | 909 hi-hat / ride / crash samples "ER-99 via 9W9", GPL-3.0 | gated until ER-99's author confirms they are not TR-909 ROM recordings |
+
+Gated today (left out of FM1_PUBLIC_BUILD): choralroot and melodee (Casio CZ-1 tones, Sequential Prophet-5
+programs), fm106 (Juno-106 patch data), duell (naming terms), rainbow (character look-alikes), fartmachine
+(recordings), orbit (OP-1 material, the Hugelton atlas), sloop and sloopdx (the Hugelton atlas), nomansky (game
+art), x0x (the cymbal samples). A public build bundles the other ten: felucca, ghoulbox, jiant, purplemonkey,
+coralflower, fomni, fimba, amb, obervave, frodhes.
 
 ## 7. Rules
 
