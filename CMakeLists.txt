@@ -218,6 +218,28 @@ target_compile_definitions(fm1testlib PUBLIC
     FM1_CORES_BUILD_DIR="${CMAKE_BINARY_DIR}/cores"
     FM1_REF_OUT="${CMAKE_BINARY_DIR}/reference")
 
+# the conformance test every core passes (tests/core_conformance.cpp: boots, draws, sounds, the flash round trip, a
+# double load, a scripted reboot, the descriptor), each with its glue folder's conformance_<id>.txt or conformance.txt
+add_executable(core_conformance tests/core_conformance.cpp)
+target_link_libraries(core_conformance PRIVATE fm1testlib)
+target_compile_options(core_conformance PRIVATE -Wall -Wextra)
+add_dependencies(core_conformance ${FM1_CORE_TARGETS})
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/conformance)
+foreach(_id IN LISTS FM1_CORE_IDS)
+    get_property(_glue GLOBAL PROPERTY FM1_CORE_GLUE_${_id})
+    get_property(_fam GLOBAL PROPERTY FM1_CORE_FAMILY_${_id})
+    get_property(_lic GLOBAL PROPERTY FM1_CORE_LICENSE_${_id})
+    set(_conf ${_glue}/conformance_${_id}.txt)
+    if(NOT EXISTS ${_conf})
+        set(_conf ${_glue}/conformance.txt)
+    endif()
+    add_test(NAME core_conformance_${_id}
+             COMMAND core_conformance $<TARGET_FILE:${_id}_core> ${_id} ${_fam} ${_lic} ${_conf}
+                     ${CMAKE_BINARY_DIR}/conformance)
+    set_tests_properties(core_conformance_${_id} PROPERTIES TIMEOUT 300
+                         ENVIRONMENT "FM1EMU_HOME=${CMAKE_BINARY_DIR}/conformance/home")
+endforeach()
+
 add_executable(double_load_test tests/double_load_test.cpp)
 target_link_libraries(double_load_test PRIVATE fm1testlib)
 add_dependencies(double_load_test ${FM1_CORE_TARGETS})

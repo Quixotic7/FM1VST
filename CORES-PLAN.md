@@ -5,7 +5,8 @@ The owner wants FM1VST to run the latest ChoralRoot, Felucca and Melodee, plus 1
 FiMba-1, JIANT FM, sloopDX, Frodhes, GHOULBOX, Rainbow Mode, ORBIT, DUELL, PurpleMonkey, Fart Machine One and No Man
 Sky FM.
 
-Status: a plan. Nothing is built yet. The per-firmware research is in `research/hub-2026-10-18/<id>.md`;
+Status: phase 0 is done (branch cores-abi5: ABI 5, core-glue/common, per-core CMake, tests/core_conformance; the
+three cores at their pinned versions pass everything). Phases 1 and 2 are a plan. The per-firmware research is in `research/hub-2026-10-18/<id>.md`;
 this file is its summary.
 
 ## 1. What the survey found

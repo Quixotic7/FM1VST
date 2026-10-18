@@ -1,0 +1,10 @@
+# Melodee 0.11.1: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: the first FM1P_PERSIST parameter of the map, the default
+# the boot guard: a second failed boot in a row enters UBOOT (exit(3))
+reboot-guard 2
+# OCT- + OCT+ held 5 s: UBOOT (melodee_fw.c, main.c's countdown)
+reboot wait 600
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

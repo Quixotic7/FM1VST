@@ -17,14 +17,16 @@ The editor is the FM-1 panel itself (phase 3): LEDs, LCD, mouse and keyboard as 
 
 | path | what |
 |---|---|
-| `core-api/fm1core.h` | the core ABI (`FM1CORE_ABI 3`): the descriptor `fm1core_t` (id, name, version, source, flash size, button labels, the parameter map `fm1param_t` and `param_epoch`, the panel state `emu_hal_t`, every `emu_fw_*` entry point, `shutdown`, `halted`, and the flash image: `flash`, `flash_dirty`, `flash_stage` to boot from bytes, `flash_sync`) and the one symbol a module exports, `fm1core_get`. The threading contract is in its header comment. |
+| `core-api/fm1core.h` | the core ABI (`FM1CORE_ABI 5`): the descriptor `fm1core_t` (id, name, version, source, family, licence, gated, flash size, button labels, the parameter map `fm1param_t`, `param_epoch` and `knob_target`, the panel `fm1panel_t`, every entry point, `shutdown`, `halted`, and the flash image: `flash`, `flash_dirty`, `flash_stage` to boot from bytes, `flash_sync`) and the one symbol a module exports, `fm1core_get`. ABI 5 includes no firmware header: `fm1panel_t` is FM1VST's own (keys, buttons, taps, encoders, MASTER, key velocity and aftertouch in; LED brightness per (column, line), PLAY green and the LCD out), each glue translates its firmware's HAL to and from it. The threading contract is in its header comment. |
+| `core-glue/common/` | what every glue shares (its README documents each and how a core is added): the NOR image and the staged boot, `exit` / `atexit` inside a plugin, the audio FIFO, the tick units, a coroutine, the panel translation helpers, the version defines |
+| `cmake/FM1Cores.cmake` | `fm1_add_core()`; each core's call is in `core-glue/<family>/core.cmake`, found by a glob |
 | `core-glue/choralroot/` | the ChoralRoot core: `core_choralroot.c` (the submodule's `tools/emu/emu_fw.c`, unmodified, with `exit` / `atexit` redirected so a firmware reboot halts the core instead of the host), `core_choralroot_params.c` (the Tier 2 parameter map and the knobs' targets, included into the same unit so it reaches the firmware's UI code) and `core_choralroot_desc.c` (the descriptor) |
 | `core-glue/felucca/`, `core-glue/melodee/` | the Felucca and Melodee cores, the same three files (`core_<id>.c`, `core_<id>_params.c`, `core_<id>_desc.c`) plus, because these firmwares have no emulator of their own, its equivalent written here: `<id>_fw.c` (the `emu_fw_*` hooks, as ChoralRoot's `emu_fw.c`), `<id>_firmware.h` (the include list, as `emu_firmware.h`) and `<id>_hal.h` (the HAL on the host, as `emu_hal_fw.h`) |
 | `cores/` | the firmwares, git submodules, read-only, pinned (below) |
 | `remote/RemoteFM1` | [RemoteFM1](https://github.com/Quixotic7/RemoteFM1) (submodule, pinned at `acd77af`, read-only): the protocol and libremotefm1, the host library behind Remote FM-1 (below) |
 | `plugin/` | the JUCE plugin: `Processor.{h,cpp}` (`FM1Processor`: the core and its `Device` on the audio thread, parameters and the Tier 2 feedback loop, MIDI, state, presets, the firmware switch; the threading and file layout are in its header comment), `Tier2Parameter.{h,cpp}` (a rebindable host parameter slot, and `KnobParameter`: a physical knob that follows the firmware's screen), `Editor.{h,cpp}` (the settings bar and the panel; the theme picker), `PanelComponent.{h,cpp}` (the FM-1 panel: the emulator's drawing, layout, mouse and key map), `Theme.{h,cpp}` (colour themes: the derived palette, the presets, custom theme files) and `RemoteLink.{h,cpp}` (Remote FM-1: the session thread, the unit lock, the event queue and the screen snapshot) |
 | `engine/` | C++17, no JUCE: `cores.{h,cpp}` (find and load modules, one private copy per instance), `device.{h,cpp}` (the single-thread device clock, input, LEDs, LCD, `render` at any host rate), `resampler.h` (4-point Lagrange) |
-| `tests/` | `core_smoke` and `param_test` (per core), `replay_test`, `double_load_test`, `halt_test`, `plugin_test`, `tier2_test`, `panel_render_test`, `remote_test`, and `script_runner` (the emulator's script grammar on a `Device`) |
+| `tests/` | `core_smoke`, `param_test` and `core_conformance` (per core), `common/` (the glue helpers), `replay_test`, `double_load_test`, `halt_test`, `plugin_test`, `tier2_test`, `panel_render_test`, `remote_test`, and `script_runner` (the emulator's script grammar on a `Device`) |
 
 ## Cores
 
@@ -56,22 +58,25 @@ the web editor's SysEx, the serial console, USB audio (Felucca's UAC input, Melo
 UART poll. On the device, Felucca's and Melodee's song (the parts' sounds and patterns) is RAM until SAVE > PROJECT,
 and so it is in the core: the plugin state keeps the flash (settings, projects, user presets), not unsaved edits.
 
-**Adding a core.** A firmware of the Felucca family becomes a core with a folder `core-glue/<id>/` and one call in
-`CMakeLists.txt`:
+**Adding a core.** A firmware becomes a core with its glue folder `core-glue/<family>/` and a `core.cmake` there
+(found by the top-level glob: no shared file is edited):
 
 ```cmake
-fm1_add_core(<id> core-glue/<id> SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/cores/<repo> UNIT core_<id>.c
-             DESC core_<id>_desc.c PREFIX <XX> GEN <the headers its tools/build.py generate() writes>
-             VERSION_FILE firmware/src/<unit>.c VERSION_REGEX "^#define <NAME>_VERSION \"v?([^\"]*)\"")
+fm1_add_core(<id> ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/<repo> UNIT core_<id>.c
+             DESC core_<id>_desc.c FAMILY <family> LICENSE GPL-3.0-only
+             GEN <the headers its tools/build.py generate() writes>      # or NO_GEN
+             VERSION_FILE firmware/src/<unit>.c VERSION_REGEX "^#define <NAME>_VERSION \"v?([^\"]*)\"")   # or VERSION x
 ```
 
-which runs the submodule's generate step into its gitignored `build/gen`, builds the unit and the descriptor once
-(OBJECT) and links `core_<id>` (STATIC) and `build/cores/<id>.fm1core` (MODULE, exporting only `fm1core_get`), puts it
-into every plugin bundle (signed) and registers `core_smoke_<id>` and `param_test_<id>`. The three glue files: the
-unit (`core_<id>.c`: the firmware with `exit` / `atexit` / `fopen` redirected, the flash hooks, the map included),
-the parameter map (`core_<id>_params.c`, optional: `nparams` 0 is valid) and the descriptor (`core_<id>_desc.c`: id,
-name, version, source, button labels, the hooks). A firmware that, like Felucca, has no emulator also needs the three
-emulator files (`<id>_fw.c`, `<id>_firmware.h`, `<id>_hal.h`): copy Felucca's.
+which runs the submodule's generate step into its gitignored `build/gen`, builds the unit, the descriptor and
+core-glue/common's sources once (OBJECT) and links `core_<id>` (STATIC) and `build/cores/<id>.fm1core` (MODULE,
+exporting only `fm1core_get`), puts it into every plugin bundle (signed) and registers `core_smoke_<id>`,
+`param_test_<id>` and `core_conformance_<id>`. cmake/FM1Cores.cmake lists every option (NO_GEN, EXTRA_GEN, GEN_ROOT,
+PYTHON_NEEDS, VERSION, FLAGS, SUBMODULES_RECURSIVE, GATED, ..); `-DFM1_PUBLIC_BUILD=ON` leaves the GATED cores out.
+The glue files: the unit (`core_<id>.c`: the firmware with `exit` / `atexit` redirected, its HAL translated to the
+panel, the map included), the parameter map (`core_<id>_params.c`, optional: `nparams` 0 is valid), the descriptor
+(`core_<id>_desc.c`) and `conformance.txt` (the conformance test's script for this core). core-glue/common/README.md
+walks through it, with the pitfalls.
 
 ## The plugin
 
@@ -390,6 +395,12 @@ The tests:
 
 - `core_smoke_<id>` (`choralroot`, `felucca`, `melodee`): the module, loaded as the plugin loads it, boots, draws,
   sounds when D4 is held (and not before), does not halt; its screen goes to `build/cores/<id>.ppm`.
+- `core_conformance_<id>` (every core CMake builds): the descriptor filled (ABI 5, id, family and licence as
+  fm1_add_core gave them, button names, the keymap, the panel table after init), the screen not blank within 3 s, a
+  note key sounding within 1 s, the flash round trip (a saved change survives a reboot from the image), a double load,
+  the scripted reboot; per core `core-glue/<family>/conformance.txt` (tests/core_conformance.cpp documents it). The
+  screens go to `build/conformance/<id>.ppm`.
+- `common_fifo_test`, `common_coro_test`, `common_nor_test`: core-glue/common's helpers on their own.
 - `replay_test`: `tools/emu/scripts/cr_dmaj.txt` and `cr_allsynth.txt` through a `Device` on the loaded module must
   give the reference emulator's samples bit for bit at 44.1 kHz and the same `expect` results; the same run rendered
   at 48 kHz must match the reference resampled by a windowed sinc within a stated tolerance.
@@ -464,7 +475,7 @@ The tests:
   property, never an updater port, never the Onyx, a Roto-Control or a stock FM-1); the unit lock
   (two links on one lock file: the second is *in use* and sends nothing, then takes over when the first stops); the
   processor with Remote on, in real time: the session starts on the (fake) bulk pipe, the unit's shadow equals
-  `hal->lcd` once settled, the LEDs equal `hal->led` / `led_dim`, a key, a button, an encoder (PRESETS: a device
+  the panel's `lcd` once settled, the LEDs are the panel's levels (each in the LEDS plane of its class), a key, a button, an encoder (PRESETS: a device
   turn, reported on Knob Presets inside a gesture, no host detents) and MASTER (the parameter follows) from the
   unit reach the core, the MIDI filter on and off, a firmware switch resends the screen whole (Felucca's screen on
   the unit), a second processor restored from the state is *in use*, the toggle off sends SESSION 0.
