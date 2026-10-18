@@ -86,6 +86,11 @@
 #if FM1CORE_SL_FW == FM1CORE_SL_NMS
 #include "ui_nms.c"
 #include "ui_game.c"
+/* ui_nms.c's colour `#define NB RGB(0x00, 0x6E, 0xA0)` (884) shadows panel.c's button count NB (14) in every unit
+ * after it: ui_input.c's loops over panel.btn[NB] (the LIGHTS glow, the remote buttons, panel setup) and project.c's
+ * panel check would read 884 entries of a 14-byte array (on the device too: an upstream bug). ui_game.c is the
+ * colour's last user: from here NB is the enum again */
+#undef NB
 #endif
 #include "ui_input.c"
 

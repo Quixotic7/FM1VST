@@ -143,13 +143,14 @@ void fm1core_sl_fw_init(int demo)
     fm1core_sl_frames = 0;
 }
 
-/* the panel table (panel.c's, from the settings or PANEL_DEFAULT) */
+/* the panel table (panel.c's, from the settings or PANEL_DEFAULT). The arrays' own sizes, not NB / NE: No Man Sky's
+ * ui_nms.c redefines NB as a colour (#define NB RGB(0x00, 0x6E, 0xA0)), which read past panel.btn here */
 void fm1core_sl_fw_panel_table(uint8_t *btn_id, uint8_t *enc_id, int8_t *enc_dir)
 {
     uint32_t i;
-    for (i = 0; i < NB; i++)
+    for (i = 0; i < sizeof panel.btn; i++)
         btn_id[i] = panel.btn[i];
-    for (i = 0; i < NE; i++) {
+    for (i = 0; i < sizeof panel.enc; i++) {
         enc_id[i] = panel.enc[i];
         enc_dir[i] = panel.dir[i];
     }
