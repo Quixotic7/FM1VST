@@ -382,7 +382,7 @@ void fm1core_sl_fw_dump(void)
 
 void fm1core_sl_fw_ui_info(char *buf, uint32_t n)
 {
-    snprintf(buf, n, "%s page %u track %u menu %u layer %u%s", ui.home ? "home" : "page", (unsigned)ui.page,
+    snprintf(buf, n, "%s %u track %u menu %u layer %u%s", ui.home ? "home, page" : "page", (unsigned)ui.page,
              (unsigned)song.sel + 1u, (unsigned)ui.menu, (unsigned)ui.layer, fm1core_sl_looping ? "" : " (splash)");
 }
 
