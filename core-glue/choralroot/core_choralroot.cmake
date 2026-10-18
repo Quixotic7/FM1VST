@@ -13,9 +13,15 @@ if(FM1_EXPOSE_EDITOR)
 endif()
 # the version: firmware/src/choralroot.c's FELUCCA_VERSION ("ChoralRoot 0.25.1", the device build's default and
 # tools/emu/build.sh's); the unit shows the same string (core_choralroot.c)
+# GATED: LICENSING.md lists the Casio CZ-1 preset tones ("the rights stay with Casio", "Casio's (no licence granted)")
+# and Sequential's Prophet-5 factory programs ("the rights stay with Sequential", "Sequential's (no licence granted)");
+# the emulator unit compiles both in (FELUCCA_CZ 1; FELUCCA_PROPHET 1, FELUCCA_P5_FACTORY 1). Un-gated by a build
+# without them (FELUCCA_P5_FACTORY 0 and a CZ-1 engine without its factory tones, or FELUCCA_CZ 0: a different
+# engine list) or by the rights holders' permission
 # GEN: tools/build.py generate()'s whole list (0.25: + cr_layouts.h, melodee_prophet_factory.h)
 fm1_add_core(choralroot ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_cr} UNIT core_choralroot.c DESC core_choralroot_desc.c
              PREFIX CR FAMILY choralroot LICENSE GPL-3.0-only
+             GATED "it bundles Casio CZ-1 and Sequential Prophet-5 factory patches (LICENSING.md: no licence granted)"
              GEN ui_fonts.h cr_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h felucca_tables.h cr_layouts.h
                  felucca_fm6.h melodee_cz1.h melodee_prophet_factory.h felucca_samples.h
              VERSION_FILE firmware/src/choralroot.c

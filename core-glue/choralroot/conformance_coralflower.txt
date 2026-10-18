@@ -1,0 +1,19 @@
+# CoralFlower 0.2: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: PRESETS +2 (the chord part's sound, a place in the sound row: cf_settings.c's record); the
+# record is written a while after the change once nothing sounds, or by flash_sync; the second unit shows that sound
+save wait 3000
+save knob PRESETS +2
+save wait 600
+save quit
+saved wait 3000
+saved quit
+saved-lcd-differs
+# the boot guard: three failed boots after a watchdog reset enter UBOOT (emu_fw.c emu_boot_guard: exit(3))
+reboot-guard 3 wdt
+# the update gesture: OCT- + OCT+ + HOME held 5 s (cf_shim.c cr_update_poll: the emulator's exit(0))
+reboot wait 600
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot btn HOME down
+reboot wait 6500
+reboot quit
