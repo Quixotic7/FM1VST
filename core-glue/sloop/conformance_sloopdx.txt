@@ -1,0 +1,21 @@
+# sloopDX 4.0: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the splash runs ~3.1 s (splash.c sloopdx_splash_run: the 32 algorithms go by, then 0.8 s): the keys play after it
+settle_ms 3500
+# the flash round trip: the working project (project.c's autosave, which flash_sync writes as persist_flush_now
+# does): PRESETS turned on the TRACKS page steps track 1's DX7 voice; after the reboot autosave_resume brings it
+# back and the TRACKS page shows it
+save wait 3500
+save knob PRESETS +3
+save wait 600
+save quit
+saved wait 3500
+saved quit
+saved-lcd-differs
+# the boot guard: a second failed boot in a row enters the recovery updater (UBOOT here: exit(3))
+reboot-guard 2
+# OCT- + OCT+ held 5 s while stopped: UBOOT (main.c, sloop_fw.c)
+reboot wait 3500
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

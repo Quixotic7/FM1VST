@@ -10,3 +10,15 @@
 [submodule "remote/RemoteFM1"]
 	path = remote/RemoteFM1
 	url = https://github.com/Quixotic7/RemoteFM1.git
+[submodule "cores/sloop-fm1"]
+	path = cores/sloop-fm1
+	url = https://github.com/isod89/sloop-fm1.git
+[submodule "cores/dxsloop"]
+	path = cores/dxsloop
+	url = https://github.com/zvenson/dxsloop.git
+[submodule "cores/orbit"]
+	path = cores/orbit
+	url = https://github.com/dspaudio/orbit.git
+[submodule "cores/nomanskyFM"]
+	path = cores/nomanskyFM
+	url = https://github.com/hericdk/nomanskyFM.git
