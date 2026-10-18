@@ -1,0 +1,11 @@
+# OberVave's golden check (dinghy_golden.c): the script in tests/host.c's format, run by its own host sim and by
+# the core; the screens compared at 3000 ms. After the splash (2.4 s): a chord, PRESETS two programs on, KNOB 1 and
+# KNOB 3 turned on the PERFORM page, the scope drawing the chord.
+200 keys 0x80
+2500 keys 0x4880
+2600 enc 6 2
+2650 enc 2 5
+2700 enc 4 -3
+2800 btn 9
+3000 shot
+3010 end

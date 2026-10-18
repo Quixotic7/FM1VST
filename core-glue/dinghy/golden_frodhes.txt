@@ -1,0 +1,13 @@
+# Frodhes' golden check (dinghy_golden.c): the script in tests/host.c's format, run by its own host sim and by the
+# core; the screens compared at 3000 ms. After the splash (1.6 s): a chord over MIDI and the keys, KNOB 1 and KNOB 2
+# turned, SELECT to the next page and back (press / release: host.c's "btn" lets go in the same pass).
+200 midi 0x90 60 90
+1700 keys 0x4880
+1800 turn 2 3
+1850 turn 3 -2
+2000 turn 0 1
+2300 turn 0 -1
+2400 press 9
+2450 release 9
+3000 shot
+3010 end

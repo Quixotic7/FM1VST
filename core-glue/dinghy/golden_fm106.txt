@@ -1,0 +1,12 @@
+# FM-106's golden check (dinghy_golden.c): the script in tests/host.c's format, run by its own host sim (patched in
+# the build tree: core_fm106.cmake) and by the core; the screens compared at 3000 ms (host.c's fixed SHOT). Its
+# host.c has no knobs and no releases: keys, MIDI and button presses that act on the press (FX: the chorus, OCT+).
+200 keys 0x80
+700 keys 0x4880
+1500 keys 0
+1700 midi 0x90 81 120
+2300 midi 0x80 81 0
+2400 btn 2
+2500 btn 1
+2700 keys 0x204
+3010 end
