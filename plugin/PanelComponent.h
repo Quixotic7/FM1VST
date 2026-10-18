@@ -62,6 +62,16 @@ public:
     // pull the processor's snapshot, redraw what changed (the timer's work; tests call it directly)
     void refresh();
 
+    // ---- for the editor's chrome (Editor.h): right-click off every control; the LCD changed (the screen view
+    // shows lcdImage()); where a point of the drawing (units) is and how big a unit is, in this component's logical
+    // points, at the layout the next paint uses; whether a rectangle (logical) covers any control, its printed name or
+    // key hint, or the screen
+    std::function<void()> onContextMenu;
+    std::function<void()> onLcdChanged;
+    juce::Point<float> unitToLocal(float ux, float uy) const;
+    float pointsPerUnit() const;
+    bool overlapsControl(juce::Rectangle<float> local) const;
+
     // ---- the layout of the last paint, in physical pixels of that paint (tests) ----
     struct Layout {
         float scale = 0;            // physical pixels per logical point
@@ -112,6 +122,7 @@ public:
 private:
     enum { SRC_KEY = 1, SRC_ESC = 2, SRC_MOUSE = 4, SRC_LATCH = 8 };
     void timerCallback() override;
+    Layout computeLayout(float scale) const;  // relayout's geometry, nothing drawn
     void relayout(float scale);
     void drawBase();
     void drawAllControls();

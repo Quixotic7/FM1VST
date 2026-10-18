@@ -1,57 +1,68 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The plugin's editor (phase 3): a slim settings bar on top (firmware, presets, Remote FM-1 (the toggle, its menu and
-// status), the preset buttons, transpose, the
-// button parameters' mode (Button params: Tap / Hold / Toggle-hold), the two MIDI toggles, the theme, the big LCD view, the status with Power on) and the FM-1 panel (PanelComponent) filling
-// the rest. Resizable, the panel's aspect kept (with the big LCD shown the frame letterboxes instead); the last size
-// is remembered per instance in the plugin state. The host parameters have no generic list any more: they remain
-// the host's (automation, the Roto-Control).
+// The plugin's editor: the FM-1 and nothing else around it.
+//
+// VIEWS (FM1Processor::getViewMode, saved in the state: a set reopens in its view)
+//   Device   the panel (PanelComponent, drawn as before) edge to edge. Resizable with the panel's aspect locked (with
+//            the big LCD above it, ` or the sheet's VIEW: free, the frame letterboxed); the size is remembered in the
+//            state (editorW / editorH).
+//   Screen   the 240 x 240 LCD alone in a thin rounded bezel, in a square window, resizable; its side is remembered
+//            apart (screenSize). The LCD is nearest-neighbour at whole multiples of 240 physical pixels (the layout
+//            snaps to one within 6 %), else scaled up nearest-neighbour to the next whole multiple and smoothed down
+//            from there, so pixel edges stay sharp at any size. The computer keys still play the panel (the view
+//            passes them on).
+// SETTINGS are hidden the same way in both views: a small round "more" button fades in at the top-right corner while
+// the mouse moves over the editor (150 ms) and fades out 1.5 s after it leaves or stops; in the device view it sits on
+// the body's empty top-right corner, clear of every control at every size. While Remote FM-1 is on it carries a small
+// LED that stays when the button fades (green: connected; amber: searching, in use or lost). A halted firmware keeps
+// the button shown, ringed in red. The button, or a right-click anywhere off the panel's controls (a right-click on a
+// key or button still latches it, on a knob still selects it), opens the settings sheet (Sheet.h).
+//
+// The Standalone app: its window loses JUCE's "Options" bar (the native title bar instead); its audio / MIDI settings
+// and state files are in the sheet.
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
 
-#include <array>
 #include <functional>
 #include <memory>
 #include <vector>
 
+#include "Look.h"
 #include "PanelComponent.h"
 #include "Processor.h"
+#include "Sheet.h"
 #include "Theme.h"
+#include "Widgets.h"
 
-// "Custom...": the three colours (Base, Membrane, Knobs), the optional Bed and Label overrides, a name; every change
-// previews live on the panel
-class ThemeEditorPanel : public juce::Component, private juce::ChangeListener {
+// the screen view: the LCD in its bezel
+class ScreenView : public juce::Component {
 public:
-    ThemeEditorPanel();
-    ~ThemeEditorPanel() override;
-    void setTheme(const Theme &t);               // (no onChange)
-    Theme theme() const;
-    void paint(juce::Graphics &g) override;
-    void resized() override;
+    explicit ScreenView(PanelComponent &panel);
+    void lcdChanged() { repaint(lcdArea().getSmallestIntegerContainer()); }
+    juce::Rectangle<float> lcdArea() const;       // the LCD's rectangle at the last paint's pixel scale (logical)
+    juce::Rectangle<float> bezelArea() const;
+    int lcdScale() const { return lastN_; }       // the last paint: the LCD's whole multiple (0: smoothed)
+    std::function<void()> onContextMenu;
 
-    std::function<void(const Theme &)> onChange;
-    std::function<bool(const Theme &, bool asDefault)> onSave;   // false: not saved (see the note)
-    void setNote(const juce::String &s) { note_.setText(s, juce::dontSendNotification); }
-    std::function<void(const juce::String &)> onDelete;
-    std::function<void()> onClose;
+    void paint(juce::Graphics &g) override;
+    void mouseDown(const juce::MouseEvent &e) override;
+    // the computer keys: the panel's (it is hidden, its key handling is not)
+    bool keyPressed(const juce::KeyPress &k) override { return panel_.keyPressed(k); }
+    bool keyStateChanged(bool down) override { return panel_.keyStateChanged(down); }
+    void modifierKeysChanged(const juce::ModifierKeys &m) override { panel_.modifierKeysChanged(m); }
+    void focusLost(FocusChangeType c) override { panel_.focusLost(c); }
 
 private:
-    void changeListenerCallback(juce::ChangeBroadcaster *) override;
-    void changed();
-
-    struct Column {
-        juce::Label title;
-        juce::ToggleButton enable;               // (Bed, Label: the override is on)
-        std::unique_ptr<juce::ColourSelector> sel;
-        bool optional = false;
-    };
-    std::array<Column, 5> cols_;                 // base, membrane, knob, bed, label
-    juce::Label nameLabel_{{}, "Name"};
-    juce::TextEditor name_;
-    juce::TextButton save_{"Save"}, default_{"Save as default"}, delete_{"Delete"}, close_{"Close"};
-    juce::Label note_;
-    bool setting_ = false;
+    juce::Rectangle<float> lcdAreaFor(float scale) const;
+    PanelComponent &panel_;
+    float lastScale_ = 1.0f;
+    int lastN_ = 0;
+    juce::Image cache_;                           // the LCD scaled up nearest-neighbour
+    const void *cacheSrc_ = nullptr;
+    int cacheN_ = 0;
+    uint32_t cacheSerial_ = 0, serial_ = 1;
+    friend class FM1Editor;
 };
 
 class FM1Editor : public juce::AudioProcessorEditor, private juce::Timer {
@@ -60,58 +71,85 @@ public:
     ~FM1Editor() override;
     void resized() override;
     void paint(juce::Graphics &g) override;
-    // the computer keys belong to the panel: a click on the bar's background, or the focus given to the editor
-    // itself (a host bringing the plugin window forward), passes the keyboard focus on to it
-    void mouseDown(const juce::MouseEvent &) override;
     void focusGained(FocusChangeType) override;
+    void parentHierarchyChanged() override;
 
-    static constexpr int kBarH = 60;
+    // ---- views
     PanelComponent &panel() { return panel_; }
+    ScreenView &screen() { return screen_; }
     const Theme &panelTheme() const { return panel_.getTheme(); }
-    // the editor's default size: the panel at 1.6 logical points per unit (an integer LCD scale: 1x, 2x on Retina),
-    // i.e. 1401 x 861 points, about 80 % of a 1080p screen's height with the bar
-    static juce::Point<int> defaultSize();
+    int viewMode() const { return mode_; }
+    void setViewMode(int m);
+    void setBigLcd(bool on);
+    // the device view's default size: the panel at 1.6 logical points per unit (an integer LCD scale: 1x, 2x on
+    // Retina), 1402 x 861 points, about 80 % of a 1080p screen's height; the screen view's: the LCD at 2 points per
+    // pixel
+    static juce::Point<int> defaultSize() { return {1402, 861}; }
+    static int defaultScreenSize() { return 546; }
+    static constexpr int kMinW = 640, kMaxW = 5000, kMinScreen = 320, kMaxScreen = 2400;
+
+    // ---- the sheet and what it changes
+    void openSettings(bool animate = true);
+    Sheet &sheet() { return sheet_; }
+    FM1Processor &proc() { return proc_; }
+    ThemeStore &themeStore() { return store_; }
+    Look &look() { return look_; }
+    void applyTheme(const Theme &t);
+    void coreChanged();                           // after a switch, a preset load, a reset: labels, status
+    void focusActiveView();                       // the keyboard focus back to the panel or the screen view
+    juce::Component &activeView() { return mode_ == FM1Processor::kViewScreen ? (juce::Component &)screen_ : (juce::Component &)panel_; }
+    bool isStandalone() const { return proc_.wrapperType == juce::AudioProcessor::wrapperType_Standalone; }
+
+    // ---- the corner button
+    CornerButton &cornerButton() { return corner_; }
+    juce::Rectangle<float> cornerCircle() const;  // the drawn button (logical, in the editor)
+    void showChromeNow();                         // shown at once (tests; a click)
+    void hideChromeNow();
+    void layoutChrome();
 
 private:
     class Constrainer : public juce::ComponentBoundsConstrainer {
     public:
+        std::function<int()> mode;
         std::function<bool()> bigLcd;
         void checkBounds(juce::Rectangle<int> &b, const juce::Rectangle<int> &previous, const juce::Rectangle<int> &limits,
                          bool top, bool left, bool bottom, bool right) override;
     };
+    // the mouse anywhere over the editor (its children included)
+    struct Watcher : juce::MouseListener {
+        FM1Editor &e;
+        explicit Watcher(FM1Editor &ed) : e(ed) {}
+        void mouseMove(const juce::MouseEvent &) override { e.activity(); }
+        void mouseEnter(const juce::MouseEvent &) override { e.activity(); }
+        void mouseDrag(const juce::MouseEvent &) override { e.activity(); }
+        void mouseExit(const juce::MouseEvent &) override { e.activity(); }
+    };
+    struct Ticker : juce::Timer {
+        std::function<void()> fn;
+        void timerCallback() override { fn(); }
+    };
 
     void timerCallback() override;
-    void refreshCores();
-    void refreshPresets();
-    void refreshStatus();
-    void refreshRemote();
-    void showRemoteMenu();
-    void showFirmwareInfo();                     // About: the loaded firmware's version, licence, source, credits
-    void refreshThemes();
-    void applyTheme(const Theme &t);
-    void openThemeEditor();
-    void setBigLcd(bool on);
-    void askName(const juce::String &title, const juce::String &initial, std::function<void(juce::String)> done);
+    void updateLimits();
+    void activity();
+    void chromeTick();
+    void refreshChrome();
+    void tweakStandaloneWindow();
 
     FM1Processor &proc_;
+    Look look_;
     ThemeStore store_;
     PanelComponent panel_;
+    ScreenView screen_;
+    CornerButton corner_;
+    Sheet sheet_;
     Constrainer constrainer_;
-    juce::ComboBox cores_, presets_, transpose_, themes_, buttonMode_, encMode_, encSteps_;
-    juce::TextButton save_{"Save"}, saveAs_{"Save as"}, rename_{"Rename"}, delete_{"Delete"}, reset_{"Reset flash"},
-        export_{"Export"}, import_{"Import"}, power_{"Power on"}, bigLcd_{"Big LCD"}, info_{"About"};
-    juce::ToggleButton notesPlayKeys_{"MIDI notes play keys"}, keyNotesToFw_{"... and go to the firmware's MIDI in"};
-    juce::Label status_;
-    // Remote FM-1: the toggle (saved in the state), its menu (the MIDI option, diagnostics), the link's status
-    juce::ToggleButton remote_{"Remote FM-1"};
-    juce::TextButton remoteMenu_{juce::String::fromUTF8("\xe2\x96\xbe")};
-    juce::Label remoteStatus_;
-    juce::String lastRemote_;
-    std::unique_ptr<ThemeEditorPanel> themeEditor_;
-    std::vector<CoreInfo> coreList_;
-    juce::StringArray presetList_;
-    std::vector<Theme> themeItems_;              // the theme menu's entries by item id - 1
-    std::unique_ptr<juce::FileChooser> chooser_;
-    juce::String lastStatus_, lastCore_;
+    Watcher watcher_{*this};
+    Ticker chrome_;
+    juce::TooltipWindow tips_{this, 700};
+    int mode_ = FM1Processor::kViewDevice;
+    double lastMove_ = -1e9, lastTick_ = 0;
+    juce::String lastCore_;
     uint32_t themeSerial_ = 0;
+    bool standaloneDone_ = false, halted_ = false;
 };

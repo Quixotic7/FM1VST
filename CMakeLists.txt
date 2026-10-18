@@ -133,10 +133,32 @@ juce_add_plugin(FM1VST
     VST3_COPY_DIR "${FM1_VST3_DIR}"
     AU_COPY_DIR "${FM1_AU_DIR}")
 target_sources(FM1VST PRIVATE plugin/Processor.cpp plugin/Tier2Parameter.cpp plugin/HostRefresh.cpp plugin/Editor.cpp plugin/Theme.cpp
-                              plugin/PanelComponent.cpp plugin/RemoteLink.cpp)
+                              plugin/PanelComponent.cpp plugin/RemoteLink.cpp plugin/Look.cpp plugin/Widgets.cpp plugin/Sheet.cpp
+                              plugin/StandaloneHooks.cpp)
 # the theme presets (themes/presets.json), embedded: BinaryData::presets_json
 juce_add_binary_data(FM1VST_Themes HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES themes/presets.json)
 set_target_properties(FM1VST_Themes PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# the editor's type (plugin/Look.cpp): Inter Tight (plugin/fonts, OFL 1.1), four static weights cut from the variable
+# font at build time (JUCE cannot pick a variable font's weight; plugin/fonts/make_font.py, fontTools), embedded:
+# FontData::InterTight<Weight>_ttf
+set(FM1_FONT_DIR ${CMAKE_BINARY_DIR}/fonts)
+set(FM1_FONT_FILES "")
+foreach(_w Regular:400 Medium:500 SemiBold:600 Bold:700)
+    string(REPLACE ":" ";" _wl ${_w})
+    list(GET _wl 0 _name)
+    list(GET _wl 1 _wght)
+    set(_out ${FM1_FONT_DIR}/InterTight-${_name}.ttf)
+    add_custom_command(OUTPUT ${_out}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${FM1_FONT_DIR}
+        COMMAND ${CR_PYTHON} ${CMAKE_CURRENT_SOURCE_DIR}/plugin/fonts/make_font.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/plugin/fonts/InterTight-VF.ttf ${_wght} ${_out}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/plugin/fonts/InterTight-VF.ttf ${CMAKE_CURRENT_SOURCE_DIR}/plugin/fonts/make_font.py
+        COMMENT "Inter Tight ${_name} (wght ${_wght})"
+        VERBATIM)
+    list(APPEND FM1_FONT_FILES ${_out})
+endforeach()
+juce_add_binary_data(FM1VST_Fonts HEADER_NAME FontData.h NAMESPACE FontData SOURCES ${FM1_FONT_FILES})
+set_target_properties(FM1VST_Fonts PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(FM1VST PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/plugin)
 target_compile_features(FM1VST PUBLIC cxx_std_17)
 # the Tier 2 host parameter slots (plugin/Tier2Parameter.h): 0 by default, the host sees the 8 knobs and the 41 panel
@@ -148,7 +170,7 @@ target_compile_definitions(FM1VST PUBLIC
     FM1_CORES_DIR="${CMAKE_BINARY_DIR}/cores" FM1_TIER2_SLOTS=${FM1_TIER2_SLOTS}
     FM1_DEFAULT_CORE="${FM1_DEFAULT_CORE}")
 target_link_libraries(FM1VST
-    PRIVATE juce::juce_audio_utils fm1engine FM1VST_Themes remotefm1
+    PRIVATE juce::juce_audio_utils fm1engine FM1VST_Themes FM1VST_Fonts remotefm1
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
 set(FM1_CORE_TARGETS ${FM1_CORE_IDS})
 list(TRANSFORM FM1_CORE_TARGETS APPEND _core)
@@ -171,6 +193,10 @@ foreach(_fmt VST3 AU Standalone)
     foreach(_id IN LISTS FM1_CORE_IDS)
         set_property(TARGET ${_t} APPEND PROPERTY LINK_DEPENDS ${CMAKE_BINARY_DIR}/cores/${_id}.fm1core)
     endforeach()
+    # the licences of what the bundle carries beyond the cores: the editor's font
+    set(_lic "$<TARGET_BUNDLE_DIR:${_t}>/Contents/Resources/licenses")
+    list(APPEND _cmds COMMAND ${CMAKE_COMMAND} -E make_directory "${_lic}"
+                      COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/plugin/fonts/OFL.txt "${_lic}/InterTight-OFL.txt")
     add_custom_command(TARGET ${_t} POST_BUILD ${_cmds}
         COMMAND codesign --force --deep -s - "$<TARGET_BUNDLE_DIR:${_t}>"
         COMMENT "FM1VST ${_fmt}: the cores (${FM1_CORE_IDS}) into the bundle, ad-hoc signed"
@@ -359,6 +385,17 @@ target_compile_definitions(panel_render_test PRIVATE $<TARGET_PROPERTY:FM1VST,CO
 add_dependencies(panel_render_test ${FM1_CORE_TARGETS})
 add_test(NAME panel_render_test COMMAND panel_render_test)
 set_tests_properties(panel_render_test PROPERTIES SKIP_RETURN_CODE 77)   # (a public build: the cores it needs left out)
+
+# the editor around the panel, headless: the device and screen views, the corner button (clear of every control at
+# every size), the settings sheet and its pages, right-click, the view state, written to build/panel/ui-*.png
+add_executable(ui_render_test tests/ui_render_test.cpp)
+target_link_libraries(ui_render_test PRIVATE FM1VST fm1engine)
+target_include_directories(ui_render_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
+target_compile_definitions(ui_render_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS> FM1_BUILT_CORES="${FM1_BUILT_CORES}"
+    FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/ui_test_home" FM1_PANEL_OUT="${CMAKE_BINARY_DIR}/panel")
+add_dependencies(ui_render_test ${FM1_CORE_TARGETS})
+add_test(NAME ui_render_test COMMAND ui_render_test)
+set_tests_properties(ui_render_test PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)   # (a public build: no choralroot)
 
 # Remote FM-1 (plugin/RemoteLink) against libremotefm1's in-process fake unit (FM1EMU_REMOTE_FAKE=1: nothing on USB or
 # CoreMIDI is opened): the processor with Remote on (frames, LEDs, keys / buttons / encoders / MASTER, a core switch's
