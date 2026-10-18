@@ -1,0 +1,13 @@
+# Fart Machine One 1.0.0: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the sound: a key plays its recording
+# the flash: the firmware keeps no project (app/project.c: "Deliberately no song/project storage: predictable
+# defaults on every power-on"); its one store object, the panel calibration, is written only by the HARDWARE
+# CALIBRATION at power-on (OCT- + OCT+ held), which the core does not run
+flash none no project storage by design; the panel calibration is written only by the power-on calibration
+# OCT- + OCT+ held 5 s: UBOOT (main_fm1.c); four failed boots in a row: UBOOT (fm1_cstart)
+reboot-guard 3
+reboot wait 600
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

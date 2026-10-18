@@ -1,0 +1,21 @@
+# FoMni-1 0.4's golden check (plat_golden_test: omni_host's grammar): power-on, a chord button held and the strum
+# plate, a knob's readout, the pages
+wait 400
+shot boot.png
+key b2 down
+wait 100
+strum 3 9
+wait 200
+shot chord.png
+key b2 up
+wait 300
+turn K2 4
+shot readout.png
+wait 1500
+shot knob.png
+turn SELECT 1
+wait 300
+shot page1.png
+turn SELECT 1
+wait 300
+shot page2.png

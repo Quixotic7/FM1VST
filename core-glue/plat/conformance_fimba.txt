@@ -1,0 +1,18 @@
+# FiMba-1 0.6.1: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the sound: a key plucks a tine
+# the flash round trip: KNOB 1 (Material, a project setting shown on the play page) turned; flash_sync saves the
+# project (AUTOSAVE's write); after the reboot the page shows the other material
+save wait 600
+save knob KNOB1 +2
+save wait 1500
+save quit
+saved wait 1000
+saved quit
+saved-lcd-differs
+# OCT- + OCT+ held 5 s: UBOOT (main_fm1.c); four failed boots in a row: UBOOT (fm1_cstart)
+reboot-guard 3
+reboot wait 600
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

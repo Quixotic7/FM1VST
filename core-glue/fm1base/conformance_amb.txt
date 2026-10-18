@@ -1,0 +1,20 @@
+# AMB-1 1.3: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the sound: it plays from power-on (the garden grows), a key adds a note
+# the flash round trip: PLAY stops it (AUTOSAVE never erases while it grows), KNOB 1 (Tempo, a piece's setting on
+# the play page) turned; flash_sync saves the project; after the reboot the page shows the other tempo
+save wait 600
+save btn PLAY 60
+save wait 300
+save knob KNOB1 +3
+save wait 1500
+save quit
+saved wait 1000
+saved quit
+saved-lcd-differs
+# OCT- + OCT+ held 5 s: UBOOT (base/device/main_fm1.c); four failed boots in a row: UBOOT (fm1_cstart)
+reboot-guard 3
+reboot wait 600
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

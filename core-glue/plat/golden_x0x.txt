@@ -1,0 +1,27 @@
+# X0X 1.1.0's golden check (plat_golden_test: x0x_host's grammar): the 909 screen at power-on, steps written with
+# the white keys, a knob's readout and its value, the other parts' screens, EDIT, HOME
+wait 400
+shot boot.png
+tapkey b0
+tapkey w0
+tapkey w4
+tapkey w8
+tapkey w12
+wait 300
+shot steps.png
+turn K1 3
+shot readout.png
+wait 1500
+shot knob.png
+turn ALGO 1
+wait 300
+shot algo1.png
+turn ALGO 1
+wait 300
+shot algo2.png
+tap EDIT
+wait 300
+shot edit.png
+tap HOME
+wait 300
+shot home.png

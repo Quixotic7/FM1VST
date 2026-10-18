@@ -28,3 +28,19 @@
 [submodule "cores/CoralFlower"]
 	path = cores/CoralFlower
 	url = https://github.com/FicusFicusov/CoralFlower
+[submodule "cores/fm1-x0x"]
+	path = cores/fm1-x0x
+	url = https://github.com/charlesvestal/fm1-x0x
+[submodule "cores/fm1-fomni"]
+	path = cores/fm1-fomni
+	url = https://github.com/charlesvestal/fm1-fomni
+[submodule "cores/fm1-fimba"]
+	path = cores/fm1-fimba
+	url = https://github.com/jadamsowers/fm1-fimba
+[submodule "cores/Fart-Machine-One"]
+	path = cores/Fart-Machine-One
+	url = https://github.com/adamcharleswilsonmusic-code/Fart-Machine-One
+	ignore = untracked
+[submodule "cores/fm1-amb"]
+	path = cores/fm1-amb
+	url = https://github.com/charlesvestal/fm1-amb
