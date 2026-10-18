@@ -274,6 +274,20 @@ foreach(_id IN LISTS FM1_CORE_IDS)
                          ENVIRONMENT "FM1EMU_HOME=${CMAKE_BINARY_DIR}/conformance/home")
 endforeach()
 
+# how heavy each core is (not a test: machine dependent): build/core_bench [SECONDS], every core with its conformance
+# file, the real-time factor of 10 s rendered on the plugin's path (tests/core_bench.cpp)
+add_executable(core_bench tests/core_bench.cpp)
+target_link_libraries(core_bench PRIVATE fm1testlib)
+target_compile_options(core_bench PRIVATE -Wall -Wextra)
+add_dependencies(core_bench ${FM1_CORE_TARGETS})
+set(_bench_args "")
+foreach(_id IN LISTS FM1_CORE_IDS)
+    fm1_conformance_file(${_id} _conf)
+    list(APPEND _bench_args "$<TARGET_FILE:${_id}_core>=${_conf}")
+endforeach()
+add_custom_target(core_bench_run COMMAND core_bench 10 ${_bench_args} DEPENDS core_bench VERBATIM
+                  COMMENT "the cores' real-time factors (10 s each)")
+
 add_executable(double_load_test tests/double_load_test.cpp)
 target_link_libraries(double_load_test PRIVATE fm1testlib)
 add_dependencies(double_load_test ${FM1_CORE_TARGETS})
