@@ -11,16 +11,18 @@
 // ChoralRoot: the names and the order; (a) the view: the functions, the value texts, a host write; (t) the turn
 // rule for all seven knobs on the view and in the PERF, FX and KEY layers (Device::enc +2: Knob 4 among them);
 // (p) PRESETS turned on the view (a new chord sound: only Knob Presets touched, Knob 4 follows its send untouched)
-// and in the KEY layer (no knob shows a send: only Knob Presets reports at all); (b) the PERF layer opened: KNOB1..4
-// the mode's row; (c) the perform mode switched from the host; (f) a panel turn of KNOB1 in the layer; (d) the FX
-// layer; (e) Options: SELECT relative, a host turn 0.5 -> 0.75 is +6 detents at the device, the spring back makes
-// none, the hidden "Option" entry; (g) the sound editor: KNOB1 bound to the cell. Felucca: HOME's knobs, the ENV
-// page, ENV DEST's empty column relative, SLICER (the hidden cell), the GLO and FX layers held, EDIT 1. Melodee:
-// HOME. (st) Stepped encoders (24 steps: a Roto-Control knob set to 24 steps): each click of a host write is one
-// detent at the device, bound (Voicing, Tempo: +10 BPM for 10 clicks, 100 clicks never out of travel) or relative (the
-// Options cursor, one row per click; the re-centre makes none), pushed back and counted from there; an echo of the
-// pushed value quantised (k/23, k/24) makes none; a skipped index is 2; the settle window drops a click; Knob Master
-// stays absolute; switching the mode turns nothing; the state keeps it. Felucca: Knob 1 and Tempo stepped.
+// and in the KEY layer (the sound's entries change, no knob shows one: only Knob Presets reports at all); (b) the
+// PERF layer opened: KNOB1..4 the mode's row; (c) the perform mode switched from the host; (f) a panel turn of KNOB1
+// in the layer; (d) the FX layer (ChoralRoot 0.25.1: its eight pages, SELECT the page); (e) Options: SELECT
+// relative, a host turn 0.5 -> 0.75 is +6 detents at the device, the spring back makes none, the hidden "Option"
+// entry rewritten row by row; (g) the sound editor: KNOB1 bound to the cell. Felucca (1.6.1): HOME's knobs, the ENV
+// page, ENV DEST's ESYNC (a hidden cell), LFO 2's empty column relative, SLICER (the hidden cell), the GLO and FX
+// layers held, EDIT 1. Melodee (1.4.3): HOME (the Prophet's knobs). (st) Stepped encoders (24 steps: a Roto-Control
+// knob set to 24 steps): each click of a host write is one detent at the device, bound (Voicing, Tempo: +10 BPM for 10
+// clicks, 100 clicks never out of travel) or relative (the Options cursor, one row per click; the re-centre makes
+// none), pushed back and counted from there; an echo of the pushed value quantised (k/23, k/24) makes none; a skipped
+// index is 2; a click into an end of the travel counts; the settle window drops a click; Knob Master stays absolute;
+// switching the mode turns nothing; the state keeps it. Felucca: Knob 1 and Tempo stepped.
 // The message loop is not running: the test calls the drain itself. FM1EMU_HOME points under the build.
 #include <cstdio>
 #include <cstdlib>
@@ -434,7 +436,9 @@ int main()
     static const int kOrder[7] = {EMU_E_SELECT, EMU_E_PRESETS, EMU_E_ALGO, EMU_E_K1, EMU_E_K2, EMU_E_K3, EMU_E_K4};
     for (int r : kOrder)
         turnRule("view", r, 2);
-    // Knob 4 explicitly (the report from Live: "Knob 4 wasn't registering"): its own turn is its own report
+    // Knob 4 explicitly (the report from Live: "Knob 4 wasn't registering"): its own turn is its own report. Since
+    // 0.22 a value knob accelerates (cr_pages.c kn_turn / kn_lin) and a turn's first KN_FIRST (2) detents are the
+    // finest step whatever their speed: +2 detents (a reversal of the put-back above: a fresh turn) are +2 of 0..127
     {
         const fm1param_t *rv = entryNamed(p, "Chord Reverb");
         const int32_t v0 = rv ? rv->get() : -1;
@@ -442,8 +446,8 @@ int main()
         p.deviceForTest()->enc(EMU_E_K4, 2);
         h.run_ms(100);
         p.drainTier2();
-        check(fn(k[3]) == "Chord Reverb" && rv && rv->get() == v0 + 8 && w.changes[idx(k[3])] == 1 &&
-                  w.begins[idx(k[3])] == 1 && w.changes.size() == 1 && k[3]->plainValue() == v0 + 8 &&
+        check(fn(k[3]) == "Chord Reverb" && rv && rv->get() == v0 + 2 && w.changes[idx(k[3])] == 1 &&
+                  w.begins[idx(k[3])] == 1 && w.changes.size() == 1 && k[3]->plainValue() == v0 + 2 &&
                   k[3]->getCurrentValueAsText().startsWith("Chord Reverb: "),
               "the view: Device::enc(Knob 4, +2): Chord Reverb " + std::to_string(v0) + " -> " +
                   std::to_string(rv ? rv->get() : -1) + ", reported on Knob 4 alone, inside a gesture (\"" +
@@ -488,7 +492,10 @@ int main()
         h.run_ms(500);
         p.drainTier2();
     }
-    // the KEY layer (SEL held 500 ms: it locks open): no knob shows a send there
+    // the KEY layer (SEL held 500 ms: it locks open): no knob shows the sound's values there. (0.25.1: SELECT turns
+    // the layer's page, cr_ui.c cu_knob "the KEY layer: SELECT turns its page (no tempo there)"; and no sound load
+    // touches the sends any more, cr_ui.c "no sound load touches them": what a new sound changes is the sound's own
+    // parameters, the map's editor entries "Chord Attack" .., none of them a knob of the KEY layer)
     {
         p.buttonParam(EMU_B_SEL)->setValueNotifyingHost(1.0f);
         h.run_ms(500);
@@ -496,24 +503,33 @@ int main()
         h.run_ms(300);
         p.drainTier2();
         std::printf("        (KEY: %s)\n", page().c_str());
-        check(fn(sel) == "Tempo" && fn(k[0]) == "Key Tonic" && fn(k[1]) == "Key Scale" && fn(k[2]) == "Transpose" &&
-                  fn(k[3]) == "Single Notes" && namesFixed(),
-              "KEY held: KNOB1..4 Key Tonic, Key Scale, Transpose, Single Notes (" + row() + "), the names unchanged");
-        const fm1param_t *sends[4] = {entryNamed(p, "Chord Reverb"), entryNamed(p, "Chord Chorus"),
-                                      entryNamed(p, "Chord Delay"), entryNamed(p, "Chord Drive")};
-        int sendsMoved = 0, tries = 0;
-        while (!sendsMoved && tries < 6) {        // (a sound whose sends differ from the one before)
-            int32_t s0[4];
-            for (int i = 0; i < 4; i++)
-                s0[i] = sends[i]->get();
+        check(fn(sel) == "turn" && sel->isRelative() && fn(k[0]) == "Key Tonic" && fn(k[1]) == "Key Scale" &&
+                  fn(k[2]) == "Transpose" && fn(k[3]) == "Single Notes" && namesFixed(),
+              "KEY held: KNOB1..4 Key Tonic, Key Scale, Transpose, Single Notes (" + row() +
+                  "), SELECT relative (the layer's page); the names unchanged");
+        const fm1core_t *cc = p.deviceForTest()->core();
+        auto values = [&]() {
+            std::vector<int32_t> v;
+            for (uint32_t i = 0; i < cc->nparams; i++)   // (the sound's: FM1P_SOUND / FM1P_EDITOR)
+                v.push_back(cc->params[i].get && (cc->params[i].flags & (FM1P_SOUND | FM1P_EDITOR)) ? cc->params[i].get() : 0);
+            return v;
+        };
+        int moved = 0, tries = 0;
+        std::string which;
+        while (!moved && tries < 6) {             // (a sound whose parameters differ from the one before)
+            const std::vector<int32_t> v0 = values();
             w.clear();
             p.deviceForTest()->enc(EMU_E_PRESETS, 1);
             h.run_ms(150);
             p.drainTier2();
-            for (int i = 0; i < 4; i++)
-                sendsMoved += sends[i]->get() != s0[i];
+            const std::vector<int32_t> v1 = values();
+            for (size_t i = 0; i < v0.size(); i++)
+                if (v0[i] != v1[i]) {
+                    if (!moved++)
+                        which = cc->params[i].name;
+                }
             tries++;
-            if (!sendsMoved) {
+            if (!moved) {
                 h.run_ms(500);
                 p.drainTier2();
             }
@@ -522,9 +538,9 @@ int main()
         for (const auto &c : w.changes)
             if (c.first != idx(pre))
                 others += " " + p.getParameters()[c.first]->getName(100).toStdString();
-        check(sendsMoved > 0 && w.changes.size() == 1 && w.changes[idx(pre)] && w.begins[idx(pre)] == 1,
-              "KEY layer: PRESETS +1 changed " + std::to_string(sendsMoved) +
-                  " chord sends; no knob shows one: only Knob Presets reported (the nudge)" +
+        check(moved > 0 && w.changes.size() == 1 && w.changes[idx(pre)] && w.begins[idx(pre)] == 1,
+              "KEY layer: PRESETS +1 changed " + std::to_string(moved) + " of the sound's entries (\"" + which +
+                  "\" ..); no knob shows one: only Knob Presets reported (the nudge)" +
                   (others.empty() ? "" : "; ALSO:" + others));
         h.run_ms(500);
         p.drainTier2();
@@ -598,25 +614,44 @@ int main()
         p.buttonParam(EMU_B_FX)->setValueNotifyingHost(0.0f);
         h.run_ms(300);
         p.drainTier2();
+        // 0.25.1: SELECT picks one of eight pages (cr_ui.c CU_FXP: Sends, Reverb 1, Reverb 2, Chorus, Delay 1, Delay 2,
+        // Drive, Filter); the layer opens on the Sends page (cr_ui.c "the FX layer opens on its first page, the Sends")
         std::printf("        (FX: %s)\n", page().c_str());
-        check(row() == "Reverb Size | Reverb Damp | Reverb Type | Chord Reverb" && fn(sel) == "FX Effect" && namesFixed(),
-              "FX held: KNOB1..4 the Reverb row (size, damp, type, the amount), SELECT the effect (\"FX Effect\", hidden)");
+        const fm1param_t *fxp = sel->entry();
+        check(row() == "Chord Drive | Chord Chorus | Chord Delay | Chord Reverb" && fn(sel) == "FX Page" && fxp &&
+                  (fxp->flags & FM1P_HIDDEN) && fxp->max - fxp->min == 7 && namesFixed(),
+              "FX held: KNOB1..4 the Sends page (the four sends), SELECT the page (\"FX Page\", hidden, 8 pages)");
         for (int r : kOrder)
-            if (r != EMU_E_SELECT)                // (SELECT: the effect, below)
+            if (r != EMU_E_SELECT)                // (SELECT: the page, below)
                 turnRule("FX", r, 2);
-        sel->setValueNotifyingHost(sel->toNorm(2));       // Delay
+        sel->setValueNotifyingHost(sel->toNorm(1));       // Reverb 1/2
         h.run_ms(200);
         p.drainTier2();
-        check(row() == "Delay Time | Delay Feedback | Delay Colour | Chord Delay", "host SELECT = Delay: " + row());
+        check(row() == "Reverb Size | Reverb Damp | Reverb Decay | Chord Reverb",
+              "host SELECT = Reverb 1: the Reverb row (size, damp, decay, the send): " + row());
+        sel->setValueNotifyingHost(sel->toNorm(2));       // Reverb 2/2
+        h.run_ms(200);
+        p.drainTier2();
+        check(row() == "Reverb Pre-delay | Reverb Mod | Reverb Low Cut | Reverb Width", "host SELECT = Reverb 2: " + row());
+        sel->setValueNotifyingHost(sel->toNorm(4));       // Delay 1/2: Time and Spread, or (Sync on) Division and Ratio
+        h.run_ms(200);
+        p.drainTier2();
+        const fm1param_t *dsync = entryNamed(p, "Delay Sync");
+        const bool synced = dsync && dsync->get();
+        check(row() == std::string(synced ? "Delay Division | Delay Ratio" : "Delay Time | Delay Spread") +
+                           " | Delay Feedback | Chord Delay",
+              "host SELECT = Delay 1 (Sync " + std::string(synced ? "on" : "off") + "): " + row());
         turnRule("FX, Delay", EMU_E_K4, 2);
-        sel->setValueNotifyingHost(sel->toNorm(1));       // Chorus: no third parameter
+        sel->setValueNotifyingHost(sel->toNorm(6));       // Drive: only its send (CU_FXP: FC_NONE x 3)
         h.run_ms(200);
         p.drainTier2();
-        check(fn(k[0]) == "Chorus Rate" && fn(k[2]) == "turn" && k[2]->isRelative() &&
-                  k[2]->getCurrentValueAsText() == "turn",
-              "Chorus: KNOB3 has nothing there (relative, \"" + k[2]->getCurrentValueAsText().toStdString() + "\")");
-        sel->setValueNotifyingHost(sel->toNorm(0));
+        check(fn(k[3]) == "Chord Drive" && fn(k[2]) == "turn" && k[0]->isRelative() && k[1]->isRelative() &&
+                  k[2]->isRelative() && k[2]->getCurrentValueAsText() == "turn",
+              "Drive: KNOB1..3 have nothing there (relative, \"" + k[2]->getCurrentValueAsText().toStdString() +
+                  "\"), KNOB4 " + fn(k[3]));
+        sel->setValueNotifyingHost(sel->toNorm(0));       // (the Sends page again: its pushes drained first)
         h.run_ms(100);
+        p.drainTier2();
         turnRule("FX", EMU_E_SELECT, 1);
         p.deviceForTest()->buttons_tap(1u << EMU_B_OCTDN);
         h.run_ms(200);
@@ -631,13 +666,16 @@ int main()
         std::printf("        (Options: %s)\n", page().c_str());
         check(sel->isRelative() && fn(sel) == "turn" && sel->getValue() == 0.5f && fn(k[0]) == "Play Style",
               "Options: SELECT (the cursor) relative at 0.5, KNOB1 the first row: \"" + fn(k[0]) + "\"");
+        // 0.25.1's order (cr_ui.c O_*: Play Style, Ext Addition, Secret Chords, Chord Keys, SUS Window, Full K Shorts,
+        // MIDI Keys, 6th with 7th, Velocity ..): 6 rows down is MIDI Keys (no named entry: the hidden "Option" entry,
+        // O_MAX 16: Off, ch 1..16), one more 6th with 7th (the same entry rewritten: O_MAX 1, In place / Octave up)
         const int32_t sent0 = p.knobDetentsSent(EMU_E_SELECT);
         w.clear();
         sel->setValueNotifyingHost(0.75f);
         h.run_ms(60);
         p.drainTier2();
         const int32_t d1 = p.knobDetentsSent(EMU_E_SELECT) - sent0;
-        check(d1 == 6 && fn(k[0]) == "Split Point" && w.changes[idx(sel)] == 1 && !w.begins.count(idx(sel)),
+        check(d1 == 6 && fn(k[0]) == "MIDI Keys" && w.changes[idx(sel)] == 1 && !w.begins.count(idx(sel)),
               "host SELECT 0.5 -> 0.75: " + std::to_string(d1) + " detents at the device; the cursor moved 6 rows: \"" +
                   fn(k[0]) + "\" (the host's own turn is not nudged back)");
         w.clear();
@@ -645,20 +683,35 @@ int main()
         p.drainTier2();
         const int32_t d2 = p.knobDetentsSent(EMU_E_SELECT) - sent0;
         check(sel->getValue() == 0.5f && w.changes.count(idx(sel)) && w.last[idx(sel)] == 0.5f && !w.begins.count(idx(sel)) &&
-                  d2 == 6 && fn(k[0]) == "Split Point",
+                  d2 == 6 && fn(k[0]) == "MIDI Keys",
               "500 ms later: SELECT re-centred to 0.5 (the host told, no gesture), no detents from it (still " +
                   std::to_string(d2) + "), the cursor stays");
-        sel->setValueNotifyingHost(0.5f + 1.0f / 24.0f);   // one row down: MIDI Perform (no named entry)
-        h.run_ms(200);                            // (a host write right after a retarget would be dropped: kSettleMs)
-        p.drainTier2();
-        check(fn(k[0]) == "MIDI Perform" && !k[0]->isRelative() && k[0]->entry()->max - k[0]->entry()->min == 16,
-              "+1 detent: KNOB1 \"" + fn(k[0]) + "\" (the hidden \"Option\" entry rewritten), 17 values");
+        const fm1param_t *opt = k[0]->entry();
+        check(opt && !k[0]->isRelative() && (opt->flags & FM1P_HIDDEN) && opt->max - opt->min == 16,
+              "MIDI Keys: KNOB1 the hidden \"Option\" entry rewritten, 17 values");
+        const int32_t keys0 = opt ? opt->get() : 0;
         k[0]->setValueNotifyingHost(k[0]->toNorm(5));
         h.run_ms(60);
         p.drainTier2();
-        check(k[0]->entry() && k[0]->entry()->get() == 5 && k[0]->getCurrentValueAsText() == "MIDI Perform: ch 5",
+        check(k[0]->entry() && k[0]->entry()->get() == 5 && k[0]->getCurrentValueAsText() == "MIDI Keys: ch 5",
               "host KNOB1 = 5: \"" + k[0]->getCurrentValueAsText().toStdString() + "\"");
-        k[0]->setValueNotifyingHost(k[0]->toNorm(1));
+        k[0]->setValueNotifyingHost(k[0]->toNorm(keys0));
+        h.run_ms(60);
+        p.drainTier2();
+        sel->setValueNotifyingHost(0.5f + 1.0f / 24.0f);   // one row down: 6th with 7th (no named entry either)
+        h.run_ms(200);                            // (a host write right after a retarget would be dropped: kSettleMs)
+        p.drainTier2();
+        check(fn(k[0]) == "6th with 7th" && !k[0]->isRelative() && k[0]->entry() == opt && opt &&
+                  opt->max - opt->min == 1,
+              "+1 detent: KNOB1 \"" + fn(k[0]) + "\" (the same hidden \"Option\" entry rewritten), 2 values");
+        const int32_t six0 = opt ? opt->get() : 0;
+        k[0]->setValueNotifyingHost(k[0]->toNorm(1 - six0));
+        h.run_ms(60);
+        p.drainTier2();
+        check(opt && opt->get() == 1 - six0 &&
+                  k[0]->getCurrentValueAsText() == juce::String("6th with 7th: ") + (six0 ? "In place" : "Octave up"),
+              "host KNOB1 = " + std::to_string(1 - six0) + ": \"" + k[0]->getCurrentValueAsText().toStdString() + "\"");
+        k[0]->setValueNotifyingHost(k[0]->toNorm(six0));
         h.run_ms(60);
         p.deviceForTest()->buttons_tap(1u << EMU_B_GLO);   // (Options closed)
         h.run_ms(600);
@@ -725,9 +778,12 @@ int main()
                   KnobParameter::stepDelta(0.3607f, onGrid(0.3607f, 24), 24) == 0 &&
                   KnobParameter::stepDelta(0.3607f, 0.3607f + 1.0f / 24, 24) == 1 &&
                   KnobParameter::stepDelta(0.3607f, 0.3607f - 1.0f / 23, 24) == -1 &&
-                  KnobParameter::stepDelta(10.0f / 23, 12.0f / 23, 24) == 2,
+                  KnobParameter::stepDelta(10.0f / 23, 12.0f / 23, 24) == 2 &&
+                  KnobParameter::stepDelta(98.0f / 99, 1.0f, 24) == 1 && KnobParameter::stepDelta(2.0f / 99, 0.0f, 24) == -1 &&
+                  KnobParameter::stepDelta(1.0f, 1.0f, 24) == 0 && KnobParameter::stepDelta(0.0f, 0.0f, 24) == 0,
               "stepDelta: a click on either grid (k/23, k/24) or by 1/24 from anywhere is 1; a value echoed back "
-              "quantised to either grid is 0; two steps are 2");
+              "quantised to either grid is 0; two steps are 2; an end written from short of it on its step (98 of "
+              "0..99 -> 1, 2 of 0..99 -> 0) is 1 toward it, the end again 0");
         const fm1param_t *vo = entryNamed(p, "Voicing");
         k[0]->setValueNotifyingHost(k[0]->toNorm(0));   // (Absolute: voicing 0, the host at 0.5)
         pump(100);
@@ -881,7 +937,12 @@ int main()
             pump(70);
             click(EMU_B_HOME);
             pump(300);
-            check(fn(k[0]) == "Voicing" && lv->get() == l0, "HOME: the view again, " + f + " back at " + std::to_string(lv->get()));
+            // (0.25.1: the editor reopens on the lane (g) left it on, ENV: Rate 1 at its top, 99 of 0..99; the click
+            // back up from 98 (pushed 98 / 99 = 0.9899, step 23 of 23 on the k/23 grid: the controller's next is
+            // the end, 1.0, again) is the end-of-travel click, stepDelta's)
+            check(fn(k[0]) == "Voicing" && lv->get() == l0,
+                  "HOME: the view again, " + f + " (" + std::to_string(lv->min) + ".." + std::to_string(lv->max) +
+                      ") back at " + std::to_string(lv->get()));
         }
         // (f) Knob Master is the pot whatever the mode: an absolute write lands as it is
         {
@@ -979,10 +1040,22 @@ int main()
         };
         tap(EMU_B_ENV);
         check(row() == "Attack | Decay | Sustain | Release", "ENV tapped: the ENV page, KNOB1..4 ATK DEC SUS REL (" + row() + ")");
+        // 1.6.1: ENV DEST's fourth column is ESYNC (params.c PAGES: P_ED_FLT P_ED_PIT P_ED_SHP P_ESYNC), a cell no named
+        // entry covers: the hidden "Knob 4" rewritten ("ENV DEST ESYNC", OFF / ON)
         tap(EMU_B_ENV);
-        check(fn(k[0]) == "Env>Filter" && k[3]->isRelative(), "ENV again: ENV DEST, its empty fourth column relative (" +
-                                                                  row() + ")");
+        const fm1param_t *esync = k[3]->entry();
+        check(fn(k[0]) == "Env>Filter" && fn(k[3]) == "ENV DEST ESYNC" && esync && (esync->flags & FM1P_HIDDEN) &&
+                  esync->max - esync->min == 1,
+              "ENV again: ENV DEST, its fourth column the hidden cell ESYNC, 2 values (" + row() + ")");
+        // an empty column (params.c 0xFF) is relative: LFO 2's fourth (P_LSYNC P_LTRIG P_LPOL 0xFF), LFO tapped twice
+        tap(EMU_B_LFO);
+        tap(EMU_B_LFO);
+        check(!k[0]->isRelative() && !k[2]->isRelative() && k[3]->isRelative() && fn(k[3]) == "turn",
+              "LFO twice: LFO 2, its empty fourth column relative (" + row() + ")");
+        // 1.6.1 (ui_layer.c, #83): FX tapped twice within LY_DTAP_MS (300 ms) locks the FX layer; two taps further
+        // apart are the FX family's pages: FX, then SLICER
         tap(EMU_B_FX);
+        h.run_ms(300);                            // (past LY_DTAP_MS: no double tap)
         tap(EMU_B_FX);
         std::printf("        (felucca FX, FX: %s)\n", row().c_str());
         const fm1param_t *cell = k[0]->entry();
@@ -1062,8 +1135,12 @@ int main()
         h.run_ms(700);
         p.drainTier2();
         std::printf("        (melodee HOME: %s)\n", page().c_str());
-        check(fn(k[0]) == "E5 CUT" && fn(alg) == "Part" && fn(sel) == "turn",
-              "HOME: the engine's knobs, ALGORITHM Part, SELECT relative (Melodee's SELECT turns pages)");
+        // 1.4.3: part 1 powers on as a Prophet (engines.c TRK_DEF: IT'S A PROPHET 5), whose HOME knobs are its own
+        // panel values (ui.c stage_page P5_K: CUTOFF RESONANCE ENV FILTER RELEASE), cells no named entry covers
+        const fm1param_t *mc = k[0]->entry();
+        check(fn(k[0]) == "HOME CUTOFF" && mc && (mc->flags & FM1P_HIDDEN) && fn(alg) == "Part" && fn(sel) == "turn",
+              "HOME: the engine's knobs (the Prophet's: KNOB1 the hidden cell \"" + fn(k[0]) +
+                  "\"), ALGORITHM Part, SELECT relative (Melodee's SELECT turns pages)");
         check(p.switchCore("choralroot"), "switchCore(\"choralroot\"): back");
         h.run_ms(700);
         p.drainTier2();

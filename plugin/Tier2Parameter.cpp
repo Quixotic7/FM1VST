@@ -267,8 +267,15 @@ int32_t KnobParameter::stepDelta(float x0, float x1, int steps)
     const double a = juce::jlimit(0.0, 1.0, (double)x0), b = juce::jlimit(0.0, 1.0, (double)x1);
     for (const int g : {steps - 1, steps}) {
         const double t = b * g;
-        if (std::abs(t - std::round(t)) < 0.02)
-            return (int32_t)std::lround(t) - (int32_t)std::lround(a * g);
+        if (std::abs(t - std::round(t)) < 0.02) {
+            const int32_t d = (int32_t)std::lround(t) - (int32_t)std::lround(a * g);
+            // an end of the travel written from a place that rounds to that end (a value pushed short of it: 98 of
+            // 0..99 is 0.9899, step 23 of 23): the controller cannot go further than the end, so the end again is
+            // its click toward it (else the last values before an end could never be clicked into)
+            if (!d && (b <= 0.0 || b >= 1.0) && a != b)
+                return b > a ? 1 : -1;
+            return d;
+        }
     }
     return (int32_t)std::lround((b - a) * ((double)steps - 0.5));
 }

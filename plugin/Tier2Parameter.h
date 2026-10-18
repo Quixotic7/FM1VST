@@ -142,7 +142,9 @@ public:
     // controller uses is not known (k / (steps - 1): 0 and 1 both steps; k / steps): a value on either grid (within
     // 0.02 of a step) counts as that grid's step index against the previous value's index on the same grid (so a
     // value echoed back quantised, on either grid, is 0 clicks); a value on neither (a controller adding 1 / steps
-    // to where it sits) counts its distance in steps (x (steps - 0.5): 1 / steps and 1 / (steps - 1) both 1)
+    // to where it sits) counts its distance in steps (x (steps - 0.5): 1 / steps and 1 / (steps - 1) both 1). An end
+    // (0 or 1) written from short of it but on its step is 1 click toward it: the controller cannot go past the end
+    // (so an echo of a value pushed within half a step of an end counts once: the price of reaching the end at all)
     static int32_t stepDelta(float x0, float x1, int steps);
     // what the knob does now ("Voicing", "Strum Rate"; "" relative): the value text's prefix, the panel's caption
     juce::String functionName() const;

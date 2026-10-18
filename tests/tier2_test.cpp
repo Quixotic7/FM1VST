@@ -3,7 +3,7 @@
 // names, a host write reaching the firmware (and not echoed back), a panel turn reaching the host (with a gesture),
 // the full report after a state restore and a preset load (no gestures), the perform mode changed on the panel, the
 // value texts; (6) after switchCore("felucca"): Felucca's map on the same slots, a host write, the part selected on
-// the panel (ALGORITHM) relabelling the engine slots (an engine slot's range follows the engine: ANALOG's WAVE 5
+// the panel (ALGORITHM) relabelling the engine slots (an engine slot's range follows the engine: ANALOG's WAVE 7
 // values, FM6's ALG 33). The eight knob parameters in front of the slots: knob_test. The message thread's feedback timer is not running here
 // (no message loop): the test calls the drain itself between blocks. FM1EMU_HOME points under the build.
 #include <cstdio>
@@ -113,7 +113,7 @@ int main()
                 unused += nm == "(unused)";
             namesOk = namesOk && nm.isNotEmpty() && (i < n) == (nm != "(unused)");
         }
-        check(n == 73 && p.getParameters().size() == 8 + FM1Processor::kTier2Slots + 41,
+        check(n == 77 && p.getParameters().size() == 8 + FM1Processor::kTier2Slots + 41,   // (0.25.1's visible entries)
               std::to_string(n) + " of " + std::to_string(FM1Processor::kTier2Slots) + " slots bound (ChoralRoot's map), " +
                   std::to_string(p.getParameters().size()) + " host parameters in all");
         check(namesOk && unused == FM1Processor::kTier2Slots - n, "the slots beyond the map are \"(unused)\" (" +
@@ -229,11 +229,23 @@ int main()
         p.drainTier2();
     }
 
-    // ---- (3) a state restore and a preset load report every slot, without gestures
+    // ---- (3) a state restore and a preset load report every slot, without gestures. The state is the flash image:
+    // since 0.18 ChoralRoot saves by itself only its AUTOMATIC fields (what the Options menu sets: Play Style ..;
+    // FM1P_PERSIST); the MANUAL ones (tempo, perform, key, ..: Arp Division) only by SAVE held on the device
+    // (core_choralroot_params.c "THE FLASH"), so they come back at their power-on values
+    Tier2Parameter *ps = slotNamed(p, "Play Style");
+    check(ps && ps->entry() && (ps->entry()->flags & FM1P_PERSIST) && !(ad->entry()->flags & FM1P_PERSIST),
+          "slot \"Play Style\" (automatic: FM1P_PERSIST), \"Arp Division\" manual");
+    if (!ps)
+        return 1;
     {
+        ps->setValueNotifyingHost(ps->toNorm(1));
+        h.run_ms(100);
+        p.drainTier2();
         juce::MemoryBlock state;
-        p.getStateInformation(state);                // (Tempo 120, Arpeggiate, Arp Division 2)
+        p.getStateInformation(state);                // (Play Style 1; Tempo 120, Arpeggiate, Arp Division 2: manual)
         tempo->setValueNotifyingHost(tempo->toNorm(90));
+        ps->setValueNotifyingHost(ps->toNorm(2));
         h.run_ms(100);
         p.drainTier2();
         w.clear();
@@ -247,12 +259,16 @@ int main()
         }
         check(reported == n && gestures == 0, "setStateInformation: every bound slot reported (" + std::to_string(reported) +
                                                   "), no gestures");
-        check(tempo->plainValue() == 120 && ad->plainValue() == 2 && p.tier2Param(0)->getName(100) == "Voicing",
-              "  ... the state's values: Tempo " + std::to_string(tempo->plainValue()) + ", Arp Division " +
-                  std::to_string(ad->plainValue()) + ", slot 0 \"" + p.tier2Param(0)->getName(100).toStdString() + "\"");
+        check(ps->plainValue() == 1 && ps->entry()->get() == 1 && tempo->plainValue() == 120 &&
+                  ad->plainValue() == ad->entry()->def && ad->entry()->def == 6 &&
+                  p.tier2Param(0)->getName(100) == "Voicing",
+              "  ... the state's values: Play Style " + std::to_string(ps->plainValue()) + " (the state's), Tempo " +
+                  std::to_string(tempo->plainValue()) + ", Arp Division " + std::to_string(ad->plainValue()) +
+                  " (the power-on's: manual), slot 0 \"" + p.tier2Param(0)->getName(100).toStdString() + "\"");
 
-        check(p.savePreset("Fast"), "savePreset(\"Fast\") at Tempo 120");
+        check(p.savePreset("Fast"), "savePreset(\"Fast\") at Play Style 1, Tempo 120");
         tempo->setValueNotifyingHost(tempo->toNorm(200));
+        ps->setValueNotifyingHost(ps->toNorm(0));
         h.run_ms(100);
         p.drainTier2();
         w.clear();
@@ -264,9 +280,9 @@ int main()
             reported += w.changes.count(idx(p.tier2Param(i))) > 0;
             gestures += w.begins.count(idx(p.tier2Param(i))) > 0;
         }
-        check(reported == n && gestures == 0 && tempo->plainValue() == 120,
+        check(reported == n && gestures == 0 && tempo->plainValue() == 120 && ps->plainValue() == 1,
               "loadPreset: every bound slot reported (" + std::to_string(reported) + "), no gestures, Tempo back to " +
-                  std::to_string(tempo->plainValue()));
+                  std::to_string(tempo->plainValue()) + ", Play Style back to " + std::to_string(ps->plainValue()));
         // after the sweep, quiet: nothing more is reported while nothing changes
         w.clear();
         h.run_ms(300);
@@ -305,8 +321,9 @@ int main()
               std::to_string(nf) + " slots bound to Felucca's visible map; slot 0 \"" + k1->getName(100).toStdString() +
                   "\", \"E1 WAVE\", \"Level\"");
         if (e1 && lvl) {
-            check(e1->getNumSteps() == 5 && e1->isDiscrete() && e1->getCurrentValueAsText() == "SAW",
-                  "E1 WAVE: 5 values, discrete, \"" + e1->getCurrentValueAsText().toStdString() + "\"");
+            // (1.6.1: ANALOG's WAVE has 7, SYNC and SUB appended: engines/src/eng_analog.c N_ANALOG_WAVE)
+            check(e1->getNumSteps() == 7 && e1->isDiscrete() && e1->getCurrentValueAsText() == "SAW",
+                  "E1 WAVE: 7 values, discrete, \"" + e1->getCurrentValueAsText().toStdString() + "\"");
             lvl->setValueNotifyingHost(lvl->toNorm(90));
             h.run_ms(60);
             check(lvl->entry()->get() == 90, "host Level 90: the part's level " + std::to_string(lvl->entry()->get()) +
