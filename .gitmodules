@@ -22,3 +22,5 @@
 [submodule "cores/nomanskyFM"]
 	path = cores/nomanskyFM
 	url = https://github.com/hericdk/nomanskyFM.git
+	ignore = untracked
+	shallow = true

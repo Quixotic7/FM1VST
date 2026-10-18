@@ -12,3 +12,14 @@ fm1_add_core(orbit ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/or
                  felucca_op1_cluster.h
              PYTHON_NEEDS numpy
              VERSION 0.7.1)
+
+# the golden check: ORBIT's native preview (tools/orbit_host.c, the stdin bridge) taps EDIT ("button 4") and writes
+# screen.ppm; the core runs golden_orbit.txt: the EDIT page is pixel for pixel the same except the battery icon
+# (x 219..232, y 6..11: the preview's ADC reads none). (Its HOME is not compared: the preview loads a demo pattern.)
+if(TARGET orbit_core)
+    fm1_sloop_ref(orbit_ref_host ${CMAKE_SOURCE_DIR}/cores/orbit/tools/orbit_host.c ${CMAKE_SOURCE_DIR}/cores/orbit
+                  gen_orbit)
+    fm1_sloop_golden(orbit REF orbit_ref_host REF_ARGS %REF% REF_STDIN ${CMAKE_CURRENT_LIST_DIR}/golden_orbit_ref.txt
+                     SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden_orbit.txt
+                     DRIVE_ARGS --compare 3200 %REF%/screen.ppm --ignore 219 6 232 11)
+endif()

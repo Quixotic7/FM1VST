@@ -5,8 +5,8 @@
  *   input    at the top of tick / frame / idle: the held keys and buttons, the taps (a press now, its release on
  *            the next tick), the encoder detents (matrix order, taken), MASTER (the pot, 0..1023)
  *   output   after init / frame / idle: the LEDs as levels (fm1_led lit = LIT, fm1_led_dim the glow = DIM,
- *            fm1_led_bg the backlight = FAINT while fm1_led_bg_ns is on; No Man Sky's fm1_led_lv[id] sixteenths of
- *            full, the brightest wins) and the LCD (big-endian RGB565 as sent, counted)
+ *            fm1_led_bg the backlight = FAINT at menu LIGHTS HIGH, dimmer at LOW / MID (fm1_led_bg_ns); No Man
+ *            Sky's fm1_led_lv[id] sixteenths of full; the brightest wins) and the LCD (big-endian RGB565 as sent, counted)
  *   exit()   common/exit.h: a reboot / UBOOT halts the core (halted() = 0x100 | code), shutdown runs the handlers
  *   flash    common/nor.c's image
  * Key velocity and lean: these firmwares read none (no velocity sensing on the FM-1's keys; their steps carry
@@ -34,7 +34,9 @@ static void fm1core_sl_in(void)                  /* MASTER (frame and idle read 
 static void fm1core_sl_out(void)
 {
     fm1panel_t *p = FM1CORE_SL_PANEL;
-    const uint8_t bg_on = fm1_led_bg_ns != 0;
+    /* the backlight: FAINT at menu LIGHTS HIGH (a 2000 ns pulse a frame), dimmer for LOW / MID (500 / 1000 ns) */
+    const uint32_t bg = fm1_led_bg_ns ? (fm1_led_bg_ns >= 2000u ? FM1P_LED_FAINT
+                                         : 3u + (FM1P_LED_FAINT - 3u) * fm1_led_bg_ns / 2000u) : 0u;
     uint32_t c, l, changed = 0;
     for (c = 0; c < FM1P_NCOL; c++)
         for (l = 0; l < FM1P_NLINE; l++) {
@@ -42,7 +44,7 @@ static void fm1core_sl_out(void)
             const int id = FM1_KEYMAP[l + 1u][c];
             uint32_t v = (fm1_led[c] & bit) ? FM1P_LED_LIT
                        : (fm1_led_dim[c] & bit) ? FM1P_LED_DIM
-                       : (bg_on && (fm1_led_bg[c] & bit)) ? FM1P_LED_FAINT : FM1P_LED_OFF;
+                       : (fm1_led_bg[c] & bit) ? bg : FM1P_LED_OFF;
             if (id >= 0 && fm1_led_lv[id]) {      /* (No Man Sky: lit for lv / 16 of each frame) */
                 const uint32_t lv = fm1_led_lv[id] > 16u ? 255u : fm1_led_lv[id] * 255u / 16u;
                 if (lv > v)

@@ -11,3 +11,15 @@ fm1_add_core(sloop ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/sl
                  sloop_logo.h
              PYTHON_NEEDS numpy
              VERSION 2.7.1)
+
+# the golden check: SLOOP's own tests/ui_pages_test.c (the real UI on its test doubles) writes its pages; the core runs
+# golden_sloop.txt to the same state: the splash, the TRACKS page and the EDIT page are pixel for pixel the same,
+# except the status corner (x 189..232, y 3..13: our HAL reports a USB host and a battery reading, the test's
+# doubles none)
+if(TARGET sloop_core)
+    fm1_sloop_ref(sloop_ref_ui_pages ${CMAKE_SOURCE_DIR}/cores/sloop-fm1/tests/ui_pages_test.c
+                  ${CMAKE_SOURCE_DIR}/cores/sloop-fm1 gen_sloop)
+    fm1_sloop_golden(sloop REF sloop_ref_ui_pages REF_ARGS %REF% SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden_sloop.txt
+                     DRIVE_ARGS --compare 5 %REF%/page-splash.ppm --compare 2400 %REF%/page-tracks.ppm
+                                --compare 3200 %REF%/page-edit.ppm --ignore 189 3 232 13)
+endif()

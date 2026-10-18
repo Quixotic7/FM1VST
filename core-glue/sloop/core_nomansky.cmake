@@ -18,3 +18,17 @@ fm1_add_core(nomansky ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores
                  nms_nave.h nms_decolagem.h nms_nave_cima.h nms_anao.h nms_nebulosa.h nms_nave_lado.h nms_cabine.h
              PYTHON_NEEDS numpy
              VERSION 0.4)
+
+# the golden check: No Man Sky's own simulator unit (firmware/wasm/nms_wasm.c, built natively by nms_golden.c with
+# its UI frames on our 15 ms clock) and the core run the same input (EDIT tapped at 2000 ms): the EDIT page at 2600 ms
+# is the same outside its live areas, the parameter bars (x 0..119, y 40..140) and the two scopes (y 85..102 right,
+# y 178..196), which follow the sound and the simulator's sample-driven clock (fm1_ms from rendered frames; one core:
+# FELUCCA_CPU1 0); up to 64 more pixels may differ (~30 background sparkles do, for the same reason)
+if(TARGET nomansky_core)
+    fm1_sloop_ref(nomansky_ref_sim ${CMAKE_CURRENT_LIST_DIR}/nms_golden.c ${CMAKE_SOURCE_DIR}/cores/nomanskyFM/firmware
+                  gen_nomansky FLAGS -ffreestanding -fno-builtin
+                  INCLUDES ${CMAKE_SOURCE_DIR}/cores/nomanskyFM/firmware/wasm)
+    fm1_sloop_golden(nomansky REF nomansky_ref_sim REF_ARGS %REF%/nms SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden_nomansky.txt
+                     DRIVE_ARGS --compare 2600 %REF%/nms_edit.ppm --ignore 0 40 119 140 --ignore 120 85 239 102
+                                --ignore 0 178 239 196 --max-diff 64)
+endif()
