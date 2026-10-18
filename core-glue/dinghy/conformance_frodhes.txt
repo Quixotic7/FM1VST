@@ -1,0 +1,12 @@
+# Frodhes 0.9.2: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: KNOB 1 on the PERFORM page (TYPE) three detents on, kept in the settings record (2 s after
+# the change, when quiet; flash_sync does it at once); after the reboot the page shows the other TYPE
+save wait 2000
+save knob KNOB1 +3
+save wait 3000
+save quit
+saved wait 2500
+saved quit
+saved-lcd-differs
+# the reboot: the host shim has no reset path (UBOOT is a USB request, the boot guard the device branch's)
+reboot none the host build has no reset path (UBOOT over USB, the boot guard in the device branch only)

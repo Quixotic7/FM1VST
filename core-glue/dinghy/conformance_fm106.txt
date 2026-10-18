@@ -1,0 +1,12 @@
+# FM-106 Beta4: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: SAVE pressed and let go (a short save, < 500 ms): the patch goes to the first free user slot
+# (the user presets at 0x98000) and the settings record names it (0xFC000); after the reboot that user patch loads
+save wait 1500
+save btn SAVE 100
+save wait 1500
+save quit
+saved wait 2000
+saved quit
+saved-lcd-differs
+# the reboot: the host shim has no reset path (UBOOT is a USB request, the boot guard the device branch's)
+reboot none the host build has no reset path (UBOOT over USB, the boot guard in the device branch only)

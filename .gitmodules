@@ -58,3 +58,12 @@
 	url = https://github.com/hericdk/nomanskyFM.git
 	ignore = untracked
 	shallow = true
+[submodule "cores/obervave"]
+	path = cores/obervave
+	url = https://github.com/zvenson/obervave.git
+[submodule "cores/frodhes"]
+	path = cores/frodhes
+	url = https://github.com/leonardoMirabal/frodhes.git
+[submodule "cores/fm-106"]
+	path = cores/fm-106
+	url = https://github.com/PatttF/fm-106.git
