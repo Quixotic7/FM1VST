@@ -1,0 +1,8 @@
+# the golden check's input (core_sloop.cmake): tests/ui_pages_test.c powers on at 120 BPM (hostsim's
+# host_tracks_init), the device at 90: SELECT turned +30 on the TRACKS page; then EDIT tapped
+wait 1500
+knob SELECT +30
+wait 1000
+btn EDIT 100
+wait 600
+quit

@@ -1,0 +1,5 @@
+# the golden check's input (core_nomansky.cmake): nms_golden.c's script (EDIT tapped at 2000 ms for 100 ms)
+wait 2000
+btn EDIT 100
+wait 500
+quit

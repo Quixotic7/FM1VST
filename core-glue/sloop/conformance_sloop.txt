@@ -1,0 +1,19 @@
+# SLOOP 2.7.1: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: the working project (project.c's autosave, which flash_sync writes as persist_flush_now
+# does): PRESETS turned on the TRACKS page steps track 1's sound (808 BOOM -> SUB BASS); after the reboot
+# autosave_resume brings it back and the TRACKS page shows it
+save wait 1500
+save knob PRESETS +3
+save wait 600
+save quit
+saved wait 1500
+saved quit
+saved-lcd-differs
+# the boot guard: a second failed boot in a row enters the recovery updater (UBOOT here: exit(3))
+reboot-guard 2
+# OCT- + OCT+ held 5 s while stopped: UBOOT (main.c, sloop_fw.c)
+reboot wait 1500
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

@@ -1,0 +1,8 @@
+# the golden check's input (core_orbit.cmake): tools/orbit_host.c's "button 4" (golden_orbit_ref.txt: EDIT tapped);
+# SELECT +30 first brings the device's 90 BPM to the preview's 120 (hostsim's host_tracks_init)
+wait 1500
+knob SELECT +30
+wait 1000
+btn EDIT 100
+wait 600
+quit
