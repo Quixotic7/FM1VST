@@ -74,10 +74,9 @@ static int fm1core_cr_sync(void)
 #define FM1CORE_CRF_FLASH_SYNC fm1core_cr_sync
 #include "crf_glue.h"
 
-/* Options > Chord Keys (emu_fw_layout: 1 FM-1, the default since 0.25.1; 0 Classic). The labels it changes: the
- * LFO button (FM-1: LOCK, Classic: LATCH) and the chord keys' (F3..C#4); the descriptor's button_names are the
- * default's. Not in the ABI (a host that follows it would need a hook): read by the family's tests. */
-uint32_t fm1core_cr_layout(void) { return emu_fw_layout(); }
+/* Options > Chord Keys (emu_fw_layout(): 1 FM-1, the default since 0.25.1; 0 Classic) changes the panel's labels: the
+ * LFO button (FM-1: LOCK, Classic: LATCH) and the chord keys' (F3..C#4). The descriptor's button_names are the
+ * default's; a host that follows the setting needs an ABI hook (the web emulator polls web_layout() each frame). */
 
 /* ---- the Tier 2 parameter map (in this unit: it reaches the firmware's statics) ---- */
 #include "core_choralroot_params.c"
