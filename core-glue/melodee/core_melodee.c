@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The Melodee core: Melodee's firmware (https://github.com/keremimo/melodee, Felucca's fork with the FM6 and CZ-1
- * engines and USB audio; the pinned, unmodified submodule cores/melodee) built as one translation unit with this
+/* The Melodee core: Melodee's firmware (https://github.com/keremimo/melodee, Felucca's fork with the Prophet, FM6,
+ * CZ-1, SID and x0x 909 engines; the pinned, unmodified submodule cores/melodee at v1.4.3) built as one translation unit with this
  * repo's glue, the equivalent of ChoralRoot's emulator unit:
  *   melodee_fw.c        the emu_fw_* hooks (power-on, the 1 ms tick, the UI frame, audio, MIDI), as emu_fw.c
  *   melodee_firmware.h  the include list (hostsim.c's sound side, the HAL, audio.c, the UI, storage), as
@@ -20,8 +20,8 @@
  * core-glue/common/exit.h's.
  *
  * ABI 5: the firmware HAL keeps its emu_hal (common/panel.h fm1p_emu_hal_t); the ABI's panel is fm1core_me_panel.
- * The input is copied in at the top of tick / frame / idle, the LEDs (fm1_led (and a dim plane lit every frame) = LIT, the other dim planes (melodee_hal.h emu_led_sync) = DIM, PLAY green from
- * its position) and the LCD out after init / frame / idle when they changed. */
+ * The input is copied in at the top of tick / frame / idle; the LEDs (fm1_led and the three dim planes as levels:
+ * me_leds_out), the LCD and the panel table out after init / frame / idle. */
 #include <stdio.h>
 #include <stdlib.h>                       /* first: its exit / atexit prototypes must not see the macros */
 #include <string.h>
@@ -38,16 +38,53 @@ fm1panel_t fm1core_me_panel;
 #define FM1CORE_PANEL (&fm1core_me_panel)
 
 static void g_in(void) { FM1P_EMU_IN(FM1CORE_PANEL, &emu_hal); }
+/* the LEDs as the PWM drives them (hal/fm1_led_pwm.h fm1_led_pwm_level): fm1_led full; else the brightest dim plane
+ * holding the LED, at its duty 1 / (mask + 1) (mask 0xFF: dark), as a level 255 / (mask + 1): the keys' LIGHTS
+ * 1/2 1/4 1/8 = 128 64 32 (MID, DIM, FAINT classes), the idle buttons' 1/4 = 64, the breathing plane sweeping
+ * 255 .. 32 .. 0 .. 32 .. 255 over a second (its level read at each frame) */
+static int me_leds_out(fm1panel_t *p)
+{
+    int changed = 0;
+    uint32_t c, l, k;
+    for (c = 0; c < FM1P_NCOL; c++)
+        for (l = 0; l < FM1P_NLINE; l++) {
+            const uint32_t row = 2u << l;
+            uint32_t v = (fm1_led[c] & row) ? 255u : 0u;
+            for (k = 0; v < 255u && k < 3u; k++)  /* (overlapping planes: the brightest) */
+                if ((fm1_led_dim[k][c] & row) && fm1_led_dim_mask[k] != 0xFFu) {
+                    const uint32_t d = 255u / ((uint32_t)fm1_led_dim_mask[k] + 1u);
+                    v = d > v ? d : v;
+                }
+            if (p->led[c][l] != (uint8_t)v) {
+                p->led[c][l] = (uint8_t)v;
+                changed = 1;
+            }
+        }
+    if (p->led_play_green) {                      /* (Melodee has none) */
+        p->led_play_green = 0;
+        changed = 1;
+    }
+    return changed;
+}
 static void g_out(void)
 {
-    static const uint8_t LV[2] = {FM1P_LED_LIT, FM1P_LED_DIM};
-    const uint8_t *const pl[2] = {emu_hal.led, emu_hal.led_dim};
-    fm1p_leds_planes(FM1CORE_PANEL, pl, LV, 2, emu_hal.led_play_green);
+    uint32_t i;
+    me_leds_out(FM1CORE_PANEL);
     fm1p_lcd_out(FM1CORE_PANEL, emu_hal.lcd, emu_hal.lcd_writes);
+    for (i = 0; i < FM1P_NB; i++)                 /* the panel table (Calibration may have taught a new one) */
+        FM1CORE_PANEL->btn_id[i] = panel.btn[i];
+    for (i = 0; i < FM1P_NE - 1u; i++) {
+        FM1CORE_PANEL->enc_id[i] = panel.enc[i];
+        FM1CORE_PANEL->enc_dir[i] = panel.dir[i];
+    }
 }
 
 int fm1core_me_halted(void) { return fm1core_halted(); }
-void fm1core_me_shutdown(void) { fm1core_run_exit(); }
+void fm1core_me_shutdown(void)
+{
+    fm1core_run_exit();
+    emu_fw_free();
+}
 
 void fm1core_me_options(const char *flash_path, int no_flash, int save_on_exit, int headless)
 {
