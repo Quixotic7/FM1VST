@@ -16,8 +16,9 @@
 #           [GEN_ROOT <dir>]      (SOURCE relative; default ".": a fork whose build.py is in felucca-base/ says so)
 #           [GEN_PYTHON <code>]   instead of "__import__('build').generate()" (one Python expression, no ';': a
 #                                 CMake list separator; run with PYTHONPATH=<GEN_ROOT>/tools)
-#           [EXTRA_GEN <cmd..>]   more generators, one command line each, run after it with the same python in
-#                                 <GEN_ROOT> ("tools/gen_909_tables.py", "tools/gen_x.py --out build/gen/x.h")
+#           [EXTRA_GEN <cmd..>]   more generators, one command line each (parsed as a shell would: quote a
+#                                 Python -c argument), run after it with the same python in <GEN_ROOT>
+#                                 ("tools/gen_909_tables.py", "tools/gen_x.py --out build/gen/x.h")
 #           [GEN_OUTPUTS <f..>]   what EXTRA_GEN writes outside build/gen (SOURCE relative), for the dependencies
 #           [PYTHON_NEEDS <m..>]  checked at configure time: python modules ("numpy"), or "raqm" (Pillow with
 #                                 libraqm). The generators run with DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib set
@@ -37,7 +38,7 @@
 # Every unit of the core gets FM1CORE_ID, FM1CORE_VERSION, FM1CORE_COMMIT, FM1CORE_FAMILY, FM1CORE_LICENSE (and
 # FM1CORE_GATED) as string defines (core-glue/common/version.h), and core-api/ and core-glue/common/ on its include
 # path; core-glue/common/{nor,fifo,coro}.c are linked into every core.
-# Makes: gen_<id> (the generate step, unless NO_GEN), core_<id>_obj (OBJECT: the units, -O2, hidden, PIC), core_<id>
+# Makes: gen_<id> (the generate step, unless NO_GEN; a second core from the same tree shares the first's), core_<id>_obj (OBJECT: the units, -O2, hidden, PIC), core_<id>
 # (STATIC, for tests that link a core directly) and <id>_core (MODULE: build/cores/<id>.fm1core, exporting only
 # fm1core_get); appends <id> to FM1_CORE_IDS (the bundles and the per-core tests take them from there) and records
 # the glue folder, family and licence as the global properties FM1_CORE_GLUE_<id>, FM1_CORE_FAMILY_<id>,
@@ -152,15 +153,25 @@ function(fm1_add_core id glue)
             separate_arguments(_args UNIX_COMMAND "${_c}")
             list(APPEND _cmds COMMAND ${_env} ${CR_PYTHON} ${_args})
         endforeach()
-        file(GLOB gen_scripts CONFIGURE_DEPENDS ${groot}/tools/*.py)
-        add_custom_command(
-            OUTPUT ${gen_headers} ${_outs}
-            ${_cmds}
-            WORKING_DIRECTORY ${groot}
-            DEPENDS ${gen_scripts}
-            COMMENT "${id}: generating the build/gen headers"
-            VERBATIM)
-        add_custom_target(gen_${id} DEPENDS ${gen_headers} ${_outs})
+        # one generate step per tree: a second core built from the same tree (a variant) shares the first's
+        string(MD5 _gkey "${groot}")
+        get_property(_shared GLOBAL PROPERTY FM1_GEN_TARGET_${_gkey})
+        if(_shared)
+            set(gen_target ${_shared})
+            message(STATUS "${id} core: shares ${_shared}'s generate step (the same tree; its GEN / EXTRA_GEN rule)")
+        else()
+            file(GLOB gen_scripts CONFIGURE_DEPENDS ${groot}/tools/*.py)
+            add_custom_command(
+                OUTPUT ${gen_headers} ${_outs}
+                ${_cmds}
+                WORKING_DIRECTORY ${groot}
+                DEPENDS ${gen_scripts}
+                COMMENT "${id}: generating the build/gen headers"
+                VERBATIM)
+            add_custom_target(gen_${id} DEPENDS ${gen_headers} ${_outs})
+            set_property(GLOBAL PROPERTY FM1_GEN_TARGET_${_gkey} gen_${id})
+            set(gen_target gen_${id})
+        endif()
         list(APPEND gen_headers ${_outs})
     endif()
 
@@ -215,7 +226,7 @@ function(fm1_add_core id glue)
     target_compile_definitions(${obj} PRIVATE ${defs} ${A_DEFINES})
     set_target_properties(${obj} PROPERTIES POSITION_INDEPENDENT_CODE ON C_STANDARD 11)
     if(NOT A_NO_GEN)
-        add_dependencies(${obj} gen_${id})
+        add_dependencies(${obj} ${gen_target})
     endif()
     # the firmware's own code: warnings off (as its host builds); the generated headers are included by the unit:
     # rebuild it when they change
