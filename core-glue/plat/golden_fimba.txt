@@ -1,0 +1,19 @@
+# FiMba-1 0.6.1's golden check (plat_golden_test: kalimba_host's grammar): power-on, tines plucked, a knob's
+# readout and value, the pages
+wait 400
+shot boot.png
+tapkey w3
+tapkey w5
+wait 40
+shot plucked.png
+wait 600
+turn K1 3
+shot readout.png
+wait 1500
+shot knob.png
+turn SELECT 1
+wait 300
+shot page1.png
+turn SELECT 1
+wait 300
+shot page2.png

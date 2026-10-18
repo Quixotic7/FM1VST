@@ -1,0 +1,18 @@
+# Fart Machine One 1.0.0's golden check (plat_golden_test: omni_host's grammar): power-on, keys (the puffs'
+# animation and the caption), a knob, the tempo
+wait 400
+shot boot.png
+tapkey w2
+wait 30
+shot puff.png
+tapkey b4
+wait 200
+shot puff2.png
+wait 2000
+shot quiet.png
+turn K2 3
+wait 100
+shot knob.png
+turn SELECT 4
+wait 100
+shot tempo.png

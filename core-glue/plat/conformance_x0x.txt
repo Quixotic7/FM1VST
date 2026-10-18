@@ -1,0 +1,31 @@
+# X0X 1.1.0: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the sound: the keys are steps (MANUAL.md: white keys write the selected drum track, the bass drum at power-on), so
+# a four-on-the-floor kick is written and PLAY starts it; the key (D4, step 6) then toggles a step while it plays
+sound wait 300
+sound key note:F3 60
+sound wait 100
+sound key note:C4 60
+sound wait 100
+sound key note:G4 60
+sound wait 100
+sound key note:D5 60
+sound wait 100
+sound btn PLAY 60
+sound wait 100
+sound quit
+# the flash round trip: a white key writes a step into the 909 pattern (the 909 screen at power-on); the project is
+# saved by flash_sync (AUTOSAVE's write, stopped); after the reboot the grid shows the step
+save wait 600
+save key note:G3 100
+save wait 400
+save quit
+saved wait 1000
+saved quit
+saved-lcd-differs
+# OCT- + OCT+ held 5 s: UBOOT (main_fm1.c); four failed boots in a row: UBOOT (fm1_cstart)
+reboot-guard 3
+reboot wait 600
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit
