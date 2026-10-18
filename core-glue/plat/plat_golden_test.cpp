@@ -23,6 +23,7 @@
 #include <vector>
 
 #include "cores.h"
+#include "ppm.h"
 #include "device.h"
 
 namespace {
@@ -91,28 +92,14 @@ bool read_png(const std::string &path, std::vector<uint8_t> &rgb)
     return true;
 }
 
-// the core's screen as the simulator converts its frame buffer (big-endian RGB565 -> RGB888)
+// the core's screen as the simulator converts its frame buffer (big-endian RGB565 -> RGB888: common/ppm.h)
 std::vector<uint8_t> core_rgb(const Device &d)
 {
-    std::vector<uint8_t> out;
-    const uint16_t *p = d.lcd();
-    for (int i = 0; i < 240 * 240; i++) {
-        const uint16_t c = (uint16_t)((p[i] >> 8) | (p[i] << 8));
-        out.push_back((uint8_t)(((c >> 11) & 31) * 255 / 31));
-        out.push_back((uint8_t)(((c >> 5) & 63) * 255 / 63));
-        out.push_back((uint8_t)((c & 31) * 255 / 31));
-    }
+    std::vector<uint8_t> out(FM1G_RGB_BYTES);
+    fm1g_lcd_rgb(d.lcd(), out.data());
     return out;
 }
-void write_ppm(const std::string &path, const std::vector<uint8_t> &rgb)
-{
-    FILE *f = std::fopen(path.c_str(), "wb");
-    if (!f)
-        return;
-    std::fprintf(f, "P6\n240 240\n255\n");
-    std::fwrite(rgb.data(), 1, rgb.size(), f);
-    std::fclose(f);
-}
+void write_ppm(const std::string &path, const std::vector<uint8_t> &rgb) { fm1g_write_ppm(path.c_str(), rgb.data()); }
 
 }  // namespace
 

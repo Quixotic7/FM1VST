@@ -25,19 +25,13 @@
 
 #include "cores.h"
 #include "device.h"
+#include "ppm.h"
 #include "script_runner.h"
 
-static bool read_ppm(const std::string &path, std::vector<uint8_t> &rgb)
+static bool read_ppm(const std::string &path, std::vector<uint8_t> &rgb)   // (common/ppm.h)
 {
-    std::ifstream f(path, std::ios::binary);
-    std::string magic;
-    int w = 0, h = 0, mx = 0;
-    if (!(f >> magic >> w >> h >> mx) || magic != "P6" || w != FM1P_LCD_W || h != FM1P_LCD_H || mx != 255)
-        return false;
-    f.get();
-    rgb.resize((size_t)w * h * 3);
-    f.read((char *)rgb.data(), (std::streamsize)rgb.size());
-    return (size_t)f.gcount() == rgb.size();
+    rgb.resize(FM1G_RGB_BYTES);
+    return fm1g_read_ppm(path.c_str(), rgb.data()) != 0;
 }
 
 struct Rect {
@@ -57,10 +51,9 @@ static int compare_ppm(const Device &d, const std::string &ref, const std::vecto
     for (int y = 0; y < FM1P_LCD_H; y++)
         for (int x = 0; x < FM1P_LCD_W; x++) {
             const int i = y * FM1P_LCD_W + x;
-            const uint16_t c = (uint16_t)((p[i] >> 8) | (p[i] << 8));
-            const uint8_t r = (uint8_t)(((c >> 11) & 31) * 255 / 31), g = (uint8_t)(((c >> 5) & 63) * 255 / 63),
-                          b = (uint8_t)((c & 31) * 255 / 31);
-            if (r == rgb[3 * i] && g == rgb[3 * i + 1] && b == rgb[3 * i + 2])
+            uint8_t px[3];
+            fm1g_rgb_of(p[i], px);
+            if (px[0] == rgb[3 * i] && px[1] == rgb[3 * i + 1] && px[2] == rgb[3 * i + 2])
                 continue;
             bool skip = false;
             for (const Rect &q : ignore)
@@ -81,21 +74,7 @@ static int compare_ppm(const Device &d, const std::string &ref, const std::vecto
     return n;
 }
 
-static void write_ppm(const std::string &path, const Device &d)
-{
-    FILE *f = std::fopen(path.c_str(), "wb");
-    if (!f)
-        return;
-    std::fprintf(f, "P6\n%d %d\n255\n", FM1P_LCD_W, FM1P_LCD_H);
-    const uint16_t *p = d.lcd();
-    for (int i = 0; i < FM1P_LCD_W * FM1P_LCD_H; i++) {
-        const uint16_t c = (uint16_t)((p[i] >> 8) | (p[i] << 8));
-        const uint8_t rgb[3] = {(uint8_t)(((c >> 11) & 31) * 255 / 31), (uint8_t)(((c >> 5) & 63) * 255 / 63),
-                                (uint8_t)((c & 31) * 255 / 31)};
-        std::fwrite(rgb, 1, 3, f);
-    }
-    std::fclose(f);
-}
+static void write_ppm(const std::string &path, const Device &d) { fm1g_write_lcd_ppm(path.c_str(), d.lcd()); }
 
 int main(int argc, char **argv)
 {

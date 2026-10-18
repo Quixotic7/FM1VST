@@ -50,6 +50,7 @@
 
 #include "cores.h"
 #include "device.h"
+#include "ppm.h"
 #include "conformance_conf.h"
 #include "script_runner.h"
 
@@ -76,21 +77,7 @@ bool lcd_blank(const Device &d)
     return true;
 }
 
-void write_ppm(const std::string &path, const Device &d)
-{
-    FILE *f = std::fopen(path.c_str(), "wb");
-    if (!f)
-        return;
-    std::fprintf(f, "P6\n%d %d\n255\n", FM1P_LCD_W, FM1P_LCD_H);
-    const uint16_t *p = d.lcd();
-    for (int i = 0; i < FM1P_LCD_W * FM1P_LCD_H; i++) {
-        const uint16_t c = (uint16_t)((p[i] >> 8) | (p[i] << 8));   // big-endian as sent
-        const uint8_t rgb[3] = {(uint8_t)(((c >> 11) & 31) * 255 / 31), (uint8_t)(((c >> 5) & 63) * 255 / 63),
-                                (uint8_t)((c & 31) * 255 / 31)};
-        std::fwrite(rgb, 1, 3, f);
-    }
-    std::fclose(f);
-}
+void write_ppm(const std::string &path, const Device &d) { fm1g_write_lcd_ppm(path.c_str(), d.lcd()); }   // (common/ppm.h)
 
 int peak_of(Device &d)                             // the audio produced since the last take, its peak
 {

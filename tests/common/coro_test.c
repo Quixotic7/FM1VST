@@ -35,16 +35,23 @@ static void delay_ms(unsigned n)
     while (fw_ms - t0 < n)
         platform_poll();
 }
-static int deep(int n)          /* recursion: a big stack frame chain, yielding at the bottom */
+/* recursion: a big stack frame chain, yielding at the bottom. Each frame's pad escapes (the empty asm takes its
+ * address and clobbers memory), so an optimised build (Release: -O3) keeps 200 real frames: it can neither drop the
+ * pad nor turn the recursion into a loop (tail-recursion elimination with an accumulator) */
+__attribute__((noinline)) static int deep(int n)
 {
-    volatile char pad[256];
-    memset((char *)pad, n, sizeof pad);
+    char pad[256];
+    int r;
+    memset(pad, n, sizeof pad);
+    __asm__ volatile("" : : "r"(pad) : "memory");
     if (n == 0) {
         depth_seen = 1;
         platform_poll();
         return pad[0];
     }
-    return deep(n - 1) + pad[1];
+    r = deep(n - 1) + pad[1];
+    __asm__ volatile("" : : "r"(pad) : "memory");
+    return r;
 }
 static void app_main(void *arg)
 {

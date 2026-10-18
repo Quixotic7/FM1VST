@@ -20,6 +20,7 @@
 #include "ticks.h"
 #include "panel.h"
 #include "exit.h"                         /* exit / atexit -> fm1core_exit / fm1core_atexit (common/exit.h) */
+#include "env.h"                          /* getenv -> NULL: no environment in a core (common/env.h) */
 
 #define X0X_HOST 1                        /* the device's .pool section off (plat.h X0X_POOL), the host's checks in */
 #define X0X_VERSION FM1CORE_VERSION

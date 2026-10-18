@@ -32,7 +32,7 @@
  *     CRB_REBOOT, whose emulator stand-ins only print): plain statements followed by ordinary code, nothing is
  *     corrupted by a return.
  *
- * The environment: crf_env.h (getenv is NULL inside the core: EMU_C1=thread would start a thread nobody joins). */
+ * The environment: common/env.h (getenv is NULL inside the core: EMU_C1=thread would start a thread nobody joins). */
 #include <stdio.h>
 #include <stdlib.h>                       /* first: its exit / atexit / getenv prototypes must not see the macros */
 #include <string.h>
@@ -40,7 +40,7 @@
 #include "fm1core.h"
 #include "version.h"
 #include "exit.h"                         /* exit / atexit -> fm1core_exit / fm1core_atexit (common/exit.h) */
-#include "crf_env.h"                      /* getenv -> NULL */
+#include "env.h"                         /* getenv -> NULL (common/env.h) */
 /* Booting from bytes (fm1core.h flash_stage). emu_hal_fw.h's emu_flash_open / emu_flash_sync do stdio on
  * emu_flash_path; when that path is FM1CORE_FLASH_STAGED the "file" is the stage instead (common/nor.h B), exactly as
  * the web build's emu_web.c does: the open "reads" the staged bytes into emu_flash[], every later write-through is

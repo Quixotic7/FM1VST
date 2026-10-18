@@ -52,6 +52,7 @@
 #include "nor.h"                          /* (core-glue/common) the staged bytes (fm1nor_stage) */
 #include "version.h"
 #include "exit.h"                         /* exit / atexit -> fm1core_exit / fm1core_atexit (common/exit.h) */
+#include "env.h"                          /* getenv -> NULL: no environment in a core (common/env.h) */
 
 #ifndef FM1CORE_FW_P
 #error "FM1CORE_FW_P: the entry points' prefix"

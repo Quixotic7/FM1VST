@@ -17,6 +17,7 @@
 #include "fm1core.h"
 #include "version.h"
 #include "exit.h"
+#include "env.h"                          /* getenv -> NULL: no environment in a core (common/env.h) */
 
 #include "sloop_fw.c"
 

@@ -22,6 +22,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include "fm1core.h"
+#include "ppm.h"
 
 static const fm1core_t *core;
 static fm1panel_t *pn;
@@ -78,37 +79,7 @@ static int load(const char *module, const char *copy)
     return 1;
 }
 
-/* the LCD as ui_render's write_ppm writes host_screen (big-endian RGB565 as sent -> 8-bit channels) */
-static void to_rgb(const uint16_t *lcd, uint8_t *rgb)
-{
-    uint32_t i;
-    for (i = 0; i < 240u * 240u; i++) {
-        const uint16_t c = (uint16_t)((lcd[i] >> 8) | (lcd[i] << 8));
-        rgb[3 * i] = (uint8_t)((c >> 11) * 255u / 31u);
-        rgb[3 * i + 1] = (uint8_t)(((c >> 5) & 63u) * 255u / 63u);
-        rgb[3 * i + 2] = (uint8_t)((c & 31u) * 255u / 31u);
-    }
-}
-static void write_ppm(const char *path, const uint8_t *rgb)
-{
-    FILE *f = fopen(path, "wb");
-    if (!f)
-        return;
-    fprintf(f, "P6\n240 240\n255\n");
-    fwrite(rgb, 1, 240u * 240u * 3u, f);
-    fclose(f);
-}
-static int read_ppm(const char *path, uint8_t *rgb)
-{
-    FILE *f = fopen(path, "rb");
-    int w = 0, h = 0, mx = 0, ok;
-    if (!f)
-        return 0;
-    ok = fscanf(f, "P6 %d %d %d", &w, &h, &mx) == 3 && w == 240 && h == 240 && mx == 255 && fgetc(f) != EOF &&
-         fread(rgb, 1, 240u * 240u * 3u, f) == 240u * 240u * 3u;
-    fclose(f);
-    return ok;
-}
+/* the LCD as ui_render's write_ppm writes host_screen: common/ppm.h (big-endian RGB565 -> c * 255 / 31 ..) */
 /* differing pixels from row y0 down */
 static uint32_t diff(const uint8_t *a, const uint8_t *b, uint32_t y0)
 {
@@ -147,7 +118,7 @@ int main(int argc, char **argv)
 
     /* ---- calibration */
     snprintf(path, sizeof path, "%s/ppm/NIGHT_calibration.ppm", argv[3]);
-    check(read_ppm(path, ref), "ui_render wrote NIGHT_calibration.ppm");
+    check(fm1g_read_ppm(path, ref), "ui_render wrote NIGHT_calibration.ppm");
     snprintf(path, sizeof path, "%s/a.fm1core", argv[3]);
     if (!load(argv[1], path))
         return 1;
@@ -165,9 +136,9 @@ int main(int argc, char **argv)
     pn->enc[pn->enc_id[FM1P_E_SELECT]] += pn->enc_dir[FM1P_E_SELECT];   /* "TURN RIGHT" SELECT */
     run_to(dev_ms + 100u);
     core->ui_info(info, sizeof info);
-    to_rgb(pn->lcd, got);
+    fm1g_lcd_rgb(pn->lcd, got);
     snprintf(path, sizeof path, "%s/core_calibration.ppm", argv[3]);
-    write_ppm(path, got);
+    fm1g_write_ppm(path, got);
     d = diff(ref, got, 0);
     snprintf(cmd, sizeof cmd, "calibration (TURN RIGHT ALGORITHM, %u ms): the whole screen as ui_render's "
              "(%u pixels differ)", dev_ms, d);
@@ -176,7 +147,7 @@ int main(int argc, char **argv)
 
     /* ---- uboot */
     snprintf(path, sizeof path, "%s/ppm/NIGHT_uboot.ppm", argv[3]);
-    check(read_ppm(path, ref), "ui_render wrote NIGHT_uboot.ppm");
+    check(fm1g_read_ppm(path, ref), "ui_render wrote NIGHT_uboot.ppm");
     snprintf(path, sizeof path, "%s/b.fm1core", argv[3]);
     if (!load(argv[1], path))
         return 1;
@@ -185,9 +156,9 @@ int main(int argc, char **argv)
     pn->buttons = (1u << pn->btn_id[FM1P_B_OCTDN]) | (1u << pn->btn_id[FM1P_B_OCTUP]);
     run_to(3500);
     core->ui_info(info, sizeof info);
-    to_rgb(pn->lcd, got);
+    fm1g_lcd_rgb(pn->lcd, got);
     snprintf(path, sizeof path, "%s/core_uboot.ppm", argv[3]);
-    write_ppm(path, got);
+    fm1g_write_ppm(path, got);
     d = diff(ref, got, 30);
     snprintf(cmd, sizeof cmd, "uboot (OCT- + OCT+ held 2.5 s: %s): below the header as ui_render's (%u pixels "
              "differ)", strstr(info, "uboot 3") ? "the countdown at 3" : info, d);

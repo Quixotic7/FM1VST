@@ -1,6 +1,6 @@
 # core-glue/common: what every core's glue uses
 
-A core is a firmware compiled as a loadable module behind `core-api/fm1core.h` (ABI 5). Its glue lives in
+A core is a firmware compiled as a loadable module behind `core-api/fm1core.h` (ABI 6; the host loads ABI 5 too). Its glue lives in
 `core-glue/<family>/` and translates between the firmware's own HAL and the ABI. This folder is the part every glue
 shares. Every core is built with `core-api/` and this folder on its include path, `nor.c`, `fifo.c` and `coro.c`
 linked in, and the version defines of `version.h` set (cmake/FM1Cores.cmake).
@@ -26,8 +26,10 @@ halts the core (`halted()`), it never ends the host. The flash is a 1 MiB RAM im
 | `fifo.{h,c}` | a firmware's own audio block (any size up to 2048 frames, int16 or int32 Q15 << shift, mono or stereo) served as the ABI's 128-frame int16 stereo, sample for sample | `fm1fifo_init(&f, block, channels, FM1FIFO_S16 / S32, shift, render, ctx)`, `fm1fifo_pull(&f, stereo, frames)`, `fm1fifo_reset`, `fm1fifo_buffered` |
 | `ticks.h` | the firmware's clocks from the simulated device ms | `fm1t_set_ms(ms)` (in tick), `fm1t_ms()`, `fm1t_us()`, `fm1t_ticks24()` (24 MHz), `fm1t_us_spin(step)` / `fm1t_ticks24_spin(step)` (for busy-wait sites) |
 | `coro.{h,c}` | a coroutine for a main loop that never returns (Dinghy's `app_main`) | `fm1coro_new(fn, arg, stack)`, `fm1coro_resume(c)` (1 yielded, 0 finished), `fm1coro_yield()`, `fm1coro_park()`, `fm1coro_inside()`, `fm1coro_done`, `fm1coro_stack_peak`, `fm1coro_free` |
-| `panel.h` | the HAL shapes to and from `fm1panel_t` | `FM1P_EMU_IN / _BOOT / _BOOTED(panel, hal)` (an emu-style HAL), `fm1p_take_key_taps / _button_taps / _enc / _role`, `fm1p_edges` (masks to press / release edges), `fm1p_vel / fm1p_lean`, `fm1p_label_of / fm1p_labels`, `fm1p_panel_default` + `FM1P_KEYMAP_INIT` (the FM-1's factory wiring), `fm1p_leds_planes(panel, planes, levels, n, play_green_pos)`, `fm1p_led_id`, `fm1p_led_pos`, `fm1p_lcd_out` (big-endian, counted), `fm1p_lcd_out_native` (native-endian, compared), `fm1p_emu_hal_t` |
-| `version.h` | what CMake passes in | `FM1CORE_ID`, `FM1CORE_VERSION`, `FM1CORE_COMMIT`, `FM1CORE_FAMILY`, `FM1CORE_LICENSE`, `FM1CORE_GATED_OR_NULL`, `FM1CORE_SOURCE_URL(repo)`, `APP_VER` (= the version unless DEFINES set it) |
+| `panel.h` | the HAL shapes to and from `fm1panel_t` | `FM1P_EMU_IN / _BOOT / _BOOTED(panel, hal)` (an emu-style HAL), `fm1p_take_key_taps / _button_taps / _enc / _role`, `fm1p_edges` (masks to press / release edges), `fm1p_vel / fm1p_lean`, `fm1p_label_of / fm1p_labels`, `fm1p_panel_default` + `FM1P_KEYMAP_INIT` (the FM-1's factory wiring), `fm1p_leds_planes(panel, planes, levels, n, play_green_pos)`, `fm1p_leds_brightest` + `fm1p_duty_level(mask)` (PWM duty planes: the brightest wins), `fm1p_led_id`, `fm1p_led_pos`, `fm1p_lcd_out` (big-endian, counted), `fm1p_lcd_out_native` (native-endian, compared), `fm1p_emu_hal_t` |
+| `env.h` | no environment inside a core: `getenv` is NULL in the firmware unit (include after `exit.h`, before the firmware), so a host's EMU_C1=thread or a host sim's test switch never reaches it | `fm1core_getenv` (as `getenv`) |
+| `ppm.h` | the LCD as 8-bit RGB (c * 255 / 31, as the host sims write theirs) and 240 x 240 P6 files, for the tests and the golden checks | `fm1g_rgb_of`, `fm1g_lcd_rgb`, `fm1g_write_ppm`, `fm1g_write_lcd_ppm`, `fm1g_read_ppm` |
+| `version.h` | what CMake passes in | `FM1CORE_ID`, `FM1CORE_VERSION`, `FM1CORE_COMMIT`, `FM1CORE_FAMILY`, `FM1CORE_LICENSE`, `FM1CORE_GATED_OR_NULL`, `FM1CORE_CREDITS_OR_NULL` (fm1_add_core `CREDITS` / `CREDITS_FILES`: the descriptor's `.credits`), `FM1CORE_SOURCE_URL(repo)`, `APP_VER` (= the version unless DEFINES set it) |
 
 The tests: `tests/common/{fifo,coro,nor}_test.c` (`ctest -R common`; nor_test covers ticks and panel too).
 
@@ -93,7 +95,7 @@ click). The plugin feeds MIDI note velocity and 100 for a key on Remote FM-1.
 fm1_add_core(<id> ${CMAKE_CURRENT_LIST_DIR}
              SOURCE ${CMAKE_SOURCE_DIR}/cores/<Name>
              UNIT core_<id>.c DESC core_<id>_desc.c
-             FAMILY <family> LICENSE GPL-3.0-only            # [GATED "the reason"]
+             FAMILY <family> LICENSE GPL-3.0-only            # [GATED "the reason"] [CREDITS "..."] [CREDITS_FILES f..]
              GEN ui_fonts.h ...                              # or NO_GEN; [GEN_ROOT felucca-base] [EXTRA_GEN "tools/x.py"]
              VERSION 1.5                                     # or VERSION_FILE / VERSION_REGEX
              FLAGS "-Dsection(x)=aligned(4)")                # (if the firmware has a .pool section attribute)
@@ -107,7 +109,7 @@ fm1_add_core(<id> ${CMAKE_CURRENT_LIST_DIR}
    `fm1core_halted()`; audio is silence then). Copy `core-glue/felucca/core_felucca.c` for an emu-style HAL.
 4. The descriptor, `core_<id>_desc.c` (`-Wall -Wextra`, no firmware header): copy `core-glue/felucca/core_felucca_desc.c`;
    `.id = FM1CORE_ID`, `.family = FM1CORE_FAMILY`, `.license = FM1CORE_LICENSE`, `.gated = FM1CORE_GATED_OR_NULL`,
-   `.version = FM1CORE_VERSION`, `.source_url = FM1CORE_SOURCE_URL("https://github.com/...")`, the 14 button names
+   `.credits = FM1CORE_CREDITS_OR_NULL`, `.version = FM1CORE_VERSION`, `.source_url = FM1CORE_SOURCE_URL("https://github.com/...")`, the 14 button names
    (the firmware's own labels, FM1P_B_* order), `.params = NULL` for a new core (every knob relative).
 5. `core-glue/<family>/conformance.txt` (or `conformance_<id>.txt`) for `tests/core_conformance.cpp`: what a core
    without a parameter map needs to show a flash round trip (`save` lines, a `saved` check, or `flash none <reason>`),

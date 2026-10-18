@@ -28,6 +28,7 @@
 #include "fm1core.h"
 #include "version.h"
 #include "exit.h"                         /* exit / atexit -> fm1core_exit / fm1core_atexit (common/exit.h) */
+#include "env.h"                          /* getenv -> NULL: no environment in a core (common/env.h) */
 
 #include "melodee_fw.c"
 
@@ -44,27 +45,10 @@ static void g_in(void) { FM1P_EMU_IN(FM1CORE_PANEL, &emu_hal); }
  * 255 .. 32 .. 0 .. 32 .. 255 over a second (its level read at each frame) */
 static int me_leds_out(fm1panel_t *p)
 {
-    int changed = 0;
-    uint32_t c, l, k;
-    for (c = 0; c < FM1P_NCOL; c++)
-        for (l = 0; l < FM1P_NLINE; l++) {
-            const uint32_t row = 2u << l;
-            uint32_t v = (fm1_led[c] & row) ? 255u : 0u;
-            for (k = 0; v < 255u && k < 3u; k++)  /* (overlapping planes: the brightest) */
-                if ((fm1_led_dim[k][c] & row) && fm1_led_dim_mask[k] != 0xFFu) {
-                    const uint32_t d = 255u / ((uint32_t)fm1_led_dim_mask[k] + 1u);
-                    v = d > v ? d : v;
-                }
-            if (p->led[c][l] != (uint8_t)v) {
-                p->led[c][l] = (uint8_t)v;
-                changed = 1;
-            }
-        }
-    if (p->led_play_green) {                      /* (Melodee has none) */
-        p->led_play_green = 0;
-        changed = 1;
-    }
-    return changed;
+    const uint8_t *const planes[4] = {fm1_led, fm1_led_dim[0], fm1_led_dim[1], fm1_led_dim[2]};
+    const uint8_t levels[4] = {FM1P_LED_LIT, fm1p_duty_level(fm1_led_dim_mask[0]), fm1p_duty_level(fm1_led_dim_mask[1]),
+                               fm1p_duty_level(fm1_led_dim_mask[2])};
+    return fm1p_leds_brightest(p, planes, levels, 4);   /* (common/panel.h; Melodee has no PLAY green) */
 }
 static void g_out(void)
 {

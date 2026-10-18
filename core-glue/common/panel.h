@@ -20,9 +20,12 @@
  *   output    fm1p_leds_planes(panel, planes, levels, n)   packed row-bit planes (fm1_led[11], fm1_led_dim[11], ..),
  *                                           the first plane with an LED's bit gives its level; PLAY green from its
  *                                           position (fm1p_play_green)
+ *             fm1p_leds_brightest(panel, planes, levels, n)  the same, the brightest overlapping plane wins (PWM duty
+ *                                           planes: fm1p_duty_level(mask) = 255 / (mask + 1); Melodee)
  *             fm1p_led_id(panel, keymap, id, level)        a per-LED-id firmware (fm1_led_key(id, on), led_lv[41])
  *             fm1p_lcd_out(panel, lcd, writes)            a big-endian RGB565 frame buffer with its own write count
- *             fm1p_lcd_out_native(panel, fb)               a native-endian one (swapped), compared, bumped if changed */
+ *             fm1p_lcd_out_native(panel, px)               a native-endian one (swapped), compared, bumped if changed
+ * (The parameters avoid short names a firmware may #define: CoralFlower's cf_fb.c defines `fb`.) */
 #pragma once
 #include <stdint.h>
 #include <string.h>
@@ -194,6 +197,31 @@ static inline int fm1p_leds_planes(fm1panel_t *p, const uint8_t *const *planes, 
     }
     return changed;
 }
+/* PWM planes with duty masks (Melodee's hal/fm1_led_pwm.h: a plane drives its LEDs one scan frame in mask + 1; mask
+ * 0 full, 1 1/2, 3 1/4, 7 1/8, 0xFF dark): the level of a duty, 255 / (mask + 1), 0 for 0xFF */
+static inline uint8_t fm1p_duty_level(uint8_t mask) { return mask == 0xFFu ? 0u : (uint8_t)(255u / (mask + 1u)); }
+/* as fm1p_leds_planes, but where planes overlap the BRIGHTEST level holding an LED wins (a PWM driver's sum: the
+ * brightest duty), not the first; PLAY's green LED is set dark (a firmware without one). 1 if anything changed */
+static inline int fm1p_leds_brightest(fm1panel_t *p, const uint8_t *const *planes, const uint8_t *levels, int n)
+{
+    int changed = 0, c, l, k;
+    for (c = 0; c < FM1P_NCOL; c++)
+        for (l = 0; l < FM1P_NLINE; l++) {
+            uint8_t v = FM1P_LED_OFF;
+            for (k = 0; k < n; k++)
+                if (((planes[k][c] >> (l + 1)) & 1u) && levels[k] > v)
+                    v = levels[k];
+            if (p->led[c][l] != v) {
+                p->led[c][l] = v;
+                changed = 1;
+            }
+        }
+    if (p->led_play_green) {
+        p->led_play_green = 0;
+        changed = 1;
+    }
+    return changed;
+}
 /* where key id `id` (0..13 matrix button, 14..40 note key) sits: 1 and its column / line, 0 none */
 static inline int fm1p_led_pos(const int8_t *keymap, int id, int *col, int *line)
 {
@@ -229,11 +257,11 @@ static inline int fm1p_lcd_out(fm1panel_t *p, const uint16_t *lcd_be, uint32_t w
 }
 /* a native-endian RGB565 frame buffer with no count (OberVave's fb[]): swapped in, the count bumped when anything
  * differs. 1 if it changed */
-static inline int fm1p_lcd_out_native(fm1panel_t *p, const uint16_t *fb)
+static inline int fm1p_lcd_out_native(fm1panel_t *p, const uint16_t *native_px)
 {
     uint32_t i, diff = 0;
     for (i = 0; i < FM1P_LCD_W * FM1P_LCD_H; i++) {
-        const uint16_t s = (uint16_t)((fb[i] >> 8) | (fb[i] << 8));
+        const uint16_t s = (uint16_t)((native_px[i] >> 8) | (native_px[i] << 8));
         diff |= (uint32_t)(p->lcd[i] ^ s);
         p->lcd[i] = s;
     }

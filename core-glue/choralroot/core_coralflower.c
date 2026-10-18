@@ -10,7 +10,7 @@
  * exit(): emu_fw.c's boot guard (BOOT_UBOOT: exit(3)) and the update gesture's leaving (OCT- + OCT+ + HOME held 5 s:
  * cf_shim.c cr_update_poll through emu_firmware.h's CRB_STUB_GO / CRB_UBOOT_GO, exit(0)), each a plain statement
  * followed by ordinary code: common/exit.h records it and halts the core (see core_choralroot.c). Its atexit handler
- * is empty. The environment: crf_env.h (EMU_MASTER, EMU_STUB read as unset). The version: the hub's 0.2
+ * is empty. The environment: common/env.h (EMU_MASTER, EMU_STUB read as unset). The version: the hub's 0.2
  * (coralflower.c still says "CoralFlower 0.1"; tools/emu/build.sh even passes choralroot.c's "ChoralRoot 0.22", which
  * the splash then shows); the splash here reads "CoralFlower 0.2". */
 #include <stdio.h>
@@ -20,7 +20,7 @@
 #include "fm1core.h"
 #include "version.h"
 #include "exit.h"
-#include "crf_env.h"
+#include "env.h"                         /* getenv -> NULL (common/env.h) */
 #include "nor_stdio.h"
 
 #define FELUCCA_VERSION "CoralFlower " FM1CORE_VERSION
@@ -28,11 +28,7 @@
 
 #include "nor_stdio_end.h"
 #include "exit_end.h"
-#pragma push_macro("fb")                  /* (cf_fb.c's `#define fb ((uint8_t *)cv_px)` would rewrite common/panel.h's
-                                           * parameter of that name) */
-#undef fb
-#include "panel.h"
-#pragma pop_macro("fb")
+#include "panel.h"                        /* (after cf_fb.c's `#define fb ((uint8_t *)cv_px)`: panel.h has no `fb`) */
 
 /* make the image current: the settings record (cf_settings.c) the frame's settings_poll would write once the change
  * has rested CF_SET_QUIET_MS and nothing has sounded for CF_SET_SILENT_MS, written now if it differs from flash's.

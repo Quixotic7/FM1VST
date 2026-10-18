@@ -7,7 +7,7 @@ set(DINGHY_GLUE_HEADERS ${DINGHY_GLUE}/dinghy_pre.h ${DINGHY_GLUE}/dinghy_glue.h
 
 # the golden driver: loads a core module, runs the host sim, compares the screens
 add_executable(dinghy_golden ${DINGHY_GLUE}/dinghy_golden.c)
-target_include_directories(dinghy_golden PRIVATE ${CMAKE_SOURCE_DIR}/core-api)
+target_include_directories(dinghy_golden PRIVATE ${CMAKE_SOURCE_DIR}/core-api ${FM1_COMMON_DIR})
 target_compile_options(dinghy_golden PRIVATE -Wall -Wextra)
 target_link_libraries(dinghy_golden PRIVATE ${CMAKE_DL_LIBS})
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/dinghy/golden)

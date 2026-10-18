@@ -239,7 +239,7 @@ endfunction()
 
 add_library(fm1testlib STATIC tests/script_runner.cpp)
 target_link_libraries(fm1testlib PUBLIC fm1engine)
-target_include_directories(fm1testlib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+target_include_directories(fm1testlib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/tests ${FM1_COMMON_DIR})   # (common/ppm.h)
 target_compile_options(fm1testlib PRIVATE -Wall -Wextra)
 target_compile_definitions(fm1testlib PUBLIC
     FM1_CR_DIR="${CR}" FM1_CORE_MODULE="$<$<BOOL:${FM1_HAVE_CR}>:$<TARGET_FILE:choralroot_core>>"

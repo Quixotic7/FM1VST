@@ -18,6 +18,7 @@
 #include "ticks.h"
 #include "panel.h"
 #include "exit.h"
+#include "env.h"                          /* getenv -> NULL: no environment in a core (common/env.h) */
 
 #define OM_HOST 1                         /* the device's .pool section off (plat.h OM_POOL) */
 #define OM_VERSION FM1CORE_VERSION

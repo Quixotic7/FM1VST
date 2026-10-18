@@ -16,6 +16,7 @@
 
 #include "conformance_conf.h"
 #include "device.h"
+#include "ppm.h"
 #include "script_runner.h"
 
 static int peak_of(Device &d)                      // the audio produced since the last take, its peak
@@ -26,21 +27,6 @@ static int peak_of(Device &d)                      // the audio produced since t
         for (uint32_t i = 0; i < n * 2; i++)
             pk = std::max(pk, std::abs((int)buf[i]));
     return pk;
-}
-
-static void write_ppm(const char *path, const fm1panel_t *p)
-{
-    FILE *f = std::fopen(path, "wb");
-    if (!f)
-        return;
-    std::fprintf(f, "P6\n%d %d\n255\n", FM1P_LCD_W, FM1P_LCD_H);
-    for (uint32_t i = 0; i < FM1P_LCD_W * FM1P_LCD_H; i++) {
-        const uint16_t c = (uint16_t)((p->lcd[i] >> 8) | (p->lcd[i] << 8));   // big-endian as sent
-        const unsigned char rgb[3] = {(unsigned char)(((c >> 11) & 31) * 255 / 31),
-                                      (unsigned char)(((c >> 5) & 63) * 255 / 63), (unsigned char)((c & 31) * 255 / 31)};
-        std::fwrite(rgb, 1, 3, f);
-    }
-    std::fclose(f);
 }
 
 int main(int argc, char **argv)
@@ -114,7 +100,7 @@ int main(int argc, char **argv)
     }
     d.keys(0);
     if (argc > 2)
-        write_ppm(argv[2], core->panel);
+        fm1g_write_lcd_ppm(argv[2], core->panel->lcd);
     char info[512];
     info[0] = 0;
     if (core->ui_info)

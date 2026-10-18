@@ -24,6 +24,7 @@
 #include "fifo.h"
 #include "panel.h"
 #include "exit.h"                         /* exit / atexit -> fm1core_exit / fm1core_atexit (common/exit.h) */
+#include "env.h"                          /* getenv -> NULL: no environment in a core (common/env.h) */
 
 /* ---- what the firmware's shim calls (defined here: they need nothing of the firmware) */
 

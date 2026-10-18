@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "fm1core.h"
+#include "ppm.h"
 
 typedef struct {
     uint32_t t;
@@ -78,27 +79,12 @@ static int read_script(const char *path)
     return 1;
 }
 
-static int read_ppm(const char *path, uint8_t *rgb)
+static int read_ppm(const char *path, uint8_t *rgb)   /* (common/ppm.h, with the host sim's file named on failure) */
 {
-    char magic[3] = {0};
-    int w = 0, h = 0, mx = 0;
-    FILE *f = fopen(path, "rb");
-    if (!f) {
-        perror(path);
-        return 0;
-    }
-    if (fscanf(f, "%2s %d %d %d", magic, &w, &h, &mx) != 4 || strcmp(magic, "P6") || w != 240 || h != 240) {
-        fclose(f);
-        fprintf(stderr, "%s: not a 240 x 240 P6 PPM\n", path);
-        return 0;
-    }
-    fgetc(f);
-    if (fread(rgb, 1, 240u * 240u * 3u, f) != 240u * 240u * 3u) {
-        fclose(f);
-        return 0;
-    }
-    fclose(f);
-    return 1;
+    if (fm1g_read_ppm(path, rgb))
+        return 1;
+    fprintf(stderr, "%s: no 240 x 240 P6 PPM there\n", path);
+    return 0;
 }
 
 int main(int argc, char **argv)
@@ -112,7 +98,6 @@ int main(int argc, char **argv)
     fm1core_get_fn get;
     const fm1core_t *c;
     fm1panel_t *p;
-    FILE *f;
     if (argc < 6) {
         fprintf(stderr, "usage: dinghy_golden CORE.fm1core HOSTSIM SCRIPT T OUT_DIR\n");
         return 2;
@@ -170,19 +155,11 @@ int main(int argc, char **argv)
         c->tick(k);
         c->frame();
     }
-    for (i = 0; i < 240u * 240u; i++) {
-        const uint16_t v = (uint16_t)((p->lcd[i] >> 8) | (p->lcd[i] << 8));   /* (the panel's is big-endian) */
-        core_rgb[3 * i] = (uint8_t)((v >> 11) * 255 / 31);
-        core_rgb[3 * i + 1] = (uint8_t)((v >> 5 & 63) * 255 / 63);
-        core_rgb[3 * i + 2] = (uint8_t)((v & 31) * 255 / 31);
+    fm1g_lcd_rgb(p->lcd, core_rgb);               /* (common/ppm.h: as host.c writes its PPM) */
+    for (i = 0; i < 240u * 240u; i++)
         diff += memcmp(core_rgb + 3 * i, host_rgb + 3 * i, 3) != 0;
-    }
     snprintf(path, sizeof path, "%s-core-%u.ppm", out, T);
-    if ((f = fopen(path, "wb"))) {
-        fprintf(f, "P6 240 240 255\n");
-        fwrite(core_rgb, 1, sizeof core_rgb, f);
-        fclose(f);
-    }
+    fm1g_write_ppm(path, core_rgb);
     printf("dinghy_golden %s: the screen at %u ms, the core (%s) against the host sim (%s-%u.ppm): %u of 57600 pixels "
            "differ: %s\n", c->id, T, path, out, T, diff, diff ? "FAIL" : "PASS");
     c->shutdown();

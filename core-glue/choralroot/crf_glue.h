@@ -14,7 +14,7 @@
  *   FM1CORE_CRF_FLASH_SYNC a function `int f(void)` for the descriptor's flash_sync (the fork's settings save now)
  *
  * and, before its emu_fw.c, including stdlib.h, fm1core.h (FM1CORE_NO_EMU_NAMES), version.h, exit.h, nor_stdio.h
- * and crf_env.h, and after it nor_stdio_end.h, exit_end.h and panel.h (core_choralroot.c is the template).
+ * and common/env.h, and after it nor_stdio_end.h, exit_end.h and panel.h (core_choralroot.c is the template).
  *
  * THE TRANSLATION (fm1core.h THREADING CONTRACT; the reference emulator's emu.c is the model)
  *   in    at the top of tick / frame / idle: FM1P_EMU_IN (held keys and buttons, taps OR'ed in, detents added,

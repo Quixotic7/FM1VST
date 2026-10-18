@@ -10,7 +10,7 @@
  * Nothing is stored (purplemonkey.c builds the flash driver for the update only; pm_emu_fw.c's emu_fw_options keeps
  * the image in RAM whatever it is given): the image stays erased, flash_sync has nothing to do. No exit() is reached
  * from the emulator's paths (hostsim.c's _exit calls are in its own test renders, never called here) and no handler
- * is registered; exit.h still guards the unit. The environment: crf_env.h (PM_EMU_MIDI, PM_RIG_DEMO read as unset).
+ * is registered; exit.h still guards the unit. The environment: common/env.h (PM_EMU_MIDI, PM_RIG_DEMO read as unset).
  * The version: the hub's 0.11 (purplemonkey.c says "0.1-dev"; the emulator unit shows no version). */
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,7 +19,7 @@
 #include "fm1core.h"
 #include "version.h"
 #include "exit.h"
-#include "crf_env.h"
+#include "env.h"                         /* getenv -> NULL (common/env.h) */
 #include "nor_stdio.h"
 
 #define FELUCCA_VERSION "PurpleMonkey " FM1CORE_VERSION

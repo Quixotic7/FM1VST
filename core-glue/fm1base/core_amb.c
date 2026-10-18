@@ -24,6 +24,7 @@
 #include "ticks.h"
 #include "panel.h"
 #include "exit.h"
+#include "env.h"                          /* getenv -> NULL: no environment in a core (common/env.h) */
 
 #define APP_VERSION FM1CORE_VERSION
 #include "fm1base_hal.h"
