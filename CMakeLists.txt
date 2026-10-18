@@ -192,6 +192,14 @@ endif()
 
 # ---- tests
 enable_testing()
+# the glue helpers (core-glue/common), on their own: the audio FIFO, the coroutine, the NOR / ticks / panel helpers
+foreach(_t fifo coro nor)
+    add_executable(common_${_t}_test tests/common/${_t}_test.c ${FM1_COMMON_SOURCES})
+    target_include_directories(common_${_t}_test PRIVATE ${FM1_COMMON_DIR} ${FM1_CORE_API_DIR})
+    target_compile_options(common_${_t}_test PRIVATE -Wall -Wextra)
+    set_target_properties(common_${_t}_test PROPERTIES C_STANDARD 11)
+    add_test(NAME common_${_t}_test COMMAND common_${_t}_test ${CMAKE_BINARY_DIR}/common_${_t}_test.bin)
+endforeach()
 # every core: boots, draws, sounds (core_smoke_<id>), and its parameter map (param_test_<id>), on the loaded module
 add_executable(core_smoke tests/core_smoke.c)
 target_include_directories(core_smoke PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/core-api)

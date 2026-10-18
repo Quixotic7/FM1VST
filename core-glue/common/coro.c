@@ -62,7 +62,6 @@ fm1coro_t *fm1coro_new(void (*fn)(void *), void *arg, size_t stack_bytes)
     mprotect(c->map, page, PROT_NONE);  /* the guard page: the stack grows down into it */
     c->page = page;
     c->stack_len = stack_bytes;
-    memset(c->map + page, FILL, stack_bytes);
     c->fn = fn;
     c->arg = arg;
     return c;
@@ -81,6 +80,9 @@ int fm1coro_resume(fm1coro_t *c)
         c->ctx.uc_stack.ss_size = c->stack_len;
         c->ctx.uc_link = NULL;
         makecontext(&c->ctx, trampoline, 0);
+        /* (macOS's makecontext zeroes the whole stack: the high-water mark's fill goes in after it, below the top
+         * where the first frame starts) */
+        memset(c->map + c->page, FILL, c->stack_len - 256u);
     }
     c->resumes++;
     cur = c;
@@ -118,7 +120,9 @@ size_t fm1coro_stack_peak(const fm1coro_t *c)
     size_t i;
     if (!c)
         return 0;
-    for (i = 0; i < c->stack_len && c->map[c->page + i] == FILL; i++)
+    if (!c->started)
+        return 0;
+    for (i = 0; i < c->stack_len - 256u && c->map[c->page + i] == FILL; i++)
         ;
     return c->stack_len - i;
 }

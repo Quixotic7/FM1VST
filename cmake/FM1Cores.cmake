@@ -46,7 +46,7 @@ set(FM1_COMMON_DIR ${CMAKE_CURRENT_LIST_DIR}/../core-glue/common)
 get_filename_component(FM1_COMMON_DIR ${FM1_COMMON_DIR} ABSOLUTE)
 set(FM1_COMMON_SOURCES ${FM1_COMMON_DIR}/nor.c ${FM1_COMMON_DIR}/fifo.c ${FM1_COMMON_DIR}/coro.c)
 get_filename_component(FM1_CORE_API_DIR ${CMAKE_CURRENT_LIST_DIR}/../core-api ABSOLUTE)
-set_source_files_properties(${FM1_COMMON_SOURCES} PROPERTIES COMPILE_OPTIONS "-Wall;-Wextra")
+set_source_files_properties(${FM1_COMMON_SOURCES} PROPERTIES COMPILE_OPTIONS "-Wall;-Wextra;-fno-common")
 set(FM1_CORE_IDS "")
 
 # PYTHON_NEEDS: one check per (python, need), cached
