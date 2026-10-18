@@ -7,3 +7,6 @@
 [submodule "cores/melodee"]
 	path = cores/melodee
 	url = https://github.com/keremimo/melodee.git
+[submodule "remote/RemoteFM1"]
+	path = remote/RemoteFM1
+	url = https://github.com/Quixotic7/RemoteFM1.git
