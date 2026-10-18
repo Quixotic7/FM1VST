@@ -14,6 +14,24 @@
 
 namespace fs = std::filesystem;
 
+// An AddressSanitizer build keeps every module it opened mapped: on macOS ASan does not forget an unloaded image's
+// globals, so the next module dyld maps at the same address (the per-instance copy of a core just closed) trips
+// false global-buffer-overflow reports in __asan_register_globals and on its own globals. Each load is its own
+// copy (a new file), so keeping them costs only memory. Every other build closes them.
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+#define FM1_KEEP_MODULES 1
+#endif
+#endif
+static void unload(void *h)
+{
+#ifdef FM1_KEEP_MODULES
+    (void)h;
+#else
+    dlclose(h);
+#endif
+}
+
 static std::string home_dir()
 {
     const char *h = std::getenv("HOME");
@@ -79,7 +97,7 @@ static const fm1core_t *open_core(const std::string &path, void **handle, std::s
     if (!get) {
         if (error)
             *error = path + ": no " FM1CORE_SYMBOL " (not a core module)";
-        dlclose(h);
+        unload(h);
         return nullptr;
     }
     // this host's ABI, else an older one it still loads (ABI 5: ABI 6's descriptor without credits, fm1core.h)
@@ -99,7 +117,7 @@ static const fm1core_t *open_core(const std::string &path, void **handle, std::s
             *error = path + ": " + (built ? "a core for ABI " + std::to_string(built) : std::string("a core for another ABI")) +
                      "; this host loads ABI " + std::to_string(FM1CORE_ABI_MIN) + ".." + std::to_string(FM1CORE_ABI) +
                      " cores only (rebuild the core against this FM1VST's core-api/fm1core.h)";
-        dlclose(h);
+        unload(h);
         return nullptr;
     }
     *handle = h;
@@ -125,7 +143,7 @@ bool CoreLoader::probe(const std::string &path, CoreInfo &out, std::string *erro
     out.credits = str(fm1core_credits(c));
     out.abi = c->abi_version;
     out.flash_size = c->flash_size;
-    dlclose(h);                  // nothing was initialised: no shutdown needed
+    unload(h);                   // nothing was initialised: no shutdown needed
     return true;
 }
 
@@ -195,7 +213,7 @@ LoadedCore::~LoadedCore()
         core_->shutdown();
     core_ = nullptr;
     if (handle_)
-        dlclose(handle_);
+        unload(handle_);
     std::error_code ec;
     if (!copy_.empty())
         fs::remove(copy_, ec);

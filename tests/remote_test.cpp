@@ -445,7 +445,9 @@ int main()
                   "  ... the unit got SESSION 0 (sessions ended " + std::to_string(ended) + ")");
             juce::MidiBuffer m = one(juce::MidiMessage::noteOn(16, 62, (juce::uint8)100));
             h.block(m);
-            check((H->keys >> 9) & 1u, "  ... and ch 16 notes from the host play again");
+            // (hal(p), not H: the core switch above loaded a new copy of the module, with its own panel; H points at
+            // the first copy's, which only happens to be the same address when dyld reuses it)
+            check((hal(p)->keys >> 9) & 1u, "  ... and ch 16 notes from the host play again");
             m = one(juce::MidiMessage::noteOff(16, 62));
             h.block(m);
         }
