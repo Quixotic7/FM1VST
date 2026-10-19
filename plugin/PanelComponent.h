@@ -20,10 +20,10 @@
 // mouse, latch), as emu.c's key_src / btn_src; a control is held while any source holds it, and the processor
 // hears panelKey / panelButton when that changes (a separate "held" source merged with the host parameters on the
 // audio thread: the panel never moves the btn_ / key_ parameters). Left click: press / release; right-click or
-// ctrl-click: latch down, again to release; wheel over a knob: one detent per notch (MASTER: 16 of 1023); vertical
-// drag on a knob: one detent per 8 points; a click on a knob selects it for Up / Down. The keyboard map is
-// keymap.c's (by key: see keymap() in PanelComponent.cpp; the screenshot, recording and dump keys are left out),
-// plus a fallback row for the F-key buttons (a host or macOS often takes F5 .. F10): C V B N M , = FX SEL ENV LFO
+// ctrl-click: latch down, again to release (on the LCD: the screen's menu, Editor.h); wheel over a knob: one detent
+// per notch (MASTER: 16 of 1023); vertical drag on a knob: one detent per 8 points; a click on a knob selects it for
+// Up / Down. The keyboard map is keymap.c's (by key: see keymap() in PanelComponent.cpp; the screenshot, recording
+// and dump keys are left out), plus a fallback row for the F-key buttons (a host or macOS often takes F5 .. F10): C V B N M , = FX SEL ENV LFO
 // EDIT GLO; a control whose first key is an F key shows both on the panel ("F5/C").
 // A key held from the keyboard is pressed once (keyPressed's repeats are ignored while it is held) and let go when
 // its release arrives (keyStateChanged) or, when a host swallowed the release, when the check finds it up: on every
@@ -68,6 +68,14 @@ public:
     // key hint, or the screen
     std::function<void()> onContextMenu;
     std::function<void()> onLcdChanged;
+    // ---- copy the screen (ScreenCapture.h): a right-click / ctrl-click on the LCD (on the panel or the big view)
+    // asks for the screen's menu instead of the settings; the frame shown now (RGB565 big-endian, as sent: the copy
+    // lcdImage() was converted from); frozen: the shown frame is kept (the firmware and the audio run on) until thawed
+    std::function<void(const juce::MouseEvent &)> onScreenMenu;
+    bool overScreen(juce::Point<float> logical) const;   // on the LCD (logical, at the last paint's layout)
+    const std::array<uint16_t, EMU_LCD_W * EMU_LCD_H> &shownLcd() const { return shown_; }
+    void setFrozen(bool on);
+    bool frozen() const { return frozen_; }
     juce::Point<float> unitToLocal(float ux, float uy) const;
     float pointsPerUnit() const;
     bool overlapsControl(juce::Rectangle<float> local) const;
@@ -156,6 +164,8 @@ private:
     // the processor's snapshot
     PanelView view_;
     uint32_t lcdSeen_ = 0xFFFFFFFFu;
+    std::array<uint16_t, EMU_LCD_W * EMU_LCD_H> shown_{};   // the frame lcd240_ shows (as sent)
+    bool frozen_ = false;
 
     // what each control was last drawn with
     struct Drawn {

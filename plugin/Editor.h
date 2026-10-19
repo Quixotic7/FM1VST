@@ -17,6 +17,13 @@
 // the button shown, ringed in red. The button, or a right-click anywhere off the panel's controls (a right-click on a
 // key or button still latches it, on a knob still selects it), opens the settings sheet (Sheet.h).
 //
+// COPY THE SCREEN (ScreenCapture.h): a right-click (or ctrl-click) on the LCD, in the device view (the panel's screen or
+// the big LCD) and in the screen view (the bezel), opens the screen's menu: Copy screen (240 x 240), Copy screen x2 /
+// x4 (480 / 960, nearest-neighbour), Save screen as PNG (x1 / x2 / x4), Advanced (Copy raw RGB565 (.bin), Save raw
+// RGB565 as .bin), Freeze screen, Settings. Option + right-click copies at once (x1), no menu. Cmd+Shift+C copies at the
+// sheet's scale (its VIEW section's "Screen" row: Copy and the scale), where the host passes the key on (the Standalone
+// does; a plugin host may keep it). A toast over the LCD says what was copied.
+//
 // The Standalone app: its window loses JUCE's "Options" bar (the native title bar instead); its audio / MIDI settings
 // and state files are in the sheet.
 #pragma once
@@ -44,6 +51,7 @@ public:
     juce::Rectangle<float> bezelArea() const;
     int lcdScale() const { return lastN_; }       // the last paint: the LCD's whole multiple (0: smoothed)
     std::function<void()> onContextMenu;
+    std::function<void(const juce::MouseEvent &)> onScreenMenu;   // a right-click on the bezel / LCD
 
     void paint(juce::Graphics &g) override;
     void mouseDown(const juce::MouseEvent &e) override;
@@ -63,6 +71,23 @@ private:
     int cacheN_ = 0;
     uint32_t cacheSerial_ = 0, serial_ = 1;
     friend class FM1Editor;
+};
+
+// a short note over the LCD ("Screen copied (240×240)"), fading out by itself; never takes a click
+class Toast : public juce::Component, private juce::Timer {
+public:
+    Toast() { setInterceptsMouseClicks(false, false); }
+    void show(const juce::String &text);
+    const juce::String &text() const { return text_; }
+    float alpha() const { return alpha_; }
+    int preferredWidth() const;
+    void paint(juce::Graphics &g) override;
+
+private:
+    void timerCallback() override;
+    juce::String text_;
+    double shownAt_ = 0;
+    float alpha_ = 0;
 };
 
 class FM1Editor : public juce::AudioProcessorEditor, private juce::Timer {
@@ -99,6 +124,24 @@ public:
     void focusActiveView();                       // the keyboard focus back to the panel or the screen view
     juce::Component &activeView() { return mode_ == FM1Processor::kViewScreen ? (juce::Component &)screen_ : (juce::Component &)panel_; }
     bool isStandalone() const { return proc_.wrapperType == juce::AudioProcessor::wrapperType_Standalone; }
+
+    // ---- copy the screen (see the top): the frame shown now; every call on the message thread
+    enum ScreenCmd { kCopy1 = 1, kCopy2, kCopy4, kSave1, kSave2, kSave4, kCopyRaw, kSaveRaw, kFreeze, kSettings };
+    juce::PopupMenu screenMenu();                 // the menu (its items' ids: ScreenCmd)
+    void showScreenMenu(const juce::MouseEvent &e);
+    void screenCommand(int cmd);
+    bool copyScreen(int scale);                   // the clipboard (PNG + TIFF); the toast
+    bool copyScreenRaw();
+    void saveScreen(int scale);                   // a file chooser, then the PNG
+    void saveScreenRaw();
+    void setScreenFrozen(bool on);
+    bool screenFrozen() const { return panel_.frozen(); }
+    int copyScale() const { return copyScale_; }  // the sheet's scale (Cmd+Shift+C, its Copy button): 1, 2 or 4
+    void setCopyScale(int s) { copyScale_ = s == 2 || s == 4 ? s : 1; }
+    juce::String screenFileName(const juce::String &ext) const;   // <firmware id>-<version>-<YYYYMMDD-HHMMSS><ext>
+    Toast &toast() { return toast_; }
+    void showToast(const juce::String &text);
+    bool keyPressed(const juce::KeyPress &k) override;
 
     // ---- the corner button
     CornerButton &cornerButton() { return corner_; }
@@ -143,6 +186,9 @@ private:
     ScreenView screen_;
     CornerButton corner_;
     Sheet sheet_;
+    Toast toast_;
+    std::unique_ptr<juce::FileChooser> chooser_;
+    int copyScale_ = 1;
     Constrainer constrainer_;
     Watcher watcher_{*this};
     Ticker chrome_;

@@ -19,6 +19,10 @@
 //       its About page (ui-about-emulated.png), Auto's step down waiting for the transport to stop
 //       (ui-sheet-clock-deferred.png).
 //   (p) Show to editors, the port faked: the Editors section off (ui-editors-off.png) and on (ui-editors.png)
+//   (k) copy the screen: a right-click on the panel's LCD opens the screen's menu, not the sheet (ui-screen-menu.png);
+//       Option + right-click copies at once, the toast over the LCD (ui-screen-toast.png; a private pasteboard, never
+//       the general one); the sheet's Screen row (ui-sheet-screen.png); in the screen view, the menu on the LCD
+//       (ui-screen-view-menu.png) and the sheet from the body around the bezel
 // FM1EMU_HOME points at a scratch folder under the build.
 #include <cstdio>
 #include <cstdlib>
@@ -26,6 +30,7 @@
 #include <string>
 
 #include "built_cores.h"
+#include "Clipboard.h"
 #include "Editor.h"
 #include "Hub.h"
 #include "Look.h"
@@ -192,6 +197,37 @@ int main()
             ed.sheet().close(false);
         }
 
+        // ---- (k) copy the screen: the LCD's menu (drawn inside the editor), Option + right-click, the sheet's row
+        const std::string pasteboard = fm1clip::makeUniquePasteboard();
+        fm1clip::setPasteboardName(pasteboard);
+        {
+            PanelComponent &panel = ed.panel();
+            ed.hideChromeNow();
+            const PanelComponent::Layout &L = panel.layout();
+            const juce::Point<float> lcdPt = L.lcdSmall.getCentre().toFloat() / L.scale;
+            const int children = ed.getNumChildComponents();
+            panel.mouseDown(mouseAt(panel, lcdPt, juce::ModifierKeys::rightButtonModifier));
+            const bool menu = ed.getNumChildComponents() == children + 1 && !ed.sheet().isOpen();
+            check(menu, "a right-click on the panel's LCD opens the screen's menu (no sheet)");
+            shot(ed, "screen-menu");
+            check(juce::PopupMenu::dismissAllActiveMenus(), "  ... and it closes");
+            const int afterMenu = ed.getNumChildComponents();   // (a closed menu is deleted later, by the message loop)
+            panel.mouseDown(mouseAt(panel, lcdPt, juce::ModifierKeys::rightButtonModifier | juce::ModifierKeys::altModifier));
+            int w = 0, hh = 0;
+            std::vector<uint8_t> px;
+            std::string cs;
+            fm1clip::decode(fm1clip::read(pasteboard, "public.png"), w, hh, px, cs);
+            check(w == 240 && ed.toast().isVisible() && ed.getNumChildComponents() == afterMenu,
+                  "Option + right-click on the LCD copies it at once (240 x 240, no menu), the toast over the LCD (" +
+                      std::to_string(w) + ", " + std::to_string(ed.getNumChildComponents() - afterMenu) + " more children)");
+            shot(ed, "screen-toast");
+            ed.toast().setVisible(false);
+            ed.openSettings(false);
+            ed.sheet().scrollToView();
+            shot(ed, "sheet-screen");
+            ed.sheet().close(false);
+        }
+
         // ---- the sheet and its pages
         ed.openSettings(false);
         check(ed.sheet().isOpen() && ed.sheet().isVisible() && ed.sheet().cardBounds().getWidth() == 360,
@@ -323,6 +359,23 @@ int main()
             check(ed.getLocalBounds().toFloat().contains(c) && c.getWidth() >= 22,
                   "screen view " + std::to_string(side) + ": the corner button inside the window (" + std::to_string((int)c.getWidth()) + " pt)");
         }
+        {   // (k) the screen's menu on the LCD; the sheet from the body around the bezel
+            ed.setSize(FM1Editor::defaultScreenSize(), FM1Editor::defaultScreenSize());
+            ed.hideChromeNow();
+            render(ed, 2.0f);
+            ScreenView &sv = ed.screen();
+            const int children = ed.getNumChildComponents();
+            sv.mouseDown(mouseAt(sv, sv.lcdArea().getCentre(), juce::ModifierKeys::rightButtonModifier));
+            check(ed.getNumChildComponents() == children + 1 && !ed.sheet().isOpen(),
+                  "screen view: a right-click on the LCD opens the screen's menu");
+            shot(ed, "screen-view-menu");
+            juce::PopupMenu::dismissAllActiveMenus();
+            sv.mouseDown(mouseAt(sv, {3.0f, 3.0f}, juce::ModifierKeys::rightButtonModifier));
+            check(ed.sheet().isOpen(), "screen view: a right-click on the body around the bezel opens the sheet");
+            ed.sheet().close(false);
+        }
+        fm1clip::setPasteboardName("");
+        fm1clip::releasePasteboard(pasteboard);
         {   // the computer keys in the screen view
             std::set<int> down;
             ed.panel().setKeyProbe([&](int code) { return down.count(code) != 0; });
