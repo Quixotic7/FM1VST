@@ -170,6 +170,7 @@ FM1Processor::FM1Processor()
     for (auto &ch : noteKey_)
         ch.fill(-1);
     sysexOut_.reserve(4096);
+    editorPort_ = std::make_unique<EditorPort>([this](uint32_t ms) { editorIdleTick(ms); });
     {
         const juce::ScopedLock l(devLock_);
         loadCoreLocked(coreId_);                 // (named buttons for the parameters; booted in prepareToPlay)
@@ -189,6 +190,7 @@ FM1Processor::~FM1Processor()
 {
     alive_->store(false);                        // (a download finishing later reaches nothing)
     stopTimer();
+    editorPort_.reset();                         // (its thread joined before devLock_ is taken: the idle clock takes it)
     cancelPendingUpdate();
     remote_.reset();                             // SESSION 0 (the unit back on its waiting screen), the thread joined
     const juce::ScopedLock l(devLock_);
@@ -2012,6 +2014,7 @@ void FM1Processor::getStateInformation(juce::MemoryBlock &dest)
     t.setProperty("encoderSteps", encSteps_.load(), nullptr);
     t.setProperty("remote", remoteOn_.load(), nullptr);
     t.setProperty("remoteIgnoreMidi", remoteIgnoreMidi_.load(), nullptr);
+    t.setProperty("editorPort", editorOn_.load(), nullptr);
     const Theme th = getTheme();
     juce::ValueTree tt("theme");
     tt.setProperty("name", th.name, nullptr);
@@ -2065,6 +2068,7 @@ void FM1Processor::setStateInformation(const void *data, int sizeInBytes)
     setEncoderMode((int)t.getProperty("encoderMode", kEncAbsolute));
     setRemoteIgnoreMidi((bool)t.getProperty("remoteIgnoreMidi", true));
     setRemoteEnabled((bool)t.getProperty("remote", false));   // (on: the unit lock decides who drives the unit)
+    editorOn_.store((bool)t.getProperty("editorPort", false));   // (the timer makes the port, for the firmware below)
     {
         const juce::String c = t.getProperty("emuClock", "auto").toString();
         const int mhz = c == "auto" ? emuclock::kAuto : c.getIntValue();
@@ -2237,6 +2241,89 @@ void FM1Processor::applyMaster()
         dev_->master(m);
         appliedMaster_ = m;
     }
+}
+
+// ======================================================= Show to editors ===
+void FM1Processor::setEditorPortEnabled(bool on)
+{
+    editorOn_.store(on);
+    if (juce::MessageManager::existsAndIsCurrentThread())
+        syncEditorPort();                        // (else the timer does it)
+}
+
+juce::String FM1Processor::editorUsbName() const
+{
+    return EditorPort::usbProductName(coreId_ == kEmuCore && emu_.valid() ? emu_.id : coreId_);
+}
+
+void FM1Processor::syncEditorPort()
+{
+    const bool want = editorOn_.load() && EditorPort::available();
+    if (!want) {
+        if (editorPort_->isOpen() || editorPort_->error().isNotEmpty())
+            editorPort_->close();                // (also forgets a failure: the next switch-on tries again)
+        return;
+    }
+    const juce::String usb = editorUsbName();
+    if (editorPort_->isOpen() && editorPort_->usbName() == usb)
+        return;
+    if (!editorPort_->isOpen() && editorPort_->usbName() == usb && editorPort_->error().isNotEmpty())
+        return;                                  // (it failed for this name: not retried 30 times a second)
+    editorPort_->open(usb);                      // (a new firmware: the editors see the old port go, the new one come)
+}
+
+FM1Processor::EditorPortStatus FM1Processor::editorPortStatus() const
+{
+    EditorPortStatus st;
+    st.available = EditorPort::available();
+    st.on = editorOn_.load();
+    st.open = editorPort_->isOpen();
+    st.idling = editorPort_->idling();
+    st.emulated = coreId_ == kEmuCore;
+    st.name = editorPort_->name();
+    st.usbName = editorUsbName();
+    if (st.on && !st.open)
+        st.error = editorPort_->error();
+    const juce::String id = coreId_ == kEmuCore && emu_.valid() ? emu_.id : hub::hubIdForCore(coreId_);
+    const hub::Catalog cat = hub_->catalog();
+    const hub::Entry *e = cat.find(id);
+    st.url = EditorPort::managerUrl(id, e ? e->editor : juce::String());
+    st.in = editorPort_->messagesIn();
+    st.out = editorPort_->messagesOut();
+    st.dropped = editorPort_->dropped();
+    st.idleMs = editorPort_->idleMs();
+    return st;
+}
+
+// the idle clock (EditorPort.h THE IDLE CLOCK): the core by the wall clock while the host sends no blocks, exactly as
+// processBlock runs it but without a host: the audio discarded, channel messages dropped, SysEx to the port
+void FM1Processor::editorIdleTick(uint32_t ms)
+{
+    // only TRIED, as processBlock does: whoever holds it (a block, a preset load, a core switch) goes first and this
+    // tick is skipped (the port's thread never waits on devLock_, so closing the port never waits on a core switch)
+    const juce::ScopedTryLock l(devLock_);
+    if (!l.isLocked() || coreId_ == kEmuCore)   // (fm1emu has no MIDI out: nothing to answer an editor with)
+        return;
+    if (!dev_ && loaded_)
+        bootLocked();                            // (no prepareToPlay yet: the Standalone without an audio device)
+    if (!dev_ || !dev_->booted() || dev_->halted())
+        return;
+    toHost_ = false;
+    pullEditorMidi();
+    for (uint32_t i = 0; i < ms; i++) {
+        dev_->run_ms();
+        flushMidiIn();
+        drainMidiOut(0);
+        if (i + 1 < ms)
+            pullEditorMidi();
+    }
+    toHost_ = true;
+    dev_->discard();                             // (nobody plays this audio; a paced render recounts from here)
+    if (dev_->halted() && !halted_.exchange(true)) {
+        haltCode_.store(dev_->core()->halted());
+        triggerAsyncUpdate();
+    }
+    snapshotPanel();
 }
 
 // ============================================================ Remote FM-1 ===
@@ -2420,44 +2507,13 @@ void FM1Processor::handleMidi(const juce::MidiMessage &m)
         forwardMidi(m);
 }
 
-// one MIDI message -> USB-MIDI event packets (cable 0) for the core's midi_in: CIN | status << 8 | d1 << 16 |
-// d2 << 24, as tools/emu/emu_midi.c packs the bytes from CoreMIDI
-static inline uint32_t usbPacket(uint32_t cin, uint32_t a, uint32_t b, uint32_t c)
-{
-    return (cin & 15u) | a << 8 | b << 16 | c << 24;
-}
-
+// one MIDI message -> USB-MIDI event packets (cable 0) for the core's midi_in (toUsbPackets, EditorPort.h)
 void FM1Processor::forwardMidi(const juce::MidiMessage &m)
 {
-    const uint8_t *d = m.getRawData();
-    const int n = m.getRawDataSize();
-    auto put = [this](uint32_t p) {
+    toUsbPackets(m.getRawData(), m.getRawDataSize(), [this](uint32_t p) {
         if (inW_ - inR_ < kInRing)
             inRing_[inW_++ % kInRing] = p;       // (full: dropped)
-    };
-    if (n <= 0)
-        return;
-    const uint8_t st = d[0];
-    if (st == 0xF0) {                            // SysEx: 3-byte packets, the last one CIN 5 / 6 / 7
-        int i = 0;
-        while (n - i > 3) {
-            put(usbPacket(4, d[i], d[i + 1], d[i + 2]));
-            i += 3;
-        }
-        const int r = n - i;
-        put(usbPacket(r == 1 ? 5u : r == 2 ? 6u : 7u, d[i], r > 1 ? d[i + 1] : 0u, r > 2 ? d[i + 2] : 0u));
-    } else if (st >= 0xF8) {
-        put(usbPacket(0xF, st, 0, 0));
-    } else if (st >= 0xF0) {                     // system common
-        if (st == 0xF1 || st == 0xF3)
-            put(usbPacket(2, st, n > 1 ? d[1] : 0u, 0));
-        else if (st == 0xF2)
-            put(usbPacket(3, st, n > 1 ? d[1] : 0u, n > 2 ? d[2] : 0u));
-        else if (st == 0xF6)
-            put(usbPacket(5, st, 0, 0));
-    } else if (st >= 0x80) {
-        put(usbPacket(st >> 4, st, n > 1 ? d[1] : 0u, n > 2 ? d[2] : 0u));
-    }
+    });
     flushMidiIn();
 }
 
@@ -2481,8 +2537,12 @@ void FM1Processor::decodePacket(uint32_t p, int pos)
         }
     };
     auto sxEnd = [this, pos]() {
-        if (!sysexOutOverflow_ && sysexOut_.size() >= 2 && sysexOut_.front() == 0xF0 && sysexOut_.back() == 0xF7)
-            midiOut_.addEvent(sysexOut_.data(), (int)sysexOut_.size(), pos);
+        if (!sysexOutOverflow_ && sysexOut_.size() >= 2 && sysexOut_.front() == 0xF0 && sysexOut_.back() == 0xF7) {
+            if (editorPort_->isOpen())           // (Show to editors: every SysEx of the core to the port, none to the host)
+                editorPort_->sysexFromCore(sysexOut_.data(), (int)sysexOut_.size());
+            else if (toHost_)
+                midiOut_.addEvent(sysexOut_.data(), (int)sysexOut_.size(), pos);
+        }
         sysexOut_.clear();
         sysexOutOverflow_ = false;
     };
@@ -2496,7 +2556,7 @@ void FM1Processor::decodePacket(uint32_t p, int pos)
         if (b[0] == 0xF7 || !sysexOut_.empty()) {
             sx(b, 1);
             sxEnd();
-        } else if (b[0] >= 0xF0) {
+        } else if (b[0] >= 0xF0 && toHost_) {
             midiOut_.addEvent(b, 1, pos);
         }
         return;
@@ -2518,7 +2578,8 @@ void FM1Processor::decodePacket(uint32_t p, int pos)
         return;                                  // (a channel CIN must match its status)
     if (cin >= 0x8 && ((len > 1 && (b[1] & 0x80)) || (len > 2 && (b[2] & 0x80))))
         return;
-    midiOut_.addEvent(b, len, pos);
+    if (toHost_)
+        midiOut_.addEvent(b, len, pos);
 }
 
 void FM1Processor::drainMidiOut(int pos)
@@ -2526,6 +2587,17 @@ void FM1Processor::drainMidiOut(int pos)
     uint32_t p;
     while (dev_->midi_out_take(&p))
         decodePacket(p, pos);
+}
+
+// the editor port's messages, whole, into inRing_ behind whatever the host sent before (never split, never mixed into
+// a host message: the core's SysEx parser sees one frame at a time), then as far into the core as it takes
+void FM1Processor::pullEditorMidi()
+{
+    if (!editorPort_->isOpen())
+        return;
+    while (editorPort_->takeMessage(kInRing - (inW_ - inR_), [this](uint32_t p) { inRing_[inW_++ % kInRing] = p; })) {
+    }
+    flushMidiIn();
 }
 
 void FM1Processor::renderSegment(float *L, float *R, int from, int to)
@@ -2557,6 +2629,7 @@ void FM1Processor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuff
         hostPlaying_.store(playing, std::memory_order_relaxed);
     }
     const juce::int64 t0 = measure ? juce::Time::getHighResolutionTicks() : 0;
+    editorPort_->blockRan();                     // (the editor port's idle clock stops: the host runs the core)
     midiOut_.clear();
     const juce::ScopedTryLock l(devLock_);
     if (!l.isLocked() || !dev_ || !dev_->booted() || n <= 0 || buffer.getNumChannels() < 1) {
@@ -2566,6 +2639,7 @@ void FM1Processor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuff
     }
     applyTier1();
     applyHostParameters();
+    pullEditorMidi();
 
     float *L = buffer.getWritePointer(0);
     float *R = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : nullptr;

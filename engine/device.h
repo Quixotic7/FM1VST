@@ -88,6 +88,9 @@ public:
     uint32_t avail() const { return ring_w_ - ring_r_; }
     // up to max_frames device frames, int16 interleaved stereo, as emu.c's --wav writes them; returns frames taken
     uint32_t take_s16(int16_t *stereo, uint32_t max_frames);
+    // drop every frame produced and not taken (a clock run with nobody listening: the plugin's idle clock); a paced
+    // render then counts the host's time from the device's own again
+    void discard() { ring_r_ = ring_w_, pace_rate_ = 0; }
 
     // n host frames at host_rate: the device runs as far as needed, then the 44.1 kHz stream is resampled
     // (bypassed at exactly 44100). Changing host_rate restarts the resampler.

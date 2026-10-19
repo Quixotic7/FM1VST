@@ -4,7 +4,8 @@
 // Esc closes it. Pages:
 //   Main       FIRMWARE (the loaded one; opens the browser), PRESET (‹ name ›, Save, Save as, Rename, Delete, Export,
 //              Import; Save as and Rename edit inline, Delete confirms inline), REMOTE FM-1 (the switch, the link's status,
-//              "Ignore the FM-1's own MIDI"), PLAYING (Transpose, MIDI notes play keys, ...and reach the firmware's MIDI
+//              "Ignore the FM-1's own MIDI"), EDITORS (macOS: "Show to editors", the port's name, a hint, the firmware's
+//              editor as a link; EditorPort.h), PLAYING (Transpose, MIDI notes play keys, ...and reach the firmware's MIDI
 //              in), HOST CONTROL (Button parameters, Encoders, steps per turn), LOOK (the themes, a custom one), VIEW
 //              (Device / Screen, the big LCD), DEVICE (Restart, Reset flash: confirmed inline), STANDALONE (the
 //              Standalone app's audio / MIDI settings and its state files; only there), ABOUT
@@ -58,6 +59,7 @@ public:
     void beginSaveAs();
     void beginDeleteConfirm();
     void beginResetConfirm();
+    void scrollToEditors();                       // the main page scrolled to its Editors section
     void setBrowserFilter(const juce::String &search, int category);
     void setEngineFilter(int engine);             // 0 All, 1 Native, 2 Emulated
     void pickInBrowser(const juce::String &key, int engine = -1);   // a card's click (engine: -1 the default)

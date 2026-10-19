@@ -232,6 +232,7 @@ bool parse(const String &json, const String &base, Catalog &out, String *error)
             e.source = repo.isNotEmpty() ? "https://github.com/" + repo : f.getProperty("site", "").toString();
         e.release = f.getProperty("release", "").toString();
         e.what = f.getProperty("what", "").toString();
+        e.editor = f.getProperty("editor", "").toString();
         e.beta = (bool)f.getProperty("beta", false);
         const juce::var k = f.getProperty("kind", {});
         if (k.isArray())
