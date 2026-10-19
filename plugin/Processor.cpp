@@ -2631,7 +2631,8 @@ void FM1Processor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuff
         hostPlaying_.store(playing, std::memory_order_relaxed);
     }
     const juce::int64 t0 = measure ? juce::Time::getHighResolutionTicks() : 0;
-    editorPort_->blockRan();                     // (the editor port's idle clock stops: the host runs the core)
+    editorPort_->blockRan(sampleRate_ > 0 ? 1000.0 * n / sampleRate_ : 0);   // (the idle clock stops: the host runs
+                                                                              // the core)
     midiOut_.clear();
     const juce::ScopedTryLock l(devLock_);
     if (!l.isLocked() || !dev_ || !dev_->booted() || n <= 0 || buffer.getNumChannels() < 1) {

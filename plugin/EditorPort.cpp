@@ -191,11 +191,14 @@ std::vector<std::vector<uint8_t>> EditorPort::takeSentForTest()
     return out;
 }
 
-// no block for kIdleAfterMs: the core's clock by the wall clock, in steps of at most kIdleMaxStep device ms
+// no block for idleAfterMs: the core's clock by the wall clock, in steps of at most kIdleMaxStep device ms, never ahead
+// of it: the device ms run since the idle clock started never exceed the wall ms since then, and a backlog (this thread
+// woke late) is run only up to kIdleCatchUp ms, the rest dropped
 void EditorPort::idleClock()
 {
     const double now = juce::Time::getMillisecondCounterHiRes();
-    if (now - lastBlockMs_.load(std::memory_order_relaxed) < kIdleAfterMs) {
+    const double after = idleAfterMs();
+    if (now - lastBlockMs_.load(std::memory_order_relaxed) < after) {
         idling_.store(false, std::memory_order_relaxed);
         return;
     }
@@ -205,9 +208,9 @@ void EditorPort::idleClock()
         idleRan_ = 0;
     }
     uint64_t due = (uint64_t)(now - idleBase_);
-    if (due > idleRan_ + 200) {                  // (far behind: a stall; the clock resumes from now)
-        idleBase_ = now - (double)idleRan_;
-        due = idleRan_;
+    if (due > idleRan_ + kIdleCatchUp) {         // (behind: a late wake-up; the time beyond the catch-up is dropped)
+        idleBase_ = now - (double)(idleRan_ + kIdleCatchUp);
+        due = idleRan_ + kIdleCatchUp;
     }
     while (due > idleRan_ && !threadShouldExit() && idling_.load(std::memory_order_relaxed)) {
         const uint32_t step = (uint32_t)std::min<uint64_t>(due - idleRan_, kIdleMaxStep);
@@ -216,7 +219,7 @@ void EditorPort::idleClock()
         idleRan_ += step;
         idleMs_.fetch_add(step, std::memory_order_relaxed);
         sendPending();
-        if (juce::Time::getMillisecondCounterHiRes() - lastBlockMs_.load(std::memory_order_relaxed) < kIdleAfterMs)
+        if (juce::Time::getMillisecondCounterHiRes() - lastBlockMs_.load(std::memory_order_relaxed) < after)
             idling_.store(false, std::memory_order_relaxed);   // (a block came meanwhile: the host has the clock)
     }
 }

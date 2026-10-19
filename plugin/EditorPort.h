@@ -19,11 +19,12 @@
 //           installer page pointed at the port would halt the firmware.
 // THE IDLE CLOCK  the core runs only inside processBlock; a host that stops calling it (a stopped transport in some
 //           hosts, a disabled track, the Standalone without audio) would leave a manager's INFO unanswered. When no
-//           block has started for kIdleAfterMs and the port is open, the service thread runs the core's clock in real
-//           time through the processor's tick function (which tries devLock_, the lock processBlock tries and the
-//           message thread takes: the two never run the core at once; a tick that finds it taken is skipped), with its
-//           audio discarded, in steps of at most kIdleMaxStep device ms. The first processBlock stops it. Not for
-//           fm1emu (no MIDI out to answer with).
+//           block has started for kIdleAfterMs (or two of the host's blocks, if longer: idleAfterMs) and the port is
+//           open, the service thread runs the core's clock in real time through the processor's tick function (which
+//           tries devLock_, the lock processBlock tries and the message thread takes: the two never run the core at
+//           once; a tick that finds it taken is skipped), with its audio discarded, in steps of at most kIdleMaxStep
+//           device ms, never ahead of the wall clock (a late wake-up catches up kIdleCatchUp ms at most, the rest is
+//           dropped). The first processBlock stops it. Not for fm1emu (no MIDI out to answer with).
 // THREADS  message thread: open / close / name / status. CoreMIDI's thread: the port's input. The clock thread
 //           (audio, or the service thread when idle; devLock_ held): takeMessage, sysexFromCore. The service thread:
 //           the port's output and the idle clock; it exists while the port is open.
@@ -33,6 +34,7 @@
 #pragma once
 #include <juce_audio_devices/juce_audio_devices.h>
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cstdint>
@@ -118,8 +120,15 @@ public:
     }
     // one complete SysEx from the core (F0 .. F7) for the port; dropped whole when the FIFO is full
     void sysexFromCore(const uint8_t *d, int n);
-    // processBlock started (any thread): the idle clock stops
-    void blockRan() { lastBlockMs_.store(juce::Time::getMillisecondCounterHiRes(), std::memory_order_relaxed); }
+    // processBlock started (any thread), for blockMs of audio: the idle clock stops. It starts again only after a gap
+    // of kIdleAfterMs and two of the host's blocks (idleAfterMs): a host with 4096-frame buffers calls every 85 ms
+    void blockRan(double blockMs = 0)
+    {
+        if (blockMs > 0)
+            blockLenMs_.store(blockMs, std::memory_order_relaxed);
+        lastBlockMs_.store(juce::Time::getMillisecondCounterHiRes(), std::memory_order_relaxed);
+    }
+    double idleAfterMs() const { return std::max(kIdleAfterMs, 2.0 * blockLenMs_.load(std::memory_order_relaxed)); }
 
     // ---- status (any thread)
     uint32_t messagesIn() const { return msgsIn_.load(); }         // taken by the core
@@ -132,7 +141,10 @@ public:
     void receiveForTest(const juce::MidiMessage &m) { handleIncomingMidiMessage(nullptr, m); }
     std::vector<std::vector<uint8_t>> takeSentForTest();
 
-    static constexpr double kIdleAfterMs = 50.0;     // no block for this long: the idle clock runs
+    static constexpr double kIdleAfterMs = 50.0;     // no block for this long (at least; idleAfterMs): the idle clock runs
+    static constexpr uint32_t kIdleCatchUp = 20;     // device ms the idle clock may be behind the wall clock at most: a
+                                                     // late wake-up (a busy machine) loses the rest instead of running
+                                                     // it at once, so the core never runs ahead of real time by more
     static constexpr uint32_t kIdleMaxStep = 5;      // device ms per idle tick at most (a block that comes meanwhile waits
                                                      // at most this long for devLock_: an emulated core runs ~3x real time)
     static constexpr uint32_t kMaxPackets = 4000;    // a message's packets at most (12 KB of SysEx)
@@ -167,6 +179,7 @@ private:
     std::vector<std::vector<uint8_t>> sent_;     // (fake: what would have been sent)
 
     std::atomic<double> lastBlockMs_{0.0};
+    std::atomic<double> blockLenMs_{0.0};        // the host's last block, ms of audio
     std::atomic<bool> idling_{false};
     double idleBase_ = 0;                        // (service thread) when the idle clock started
     uint64_t idleRan_ = 0;                       // device ms it has run since

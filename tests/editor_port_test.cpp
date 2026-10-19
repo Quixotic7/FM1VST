@@ -64,6 +64,9 @@ struct Host {
     juce::AudioBuffer<float> buf{2, 256};
     int sysexToHost = 0, channelToHost = 0;
     std::vector<Bytes> hostSysex;
+    double lastBlock = 0;                        // (wall ms) when the last block started
+    double idleRoom = 0;                         // the most device ms the idle clock may have run in the gaps between
+                                                 // blocks (a gap longer than idleAfterMs: the host was late)
     explicit Host(FM1Processor &proc) : p(proc)
     {
         p.setRateAndBufferSizeDetails(sr, bs);
@@ -71,6 +74,10 @@ struct Host {
     }
     void block(juce::MidiBuffer &m)
     {
+        const double now = nowMs(), after = p.editorPortForTest()->idleAfterMs();
+        if (lastBlock > 0 && now - lastBlock > after)
+            idleRoom += now - lastBlock - after + EditorPort::kIdleMaxStep;
+        lastBlock = now;
         buf.clear();
         p.processBlock(buf, m);
         for (const auto e : m) {
@@ -230,21 +237,38 @@ static int runFake()
     const double t0 = nowMs();
     ep.receiveForTest(msgOf(ask));
     got = waitSent(ep, 1, 500);
-    const double dt = nowMs() - t0;
+    const double t1 = nowMs(), dt = t1 - t0;
     const uint32_t tk1 = got.size() == 1 ? ticksOf(got[0]) : 0;
     check(got.size() == 1 && tk1 > 0 && dt < 50, "answered with processBlock idle, in " + std::to_string((int)dt) + " ms");
+    // the device ms between two answers against the wall ms between them, as measured (a busy machine oversleeps):
+    // never more (the catch-up and one step of tolerance: the interval is measured from before the first answer to
+    // after the second)
+    const double s0 = nowMs();
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    const double overslept = nowMs() - s0 - 200;
     ep.receiveForTest(msgOf(ask));
     got = waitSent(ep, 1, 500);
+    const double t2 = nowMs();
     const uint32_t tk2 = got.size() == 1 ? ticksOf(got[0]) : 0;
-    check(tk2 > tk1 && tk2 - tk1 >= 150 && tk2 - tk1 <= 300,
-          "the idle clock keeps real time: " + std::to_string(tk2 - tk1) + " device ms in ~200 ms");
+    const double wall = t2 - t0, slack = EditorPort::kIdleCatchUp + EditorPort::kIdleMaxStep;
+    check(tk2 > tk1 && tk2 - tk1 <= wall + slack,
+          "the idle clock never runs ahead of real time: " + std::to_string(tk2 - tk1) + " device ms in " +
+              std::to_string((int)wall) + " wall ms (+ " + std::to_string((int)slack) + " tolerance)");
+    // (a starved machine, this test's own 200 ms sleep 50 ms late or more: the idle clock drops what it cannot catch
+    // up, by design, so it is not held to keeping up there)
+    if (overslept < 50)
+        check(tk2 - tk1 >= wall / 2, "  and keeps up with it (at least half)");
+    else
+        std::printf("  (this machine is starved: a 200 ms sleep took %d ms; keeping up not checked)\n", (int)(200 + overslept));
 
     h.play(60);                                  // (the host plays again)
     const uint64_t idle0 = ep.idleMs();
+    h.idleRoom = 0;
     h.play(150);
-    check(!ep.idling() && ep.idleMs() == idle0, "blocks again: the idle clock stopped (" +
-                                                    std::to_string(ep.idleMs() - idle0) + " idle ms while playing)");
+    const uint64_t ran = ep.idleMs() - idle0;
+    check((h.idleRoom > 0 || !ep.idling()) && ran <= (uint64_t)h.idleRoom,
+          "blocks again: the idle clock stopped (" + std::to_string(ran) + " idle ms while playing; " +
+              std::to_string((int)h.idleRoom) + " allowed by the host's late blocks)");
     h.sysexToHost = 0;
     ep.receiveForTest(msgOf(info));
     got = waitSent(ep, 1, 500, &h);
@@ -712,10 +736,10 @@ struct Manager {
         }
         return -1;
     }
-    double info(std::string &version)
+    double info(std::string &version, double limit = 1500)
     {
         Bytes r;
-        const double t = request(fl(1), flReply(1), r, 1500);
+        const double t = request(fl(1), flReply(1), r, limit);
         version.clear();
         for (uint8_t b : flArgs(r)) {
             if (!b)
@@ -920,7 +944,7 @@ static void runManager(const MProfile &pr, MRow &row)
         return;
     }
     Host h(p);
-    h.play(3000);                                // (booted, past the splash)
+    h.play(3000);                                // (booted: the splash showing or past)
     p.setEditorPortEnabled(true);
     const auto st = p.editorPortStatus();
     row.port = st.name.toStdString();
@@ -933,6 +957,29 @@ static void runManager(const MProfile &pr, MRow &row)
     if (pr.kind == MProfile::SLOOP)
         m.bk = 34, m.listHdr = 1;
     m.settle(100);
+    // the editors' connect: INFO, 500 ms for the answer, three tries (Felucca's, JIANT's, Melodee's editor.html; SLOOP's
+    // two of 1000 ms), and a person pressing Connect again until it answers (20 s at most). A firmware answers only from
+    // its main loop: not under its boot splash (JIANT's ~2 s, 600 frames), which on a busy machine, the host's blocks
+    // late, takes longer in wall time
+    int tries = 0;
+    double hs = -1;
+    std::string hv;
+    for (const double t0 = nowMs(); hs < 0 && nowMs() - t0 < 20000;) {
+        tries++;
+        hs = m.info(hv, 500);
+    }
+    check(hs >= 0, std::string(pr.id) + ": the editor's connect: INFO answered at try " + std::to_string(tries) + " (\"" +
+                       hv + "\")");
+    if (hs < 0) {
+        const auto cs = p.getCoreInfo();
+        const auto ps = p.editorPortStatus();
+        std::printf("    (core %s, halted %d code 0x%X; device %u ms; port in %u out %u dropped %u, idle %llu ms)\n",
+                    cs.info.id.c_str(), (int)cs.halted, (unsigned)cs.haltCode,
+                    p.deviceForTest() ? p.deviceForTest()->ms() : 0u, ps.in, ps.out, ps.dropped,
+                    (unsigned long long)ps.idleMs);
+        return;
+    }
+    m.settle(100);                               // (any late answer to an earlier try: gone before the next request)
 
     // the preset the manager will change: made once, the host playing (the editor's own store / a DX7 bulk dump)
     uint32_t target = 0;
@@ -986,8 +1033,14 @@ static void runManager(const MProfile &pr, MRow &row)
         prep = prep && m.x0xBackup(x0xB) >= 0 && x0xB != x0xA;
     }
     check(prep, std::string(pr.id) + ": a preset to change (" + m.why + ")");
-    if (!prep)
+    if (!prep) {
+        const auto cs = p.getCoreInfo();
+        const auto ps = p.editorPortStatus();
+        std::printf("    (core %s, halted %d code 0x%X; port in %u out %u dropped %u, idle %llu ms)\n",
+                    cs.info.id.c_str(), (int)cs.halted, (unsigned)cs.haltCode, ps.in, ps.out, ps.dropped,
+                    (unsigned long long)ps.idleMs);
         return;
+    }
     row.putId = target;
 
     for (int mode = 0; mode < 2; mode++) {      // 0: the host playing, 1: idle (no processBlock at all)
@@ -1055,10 +1108,12 @@ static void runManager(const MProfile &pr, MRow &row)
     waitListed(st.name, false);
 }
 
-static int runManagers()
+static int runManagers(const char *only)
 {
     std::vector<MRow> rows;
     for (const MProfile &pr : kManagers) {
+        if (only && std::strcmp(only, pr.id) != 0)
+            continue;
         if (!built_cores().count(pr.id)) {
             std::printf("[%s: not in this build]\n", pr.id);
             continue;
@@ -1103,7 +1158,7 @@ int main(int argc, char **argv)
         setenv("FM1EMU_EDITOR_FAKE", "1", 1);
     juce::ScopedJuceInitialiser_GUI gui;
     std::printf("editor_port_test (%s): FM1EMU_HOME=%s\n", coremidi ? "CoreMIDI" : "fake port", scratch.getFullPathName().toRawUTF8());
-    const int rc = managers ? runManagers() : coremidi ? runCoreMidi() : runFake();
+    const int rc = managers ? runManagers(argc > 2 ? argv[2] : nullptr) : coremidi ? runCoreMidi() : runFake();
     if (rc == 77)
         return 77;
     std::printf("%s: %d failure(s)\n", fails ? "FAIL" : "PASS", fails);
