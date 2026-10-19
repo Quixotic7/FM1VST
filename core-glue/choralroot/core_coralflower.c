@@ -22,6 +22,7 @@
 #include "exit.h"
 #include "env.h"                         /* getenv -> NULL (common/env.h) */
 #include "nor_stdio.h"
+#include "crf_sx_pre.h"                   /* the managers' SysEx: CRB_SEND on the glue's ring (crf_glue.h) */
 
 #define FELUCCA_VERSION "CoralFlower " FM1CORE_VERSION
 #include "../../cores/CoralFlower/tools/emu/emu_fw.c"
@@ -47,4 +48,7 @@ static int fm1core_cf_sync(void)
 #define FM1CORE_CRF_LEVELS 4
 #define FM1CORE_CRF_PA2 1
 #define FM1CORE_CRF_FLASH_SYNC fm1core_cf_sync
+#define FM1CORE_CRF_SX 1                  /* cf_backup.c: the installer's backup and restore */
+#define FM1CORE_CRF_OTA_C "../../cores/CoralFlower/firmware/src/ota.c"
+#define FELUCCA_ID "FM-1_930"             /* (coralflower.c: the package identity) */
 #include "crf_glue.h"
