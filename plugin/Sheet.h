@@ -7,8 +7,9 @@
 //              "Ignore the FM-1's own MIDI"), EDITORS (macOS: "Show to editors", the port's name, a hint, the firmware's
 //              editor as a link; EditorPort.h), PLAYING (Transpose, MIDI notes play keys, ...and reach the firmware's MIDI
 //              in), HOST CONTROL (Button parameters, Encoders, steps per turn), LOOK (the themes, a custom one), VIEW
-//              (Device / Screen, the big LCD), DEVICE (Restart, Reset flash: confirmed inline), STANDALONE (the
-//              Standalone app's audio / MIDI settings and its state files; only there), ABOUT
+//              (Device / Screen, the big LCD, Screen: Copy and its scale menu, Editor.h), DEVICE (Restart, Reset flash:
+//              confirmed inline), STANDALONE (the Standalone app's audio / MIDI settings and its state files; only
+//              there), ABOUT
 //   Firmware   the browser: a search field, the engine filter (All / Native / Emulated), category chips, a card per
 //              firmware (the loaded one outlined): FM1VST's native cores and the Hub's firmwares in one list (one card
 //              per firmware, its engines as badges: the one running filled), the catalog's state, and "Your own .fwsc"
@@ -60,6 +61,7 @@ public:
     void beginDeleteConfirm();
     void beginResetConfirm();
     void scrollToEditors();                       // the main page scrolled to its Editors section
+    void scrollToView();                          // ... to its View section (the Screen row)
     void setBrowserFilter(const juce::String &search, int category);
     void setEngineFilter(int engine);             // 0 All, 1 Native, 2 Emulated
     void pickInBrowser(const juce::String &key, int engine = -1);   // a card's click (engine: -1 the default)

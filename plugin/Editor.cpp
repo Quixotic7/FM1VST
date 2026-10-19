@@ -2,6 +2,7 @@
 // The editor (see Editor.h).
 #include "Editor.h"
 
+#include "ScreenCapture.h"
 #include "StandaloneHooks.h"
 
 #include <cmath>
@@ -97,8 +98,48 @@ void ScreenView::mouseDown(const juce::MouseEvent &e)
 {
     if (isShowing())
         grabKeyboardFocus();
-    if (e.mods.isPopupMenu() && onContextMenu)
+    if (!e.mods.isPopupMenu())
+        return;
+    if (onScreenMenu && bezelArea().contains(e.position))   // (the screen: copy it; the body around it: the settings)
+        onScreenMenu(e);
+    else if (onContextMenu)
         onContextMenu();
+}
+
+// ================================================================ toast ===
+void Toast::show(const juce::String &text)
+{
+    text_ = text;
+    shownAt_ = juce::Time::getMillisecondCounterHiRes();
+    alpha_ = 1.0f;
+    setVisible(true);
+    repaint();
+    startTimerHz(30);
+}
+
+int Toast::preferredWidth() const { return juce::roundToInt(Look::textWidth(Look::font(13.0f, Look::SemiBold), text_)) + 32; }
+
+void Toast::timerCallback()
+{
+    const double t = juce::Time::getMillisecondCounterHiRes() - shownAt_;
+    alpha_ = t < 1400.0 ? 1.0f : juce::jmax(0.0f, 1.0f - (float)(t - 1400.0) / 400.0f);
+    if (alpha_ <= 0.0f) {
+        stopTimer();
+        setVisible(false);
+    }
+    repaint();
+}
+
+void Toast::paint(juce::Graphics &g)
+{
+    const Rectangle<float> r = getLocalBounds().toFloat().reduced(0.5f);
+    g.setColour(Look::col(Look::C::raised).withMultipliedAlpha(0.96f * alpha_));
+    g.fillRoundedRectangle(r, r.getHeight() / 2);
+    g.setColour(Look::col(Look::C::border).withMultipliedAlpha(alpha_));
+    g.drawRoundedRectangle(r, r.getHeight() / 2, 1.0f);
+    g.setColour(Look::col(Look::C::text).withMultipliedAlpha(alpha_));
+    g.setFont(Look::font(13.0f, Look::SemiBold));
+    g.drawText(text_, getLocalBounds(), juce::Justification::centred, false);
 }
 
 // =============================================================== editor ===
@@ -142,6 +183,9 @@ FM1Editor::FM1Editor(FM1Processor &p)
         }
     };
     screen_.onContextMenu = [this] { openSettings(); };
+    panel_.onScreenMenu = [this](const juce::MouseEvent &e) { showScreenMenu(e); };
+    screen_.onScreenMenu = [this](const juce::MouseEvent &e) { showScreenMenu(e); };
+    addChildComponent(toast_);
     corner_.onClick = [this] { openSettings(); };
     corner_.setTooltip("Settings (or right-click the panel)");
 
@@ -398,4 +442,187 @@ void FM1Editor::timerCallback()
     layoutChrome();                               // (the panel snaps to the screen's pixel scale at its first paint)
     if (sheet_.isOpen())
         sheet_.refresh();
+}
+
+// ------------------------------------------------------- copy the screen ---
+static juce::String px(int scale)
+{
+    const int n = fm1screen::kW * scale;
+    return juce::String(n) + juce::String::fromUTF8("\xc3\x97") + juce::String(n);
+}
+
+juce::PopupMenu FM1Editor::screenMenu()
+{
+    const juce::String times = juce::String::fromUTF8("\xc3\x97"), ellipsis = juce::String::fromUTF8("\xe2\x80\xa6");
+    juce::PopupMenu m;
+    m.setLookAndFeel(&look_);
+    for (int s : {1, 2, 4}) {
+        juce::PopupMenu::Item it(s == 1 ? juce::String("Copy screen") : "Copy screen " + times + juce::String(s));
+        it.itemID = s == 1 ? kCopy1 : s == 2 ? kCopy2 : kCopy4;
+        if (s == copyScale_)
+            it.shortcutKeyDescription = juce::String::fromUTF8("\xe2\x87\xa7\xe2\x8c\x98" "C");   // (shift, cmd)
+        m.addItem(it);
+    }
+    juce::PopupMenu save;
+    save.setLookAndFeel(&look_);
+    save.addItem(kSave1, px(1) + ellipsis);
+    save.addItem(kSave2, px(2) + " (" + times + "2)" + ellipsis);
+    save.addItem(kSave4, px(4) + " (" + times + "4)" + ellipsis);
+    m.addSubMenu("Save screen as PNG", save);
+    juce::PopupMenu adv;
+    adv.setLookAndFeel(&look_);
+    adv.addItem(kCopyRaw, "Copy raw RGB565 (.bin)");
+    adv.addItem(kSaveRaw, "Save raw RGB565 as .bin" + ellipsis);
+    m.addSubMenu("Advanced", adv);
+    m.addSeparator();
+    m.addItem(kFreeze, "Freeze screen", true, panel_.frozen());
+    m.addSeparator();
+    m.addItem(kSettings, "Settings" + ellipsis);
+    return m;
+}
+
+void FM1Editor::showScreenMenu(const juce::MouseEvent &e)
+{
+    if (e.mods.isAltDown()) {                     // (Option + right-click: the shown frame at once, no menu)
+        copyScreen(1);
+        return;
+    }
+    hideChromeNow();
+    juce::Component::SafePointer<FM1Editor> self(this);
+    // (inside the editor, not a window of its own: a host's window keeps the focus, and the tests can draw it)
+    screenMenu().showMenuAsync(juce::PopupMenu::Options()
+                                   .withParentComponent(this)
+                                   .withTargetScreenArea(juce::Rectangle<int>(e.getScreenX(), e.getScreenY(), 1, 1)),
+                               [self](int r) {
+                                   if (self && r > 0)
+                                       self->screenCommand(r);
+                               });
+}
+
+void FM1Editor::screenCommand(int cmd)
+{
+    switch (cmd) {
+    case kCopy1: copyScreen(1); break;
+    case kCopy2: copyScreen(2); break;
+    case kCopy4: copyScreen(4); break;
+    case kSave1: saveScreen(1); break;
+    case kSave2: saveScreen(2); break;
+    case kSave4: saveScreen(4); break;
+    case kCopyRaw: copyScreenRaw(); break;
+    case kSaveRaw: saveScreenRaw(); break;
+    case kFreeze: setScreenFrozen(!panel_.frozen()); break;
+    case kSettings: openSettings(); break;
+    default: break;
+    }
+}
+
+bool FM1Editor::copyScreen(int scale)
+{
+    scale = scale == 2 || scale == 4 ? scale : 1;
+    const bool ok = fm1screen::copyImage(panel_.shownLcd().data(), scale);
+    showToast(ok ? "Screen copied (" + px(scale) + ")" : juce::String("Couldn't copy the screen"));
+    return ok;
+}
+
+bool FM1Editor::copyScreenRaw()
+{
+    const bool ok = fm1screen::copyRaw(panel_.shownLcd().data());
+    showToast(ok ? juce::String("Raw RGB565 copied (115,200 bytes)") : juce::String("Couldn't copy the screen"));
+    return ok;
+}
+
+juce::String FM1Editor::screenFileName(const juce::String &ext) const
+{
+    juce::String id, version;
+    if (proc_.isEmulated()) {
+        const FM1Processor::EmuFirmware fw = proc_.getEmuFirmware();
+        id = fw.id;
+        version = fw.version;
+    } else {
+        const FM1Processor::CoreStatus st = proc_.getCoreInfo();
+        id = juce::String(st.info.id);
+        version = juce::String(st.info.version);
+    }
+    return fm1screen::defaultFileName(id, version, juce::Time::getCurrentTime(), ext);
+}
+
+void FM1Editor::saveScreen(int scale)
+{
+    scale = scale == 2 || scale == 4 ? scale : 1;
+    // (the frame as shown now: the chooser is open for a while)
+    auto frame = std::make_shared<std::array<uint16_t, EMU_LCD_W * EMU_LCD_H>>(panel_.shownLcd());
+    const juce::File dir = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
+    chooser_ = std::make_unique<juce::FileChooser>("Save the screen as PNG", dir.getChildFile(screenFileName(".png")), "*.png");
+    juce::Component::SafePointer<FM1Editor> self(this);
+    chooser_->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles |
+                              juce::FileBrowserComponent::warnAboutOverwriting,
+                          [self, frame, scale](const juce::FileChooser &fc) {
+                              juce::File f = fc.getResult();
+                              if (f == juce::File())
+                                  return;
+                              if (!f.hasFileExtension("png"))
+                                  f = f.withFileExtension("png");
+                              const bool ok = fm1screen::savePng(f, frame->data(), scale);
+                              if (self)
+                                  self->showToast(ok ? "Saved " + f.getFileName() : "Couldn't save " + f.getFileName());
+                          });
+}
+
+void FM1Editor::saveScreenRaw()
+{
+    auto frame = std::make_shared<std::array<uint16_t, EMU_LCD_W * EMU_LCD_H>>(panel_.shownLcd());
+    const juce::File dir = juce::File::getSpecialLocation(juce::File::userDesktopDirectory);
+    chooser_ = std::make_unique<juce::FileChooser>("Save the screen's raw RGB565 (little-endian)", dir.getChildFile(screenFileName(".bin")),
+                                                   "*.bin");
+    juce::Component::SafePointer<FM1Editor> self(this);
+    chooser_->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles |
+                              juce::FileBrowserComponent::warnAboutOverwriting,
+                          [self, frame](const juce::FileChooser &fc) {
+                              juce::File f = fc.getResult();
+                              if (f == juce::File())
+                                  return;
+                              if (!f.hasFileExtension("bin"))
+                                  f = f.withFileExtension("bin");
+                              const bool ok = fm1screen::saveRaw(f, frame->data());
+                              if (self)
+                                  self->showToast(ok ? "Saved " + f.getFileName() : "Couldn't save " + f.getFileName());
+                          });
+}
+
+void FM1Editor::setScreenFrozen(bool on)
+{
+    panel_.setFrozen(on);
+    showToast(on ? juce::String("Screen frozen (the firmware runs on)") : juce::String("Screen live"));
+    sheet_.refresh();
+}
+
+void FM1Editor::showToast(const juce::String &text)
+{
+    // over the LCD: the screen view's, the big one, or the panel's own
+    Rectangle<float> lcd;
+    if (mode_ == FM1Processor::kViewScreen) {
+        lcd = screen_.lcdArea() + screen_.getPosition().toFloat();
+    } else {
+        const PanelComponent::Layout &L = panel_.layout();
+        if (L.scale > 0)
+            lcd = (panel_.bigLcd() ? L.lcdBig : L.lcdSmall).toFloat().transformedBy(juce::AffineTransform::scale(1.0f / L.scale)) +
+                  panel_.getPosition().toFloat();
+    }
+    if (lcd.isEmpty())
+        lcd = getLocalBounds().toFloat();
+    toast_.show(text);
+    const int w = juce::jmin(toast_.preferredWidth(), getWidth() - 16), h = 32;
+    toast_.setBounds(Rectangle<int>(w, h).withCentre(lcd.getCentre().toInt()).constrainedWithin(getLocalBounds()));
+    toast_.toFront(false);
+}
+
+bool FM1Editor::keyPressed(const juce::KeyPress &k)
+{
+    const juce::ModifierKeys m = k.getModifiers();
+    const int c = k.getKeyCode();
+    if (m.isCommandDown() && m.isShiftDown() && !m.isAltDown() && (c == 'C' || c == 'c')) {   // Cmd+Shift+C
+        copyScreen(copyScale_);
+        return true;
+    }
+    return false;
 }

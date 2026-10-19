@@ -182,7 +182,13 @@ juce_add_plugin(FM1VST
     AU_COPY_DIR "${FM1_AU_DIR}")
 target_sources(FM1VST PRIVATE plugin/Processor.cpp plugin/Tier2Parameter.cpp plugin/HostRefresh.cpp plugin/Editor.cpp plugin/Theme.cpp
                               plugin/PanelComponent.cpp plugin/RemoteLink.cpp plugin/Look.cpp plugin/Widgets.cpp plugin/Sheet.cpp
-                              plugin/StandaloneHooks.cpp plugin/Hub.cpp plugin/EmuClock.cpp plugin/EditorPort.cpp)
+                              plugin/StandaloneHooks.cpp plugin/Hub.cpp plugin/EmuClock.cpp plugin/EditorPort.cpp
+                              plugin/ScreenCapture.cpp)
+# copy the screen (plugin/ScreenCapture.h): the image clipboard is NSPasteboard's (JUCE's is text only)
+if(APPLE)
+    target_sources(FM1VST PRIVATE plugin/Clipboard.mm)
+    target_link_libraries(FM1VST PRIVATE "-framework AppKit" "-framework CoreGraphics" "-framework ImageIO")
+endif()
 # the theme presets (themes/presets.json), embedded: BinaryData::presets_json; the Hub's fallback list
 # (plugin/hub/fallback-catalog.json, the un-gated firmwares only: plugin/Hub.h), BinaryData::fallbackcatalog_json
 juce_add_binary_data(FM1VST_Themes HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES themes/presets.json
@@ -452,6 +458,18 @@ target_compile_definitions(panel_render_test PRIVATE $<TARGET_PROPERTY:FM1VST,CO
 add_dependencies(panel_render_test ${FM1_CORE_TARGETS})
 add_test(NAME panel_render_test COMMAND panel_render_test)
 set_tests_properties(panel_render_test PROPERTIES SKIP_RETURN_CODE 77)   # (a public build: the cores it needs left out)
+
+# copy the screen (plugin/ScreenCapture.h), headless: RGB565 -> RGB and the x2 / x4 nearest scaling pixel-exact (a known
+# frame, ChoralRoot's boot frame against what the panel draws), the raw bytes, a PNG round trip, a saved file, and the
+# clipboard writer on a private named pasteboard (never the general one): public.png and public.tiff read back
+add_executable(screen_copy_test tests/screen_copy_test.cpp)
+target_link_libraries(screen_copy_test PRIVATE FM1VST fm1engine)
+target_include_directories(screen_copy_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
+target_compile_definitions(screen_copy_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS> FM1_BUILT_CORES="${FM1_BUILT_CORES}"
+    FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/screen_copy_test_home")
+add_dependencies(screen_copy_test ${FM1_CORE_TARGETS})
+add_test(NAME screen_copy_test COMMAND screen_copy_test)
+set_tests_properties(screen_copy_test PROPERTIES SKIP_RETURN_CODE 77)   # (a build without choralroot)
 
 # the editor around the panel, headless: the device and screen views, the corner button (clear of every control at
 # every size), the settings sheet and its pages, right-click, the view state, written to build/panel/ui-*.png

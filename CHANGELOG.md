@@ -3,6 +3,33 @@
 FM1VST's releases. The version is `project(FM1VST VERSION ..)` in CMakeLists.txt (the plugin shows it in its
 settings sheet); a release is the tag `v<version>` on it (.github/workflows/release.yml builds and publishes it).
 
+## Unreleased
+
+### Copy the screen
+
+The firmware's screen can now go straight into an image editor (Photoshop, Figma, Affinity, Pixelmator, Preview's
+File > New from Clipboard) for mock-ups: exactly the 240 × 240 frame the plugin shows, pixel for pixel, in the
+colours it draws them.
+
+- **Right-click (or ctrl-click) the screen**, in the device view (the panel's screen or the big LCD) and in the
+  screen view, for its menu: **Copy screen** (240 × 240), **Copy screen ×2 / ×4** (480 / 960, each pixel a sharp
+  block), **Save screen as PNG** (×1, ×2 or ×4; the file chooser starts at
+  `~/Desktop/<firmware>-<version>-<date>-<time>.png`), **Advanced** (the raw frame), **Freeze screen** and
+  **Settings…**. It works in the clean views too, with the settings out of sight. A right-click elsewhere off the
+  controls still opens the settings.
+- **Option + right-click** copies at once, without the menu.
+- **Shift + Cmd + C** copies while the plugin has the keyboard focus. The Standalone app always gets it; some hosts
+  keep the key for themselves.
+- **The settings sheet** has a **Screen** row under View: Copy, and the scale (×1, ×2, ×4) that Copy and the
+  shortcut use, with Save as PNG, the raw frame and Freeze in its menu.
+- **On the clipboard:** a PNG (public.png) and a TIFF (public.tiff), both sRGB with no gamma or colour conversion, so
+  apps that paste only one kind still get it. A short note over the screen confirms each copy ("Screen copied
+  (240×240)").
+- **Freeze screen** holds the shown frame while the firmware and the sound run on, so you can pick the moment to copy.
+  Choose it again to unfreeze.
+- **Advanced: Copy raw RGB565 (.bin)** puts the framebuffer itself on the clipboard: 115,200 bytes, RGB565
+  little-endian, row by row. **Save raw RGB565 as .bin…** writes the same bytes to a file.
+
 ## 0.5.0 (2026-10-19): the firmwares' own editors and managers
 
 ### Show to editors (macOS)

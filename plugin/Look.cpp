@@ -393,6 +393,16 @@ void Look::drawPopupMenuItemWithOptions(juce::Graphics &g, const juce::Rectangle
     const Rectangle<float> tick = t.removeFromLeft(18);
     if (item.isTicked)
         strokeIcon(g, Check, tick.withSizeKeepingCentre(14, 14), accent_, 1.8f);
+    // (a submenu: a chevron at the right; a shortcut: its keys at the right, muted)
+    if (item.subMenu != nullptr)
+        strokeIcon(g, ChevronRight, t.removeFromRight(14).withSizeKeepingCentre(12, 12), col(C::muted), 1.5f);
+    else if (item.shortcutKeyDescription.isNotEmpty()) {
+        g.setFont(getPopupMenuFont());
+        g.setColour(col(C::muted));
+        const float sw = textWidth(getPopupMenuFont(), item.shortcutKeyDescription);
+        g.drawText(item.shortcutKeyDescription, t.removeFromRight(sw + 2).toNearestInt(), juce::Justification::centredRight, false);
+        t.removeFromRight(12);
+    }
     g.setColour(!item.isEnabled ? col(C::muted).withAlpha(0.7f) : isHighlighted ? juce::Colours::white : col(C::text));
     g.setFont(getPopupMenuFont());
     g.drawFittedText(item.text, t.reduced(4, 0).toNearestInt(), juce::Justification::centredLeft, 1, 0.9f);
@@ -412,7 +422,7 @@ void Look::getIdealPopupMenuItemSizeWithOptions(const juce::String &text, bool i
         h = 9;
         return;
     }
-    w = juce::roundToInt(textWidth(getPopupMenuFont(), text)) + 12 + 18 + 4 + 28;
+    w = juce::roundToInt(textWidth(getPopupMenuFont(), text)) + 12 + 18 + 4 + 28 + 14;   // (+ a submenu's chevron)
     h = 32;
 }
 

@@ -476,6 +476,26 @@ protected:
     juce::Viewport vp_;
     Stack stack_;
 };
+
+// the VIEW section's Screen row: Copy, and the scale (its menu: the scale, Save as PNG, the raw frame, Freeze)
+class ScreenCopyControls : public juce::Component {
+public:
+    explicit ScreenCopyControls(Look &l) : copy(l, "Copy", Look::Primary), scale(l, String::fromUTF8("\xc3\x97" "1"))
+    {
+        addAndMakeVisible(copy);
+        addAndMakeVisible(scale);
+        scale.setTooltip("The copy's scale (nearest-neighbour), and more: Save as PNG, the raw frame, Freeze");
+    }
+    void resized() override
+    {
+        Rectangle<int> r = getLocalBounds();
+        scale.setBounds(r.removeFromRight(kScaleW));
+        r.removeFromRight(8);
+        copy.setBounds(r);
+    }
+    static constexpr int kCopyW = 72, kScaleW = 58, kW = kCopyW + 8 + kScaleW;
+    Pill copy, scale;
+};
 }   // namespace
 
 // =============================================================== main ===
@@ -488,6 +508,12 @@ public:
     void beginDeleteConfirm();
     void beginResetConfirm();
     void endInline();
+    void scrollToView()                           // (tests: the View section at the top of the view)
+    {
+        endInline();
+        refresh(false);
+        vp_.setViewPosition(0, juce::jmax(0, hView_.getY() - 8));
+    }
     void scrollToEditors()                        // (tests: the Editors section at the top of the view)
     {
         endInline();
@@ -503,6 +529,7 @@ private:
     void exportPreset();
     void importPreset();
     void showClockMenu();
+    void showScreenMenu();
 
     Sheet &sheet_;
     FM1Editor &ed_;
@@ -570,6 +597,8 @@ private:
     Row view_{look_, "Show", &viewSeg_, 150, 30};
     Switch bigSw_{look_};
     Row big_{look_, "Big LCD above the panel", &bigSw_, Switch::kW, 24};
+    ScreenCopyControls screenCtl_{look_};
+    Row screen_{look_, "Screen", &screenCtl_, ScreenCopyControls::kW, 30};
 
     Heading hDevice_{look_, "Device"};
     Pill restartP_{look_, "Restart"};
@@ -783,6 +812,12 @@ Sheet::MainPage::MainPage(Sheet &s, FM1Editor &ed) : ScrollPage(ed.look()), shee
     stack_.add(big_);
     big_.setCaption("also the ` key");
     bigSw_.onChange = [this](bool on) { ed_.setBigLcd(on); };
+    stack_.add(screen_);
+    screen_.setCaption(String::fromUTF8("to the clipboard, pixel for pixel \xc2\xb7 \xe2\x87\xa7\xe2\x8c\x98" "C"));
+    screen_.setTooltip("Copies the firmware's screen as an image (PNG and TIFF, sRGB), for an image editor: Photoshop, Figma, "
+                       "Affinity, Pixelmator, Preview (File > New from Clipboard). Also: right-click the screen.");
+    screenCtl_.copy.onClick = [this] { ed_.copyScreen(ed_.copyScale()); };
+    screenCtl_.scale.onClick = [this] { showScreenMenu(); };
 
     // DEVICE
     stack_.add(hDevice_);
@@ -962,6 +997,35 @@ void Sheet::MainPage::showClockMenu()
             self->refresh();
         }
     });
+}
+
+void Sheet::MainPage::showScreenMenu()
+{
+    const String times = String::fromUTF8("\xc3\x97"), ellipsis = String::fromUTF8("\xe2\x80\xa6");
+    enum { kScale = 100 };
+    juce::PopupMenu m;
+    m.setLookAndFeel(&look_);
+    for (int sc : {1, 2, 4})
+        m.addItem(kScale + sc, times + String(sc) + "   " + String(240 * sc) + times + String(240 * sc), true, ed_.copyScale() == sc);
+    m.addSeparator();
+    const int cur = ed_.copyScale();
+    m.addItem(cur == 4 ? FM1Editor::kSave4 : cur == 2 ? FM1Editor::kSave2 : FM1Editor::kSave1, "Save screen as PNG" + ellipsis);
+    m.addItem(FM1Editor::kCopyRaw, "Copy raw RGB565 (.bin)");
+    m.addItem(FM1Editor::kSaveRaw, "Save raw RGB565 as .bin" + ellipsis);
+    m.addSeparator();
+    m.addItem(FM1Editor::kFreeze, "Freeze screen", true, ed_.screenFrozen());
+    juce::Component::SafePointer<MainPage> self(this);
+    m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&screenCtl_.scale).withMinimumWidth(screenCtl_.getWidth()),
+                    [self](int r) {
+                        if (!self || r <= 0)
+                            return;
+                        if (r > kScale)
+                            self->ed_.setCopyScale(r - kScale);
+                        else
+                            self->ed_.screenCommand(r);
+                        if (self)
+                            self->refresh(false);
+                    });
 }
 
 void Sheet::MainPage::refreshPresets()
@@ -1166,6 +1230,7 @@ void Sheet::MainPage::refresh(bool full)
     const bool dev = ed_.viewMode() == FM1Processor::kViewDevice;
     bigSw_.setEnabledLook(dev);
     big_.setEnabledLook(dev);
+    screenCtl_.scale.setText(String::fromUTF8("\xc3\x97") + String(ed_.copyScale()));
     relayout();
 }
 
@@ -2097,6 +2162,11 @@ void Sheet::beginRename() { main_->beginRename(); }
 void Sheet::beginSaveAs() { main_->beginSaveAs(); }
 void Sheet::beginDeleteConfirm() { main_->beginDeleteConfirm(); }
 void Sheet::beginResetConfirm() { main_->beginResetConfirm(); }
+void Sheet::scrollToView()
+{
+    showPage(kMain);
+    main_->scrollToView();
+}
 void Sheet::scrollToEditors()
 {
     showPage(kMain);

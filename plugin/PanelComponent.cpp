@@ -2,6 +2,8 @@
 // The FM-1 panel (see PanelComponent.h): tools/emu/emu.c's drawing, layout and input, ported.
 #include "PanelComponent.h"
 
+#include "ScreenCapture.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -652,18 +654,15 @@ void PanelComponent::refresh()
             knobAngle_[(size_t)r] = std::fmod(knobAngle_[(size_t)r] + (float)d * (2 * kPi / 24), 2 * kPi);
     }
     turnsInit_ = true;
-    if (view_.lcdSeq != lcdSeen_) {
+    if (view_.lcdSeq != lcdSeen_ && !frozen_) {   // (frozen: the shown frame stays; the next one after the thaw)
         lcdSeen_ = view_.lcdSeq;
-        // RGB565 big-endian (as sent) -> ARGB, the 5 / 6 bits replicated (emu_img.c)
+        shown_ = view_.lcd;
+        // RGB565 big-endian (as sent) -> ARGB, the 5 / 6 bits replicated (emu_img.c; ScreenCapture.h argbOf)
         juce::Image::BitmapData d(lcd240_, juce::Image::BitmapData::readWrite);
         for (int y = 0; y < EMU_LCD_H; y++) {
             uint32_t *row = (uint32_t *)(void *)d.getLinePointer(y);
-            for (int x = 0; x < EMU_LCD_W; x++) {
-                const uint16_t v = view_.lcd[(size_t)(y * EMU_LCD_W + x)];
-                const uint32_t p = (uint32_t)((v >> 8) | ((v & 0xFFu) << 8));
-                const uint32_t r = (p >> 11) & 31u, g = (p >> 5) & 63u, b = p & 31u;
-                row[x] = 0xFF000000u | ((r << 3) | (r >> 2)) << 16 | ((g << 2) | (g >> 4)) << 8 | ((b << 3) | (b >> 2));
-            }
+            for (int x = 0; x < EMU_LCD_W; x++)
+                row[x] = fm1screen::argbOf(shown_[(size_t)(y * EMU_LCD_W + x)]);
         }
         lcdImagesDirty_ = true;
         if (onLcdChanged)
@@ -910,6 +909,10 @@ void PanelComponent::mouseDown(const juce::MouseEvent &e)
     float ux, uy;
     int kind, idx;
     mouseKind_ = -1;
+    if (e.mods.isPopupMenu() && onScreenMenu && overScreen(e.position)) {   // (right-click on the LCD: copy the screen)
+        onScreenMenu(e);
+        return;
+    }
     if (!toUnits(e.position, ux, uy) || !hit(ux, uy, kind, idx)) {
         if (e.mods.isPopupMenu() && onContextMenu)   // (right-click off the controls: the editor's settings)
             onContextMenu();
@@ -937,6 +940,23 @@ void PanelComponent::mouseDown(const juce::MouseEvent &e)
         holdKey(idx, SRC_MOUSE, true);
     else
         holdBtn(idx, SRC_MOUSE, true);
+}
+
+bool PanelComponent::overScreen(juce::Point<float> logical) const
+{
+    if (lay_.scale <= 0)
+        return false;
+    const juce::Point<int> px = (logical * lay_.scale).roundToInt();
+    return lay_.lcdSmall.contains(px) || (bigLcd_ && lay_.lcdBig.contains(px));
+}
+
+void PanelComponent::setFrozen(bool on)
+{
+    if (on == frozen_)
+        return;
+    frozen_ = on;
+    if (!on)
+        refresh();                               // (the latest frame at once)
 }
 
 void PanelComponent::mouseUp(const juce::MouseEvent &)
