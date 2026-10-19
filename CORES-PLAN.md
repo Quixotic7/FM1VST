@@ -22,7 +22,7 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | Felucca 1.6.1 | GPL-3.0 (engines MIT) | the original | native + wasm (`web/emu/felucca_web.c`) | A |
 | Rainbow Mode 1.1.5-rb | GPL-3.0 | Felucca 1.1.5 | native + wasm (felucca_web) | A |
 | GHOULBOX 2.3.2 | GPL-3.0 (+ OFL fonts) | Felucca 1.4.1 | native + wasm (felucca_web) | A |
-| JIANT FM 0.8.5 (c524e3c) | GPL-3.0 (+ CMUdict BSD-2) | Felucca 1.1.5.1 + SLOOP songs | native + wasm (felucca_web) | A |
+| JIANT FM 0.9.9 (0912abb) | GPL-3.0 (+ CMUdict BSD-2) | Felucca 1.1.5.1 + SLOOP songs | native + wasm (felucca_web) | A |
 | DUELL 0.2.20-beta | GPL-3.0 + naming terms | Felucca main | felucca_web (native via its check) | A |
 | ChoralRoot 0.25.1 | GPL-3.0 | Felucca 1.0 + Melodee ports | native emulator + wasm | B |
 | PurpleMonkey 0.11 | GPL-3.0 | ChoralRoot 44453d0 + SLOOP drums | native emulator + wasm | B |
