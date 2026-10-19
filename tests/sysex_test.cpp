@@ -944,6 +944,86 @@ installer_run(const char *reader, bool log)
         }
     };
 }
+
+// ---- FM-106: web/Librarian.html (Roland-style F0 41 ..: 34 dump request, 30 store to a slot, 35 commit to flash) and
+// the installer's M-UPGRADE identity (platform_poll: ota_service for the frames that are not 41 ..)
+bool fm106_dump(Link &k, uint32_t idx, Bytes &r)           // requestSlotFromHardware: F0 41 34 chByte slot F7
+{
+    const uint8_t opt = (uint8_t)(idx / 64 % 4 + 1), slot = (uint8_t)(idx % 64);
+    auto match = [=](const Bytes &f) {
+        return f.size() >= 24 && f[1] == 0x41 && f[2] == 0x30 && (f[3] >> 4 & 7) == opt && f[4] == slot;
+    };
+    return k.request({0xF0, 0x41, 0x34, (uint8_t)(opt << 4), slot, 0xF7}, match, r, 500);
+}
+std::string fm106_name(const Bytes &d)
+{
+    std::string n;
+    for (size_t i = 23; i < 39 && i + 1 < d.size(); i++)
+        n += (char)d[i];
+    return n;
+}
+void fm106_run(const std::string &module, Device &dev, Link &k, Session &s, const Profile &p)
+{
+    std::string id, why;
+    check(mupg_identity_exact(k, id) && id == p.mupg, "M-UPGRADE identity: \"" + id + "\" (the package's " + p.mupg + ")");
+    // readAllFromHardware (and the factory banks): every slot, one dump each
+    uint32_t got = 0, named = 0;
+    Bytes f3;
+    for (uint32_t i = 0; i < 256; i++) {
+        Bytes r;
+        if (fm106_dump(k, i, r)) {
+            got++;
+            named += r.size() == 40;
+            if (i == 3)
+                f3 = r;
+        }
+    }
+    check(got == 256, "dump request (34) of every slot, factory A / B and user A / B: " + std::to_string(got) +
+                          " of 256 answered (" + std::to_string(named) + " named)");
+    if (f3.size() != 40) {
+        check(false, "factory A 4 has no named dump to start from");
+        return;
+    }
+    // saveCurrentSlotToHardware: factory A 4's sound, its cutoff changed, named, into user A 6
+    Bytes st = {0xF0, 0x41, 0x30, 0x30, 5};
+    st.insert(st.end(), f3.begin() + 5, f3.begin() + 23);  // 16 sliders, sw1, sw2
+    st[5 + 5] = (uint8_t)((st[5 + 5] + 37) & 0x7F);        // slider 6: VCF cutoff
+    const std::string name = "SYSEX TEST      ";             // encodePatchName: 16, space padded
+    st.insert(st.end(), name.begin(), name.end());
+    st.push_back(0xF7);
+    k.put_frame(st);
+    k.run_ms(100);
+    Bytes u;
+    const bool ok = fm106_dump(k, 128 + 5, u) && u.size() == 40;
+    check(ok && std::equal(st.begin() + 5, st.begin() + 23, u.begin() + 5) && fm106_name(u) == name,
+          "store (30) to user A 6, dumped back: the sliders, switches and name \"" + (ok ? fm106_name(u) : "") + "\"");
+    // burnToHardwareFlash. FM-106 Beta4's user bank is 16 + 128 x 82 = 10,512 bytes, its flash area 8 KiB:
+    // presets_flash_save refuses it (n > FM106_PRESETS_FLASH_SIZE) on the device as here, yet the ACK goes out
+    // (fm106_sysex.h ignores the result). So the commit writes nothing and the stored preset is gone after a power
+    // cycle, on a unit too; once a firmware writes it, the reboot below must find it.
+    const uint32_t dirty0 = dev.flash_dirty();
+    Bytes ack;
+    const bool acked = k.request({0xF0, 0x41, 0x35, 0x00, 0x01, 0xF7},
+                                 [](const Bytes &f) { return f.size() == 6 && f[1] == 0x41 && f[2] == 0x35 && !f[4]; }, ack,
+                                 2000);
+    const bool wrote = dev.flash_dirty() != dirty0;
+    check(acked, std::string("commit (35): the ACK; the NOR image ") +
+                     (wrote ? "written" : "unchanged (Beta4: the bank does not fit its 8 KiB, as on the device)"));
+    update_keys(k, s, p);
+    const Bytes image(dev.flash(), dev.flash() + dev.flash_size());
+    std::unique_ptr<LoadedCore> lc2 = load(module);
+    Device dev2(lc2->core());
+    dev2.boot_from(image.data(), (uint32_t)image.size());
+    Link k2(dev2);
+    k2.run_ms(3000);
+    Bytes u2;
+    const bool got2 = fm106_dump(k2, 128 + 5, u2);
+    if (wrote)
+        check(got2 && u2 == u, "rebooted from the flash image: user A 6 is the stored preset");
+    else
+        check(got2 && u2.size() == 24, "rebooted from the flash image: user A 6 blank again (nothing was written)");
+    k.worst = std::max(k.worst, k2.worst);
+}
 // ---- end of plat, fm1base, dinghy ----
 
 const Profile kProfiles[] = {
@@ -970,6 +1050,9 @@ const Profile kProfiles[] = {
     {"fomni", nullptr, false, "FM-1_8000400", false, nullptr, false, nullptr, installer_run("FoMni-1 ", false)},
     {"fimba", nullptr, false, "FM-1_8000601", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"fartmachine", nullptr, false, "FM-1_701", false, nullptr, false, nullptr, installer_run(nullptr, false)},
+    {"fm106", nullptr, false, "FM-1_907", false, nullptr, false, nullptr, fm106_run},
+    {"obervave", nullptr, false, "FM-1_955", false, nullptr, false, nullptr, installer_run(nullptr, false)},
+    {"frodhes", nullptr, false, "FM-1_958", false, nullptr, false, nullptr, installer_run(nullptr, false)},
 };
 
 const Profile *profile_of(const std::string &id)

@@ -190,8 +190,12 @@ void fm1core_pl_init(int demo)
 #if FM1CORE_PL_SX
     fm1sx_in_init(&fm1core_pl_sxi, FM1CORE_PL_SX_ACCEPT);
     fm1sx_out_reset(&fm1core_pl_sxo);
-    fm1core_pl_sx_held = 0;
 #if FM1CORE_PL_SX_CORO
+    if (fm1core_pl_sx_co && fm1core_pl_sx_held) {   /* (powered on again while a service waited: a fresh one) */
+        fm1coro_free(fm1core_pl_sx_co);
+        fm1core_pl_sx_co = NULL;
+    }
+    fm1core_pl_sx_held = 0;
     if (!fm1core_pl_sx_co)
         fm1core_pl_sx_co = fm1coro_new(fm1core_pl_sx_main, NULL, 0);
     if (!fm1core_pl_sx_co) {
