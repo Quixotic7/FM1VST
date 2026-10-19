@@ -364,6 +364,9 @@ struct Profile {
     bool bk_v6 = false;             // SLOOP's editor.c v6 backup numbers and LIST header (Session::use_v6)
     // a check on the core rebooted from the flash image (after the preset's), nullptr: none
     std::function<bool(Link &, Session &)> after_reboot = nullptr;
+    // a manager with a protocol of its own (X0X's backup, AMB-1's installer, FM-106's Librarian): the whole sequence
+    // (module, the booted core, its link): used instead of the steps above
+    std::function<void(const std::string &, Device &, Link &, Session &, const struct Profile &)> run = nullptr;
 };
 
 // ChoralRoot / CoralFlower / Melodee: the FM6 patch bank (backup id 8, fm6_bank.c), filled as a DX7 librarian fills it
@@ -617,6 +620,331 @@ bool sl_dxbank_kept(Link &, Session &s)
     return s.list(m) && find(m, 8) && s.get(*find(m, 8), b) && b == sl_dx_data();
 }
 // ---- end of the sloop family ----
+// ---- plat, fm1base, dinghy ----
+bool update_keys(Link &k, Session &s, const Profile &p);
+std::unique_ptr<LoadedCore> load(const std::string &module);
+
+// the update's framing (ota.c; X0X web/backup/index.html PB.frame / parseFrame / response / parseRequest):
+// F0 pack7(00 59 cmd len24 body ~sum(body)) F7, pack7 LSB first over the whole message
+Bytes upd_wire(const Bytes &m)
+{
+    Bytes f = {0xF0};
+    uint32_t acc = 0, nb = 0;
+    for (uint8_t b : m) {
+        acc |= (uint32_t)b << nb;
+        nb += 8;
+        while (nb >= 7) {
+            f.push_back(acc & 0x7Fu);
+            acc >>= 7;
+            nb -= 7;
+        }
+    }
+    if (nb)
+        f.push_back(acc & 0x7Fu);
+    f.push_back(0xF7);
+    return f;
+}
+Bytes upd_frame(uint8_t cmd, const Bytes &body)                // PB.frame
+{
+    const size_t n = body.size();
+    Bytes m = {0x00, 0x59, cmd, (uint8_t)(n & 0xFF), (uint8_t)(n >> 8 & 0xFF), 0};
+    uint32_t sum = 0;
+    for (uint8_t b : body)
+        m.push_back(b), sum += b;
+    m.push_back((uint8_t)~sum);
+    return upd_wire(m);
+}
+bool upd_parse(const Bytes &f, uint8_t &cmd, Bytes &body)     // PB.parseFrame
+{
+    if (f.size() < 2 || f.front() != 0xF0 || f.back() != 0xF7)
+        return false;
+    const Bytes u = mupg_unpack(f);
+    if (u.size() < 7 || u[0] != 0 || u[1] != 0x59)
+        return false;
+    const size_t n = u[3] | u[4] << 8 | u[5] << 16;
+    if (n + 7 != u.size())
+        return false;
+    uint32_t sum = 0;
+    for (size_t i = 6; i < 6 + n; i++)
+        sum += u[i];
+    if ((uint8_t)~sum != u[6 + n])
+        return false;
+    cmd = u[2];
+    body.assign(u.begin() + 6, u.begin() + 6 + n);
+    return true;
+}
+Bytes le32(uint32_t v) { return {(uint8_t)v, (uint8_t)(v >> 8), (uint8_t)(v >> 16), (uint8_t)(v >> 24)}; }
+uint32_t rd32le(const Bytes &b, size_t o) { return b[o] | b[o + 1] << 8 | b[o + 2] << 16 | (uint32_t)b[o + 3] << 24; }
+
+// the M-UPGRADE identity as the X0X page reads it (PB.parseIdentity: 34 bytes decoded, "<model>_<digits>")
+bool mupg_identity_exact(Link &k, std::string &id)
+{
+    Bytes r;
+    auto match = [](const Bytes &f) {
+        const Bytes d = f.size() >= 4 && f[1] == 0x00 && f[2] == 0x32 ? mupg_unpack(f) : Bytes();
+        return d.size() == 34 && d[0] == 0 && d[1] == 0x59 && d[2] == 0x11;
+    };
+    uint32_t took = 0;
+    if (!k.request(kMupgIdentity, match, r, 1000, &took))   // DELAY.hs
+        return false;
+    const Bytes d = mupg_unpack(r);
+    id.clear();
+    for (size_t i = 6; i < 33 && d[i]; i++)
+        id += (char)d[i];
+    std::printf("    M-UPGRADE identity: \"%s\" in %u blocks\n", id.c_str(), took);
+    return true;
+}
+
+// the screen reader (announce.c, fm1-reader): HELLO -> HELLO ver, the firmware's name, 0, its words link
+bool reader_hello(Link &k, std::string &name)
+{
+    Bytes r;
+    const Bytes hello = {0xF0, 0x7D, 0x53, 0x52, 0x01, 0x01, 0xF7};
+    auto match = [](const Bytes &f) { return f.size() >= 7 && f[1] == 0x7D && f[2] == 0x53 && f[3] == 0x52 && f[4] == 1; };
+    if (!k.request(hello, match, r, 1000))
+        return false;
+    name.clear();
+    for (size_t i = 6; i + 1 < r.size() && r[i]; i++)
+        name += (char)r[i];
+    k.put_frame({0xF0, 0x7D, 0x53, 0x52, 0x02, 0xF7});      // BYE: no more SAYs
+    k.run_ms(100);
+    k.frames.clear();
+    std::printf("    screen reader HELLO: \"%s\"\n", name.c_str());
+    return true;
+}
+
+// ---- X0X: web/backup/index.html (PB.backup / PB.restore), firmware/src/backup.c ----
+// a backup: 0x42 "X0XB", the device's 0x42 frames (offset + data) to its 0x43 end (length, CRC-32, status, flags)
+bool x0x_backup(Link &k, Bytes &image, std::string &why, uint32_t *frames_out = nullptr)
+{
+    k.frames.clear();
+    image.clear();
+    k.put_frame(upd_frame(0x42, {0x58, 0x30, 0x58, 0x42}));
+    uint32_t frames = 0;
+    const uint64_t end = k.blocks + (uint64_t)(20000 / kBlockMs);
+    while (k.blocks < end) {
+        k.block();
+        while (!k.frames.empty()) {
+            Bytes f = std::move(k.frames.front());
+            k.frames.pop_front();
+            uint8_t cmd;
+            Bytes b;
+            if (!upd_parse(f, cmd, b))
+                continue;
+            if (cmd == 0x42 && b.size() >= 4) {
+                if (rd32le(b, 0) != image.size())
+                    return why = "a backup frame's offset skips", false;
+                image.insert(image.end(), b.begin() + 4, b.end());
+                frames++;
+            } else if (cmd == 0x43 && b.size() >= 10) {
+                if (b[8])
+                    return why = "the end frame's status " + std::to_string(b[8]), false;
+                if (rd32le(b, 0) != image.size() || rd32le(b, 4) != crc32(image.data(), image.size()))
+                    return why = "the end frame's length or CRC-32", false;
+                if (frames_out)
+                    *frames_out = frames;
+                return true;
+            }
+        }
+    }
+    return why = "no end frame within 20 s", false;
+}
+// PB.parse: the head, the six records (ids 0 1 2 3 5 6, each its CRC-32), the tail
+bool x0x_parse(const Bytes &im, std::string &why, std::string *sizes = nullptr)
+{
+    static const uint8_t ids[6] = {0, 1, 2, 3, 5, 6};
+    if (im.size() < 16 + 6 * 8 + 4 || rd32le(im, 0) != 0x42583058u || (im[4] | im[5] << 8) != 1 ||
+        (im[6] | im[7] << 8) != 6 || rd32le(im, 12) != crc32(im.data(), 12))
+        return why = "the image's head", false;
+    size_t pos = 16;
+    for (uint8_t want : ids) {
+        if (pos + 8 > im.size())
+            return why = "cut short", false;
+        const uint32_t obj = im[pos] | im[pos + 1] << 8, ln = im[pos + 2] | im[pos + 3] << 8, c = rd32le(im, pos + 4);
+        pos += 8;
+        if (obj != want || ln > 3840 || pos + ln + 4 > im.size() || crc32(&im[pos], ln) != c)
+            return why = "record " + std::to_string(want), false;
+        if (sizes)
+            *sizes += " " + std::to_string(obj) + ":" + std::to_string(ln);
+        pos += ln;
+    }
+    if (pos + 4 != im.size() || rd32le(im, pos) != crc32(im.data(), pos))
+        return why = "the tail", false;
+    return true;
+}
+// a restore: 0x41 (length, CRC-32), then the device's read requests (0x30) answered from the image (PB.response) until
+// it reads a reply address (0xC0000000 restored, 0xCF0000xx failed: code xx); at 0xC1000000 the device asks on its
+// screen: SEL pressed on the panel (as the page tells the user). -> 0 restored, the device's code, or -1 (no end)
+int x0x_restore(Link &k, const Bytes &image, std::string &why, int answer = EMU_B_SEL)
+{
+    k.frames.clear();
+    Bytes q = le32((uint32_t)image.size()), c = le32(crc32(image.data(), image.size()));
+    q.insert(q.end(), c.begin(), c.end());
+    k.put_frame(upd_frame(0x41, q));
+    uint64_t sel_at = 0;
+    uint32_t reads = 0;
+    const uint64_t end = k.blocks + (uint64_t)(90000 / kBlockMs);
+    while (k.blocks < end) {
+        k.block();
+        if (sel_at && k.blocks == sel_at)
+            k.dev.buttons_tap(1u << answer);
+        while (!k.frames.empty()) {
+            Bytes f = std::move(k.frames.front());
+            k.frames.pop_front();
+            const Bytes u = f.size() >= 3 ? mupg_unpack(f) : Bytes();
+            if (u.size() != 15 || u[0] != 0 || u[1] != 0x59 || u[2] != 0x30)
+                continue;                                       // (PB.parseRequest)
+            uint32_t sum = 0;
+            for (int i = 6; i < 14; i++)
+                sum += u[i];
+            if ((uint8_t)~sum != u[14])
+                continue;
+            const uint8_t fl = u[6];
+            const uint32_t addr = rd32le(u, 7), len = u[11] | u[12] << 8 | u[13] << 16;
+            Bytes data;
+            const uint32_t top = addr & 0xFF000000u;
+            if (top == 0xC0000000u || top == 0xC1000000u || top == 0xCF000000u)
+                data = {0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0};   // "success\0"
+            else if (len > 512 || addr >= image.size())
+                return why = "a read outside the image", -1;
+            else {
+                data.assign(image.begin() + addr, image.begin() + std::min<size_t>(image.size(), addr + len));
+                data.resize(len, 0);
+                reads++;
+            }
+            const uint32_t n = (uint32_t)data.size();
+            Bytes m = {0x00, 0x59, 0x30, (uint8_t)((n + 8) & 0xFF), (uint8_t)((n + 8) >> 8), 0, fl};
+            Bytes a = le32(addr);
+            m.insert(m.end(), a.begin(), a.end());
+            m.push_back(n & 0xFF);
+            m.push_back(n >> 8 & 0xFF);
+            m.push_back(0);
+            m.insert(m.end(), data.begin(), data.end());
+            uint32_t s2 = 0;
+            for (size_t i = 6; i < m.size(); i++)
+                s2 += m[i];
+            m.push_back((uint8_t)~s2);
+            k.put_frame(upd_wire(m));
+            if (addr == 0xC1000000u) {
+                std::printf("    restore: %u reads, then RESTORE FROM USB? on the screen: %s\n", reads,
+                            answer == EMU_B_SEL ? "SEL" : "HOME");
+                sel_at = k.blocks + 10;                           // (a person's press, after the question is up)
+                continue;
+            }
+            if (top == 0xC0000000u || top == 0xCF000000u)
+                return top == 0xC0000000u ? 0 : (int)(addr & 0xFFFF);
+        }
+    }
+    return why = "no result within 90 s", -1;
+}
+
+// a change the panel makes to X0X's saved project: a white key writes a step into the 909 pattern (the 909 screen at
+// power-on; conformance_x0x.txt "save"), written as AUTOSAVE writes it (flash_sync)
+void x0x_turn(Device &d, Link &k, int key)
+{
+    d.keys_tap(1u << key);
+    k.run_ms(400);
+    d.flash_sync();
+    k.run_ms(100);
+}
+
+void x0x_run(const std::string &module, Device &dev, Link &k, Session &s, const Profile &p)
+{
+    std::string id, v, name, why, sz;
+    check(mupg_identity_exact(k, id) && id == p.mupg && id.rfind("FM-1_9", 0) == 0,
+          "M-UPGRADE identity: \"" + id + "\" (the X0X page: 34 bytes, starts FM-1_9; the package's " + p.mupg + ")");
+    check(s.info(v) && v.rfind(p.info, 0) == 0, "editor.c INFO: \"" + v + "\"");
+    check(reader_hello(k, name) && name.rfind("X0X ", 0) == 0, "screen reader HELLO: \"" + name + "\"");
+
+    Bytes a0, a, b, c;
+    uint32_t frames = 0;
+    bool ok = x0x_backup(k, a0, why, &frames) && x0x_parse(a0, why, &sz);
+    check(ok, "backup (0x42) of a fresh unit: " + std::to_string(a0.size()) + " bytes in " + std::to_string(frames) +
+                  " frames, every record's CRC-32 (" + sz + " ) " + why);
+    x0x_turn(dev, k, 2);              // G3: step 2
+    sz.clear();
+    ok = x0x_backup(k, a, why, &frames) && x0x_parse(a, why, &sz);
+    check(ok && a != a0, "backup after a change on the panel (saved): " + std::to_string(a.size()) + " bytes in " +
+                             std::to_string(frames) + " frames (" + sz + " ) " + why);
+    x0x_turn(dev, k, 4);              // A3: step 3
+    ok = x0x_backup(k, b, why) && x0x_parse(b, why);
+    check(ok && b != a, "another change: the backup differs " + why);
+
+    const uint32_t dirty0 = dev.flash_dirty();
+    int rc = x0x_restore(k, a, why, EMU_B_HOME);
+    check(rc == 11, "restore answered HOME on the FM-1: code " + std::to_string(rc) + " (11, DECLINED) " + why);
+    ok = x0x_backup(k, c, why);
+    check(ok && c == b, "  nothing changed " + why);
+    rc = x0x_restore(k, a, why, EMU_B_SEL);
+    check(rc == 0, "restore of the earlier backup (0x41, SEL on the FM-1): code " + std::to_string(rc) + " " + why);
+    check(dev.flash_dirty() != dirty0, "  the NOR image written (flash_dirty " + std::to_string(dirty0) + " -> " +
+                                           std::to_string(dev.flash_dirty()) + ")");
+    ok = x0x_backup(k, c, why);
+    check(ok && c == a, "backup after the restore: the restored project " + why);
+
+    const bool alive = update_keys(k, s, p);
+    if (alive) {
+        std::string idd;
+        check(mupg_identity_exact(k, idd) && idd == p.mupg, "  the X0X page still finds it");
+    }
+    dev.flash_sync();
+    const Bytes image(dev.flash(), dev.flash() + dev.flash_size());
+    std::unique_ptr<LoadedCore> lc2 = load(module);
+    Device dev2(lc2->core());
+    dev2.boot_from(image.data(), (uint32_t)image.size());
+    Link k2(dev2);
+    k2.run_ms(3000);
+    Bytes d;
+    ok = x0x_backup(k2, d, why);
+    check(ok && d == a, "rebooted from the flash image: the backup is the restored project " + why);
+    k.worst = std::max(k.worst, k2.worst);
+}
+
+// ---- the installers' firmwares (FiMba, FoMni, Fart Machine One, AMB-1): the hub's installer (fm1ota.js) finds the
+// unit by the M-UPGRADE identity and offers the update (refused: the update key is not taken); AMB-1's installer also
+// reads the log (F0 7D 4C 47 F7: a frame a line, "end" last: its crash report). A screen reader where the firmware has
+// one (announce.c). Nothing here writes the flash: no backup, no preset, no reboot to test.
+std::function<void(const std::string &, Device &, Link &, Session &, const Profile &)>
+installer_run(const char *reader, bool log)
+{
+    return [=](const std::string &, Device &, Link &k, Session &s, const Profile &p) {
+        std::string id, name;
+        check(mupg_identity_exact(k, id) && id == p.mupg, "M-UPGRADE identity: \"" + id + "\" (the package's " + p.mupg +
+                                                              ", 34 bytes as the installer reads it)");
+        if (reader)
+            check(reader_hello(k, name) && name.rfind(reader, 0) == 0, "screen reader HELLO: \"" + name + "\"");
+        if (log) {                        // installer.html "reportgo": the lines until "end", within 4 s
+            k.frames.clear();
+            k.put_frame({0xF0, 0x7D, 0x4C, 0x47, 0xF7});
+            std::vector<std::string> lines;
+            bool end = false;
+            const uint64_t b0 = k.blocks;
+            while (!end && k.blocks < b0 + (uint64_t)(4000 / kBlockMs)) {
+                k.block();
+                while (!k.frames.empty() && !end) {
+                    const Bytes f = std::move(k.frames.front());
+                    k.frames.pop_front();
+                    if (f.size() < 5 || f[1] != 0x7D || f[2] != 0x4C || f[3] != 0x47)
+                        continue;
+                    const std::string t(f.begin() + 4, f.end() - 1);
+                    end = t == "end";
+                    if (!end)
+                        lines.push_back(t);
+                }
+            }
+            k.worst = std::max(k.worst, (uint32_t)(k.blocks - b0));
+            check(end && !lines.empty() && lines[0] == "no crash recorded",
+                  "the log readout (LG): " + std::to_string(lines.size()) + " line(s) then \"end\"" +
+                      (lines.empty() ? std::string() : ": \"" + lines[0] + "\""));
+        }
+        const bool alive = update_keys(k, s, p);
+        if (alive) {
+            std::string again;
+            check(mupg_identity_exact(k, again) && again == p.mupg, "  the installer still finds it");
+        }
+    };
+}
+// ---- end of plat, fm1base, dinghy ----
 
 const Profile kProfiles[] = {
     {"choralroot", "ChoralRoot ", true, "FM-1_920", true, fm6_bank_change},
@@ -636,6 +964,12 @@ const Profile kProfiles[] = {
     {"sloopdx", "FELUCCA sloopDX 4.0", true, "FM-1_900", false, sl_dxbank_change, true, sl_dxbank_kept},
     {"orbit", "FELUCCA ORBIT 0.7.1", true, "FM-1_900", false, sl_upreset_change, true},
     {"nomansky", "FELUCCA NMS FM 0.4", true, "FM-1_900", false, sl_upreset_change, true},
+    // plat, fm1base, dinghy
+    {"x0x", "X0X ", false, "FM-1_9010100", false, nullptr, false, nullptr, x0x_run},
+    {"amb", nullptr, false, "FM-1_7010300", false, nullptr, false, nullptr, installer_run("AMB-1 ", true)},
+    {"fomni", nullptr, false, "FM-1_8000400", false, nullptr, false, nullptr, installer_run("FoMni-1 ", false)},
+    {"fimba", nullptr, false, "FM-1_8000601", false, nullptr, false, nullptr, installer_run(nullptr, false)},
+    {"fartmachine", nullptr, false, "FM-1_701", false, nullptr, false, nullptr, installer_run(nullptr, false)},
 };
 
 const Profile *profile_of(const std::string &id)
@@ -699,6 +1033,14 @@ int main(int argc, char **argv)
         std::printf("  (no manager for this firmware: the update keys only)\n");
         Profile none{id.c_str(), nullptr, false, nullptr, false, nullptr, false};
         update_keys(k, s, none);
+        std::printf("sysex_test %s: %s\n", id.c_str(), fails ? "FAIL" : "PASS");
+        return fails ? 1 : 0;
+    }
+    if (p->run) {                           // (its own protocol: the profile's sequence)
+        p->run(module, dev, k, s, *p);
+        std::printf("  worst reply: %u blocks of %u frames at %.0f Hz (%.1f ms; + one block for a request that just "
+                    "missed one: %.1f ms)\n",
+                    k.worst, kBlock, kRate, k.worst * kBlockMs, (k.worst + 1) * kBlockMs);
         std::printf("sysex_test %s: %s\n", id.c_str(), fails ? "FAIL" : "PASS");
         return fails ? 1 : 0;
     }
