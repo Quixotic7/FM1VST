@@ -18,13 +18,14 @@ list(TRANSFORM _qd_pvg_sources PREPEND ../../third_party/plutovg/source/)   # (E
 # the sound (P1.1): FM TONE (core/voice/quad: ChoralRoot's eng_quad.c and what it reads, one unit, quad_voice.c), the
 # voice pool, the mix, ChoralRoot's effects and output chain (core/voice/fx: one unit, qd_fx.c), the tracks (core/seq);
 # the sequencer (P1.2: core/seq: the patterns and their editing, the engine, the player, the demo patterns; P1.3: the
-# chords)
+# chords; P1.3b: the scales, the sound pool, copy / paste and undo)
 set(_qd_voice_sources ../voice/quad/quad_voice.c ../voice/pool.c ../voice/mix.c ../voice/fx/qd_fx.c ../seq/model.c
-                      ../seq/pattern.c ../seq/seq.c ../seq/player.c ../seq/demo.c ../seq/chord.c)
-# the app and its controller (P1.3: core/app/ctl*.c, view.c) and the screens (core/ui)
+                      ../seq/pattern.c ../seq/seq.c ../seq/player.c ../seq/demo.c ../seq/chord.c ../seq/scale.c
+                      ../seq/sounds.c ../seq/clip.c)
+# the app and its controller (P1.3, P1.3b: core/app/ctl*.c, view.c) and the screens (core/ui)
 set(_qd_app_sources ../app/app.c ../app/ctl.c ../app/ctl_step.c ../app/ctl_rec.c ../app/ctl_leds.c ../app/view.c)
-set(_qd_ui_sources ../ui/ui_kit.c ../ui/ui_idle.c ../ui/ui_keys.c ../ui/ui_picker.c ../ui/ui_tracks.c ../ui/ui_step.c
-                   ../ui/ui_held.c ../ui/ui_turn.c)
+set(_qd_ui_sources ../ui/ui_kit.c ../ui/ui_idle.c ../ui/ui_keys.c ../ui/ui_picker.c ../ui/ui_tracks.c ../ui/ui_lane.c
+                   ../ui/ui_held.c ../ui/ui_turn.c ../ui/ui_layer.c)
 fm1_add_core(quadrille ${_qd}/core/glue SOURCE ${_qd}
              UNIT core_quadrille.c DESC core_quadrille_desc.c
              EXTRA_SOURCES ${_qd_app_sources} ${_qd_ui_sources}
@@ -37,7 +38,7 @@ fm1_add_core(quadrille ${_qd}/core/glue SOURCE ${_qd}
              CREDITS "QUADRILLE (working name), a step sequencer for the FM-1: Phase 1 prototype.\nFM TONE, the effects and the output chain: ChoralRoot FM-1 v0.25.1 (GPL-3.0-only, ChoralRoot FM-1 contributors), a fork of Felucca (Leo Kuroshita, Hugelton Instruments).\nDrawn with plutovg (MIT). Portions of this software are copyright (c) 2006 The FreeType Project (www.freetype.org). All rights reserved.\nType: Inter Tight (SIL Open Font License 1.1)."
              CREDITS_FILES third_party/plutovg/LICENSE assets/fonts/OFL.txt
              NO_GEN
-             VERSION 0.0.4-p1.3)
+             VERSION 0.0.5-p1.3b)
 if(TARGET core_quadrille_obj)
     # plutovg is vendored unmodified: its own warnings are not ours (ChoralRoot's copies keep theirs off themselves:
     # quad_voice.c and qd_fx.c push their diagnostics around them)
