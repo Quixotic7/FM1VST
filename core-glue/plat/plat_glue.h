@@ -29,8 +29,8 @@
  *   FM1CORE_PL_DIM_ON (optional)         whether the dim plane shows (default: fm1_led_dim_div != 0; FiMba's HAL
  *                                        has no divider: always)
  *   FM1CORE_PL_NAME                      for the log lines ("X0X")
- * Optional: FM1CORE_PL_SX (1: the managers' SysEx, plat_sx.h included before the firmware's sources: see there),
- * FM1CORE_PL_TICK_HOOK() (each device ms, after the input: fm1-base's app_tick), FM1CORE_PL_KEY_HOOK(down,
+ * Optional: FM1CORE_PL_SX (1: the managers' SysEx, plat_sx.h included before the firmware's sources: see
+ * there), FM1CORE_PL_TICK_HOOK() (each device ms, after the input: fm1-base's app_tick), FM1CORE_PL_KEY_HOOK(down,
  * up, held) (the note keys that went down / up this ms, and those held now: fm1-base's velocity and pressure), FM1CORE_PL_DEFAULT_MASTER (the pot's position
  * when the host gives none, 0..1023: the firmware's own default MASTER), FM1CORE_PL_PALETTE (the palette set at
  * power-on, default 1).

@@ -11,7 +11,18 @@
  *
  * AMB-1's files are MPL-2.0 (none carries the "Incompatible With Secondary Licenses" notice), announce.c MIT; this
  * glue is GPL-3.0-only (MPL-2.0 section 3.3: a Larger Work). Its version is a build-time define (APP_VERSION, "DEV" by
- * default): the hub's version (core_amb.cmake). */
+ * default): the hub's version (core_amb.cmake).
+ *
+ * THE MANAGERS (research/managers-2026-10-19/MANAGERS.md; core-glue/plat/plat_sx.h): AMB-1's page is fm1-base's
+ * installer (base/web/installer.html): it finds the unit by the M-UPGRADE identity, and its crash report asks the
+ * firmware's log readout (F0 7D 4C 47 F7, "LG"); a screen reader talks to announce.c (7D 53 52). The device's main
+ * loop (base/device/main_fm1.c fm1_main) gives each frame to the screen reader, the log readout and the remote
+ * control, then runs ota_service (the M-UPGRADE handshake: felucca-bsp's chip/ota.c, compiled here through
+ * common/sysex_ota.h with the package identity). The log readout is main_fm1.c's (the hardware's: its crash record,
+ * the supplies' registers, Bluetooth's log, the timer's statistics); here it says what an emulated unit has: no
+ * crash recorded, then its "end". The remote control (7D 4C 43, tools/fm1_remote.py, not a manager) is not answered.
+ * The update key F0 22 24 35 7F F7 and UBOOT's F0 22 24 35 7D F7 are not taken (plat_sx.h): the installer gets the
+ * identity, no read requests (it times out), and nothing is written. */
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -27,7 +38,10 @@
 #include "env.h"                          /* getenv -> NULL: no environment in a core (common/env.h) */
 
 #define APP_VERSION FM1CORE_VERSION
+#define FELUCCA_ID "FM-1_7010300"         /* the package identity: build.py --release 1.3 (FM-1_7 01 03 00) */
+#define FM1CORE_PL_SX 1                   /* the managers' SysEx (core-glue/plat/plat_sx.h) */
 #include "fm1base_hal.h"
+#include "../plat/plat_sx.h"
 
 /* ---------------------------------------------------------------- the firmware --- */
 #define __attribute__(x)                  /* (as the host simulator: .noinit / .pool sections) */
@@ -42,11 +56,9 @@
 #define ANN_NAME APP_NAME " " APP_VERSION
 #include "ann_words.h"
 #include "announce.c"
-static int ann_wire_send(const uint8_t *p, uint32_t n)   /* (no SysEx path to a screen reader: not sent) */
+static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room (nobody reading), not sent */
 {
-    (void)p;
-    (void)n;
-    return -1;
+    return fm1core_pl_sx_send(p, n);
 }
 #include "panel.c"
 #include "radio_none.c"
@@ -58,6 +70,50 @@ static int ann_wire_send(const uint8_t *p, uint32_t n)   /* (no SysEx path to a 
 #endif
 #include "app.c"
 #undef __attribute__
+
+/* ---------------------------------------------------------------- the managers' SysEx (plat_sx.h) --- */
+#define FM1SX_OTA_C "../../cores/fm1-amb/base/bsp/chip/ota.c"
+#define FM1SX_OTA_IN fm1core_pl_sxi
+#define FM1SX_OTA_OUT fm1core_pl_sxo
+#define FM1SX_OTA_MS() fm1_ms
+#include "sysex_ota.h"
+/* main_fm1.c log_frame's answer on a unit that never crashed: one frame a line, F0 7D 4C 47 <ASCII> F7, "end" last
+ * (the device's lines about its supplies' registers, Bluetooth's log and its timer have no counterpart here) */
+static void fm1core_amb_log_line(const char *t)
+{
+    uint8_t f[48];
+    uint32_t n = 0;
+    f[n++] = 0xF0;
+    f[n++] = 0x7D;
+    f[n++] = 0x4C;
+    f[n++] = 0x47;
+    while (*t && n < sizeof f - 1u)
+        f[n++] = (uint8_t)(*t++ & 0x7Fu);
+    f[n++] = 0xF7;
+    fm1core_pl_sx_send(f, n);
+}
+static int fm1core_amb_log_frame(const uint8_t *p, uint32_t n)
+{
+    if (n < 3u || p[0] != 0x7Du || p[1] != 0x4Cu || p[2] != 0x47u)
+        return 0;
+    fm1core_amb_log_line("no crash recorded");
+    fm1core_amb_log_line("end");
+    return 1;
+}
+static int fm1core_amb_sx_accept(const uint8_t *f, uint32_t n)
+{
+    return fm1sx_is_mupg(f, n) || FM1CORE_PL_SX_READER(f, n) || fm1core_pl_sx_is(f, n, 0x4Cu, 0x47u);
+}
+static void fm1core_amb_sx_service(void)  /* main_fm1.c fm1_main, each pass (the update key's ota_req: not taken) */
+{
+    const uint8_t *p;
+    uint32_t n;
+    if (fm1sx_frame(&fm1core_pl_sxi, &p, &n) && (ann_frame(p, n, fm1_ms) || fm1core_amb_log_frame(p, n)))
+        fm1sx_done(&fm1core_pl_sxi);
+    ota_service();                        /* M-UPGRADE handshake (other SysEx is dropped) */
+}
+#define FM1CORE_PL_SX_ACCEPT fm1core_amb_sx_accept
+#define FM1CORE_PL_SX_SERVICE() fm1core_amb_sx_service()
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME APP_NAME

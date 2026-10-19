@@ -7,7 +7,8 @@
  *   fm1_irq_off / on    plat_lock (the 1 kHz tick's lock: one thread here)
  *   fm1_an, fm1_adc_*   the analog rows (plat_sense: the keys' readings; the converter is the scan's then)
  *   FL_IN, FL_XIP       the data area read in place (plat_data: the NOR image itself)
- *   ota_wire_send       a SysEx frame out (plat_sysex_send: no SysEx path here, dropped)
+ *   ota_wire_send       a SysEx frame out (plat_sysex_send): with FM1CORE_PL_SX the managers' transport
+ *                       (core-glue/plat/plat_sx.h, common/sysex_ota.h), else no SysEx path: dropped
  * Included by an fm1-base core's unit after fm1core.h, nor.h, ticks.h and panel.h, before the firmware's sources. */
 #pragma once
 #include "../plat/plat_hal.h"
@@ -30,9 +31,13 @@ static int32_t fm1_adc_read(int ch) { return ch == FM1_ADC_MASTER ? fm1core_fb_m
 /* the data area (0x97000..0xDFFFF), read in place: the NOR image is the flash the XIP window shows */
 #define FL_IN(off, n, lo, hi) ((uint32_t)(off) >= (uint32_t)(lo) && (uint32_t)(off) + (uint32_t)(n) <= (uint32_t)(hi))
 #define FL_XIP(off) ((const uint8_t *)fm1nor_image + (uint32_t)(off))
+#if defined FM1CORE_PL_SX && FM1CORE_PL_SX
+static int ota_wire_send(const uint8_t *p, uint32_t n);   /* (the managers' transport: common/sysex_ota.h, later) */
+#else
 static int ota_wire_send(const uint8_t *p, uint32_t n)
 {
     (void)p;
     (void)n;
     return -1;
 }
+#endif

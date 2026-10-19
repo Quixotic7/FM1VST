@@ -16,6 +16,15 @@ fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised 
 - The generate step: fm1-base's `build.py generate()` after the globals its `main()` sets (`APP`, `CONF` from the
   app's fm1.toml, `GEN`), in one Python expression (`core_amb.cmake`).
 
+## The managers' SysEx
+
+AMB-1's page is fm1-base's installer: the M-UPGRADE identity (`FM-1_7010300`, felucca-bsp's `chip/ota.c` through
+`common/sysex_ota.h`) and the crash report's log readout (`F0 7D 4C 47 F7`: `main_fm1.c log_frame` reads the
+hardware's crash record and registers; the core answers "no crash recorded", then "end"); a screen reader talks to
+`announce.c`. The transport and the service's place in the loop are the plat family's (`../plat/plat_sx.h`,
+README there). The remote control (`7D 4C 43`, `tools/fm1_remote.py`) is not answered. The update and UBOOT keys are
+not taken.
+
 ## Velocity and pressure
 
 An app with `APP_TOUCH` (CTL-1, MONK-1; not AMB-1) reads its keys through lib/touch.c from the scan's analog

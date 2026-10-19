@@ -726,6 +726,51 @@ void x0x_run(const std::string &module, Device &dev, Link &k, Session &s, const 
     check(ok && d == a, "rebooted from the flash image: the backup is the restored project " + why);
     k.worst = std::max(k.worst, k2.worst);
 }
+
+// ---- the installers' firmwares (FiMba, FoMni, Fart Machine One, AMB-1): the hub's installer (fm1ota.js) finds the
+// unit by the M-UPGRADE identity and offers the update (refused: the update key is not taken); AMB-1's installer also
+// reads the log (F0 7D 4C 47 F7: a frame a line, "end" last: its crash report). A screen reader where the firmware has
+// one (announce.c). Nothing here writes the flash: no backup, no preset, no reboot to test.
+std::function<void(const std::string &, Device &, Link &, Session &, const Profile &)>
+installer_run(const char *reader, bool log)
+{
+    return [=](const std::string &, Device &, Link &k, Session &s, const Profile &p) {
+        std::string id, name;
+        check(mupg_identity_exact(k, id) && id == p.mupg, "M-UPGRADE identity: \"" + id + "\" (the package's " + p.mupg +
+                                                              ", 34 bytes as the installer reads it)");
+        if (reader)
+            check(reader_hello(k, name) && name.rfind(reader, 0) == 0, "screen reader HELLO: \"" + name + "\"");
+        if (log) {                        // installer.html "reportgo": the lines until "end", within 4 s
+            k.frames.clear();
+            k.put_frame({0xF0, 0x7D, 0x4C, 0x47, 0xF7});
+            std::vector<std::string> lines;
+            bool end = false;
+            const uint64_t b0 = k.blocks;
+            while (!end && k.blocks < b0 + (uint64_t)(4000 / kBlockMs)) {
+                k.block();
+                while (!k.frames.empty() && !end) {
+                    const Bytes f = std::move(k.frames.front());
+                    k.frames.pop_front();
+                    if (f.size() < 5 || f[1] != 0x7D || f[2] != 0x4C || f[3] != 0x47)
+                        continue;
+                    const std::string t(f.begin() + 4, f.end() - 1);
+                    end = t == "end";
+                    if (!end)
+                        lines.push_back(t);
+                }
+            }
+            k.worst = std::max(k.worst, (uint32_t)(k.blocks - b0));
+            check(end && !lines.empty() && lines[0] == "no crash recorded",
+                  "the log readout (LG): " + std::to_string(lines.size()) + " line(s) then \"end\"" +
+                      (lines.empty() ? std::string() : ": \"" + lines[0] + "\""));
+        }
+        const bool alive = update_keys(k, s, p);
+        if (alive) {
+            std::string again;
+            check(mupg_identity_exact(k, again) && again == p.mupg, "  the installer still finds it");
+        }
+    };
+}
 // ---- end of plat, fm1base, dinghy ----
 
 const Profile kProfiles[] = {
@@ -737,6 +782,10 @@ const Profile kProfiles[] = {
     {"purplemonkey", "PurpleMonkey ", false, "FM-1_927", false, nullptr},
     // plat, fm1base, dinghy
     {"x0x", "X0X ", false, "FM-1_9010100", false, nullptr, x0x_run},
+    {"amb", nullptr, false, "FM-1_7010300", false, nullptr, installer_run("AMB-1 ", true)},
+    {"fomni", nullptr, false, "FM-1_8000400", false, nullptr, installer_run("FoMni-1 ", false)},
+    {"fimba", nullptr, false, "FM-1_8000601", false, nullptr, installer_run(nullptr, false)},
+    {"fartmachine", nullptr, false, "FM-1_701", false, nullptr, installer_run(nullptr, false)},
 };
 
 const Profile *profile_of(const std::string &id)

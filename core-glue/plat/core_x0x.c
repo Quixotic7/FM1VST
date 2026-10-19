@@ -62,7 +62,10 @@ static void ota_frame_done(void) { fm1sx_done(&fm1core_pl_sxi); }
  * the NOR image. The update's own steps (ota_session: its screen, its commit) are never reached here */
 static uint32_t ota_now_ms(void) { return fm1_ms; }
 static void ota_idle(void) { fm1_wdt_feed(); }
-static int fm1core_x0x_ota_in(uint32_t off, uint32_t n) { return off >= OTA_AREA && off + n <= OTA_AREA + OTA_AREA_LEN; }
+static int fm1core_x0x_ota_in(uint32_t off, uint32_t n)
+{
+    return off >= OTA_AREA && off + n <= OTA_AREA + OTA_AREA_LEN;
+}
 static int ota_erase(uint32_t off)
 {
     if (!fm1core_x0x_ota_in(off, 0x1000u) || (off & 0xFFFu))
@@ -274,7 +277,7 @@ static void fm1core_x0x_sx_service(void)  /* main_fm1.c fm1_main, each pass (the
 #define FM1CORE_PL_UI_INPUT() ui_input_only()
 #define FM1CORE_PL_DIM_LEVEL FM1P_LED_DIM /* the glow and the dim keys: one scan frame in GLOW_DIV */
 static uint8_t fm1core_x0x_last_pat = 0xFF;
-static void fm1core_pl_flash_boot(void)  /* fm1_main: a restore's commit finished, the user sample slots read in place */
+static void fm1core_pl_flash_boot(void)  /* fm1_main: a restore's commit finished, the user sample slots read */
 {
     uint32_t k;
     rs_boot();                            /* a restore's commit cut short by a power loss: finished */
