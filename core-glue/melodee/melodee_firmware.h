@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The firmware the Melodee core runs: the ONE include list (included once, by melodee_fw.c), from the unmodified
- * submodule cores/melodee (v1.4.3). It follows firmware/src/melodee.c (the device's unit), as Melodee's own host
+ * submodule cores/melodee (v1.4.4). It follows firmware/src/melodee.c (the device's unit), as Melodee's own host
  * builds do (tests/ui_test.c): the sound side through tests/hostsim.c (libc.c, the engines with Prophet, FM6, CZ-1,
  * SID and the x0x 909, voices, mod, FX, usb.c's MIDI queues, TRS MIDI's parser, the song chain, the pattern banks
  * and seq.c; hostsim's main() is renamed and never called), then the core's HAL (melodee_hal.h), the audio ISR
@@ -79,7 +79,7 @@ static int fm1core_me_aw_join(void)                   /* run the pending job her
 /* --------------------------------------------------------------------- UI --- */
 #define MELODEE_FLASH 1                               /* storage.c on the NOR image: settings, projects, presets */
 #ifndef MELODEE_VERSION
-#define MELODEE_VERSION "v1.4.3"                      /* melodee.c's default */
+#define MELODEE_VERSION "v1.4.4"                      /* melodee.c's default */
 #endif
 /* panel_setup (ui_input.c: Calibration, from the menu or OCT- + OCT+ at power-on) waits in loops of its own for the
  * buttons and knobs; melodee_fw.c runs the main loop on a coroutine, and these loops yield there (fm1_wdt_feed) */

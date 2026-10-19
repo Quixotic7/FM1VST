@@ -402,7 +402,7 @@ leaves them in the build folder (a second build tree next to a working install; 
 bundles). Remote FM-1's vendor bulk transport links Homebrew's static `libusb-1.0.a` (`brew install libusb`); without
 it the plugin builds with SysEx frames only.
 
-**A release build** is the public build (`-DFM1_PUBLIC_BUILD=ON`: the 10 un-gated cores, CORES-PLAN.md 6) for Apple
+**A release build** is the public build (`-DFM1_PUBLIC_BUILD=ON`: the 12 un-gated cores, CORES-PLAN.md 6) for Apple
 silicon, made by `.github/workflows/release.yml` when a tag `v<version>` is pushed (the version is `project()`'s
 here; CHANGELOG.md has the notes) and by hand the same way:
 

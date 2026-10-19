@@ -4,12 +4,14 @@
 #
 #   tools/release_tests.sh BUILD_DIR
 #
-# Runs ctest; every test must pass, and the only skips allowed are those a public build already makes (the tests
-# that drive ChoralRoot, Felucca and Melodee together, which a public build leaves out, and param_test for the cores
-# without a parameter map). Any other skip (a core's smoke, conformance or golden test) fails.
+# Runs ctest; every test must pass, and the only skips allowed are those a public build already makes: param_test for
+# the cores without a parameter map, and tier2_test (the release configures no Tier 2 slots). ChoralRoot, Felucca and
+# Melodee are all in a public build now (ChoralRoot and Melodee un-gated, 2026-10-19), so the tests that drive them
+# (double_load_test, halt_test, plugin_test, knob_test, panel_render_test, ui_render_test, remote_test) must run. Any
+# other skip (one of those, a core's smoke, conformance or golden test) fails.
 set -uo pipefail
 build="${1:?usage: release_tests.sh BUILD_DIR}"
-allowed='^(double_load_test|halt_test|param_test_[a-z0-9]+|plugin_test|tier2_test|knob_test|panel_render_test|ui_render_test|remote_test)$'
+allowed='^(param_test_[a-z0-9]+|tier2_test)$'
 log="$(mktemp)"
 ctest --test-dir "$build" -C Release --output-on-failure -j "$(sysctl -n hw.ncpu)" 2>&1 | tee "$log"
 st=${PIPESTATUS[0]}

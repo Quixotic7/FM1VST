@@ -14,7 +14,10 @@
 #   - libusb: the static library the build linked is built for the deployment target or older, and no binary
 #     references kIOMainPortDefault below macOS 12 (a newer libusb's; it fails to load on macOS 11). A warning only
 #     unless FM1_RELEASE_STRICT=1 (CI): a local build may link Homebrew's newer bottle
-#   - the zip: the three bundles, 10 cores in each, no gated core's name anywhere in it
+#   - the zip: the three bundles, the public cores in each, no gated core's name anywhere in it
+#   - no raw preset source in the release (zip, package): no .syx, nothing from a core's assets/cz1-factory or
+#     assets/prophet5-factory, no file whose content is one of the cores' .syx files (ChoralRoot and Melodee ship
+#     those presets compiled into the firmware only)
 #   - the installer package: expanded (pkgutil --expand-full), each component's bundle under its install location
 #     with the cores, not relocatable, the AU's postinstall, the Distribution's choices; no gated core's name in it;
 #     installer -pkginfo / -dominfo read it; its signature (pkgutil --check-signature) when it is signed
@@ -230,7 +233,30 @@ EOF
     echo "Source: https://github.com/Quixotic7/FM1VST (tag v$version). FM1VST is independent of and unaffiliated"
     echo "with M-VAVE."
 } > "$stage/README.txt"
+
+# ---- no raw preset source: ChoralRoot and Melodee compile Casio's CZ-1 tones and Sequential's Prophet-5 programs
+# into the firmware (the owner's call, 2026-10-19: the compiled firmware ships, the raw SysEx does not). No .syx file,
+# nothing from a core's assets/cz1-factory/ or assets/prophet5-factory/, and no file with the content of any .syx in
+# a core's source tree may be in the release (the staging folder, so the zip; the package's payload below)
+raw_hashes="$(while IFS=$'\t' read -r kind _ _ _ _ _ src; do
+    [ "$kind" = core ] && [ -d "$src" ] || continue
+    find "$src" \( -name .git -o -name build -o -name node_modules \) -prune -o -type f -iname '*.syx' \
+        -exec shasum -a 256 {} + | cut -d' ' -f1
+done < "$manifest" | sort -u)"
+nraw="$(printf '%s' "$raw_hashes" | grep -c . || true)"
+[ "$nraw" -ge 2 ] || bad "raw presets: only $nraw .syx found in the cores' trees (the CZ-1 and Prophet-5 sets expected)"
+no_raw_presets() {   # LABEL DIR
+    local names hits
+    names="$(cd "$2" && find . -type f \( -iname '*.syx' -o -path '*/cz1-factory/*' -o -path '*/prophet5-factory/*' \) |
+             sed 's|^\./||')"
+    [ -z "$names" ] || bad "$1: raw preset sources in it: $(echo $names)"
+    hits="$(find "$2" -type f -exec shasum -a 256 {} + |
+            awk 'NR == FNR {h[$1] = 1; next} ($1 in h) {sub(/^[0-9a-f]+  /, ""); print}' <(printf '%s\n' "$raw_hashes") -)"
+    [ -z "$hits" ] || bad "$1: files with a core's .syx content: $(echo $hits)"
+}
+no_raw_presets "staging folder" "$stage"
 [ "$fails" = 0 ] || die "$fails check(s) failed"
+ok "raw presets: no .syx, no cz1-factory / prophet5-factory file and none of the cores' $nraw .syx contents in the release"
 
 # ---- the zip, checked, and its checksum
 (cd "$out" && ditto -c -k --norsrc --keepParent "$name" "$name.zip")
@@ -249,6 +275,7 @@ for g in $gated; do
     if echo "$listing" | grep -q "/$g\.fm1core$\|/cores/$g/"; then bad "zip: the gated core $g is in it"; fi
 done
 if echo "$listing" | grep -q '\.DS_Store\|/\._'; then bad "zip: Finder litter (.DS_Store, ._ files) in it"; fi
+if echo "$listing" | grep -qi '\.syx$\|/cz1-factory/\|/prophet5-factory/'; then bad "zip: raw preset sources in it"; fi
 [ "$fails" = 0 ] || die "$fails check(s) failed"
 size="$(du -h "$out/$name.zip" | cut -f1 | tr -d ' ')"
 ok "zip: $out/$name.zip ($size, $(echo "$listing" | wc -l | tr -d ' ') entries), 3 bundles x $ncores cores, no gated core"
@@ -341,6 +368,7 @@ for g in $gated; do
     fi
 done
 if echo "$pkg_files" | grep -q '\.DS_Store\|/\._'; then bad "pkg: Finder litter (.DS_Store, ._ files) in it"; fi
+no_raw_presets "pkg (expanded)" "$x"
 installer -pkginfo -pkg "$pkg" > "$pw/pkginfo.txt" 2>&1 || bad "pkg: installer -pkginfo fails: $(cat "$pw/pkginfo.txt")"
 installer -dominfo -pkg "$pkg" > "$pw/dominfo.txt" 2>&1 || bad "pkg: installer -dominfo fails: $(cat "$pw/dominfo.txt")"
 grep -qx LocalSystem "$pw/dominfo.txt" || bad "pkg: installer -dominfo: not LocalSystem alone ($(cat "$pw/dominfo.txt"))"
