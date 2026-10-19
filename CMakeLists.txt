@@ -3,7 +3,7 @@
 # Phase 1: the ChoralRoot core as a loadable module, the engine (core loader, device clock, resampler), replay tests.
 # Phase 2: the JUCE plugin (plugin/): AU, VST3, Standalone. Phase 3: the panel GUI (plugin/PanelComponent, Theme).
 cmake_minimum_required(VERSION 3.22)
-project(FM1VST VERSION 0.2.0 LANGUAGES C CXX)
+project(FM1VST VERSION 0.3.0 LANGUAGES C CXX)
 
 # ---- the cores: one fm1_add_core() per firmware (cmake/FM1Cores.cmake documents it), each in its glue folder:
 # core-glue/<family>/core.cmake (or core_<id>.cmake for a family of several), picked up by the glob below, so a new
@@ -91,9 +91,13 @@ target_include_directories(remotefm1 PUBLIC ${RFM}/host/include ${RFM}/proto ${C
 set_target_properties(remotefm1 PROPERTIES C_STANDARD 99 C_STANDARD_REQUIRED ON POSITION_INDEPENDENT_CODE ON)
 target_compile_options(remotefm1 PRIVATE -O2 -Wall -Wextra -Wno-deprecated-declarations -Wno-unused-parameter)
 target_link_libraries(remotefm1 PUBLIC "-framework CoreMIDI" "-framework CoreFoundation" pthread)
-find_path(FM1_LIBUSB_INCLUDE libusb.h PATHS /opt/homebrew/include/libusb-1.0 /usr/local/include/libusb-1.0
-          NO_DEFAULT_PATH)
-find_library(FM1_LIBUSB_STATIC NAMES libusb-1.0.a PATHS /opt/homebrew/lib /usr/local/lib NO_DEFAULT_PATH)
+# (-DFM1_LIBUSB_PREFIX=<dir>: a libusb built elsewhere, searched first; the release build's own, made for its
+# deployment target: tools/libusb_static.sh)
+set(FM1_LIBUSB_PREFIX "" CACHE PATH "a libusb install prefix searched before Homebrew's (include/libusb-1.0, lib)")
+find_path(FM1_LIBUSB_INCLUDE libusb.h PATHS ${FM1_LIBUSB_PREFIX}/include/libusb-1.0 /opt/homebrew/include/libusb-1.0
+          /usr/local/include/libusb-1.0 NO_DEFAULT_PATH)
+find_library(FM1_LIBUSB_STATIC NAMES libusb-1.0.a PATHS ${FM1_LIBUSB_PREFIX}/lib /opt/homebrew/lib /usr/local/lib
+             NO_DEFAULT_PATH)
 if(FM1_LIBUSB_INCLUDE AND FM1_LIBUSB_STATIC)
     message(STATUS "Remote FM-1: vendor bulk with libusb, static (${FM1_LIBUSB_STATIC})")
     target_include_directories(remotefm1 PRIVATE ${FM1_LIBUSB_INCLUDE})
@@ -109,6 +113,29 @@ set(FM1_JUCE_TAG 8.0.15)
 FetchContent_Declare(JUCE GIT_REPOSITORY https://github.com/juce-framework/JUCE.git GIT_TAG ${FM1_JUCE_TAG}
                      GIT_SHALLOW TRUE GIT_PROGRESS FALSE)
 FetchContent_MakeAvailable(JUCE)
+
+# the release manifest, build/release-manifest.tsv (tools/package_release.sh reads it), tab separated: this build's
+# settings ("info" lines), each core it built (id, version, commit, licence, family, source tree) and each gated core
+# it left out
+set(_pub OFF)
+if(FM1_PUBLIC_BUILD)
+    set(_pub ON)
+endif()
+set(_m "info\tversion\t${PROJECT_VERSION}\ninfo\tpublic_build\t${_pub}\ninfo\tdefault_core\t${FM1_DEFAULT_CORE}\n")
+string(APPEND _m "info\tdeployment_target\t${CMAKE_OSX_DEPLOYMENT_TARGET}\ninfo\tarchitectures\t${CMAKE_OSX_ARCHITECTURES}\n")
+string(APPEND _m "info\tjuce_version\t${FM1_JUCE_TAG}\ninfo\tjuce_source\t${juce_SOURCE_DIR}\n")
+string(APPEND _m "info\tlibusb\t${FM1_LIBUSB_STATIC}\n")
+foreach(_id IN LISTS FM1_CORE_IDS)
+    foreach(_k VERSION COMMIT LICENSE FAMILY SOURCE)
+        get_property(_v_${_k} GLOBAL PROPERTY FM1_CORE_${_k}_${_id})
+    endforeach()
+    string(APPEND _m "core\t${_id}\t${_v_VERSION}\t${_v_COMMIT}\t${_v_LICENSE}\t${_v_FAMILY}\t${_v_SOURCE}\n")
+endforeach()
+get_property(_left_out GLOBAL PROPERTY FM1_CORES_LEFT_OUT)
+foreach(_id IN LISTS _left_out)
+    string(APPEND _m "gated\t${_id}\n")
+endforeach()
+file(WRITE ${CMAKE_BINARY_DIR}/release-manifest.tsv "${_m}")
 
 set(FM1_VST3_DIR "$ENV{HOME}/Library/Audio/Plug-Ins/VST3")
 set(FM1_AU_DIR "$ENV{HOME}/Library/Audio/Plug-Ins/Components")

@@ -402,6 +402,23 @@ leaves them in the build folder (a second build tree next to a working install; 
 bundles). Remote FM-1's vendor bulk transport links Homebrew's static `libusb-1.0.a` (`brew install libusb`); without
 it the plugin builds with SysEx frames only.
 
+**A release build** is the public build (`-DFM1_PUBLIC_BUILD=ON`: the 10 un-gated cores, CORES-PLAN.md 6) for Apple
+silicon, made by `.github/workflows/release.yml` when a tag `v<version>` is pushed (the version is `project()`'s
+here; CHANGELOG.md has the notes) and by hand the same way:
+
+```sh
+cmake -B build-release -DCMAKE_BUILD_TYPE=Release -DFM1_PUBLIC_BUILD=ON -DFM1_COPY_PLUGIN=OFF \
+      -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+      -DFM1_LIBUSB_PREFIX=$(tools/libusb_static.sh build-libusb 11.0)
+cmake --build build-release -j && tools/release_tests.sh build-release && tools/package_release.sh build-release
+```
+
+`tools/libusb_static.sh` uses Homebrew's libusb when it is built for the deployment target, else builds libusb from its
+release tarball (a bottle built for macOS 15 would not load on macOS 11). `tools/package_release.sh` checks the
+bundles (exactly the public cores, arm64, no Homebrew paths, signatures) and writes
+`build-release/dist/FM1VST-<version>-macOS-arm64.zip` (the three bundles, INSTALL.txt, README.txt, LICENSE,
+licences/), `SHA256SUMS` and the release notes.
+
 The Tier 2 slots (the firmware's parameters by name) are off by default; `cmake -B build -DFM1_TIER2_SLOTS=79` turns
 them on (`FM1_TIER2_SLOTS` is a cache variable: a build folder configured before the default became 0 keeps 79 until
 it is set again, `-DFM1_TIER2_SLOTS=0`).

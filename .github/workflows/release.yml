@@ -1,0 +1,187 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# FM1VST's release: the public build (FM1_PUBLIC_BUILD=ON: the 10 un-gated cores, Felucca the default) for Apple
+# silicon, tested, checked and zipped by the same scripts a local run uses (tools/release_tests.sh,
+# tools/package_release.sh).
+#   - a tag v<version> (git tag v0.3.0 && git push origin v0.3.0): builds and publishes the GitHub Release (the zip,
+#     SHA256SUMS, the notes); the tag must equal CMakeLists.txt's project(FM1VST VERSION ..)
+#   - Run workflow (workflow_dispatch): the same build as a dry run, uploaded as an artifact, nothing published
+# Unsigned (ad-hoc) for now. Developer ID signing and notarisation run once these secrets exist (until then those steps
+# are skipped): MACOS_CERT_P12 (base64 of the .p12), MACOS_CERT_PASSWORD, MACOS_SIGN_IDENTITY ("Developer ID
+# Application: .. (TEAMID)"), and for notarisation APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD.
+# A failing build step publishes the tail of its log as an error annotation (.github/scripts/logged.sh).
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  macos-arm64:
+    runs-on: macos-14
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    env:
+      DEPLOYMENT_TARGET: '11.0'
+      BUILD_DIR: build-release
+      DIST_DIR: dist
+      FM1_RELEASE_STRICT: '1'
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+      HOMEBREW_NO_INSTALL_CLEANUP: '1'
+      MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+    steps:
+      - name: Check out (with every submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: The version
+        shell: bash
+        run: |
+          v="$(sed -n 's/^project(FM1VST VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)"
+          if [ -z "$v" ]; then echo "::error title=version::no project(FM1VST VERSION ..) in CMakeLists.txt"; exit 1; fi
+          if [ "${GITHUB_REF_TYPE}" = tag ]; then
+            t="${GITHUB_REF_NAME#v}"
+            if [ "$t" != "$v" ]; then
+              echo "::error title=version::the tag ${GITHUB_REF_NAME} is not CMakeLists.txt's version $v"; exit 1
+            fi
+            echo "FM1_RELEASE_VERSION=$t" >> "$GITHUB_ENV"
+          fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+          echo "FM1VST $v ($GITHUB_REF_TYPE $GITHUB_REF_NAME)"
+
+      - name: Python (Pillow, fontTools, numpy) for the cores' generate steps
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Dependencies
+        shell: bash
+        run: |
+          # fribidi + libraqm: Pillow's text layout (PYTHON_NEEDS raqm), loaded from /opt/homebrew/lib at run time;
+          # sdl2: the firmwares' own emulators for the golden checks; libusb: Remote FM-1 (tools/libusb_static.sh)
+          .github/scripts/logged.sh brew brew install libusb fribidi libraqm sdl2
+          .github/scripts/logged.sh pip python -m pip install --upgrade Pillow fonttools numpy
+          echo "CR_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
+          DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib python -c "
+          from PIL import features; import PIL, fontTools, numpy
+          print('Pillow', PIL.__version__, 'raqm', features.version('raqm'), 'fribidi', features.version('fribidi'))
+          assert features.check('raqm'), 'Pillow has no raqm'"
+
+      - name: libusb, static, for macOS ${{ env.DEPLOYMENT_TARGET }}
+        shell: bash
+        run: .github/scripts/logged.sh libusb tools/libusb_static.sh "$RUNNER_TEMP/libusb" "$DEPLOYMENT_TARGET" "$GITHUB_ENV"
+
+      - name: Configure
+        shell: bash
+        run: |
+          .github/scripts/logged.sh configure cmake -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release \
+            -DFM1_PUBLIC_BUILD=ON -DFM1_COPY_PLUGIN=OFF \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET" \
+            -DCR_PYTHON="$CR_PYTHON" -DFM1_LIBUSB_PREFIX="$FM1_LIBUSB_PREFIX"
+          cat "$BUILD_DIR/release-manifest.tsv"
+
+      - name: Build
+        shell: bash
+        run: .github/scripts/logged.sh build cmake --build "$BUILD_DIR" --config Release -j "$(sysctl -n hw.ncpu)"
+
+      - name: Test
+        shell: bash
+        run: .github/scripts/logged.sh test tools/release_tests.sh "$BUILD_DIR"
+
+      - name: Sign with the Developer ID (skipped without the secrets)
+        if: env.MACOS_SIGN_IDENTITY != ''
+        shell: bash
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          kc="$RUNNER_TEMP/signing.keychain-db"; kcpw="$(uuidgen)"
+          echo "$MACOS_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$kcpw" "$kc"
+          security set-keychain-settings -lut 21600 "$kc"
+          security unlock-keychain -p "$kcpw" "$kc"
+          security import "$RUNNER_TEMP/cert.p12" -P "$MACOS_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$kc"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$kcpw" "$kc"
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
+          art="$BUILD_DIR/FM1VST_artefacts/Release"
+          for b in "$art/VST3/FM1VST.vst3" "$art/AU/FM1VST.component" "$art/Standalone/FM1VST.app"; do
+            for c in "$b"/Contents/Resources/cores/*.fm1core; do
+              codesign --force --timestamp --options runtime -s "$MACOS_SIGN_IDENTITY" "$c"
+            done
+            # (the Standalone loads cores a user drops into ~/Library/Application Support/fm1emu/cores: without
+            # library validation off, the hardened runtime would refuse those)
+            ent=()
+            if [ "${b##*.}" = app ]; then
+              /usr/libexec/PlistBuddy -c 'Add :com.apple.security.cs.disable-library-validation bool true' \
+                "$RUNNER_TEMP/app.entitlements" > /dev/null
+              ent=(--entitlements "$RUNNER_TEMP/app.entitlements")
+            fi
+            codesign --force --timestamp --options runtime "${ent[@]}" -s "$MACOS_SIGN_IDENTITY" "$b"
+            codesign --verify --deep --strict --verbose=2 "$b"
+          done
+
+      - name: Package
+        shell: bash
+        run: .github/scripts/logged.sh package tools/package_release.sh "$BUILD_DIR" "$DIST_DIR"
+
+      - name: Notarise (skipped without the secrets)
+        if: env.MACOS_SIGN_IDENTITY != '' && env.APPLE_ID != ''
+        shell: bash
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          zip="$DIST_DIR/FM1VST-$VERSION-macOS-arm64.zip"
+          xcrun notarytool submit "$zip" --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" --wait
+          art="$BUILD_DIR/FM1VST_artefacts/Release"
+          for b in "$art/VST3/FM1VST.vst3" "$art/AU/FM1VST.component" "$art/Standalone/FM1VST.app"; do
+            xcrun stapler staple "$b"
+          done
+          # the zip again, now with the stapled tickets (and its checks again)
+          tools/package_release.sh "$BUILD_DIR" "$DIST_DIR"
+
+      - name: Upload the build
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FM1VST-${{ env.VERSION }}-macOS-arm64
+          path: |
+            ${{ env.DIST_DIR }}/*.zip
+            ${{ env.DIST_DIR }}/SHA256SUMS
+            ${{ env.DIST_DIR }}/RELEASE-NOTES.md
+          if-no-files-found: warn
+
+      - name: Upload the test log (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: |
+            ${{ env.BUILD_DIR }}/Testing/Temporary/LastTest.log
+            ${{ env.BUILD_DIR }}/CMakeFiles/CMakeConfigureLog.yaml
+            ${{ env.BUILD_DIR }}/release-manifest.tsv
+          if-no-files-found: ignore
+
+      - name: Publish the release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: FM1VST ${{ env.VERSION }}
+          body_path: ${{ env.DIST_DIR }}/RELEASE-NOTES.md
+          fail_on_unmatched_files: true
+          files: |
+            ${{ env.DIST_DIR }}/FM1VST-${{ env.VERSION }}-macOS-arm64.zip
+            ${{ env.DIST_DIR }}/SHA256SUMS
