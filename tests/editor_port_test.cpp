@@ -7,10 +7,11 @@
 //                               with the port off, the host's SysEx is answered to the host as before; the idle clock
 //                               answers while processBlock is not called, and stops when blocks come again
 //   editor_port_test coremidi   a CoreMIDI client (JUCE's devices, in this process) finds the virtual port by name and
-//                               does an INFO round trip against FM-106 (its Librarian's dump request, F0 41 34 ..) and
+//                               does an INFO round trip against FM-106 (its Librarian's dump request, F0 41 34 ..; a
+//                               public build: Felucca's INFO) and
 //                               against the echo core, idle and while playing; ChoralRoot's INFO, LIST and RESTART (its
 //                               SysEx glue; the reboot powered on again with the host idle); two instances get distinct
-//                               names; no SysEx in the host's MIDI out. Exit 77 (skipped) without CoreMIDI or FM-106.
+//                               names; no SysEx in the host's MIDI out. Exit 77 (skipped) without CoreMIDI.
 //   editor_port_test managers   the managers end to end through the CoreMIDI port (runManagers): INFO, LIST, GET, a
 //                               PUT read back, for every firmware with a backup manager, playing and idle; a table of
 //                               the latencies
@@ -352,34 +353,38 @@ static bool waitListed(const juce::String &name, bool want, double ms = 2000)
 
 static int runCoreMidi()
 {
-    if (!built_cores().count("fm106")) {
-        std::printf("SKIP: this build has no FM-106 core (a public build)\n");
+    // the first firmware: FM-106 (its Librarian's dump request), or in a public build (FM-106 gated) Felucca (INFO)
+    const bool fm106 = built_cores().count("fm106") > 0;
+    if (!fm106 && !built_cores().count("felucca")) {
+        std::printf("SKIP: this build has neither FM-106 nor Felucca\n");
         return 77;
     }
+    const char *firstId = fm106 ? "fm106" : "felucca";
+    const std::string firstUsb = fm106 ? "FM-106" : "Felucca";
     FM1Processor a;
-    if (!a.switchCore("fm106")) {
-        std::printf("FAIL: FM-106 does not load\n");
+    if (!a.switchCore(firstId)) {
+        std::printf("FAIL: %s does not load\n", firstId);
         return 1;
     }
     Host ha(a);
-    ha.blocks(200);                              // (booted, its librarian up)
+    ha.blocks(fm106 ? 200 : 600);                // (booted, its librarian / editor service up)
     a.setEditorPortEnabled(true);
     const auto sa = a.editorPortStatus();
     if (!sa.open) {
         std::printf("SKIP: no virtual CoreMIDI port could be made here (%s)\n", sa.error.toRawUTF8());
         return 77;
     }
-    std::printf("[CoreMIDI: FM-106]\n");
-    check(sa.name == "FM-106 (FM1VST)", "the port: \"" + sa.name.toStdString() + "\"");
+    std::printf("[CoreMIDI: %s]\n", firstUsb.c_str());
+    check(sa.name.toStdString() == firstUsb + " (FM1VST)", "the port: \"" + sa.name.toStdString() + "\"");
     check(waitListed(sa.name, true), "CoreMIDI lists a source and a destination by that name");
 
     FM1Processor b;
-    b.switchCore("fm106");
+    b.switchCore(firstId);
     Host hb(b);
     hb.blocks(4);
     b.setEditorPortEnabled(true);
     const auto sb = b.editorPortStatus();
-    check(sb.open && sb.name == "FM-106 (FM1VST 2)" && sb.name != sa.name,
+    check(sb.open && sb.name.toStdString() == firstUsb + " (FM1VST 2)" && sb.name != sa.name,
           "a second instance: \"" + sb.name.toStdString() + "\" (the first name is taken)");
     check(waitListed(sa.name, true) && waitListed(sb.name, true), "both listed");
 
@@ -387,14 +392,16 @@ static int runCoreMidi()
     check(c.connect(sa.name), "a client finds the port by name and opens both directions");
     if (!c.in || !c.out)
         return 1;
-    const Bytes dump = sx({0xF0, 0x41, 0x34, 0x00, 0x00, 0xF7});   // (the Librarian: dump request, patch 0)
+    // FM-106's Librarian: a dump request (patch 0), answered F0 41 30 ..; Felucca's editor: INFO
+    const Bytes dump = fm106 ? sx({0xF0, 0x41, 0x34, 0x00, 0x00, 0xF7}) : sx({0xF0, 0x7D, 0x46, 0x4C, 0x01, 0xF7});
+    const Bytes dumpReply = fm106 ? sx({0xF0, 0x41, 0x30}) : sx({0xF0, 0x7D, 0x46, 0x4C, 0x01});
     Bytes reply;
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    double t = c.roundTrip(dump, sx({0xF0, 0x41, 0x30}), nullptr, &reply);
-    check(t >= 0 && t < 300, "FM-106 answers with the host idle (the idle clock): " + std::to_string((int)t) + " ms, " +
+    double t = c.roundTrip(dump, dumpReply, nullptr, &reply);
+    check(t >= 0 && t < 300, firstUsb + " answers with the host idle (the idle clock): " + std::to_string((int)t) + " ms, " +
                                  hex(reply, 12));
     ha.sysexToHost = 0;
-    t = c.roundTrip(dump, sx({0xF0, 0x41, 0x30}), &ha, &reply);
+    t = c.roundTrip(dump, dumpReply, &ha, &reply);
     check(t >= 0 && t < 300, "and while the host plays: " + std::to_string((int)t) + " ms");
     ha.play(50);
     check(ha.sysexToHost == 0, "no SysEx in the host's MIDI out (" + std::to_string(ha.sysexToHost) + ")");
@@ -403,7 +410,7 @@ static int runCoreMidi()
     Client c2;
     if (c2.connect(sb.name)) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        t = c2.roundTrip(dump, sx({0xF0, 0x41, 0x30}), nullptr);
+        t = c2.roundTrip(dump, dumpReply, nullptr);
         check(t >= 0 && t < 300, "the second instance answers on its own port: " + std::to_string((int)t) + " ms");
     } else {
         check(false, "a client opens the second port");
