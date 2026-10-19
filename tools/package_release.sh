@@ -169,6 +169,8 @@ cp "$root/plugin/fonts/OFL.txt" "$lic/InterTight-OFL.txt"
 juce="$(info juce_source)"
 [ -f "$juce/LICENSE.md" ] || die "JUCE's LICENSE.md not found in '$juce'"
 cp "$juce/LICENSE.md" "$lic/JUCE/LICENSE.md"
+# (the AGPLv3 JUCE is used under: the FSF's text, https://www.gnu.org/licenses/agpl-3.0.txt, kept in tools/release/)
+cp "$here/release/AGPL-3.0.txt" "$lic/JUCE/AGPL-3.0.txt"
 for f in modules/juce_audio_processors_headless/format_types/VST3_SDK/LICENSE.txt:VST3_SDK-LICENSE.txt \
          modules/juce_audio_plugin_client/AU/AudioUnitSDK/LICENSE.txt:AudioUnitSDK-LICENSE.txt \
          modules/juce_graphics/image_formats/pnglib/LICENSE:libpng-LICENSE.txt \
@@ -195,9 +197,10 @@ cores/<id>/      each bundled firmware core: its licence, its LICENSING.md / CRE
 RemoteFM1/       libremotefm1 (Remote FM-1's host library), GPL-3.0.
 libusb/          libusb $( [ -f "$lic/libusb/COPYING" ] && echo "(linked statically)" ), LGPL-2.1-or-later: COPYING.
                  Its source: https://github.com/libusb/libusb
-JUCE/            the JUCE framework $juce_v, used under its open-source licence, the AGPLv3
-                 (https://www.gnu.org/licenses/agpl-3.0.html; GPL-3.0 section 13 allows the combination), and the
-                 SDKs it compiles in: the VST3 SDK (MIT), the AudioUnitSDK (Apache-2.0), libpng, SheenBidi.
+JUCE/            the JUCE framework $juce_v (LICENSE.md), used under its open-source licence, the AGPLv3: its
+                 full text is AGPL-3.0.txt (https://www.gnu.org/licenses/agpl-3.0.html; GPL-3.0 section 13 allows
+                 the combination), and the SDKs it compiles in: the VST3 SDK (MIT), the AudioUnitSDK
+                 (Apache-2.0), libpng, SheenBidi.
 InterTight-OFL.txt  the editor's type, Inter Tight (The Inter Project Authors), SIL Open Font License 1.1.
 EOF
 
@@ -234,7 +237,8 @@ EOF
 listing="$(unzip -Z1 "$out/$name.zip")"
 for want in "$name/FM1VST.vst3/Contents/MacOS/FM1VST" "$name/FM1VST.component/Contents/MacOS/FM1VST" \
             "$name/FM1VST.app/Contents/MacOS/FM1VST" "$name/INSTALL.txt" "$name/README.txt" "$name/LICENSE" \
-            "$name/licences/README.txt" "$name/licences/JUCE/LICENSE.md" "$name/licences/InterTight-OFL.txt"; do
+            "$name/licences/README.txt" "$name/licences/JUCE/LICENSE.md" "$name/licences/JUCE/AGPL-3.0.txt" \
+            "$name/licences/InterTight-OFL.txt"; do
     echo "$listing" | grep -qx "$want" || bad "zip: $want missing"
 done
 for fmt in vst3 component app; do
