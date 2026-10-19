@@ -65,6 +65,7 @@ struct Link {
     std::deque<Bytes> frames;       // whole SysEx replies, F0..F7
     uint64_t blocks = 0;
     uint32_t worst = 0;             // the most blocks a reply took
+    std::string worst_what;         // .. and to which request (its first bytes after F0)
     std::vector<float> L, R;
     explicit Link(Device &d) : dev(d), L(kBlock), R(kBlock) {}
 
@@ -135,6 +136,12 @@ struct Link {
                 frames.pop_front();
                 if (match(f)) {
                     const uint32_t n = (uint32_t)(blocks - b0);
+                    if (n > worst || worst_what.empty()) {
+                        char w[32];
+                        std::snprintf(w, sizeof w, "%02X %02X %02X %02X", q.size() > 1 ? q[1] : 0, q.size() > 2 ? q[2] : 0,
+                                      q.size() > 3 ? q[3] : 0, q.size() > 4 ? q[4] : 0);
+                        worst_what = w;
+                    }
                     worst = std::max(worst, n);
                     if (took)
                         *took = n;
@@ -780,11 +787,12 @@ int main(int argc, char **argv)
                                           " is the changed preset " + s2.why);
         if (p->after_reboot)
             check(p->after_reboot(k2, s2), "rebooted from the flash image: the profile's own check " + s2.why);
-        k.worst = std::max(k.worst, k2.worst);
+        if (k2.worst > k.worst)
+            k.worst = k2.worst, k.worst_what = k2.worst_what;
     }
     std::printf("  worst reply: %u blocks of %u frames at %.0f Hz (%.1f ms; + one block for a request that just missed "
-                "one: %.1f ms)\n",
-                k.worst, kBlock, kRate, k.worst * kBlockMs, (k.worst + 1) * kBlockMs);
+                "one: %.1f ms), request %s\n",
+                k.worst, kBlock, kRate, k.worst * kBlockMs, (k.worst + 1) * kBlockMs, k.worst_what.c_str());
     std::printf("sysex_test %s: %s\n", id.c_str(), fails ? "FAIL" : "PASS");
     return fails ? 1 : 0;
 }
