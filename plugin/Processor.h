@@ -243,6 +243,13 @@ public:
     void setEditorSize(int w, int h) { editorW_.store(w), editorH_.store(h); }
     bool getBigLcd() const { return bigLcd_.load(); }
     void setBigLcd(bool on) { bigLcd_.store(on); }
+    // the editor's view (stored in the state; a state without it: the device): the whole FM-1, or its screen alone in
+    // a square window whose side is remembered apart from the device view's size (0: never shown)
+    enum ViewMode { kViewDevice = 0, kViewScreen = 1 };
+    int getViewMode() const { return viewMode_.load(); }
+    void setViewMode(int m) { viewMode_.store(juce::jlimit(0, 1, m)); }
+    int getScreenSize() const { return screenSize_.load(); }
+    void setScreenSize(int side) { screenSize_.store(side); }
     // a relative knob's detents per full travel of the host value (the Roto-Control's 0..1; stored in the state)
     int getKnobDetents() const { return knobDetents_.load(); }
     void setKnobDetents(int n) { knobDetents_.store(juce::jlimit(4, 256, n)); }
@@ -466,6 +473,7 @@ private:
     std::atomic<uint32_t> themeSerial_{0};
     std::atomic<int> editorW_{0}, editorH_{0};
     std::atomic<bool> bigLcd_{false};
+    std::atomic<int> viewMode_{kViewDevice}, screenSize_{0};
 
     // the panel GUI's input (written by the message thread, taken by the audio thread at block start)
     std::atomic<uint32_t> panelKeys_{0}, panelButtons_{0}, panelKeyTaps_{0}, panelBtnTaps_{0};

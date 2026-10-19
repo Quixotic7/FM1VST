@@ -1475,7 +1475,8 @@ void FM1Processor::snapshotPanel()
 
 // ---------------------------------------------------------------- state ---
 // A ValueTree "FM1VST" (binary): stateVersion, core, coreVersion, transpose, midiNotesPlayKeys, keyNotesToFirmware,
-// master, preset, editorW, editorH, bigLcd, knobDetents, buttonMode (0 Tap, 1 Hold, 2 Toggle-hold), buttonTapMs,
+// master, preset, editorW, editorH (the device view's size), bigLcd, viewMode (0 device, 1 screen), screenSize (the
+// screen view's side; absent until it was shown), knobDetents, buttonMode (0 Tap, 1 Hold, 2 Toggle-hold), buttonTapMs,
 // encoderMode (0 Absolute, 1 Stepped), encoderSteps (8..64), remote (Remote FM-1 on), remoteIgnoreMidi, a child "theme" (name base membrane knob, and bed / label when the theme
 // sets them; "#RRGGBB") and "flash": the image gzip-compressed (a MemoryBlock property; absent when the instance
 // never had one, i.e. a fresh flash).
@@ -1500,6 +1501,9 @@ void FM1Processor::getStateInformation(juce::MemoryBlock &dest)
         t.setProperty("editorH", editorH_.load(), nullptr);
     }
     t.setProperty("bigLcd", bigLcd_.load(), nullptr);
+    t.setProperty("viewMode", viewMode_.load(), nullptr);
+    if (screenSize_.load() > 0)
+        t.setProperty("screenSize", screenSize_.load(), nullptr);
     t.setProperty("knobDetents", knobDetents_.load(), nullptr);
     t.setProperty("buttonMode", btnMode_.load(), nullptr);
     t.setProperty("buttonTapMs", btnTapMs_.load(), nullptr);
@@ -1551,6 +1555,8 @@ void FM1Processor::setStateInformation(const void *data, int sizeInBytes)
     if (t.hasProperty("editorW") && t.hasProperty("editorH"))
         setEditorSize((int)t.getProperty("editorW"), (int)t.getProperty("editorH"));
     bigLcd_.store((bool)t.getProperty("bigLcd", false));
+    setViewMode((int)t.getProperty("viewMode", kViewDevice));
+    screenSize_.store(juce::jmax(0, (int)t.getProperty("screenSize", 0)));
     setKnobDetents((int)t.getProperty("knobDetents", KnobParameter::kDefaultDetents));
     setButtonMode((int)t.getProperty("buttonMode", kButtonTap));
     setButtonTapMs((int)t.getProperty("buttonTapMs", kDefaultTapMs));
