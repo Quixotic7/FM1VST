@@ -22,8 +22,9 @@ list(TRANSFORM _qd_pvg_sources PREPEND ../../third_party/plutovg/source/)   # (E
 set(_qd_voice_sources ../voice/quad/quad_voice.c ../voice/pool.c ../voice/mix.c ../voice/fx/qd_fx.c ../seq/model.c
                       ../seq/pattern.c ../seq/seq.c ../seq/player.c ../seq/demo.c ../seq/chord.c ../seq/scale.c
                       ../seq/sounds.c ../seq/clip.c)
-# the app and its controller (P1.3, P1.3b, P1.3c: core/app/ctl*.c, view.c) and the screens (core/ui; P1.3c: ui_octave)
-set(_qd_app_sources ../app/app.c ../app/ctl.c ../app/ctl_step.c ../app/ctl_rec.c ../app/ctl_leds.c ../app/view.c)
+# the app and its controller (P1.3, P1.3b, P1.3c, P1.3d: core/app/ctl*.c, view.c; P1.3d: ctl_latch, ctl_preview) and the screens (core/ui; P1.3c: ui_octave)
+set(_qd_app_sources ../app/app.c ../app/ctl.c ../app/ctl_step.c ../app/ctl_rec.c ../app/ctl_leds.c ../app/ctl_latch.c
+                    ../app/ctl_preview.c ../app/view.c)
 set(_qd_ui_sources ../ui/ui_kit.c ../ui/ui_idle.c ../ui/ui_keys.c ../ui/ui_picker.c ../ui/ui_tracks.c ../ui/ui_lane.c
                    ../ui/ui_held.c ../ui/ui_turn.c ../ui/ui_layer.c ../ui/ui_octave.c)
 fm1_add_core(quadrille ${_qd}/core/glue SOURCE ${_qd}
@@ -38,7 +39,7 @@ fm1_add_core(quadrille ${_qd}/core/glue SOURCE ${_qd}
              CREDITS "QUADRILLE (working name), a step sequencer for the FM-1: Phase 1 prototype.\nFM TONE, the effects and the output chain: ChoralRoot FM-1 v0.25.1 (GPL-3.0-only, ChoralRoot FM-1 contributors), a fork of Felucca (Leo Kuroshita, Hugelton Instruments).\nDrawn with plutovg (MIT). Portions of this software are copyright (c) 2006 The FreeType Project (www.freetype.org). All rights reserved.\nType: Inter Tight (SIL Open Font License 1.1)."
              CREDITS_FILES third_party/plutovg/LICENSE assets/fonts/OFL.txt
              NO_GEN
-             VERSION 0.0.6-p1.3c)
+             VERSION 0.0.7-p1.3d)
 if(TARGET core_quadrille_obj)
     # plutovg is vendored unmodified: its own warnings are not ours (ChoralRoot's copies keep theirs off themselves:
     # quad_voice.c and qd_fx.c push their diagnostics around them)
