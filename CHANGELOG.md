@@ -3,6 +3,17 @@
 FM1VST's releases. The version is `project(FM1VST VERSION ..)` in CMakeLists.txt (the plugin shows it in its
 settings sheet); a release is the tag `v<version>` on it (.github/workflows/release.yml builds and publishes it).
 
+## Unreleased
+
+### ChoralRoot and Melodee in the public build
+
+ChoralRoot 0.25.1 and Melodee are no longer gated (the owner's call, 2026-10-19): the public build carries 12 cores,
+and ChoralRoot is its default firmware (it was Felucca while ChoralRoot was left out). Their CZ-1 tones (Casio) and
+Prophet-5 programs (Sequential) ship compiled into the firmware, as the firmwares' own packages carry them, and the
+cores' credits name both owners. No raw .syx goes out: tools/package_release.sh fails a release that holds a .syx,
+anything from a core's assets/cz1-factory or assets/prophet5-factory, or a file with the content of any core's .syx.
+Melodee: 1.4.3 -> 1.4.4 (a release-tooling update; the firmware's only change is its version string).
+
 ## 0.3.1 (2026-10-19): an installer package
 
 ### An installer package

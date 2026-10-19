@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# FM1VST's release: the public build (FM1_PUBLIC_BUILD=ON: the 10 un-gated cores, Felucca the default) for Apple
+# FM1VST's release: the public build (FM1_PUBLIC_BUILD=ON: the 12 un-gated cores, ChoralRoot the default) for Apple
 # silicon, tested, checked, zipped and packaged as an installer (.pkg) by the same scripts a local run uses
 # (tools/release_tests.sh, tools/package_release.sh).
 #   - a tag v<version> (git tag v0.3.1 && git push origin v0.3.1): builds and publishes the GitHub Release (the zip,

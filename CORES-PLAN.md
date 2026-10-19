@@ -137,12 +137,12 @@ so these need an answer first:
 | DUELL | naming terms for unofficial builds | an unmodified build at a release tag is probably fine; ask the author |
 | No Man Sky FM | credit request | credited in the About box (the descriptor's credits, ABI 6) |
 | X0X | 909 hi-hat / ride / crash samples "ER-99 via 9W9", GPL-3.0 | gated until ER-99's author confirms they are not TR-909 ROM recordings |
+| ChoralRoot, Melodee | Casio's CZ-1 preset tones and Sequential's Prophet-5 factory programs, no licence granted | un-gated (the owner's call, 2026-10-19): they ship compiled into the firmware, credited to Casio and Sequential; no raw .syx is distributed (tools/package_release.sh checks) |
 
-Gated today (left out of FM1_PUBLIC_BUILD): choralroot and melodee (Casio CZ-1 tones, Sequential Prophet-5
-programs), fm106 (Juno-106 patch data), duell (naming terms), rainbow (character look-alikes), fartmachine
-(recordings), orbit (OP-1 material, the Hugelton atlas), sloop and sloopdx (the Hugelton atlas), nomansky (game
-art), x0x (the cymbal samples). A public build bundles the other ten: felucca, ghoulbox, jiant, purplemonkey,
-coralflower, fomni, fimba, amb, obervave, frodhes.
+Gated today (left out of FM1_PUBLIC_BUILD): fm106 (Juno-106 patch data), duell (naming terms), rainbow (character
+look-alikes), fartmachine (recordings), orbit (OP-1 material, the Hugelton atlas), sloop and sloopdx (the Hugelton
+atlas), nomansky (game art), x0x (the cymbal samples). A public build bundles the other twelve: choralroot (the
+default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee, fomni, fimba, amb, obervave, frodhes.
 
 ## 7. Rules
 
