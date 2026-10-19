@@ -18,6 +18,7 @@
 //       put in the cache first: no network): the main page's Engine, clock and Source rows (ui-sheet-emulated.png),
 //       its About page (ui-about-emulated.png), Auto's step down waiting for the transport to stop
 //       (ui-sheet-clock-deferred.png).
+//   (p) Show to editors, the port faked: the Editors section off (ui-editors-off.png) and on (ui-editors.png)
 // FM1EMU_HOME points at a scratch folder under the build.
 #include <cstdio>
 #include <cstdlib>
@@ -110,6 +111,7 @@ int main()
     setenv("FM1EMU_HOME", scratch.getFullPathName().toRawUTF8(), 1);
     // (the Hub unreachable: the browser shows the bundled list, and nothing is fetched)
     setenv("FM1VST_HUB_CATALOG", ("file://" + scratch.getFullPathName() + "/no-hub/catalog.json").toRawUTF8(), 1);
+    setenv("FM1EMU_EDITOR_FAKE", "1", 1);    // (Show to editors: no CoreMIDI port is made)
     juce::ScopedJuceInitialiser_GUI gui;
     outDir().createDirectory();
     std::printf("ui_render_test: FM1EMU_HOME=%s, pictures in %s\n", scratch.getFullPathName().toRawUTF8(),
@@ -209,6 +211,19 @@ int main()
         shot(ed, "rename");
         ed.sheet().beginResetConfirm();
         shot(ed, "reset-confirm");
+        // ---- Show to editors (the port faked: FM1EMU_EDITOR_FAKE, no CoreMIDI port is made)
+        ed.sheet().scrollToEditors();
+        shot(ed, "editors-off");
+        p.setEditorPortEnabled(true);
+        p.editorPortForTest()->receiveForTest(juce::MidiMessage::createSysExMessage("\x7D\x46\x4C\x01", 4));
+        h.run_ms(30);
+        for (int i = 0; i < 100 && p.editorPortStatus().out == 0; i++)
+            juce::Thread::sleep(2);
+        ed.sheet().scrollToEditors();
+        check(p.editorPortStatus().open && p.editorPortStatus().name == "ChoralRoot FM-1 (FM1VST)",
+              "Show to editors: the port is \"" + p.editorPortStatus().name.toStdString() + "\"");
+        shot(ed, "editors");
+        p.setEditorPortEnabled(false);
         ed.sheet().close(false);
         ed.setSize(2600, juce::roundToInt(2600.0f / PanelComponent::frameAspect(false)));
         ed.openSettings(false);

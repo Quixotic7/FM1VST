@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The settings sheet (see Sheet.h).
+#include "EditorPort.h"
 #include "Sheet.h"
 
 #include "Editor.h"
@@ -487,6 +488,12 @@ public:
     void beginDeleteConfirm();
     void beginResetConfirm();
     void endInline();
+    void scrollToEditors()                        // (tests: the Editors section at the top of the view)
+    {
+        endInline();
+        refresh(false);
+        vp_.setViewPosition(0, juce::jmax(0, hEditors_.getY() - 8));
+    }
 
 private:
     void refreshPresets();
@@ -529,6 +536,14 @@ private:
     Text remoteDiag_{look_, 11.5f, Look::C::muted};
     Switch ignoreSw_{look_};
     Row ignore_{look_, "Ignore the FM-1's own MIDI", &ignoreSw_, Switch::kW, 24};
+
+    Heading hEditors_{look_, "Editors"};
+    Switch editorSw_{look_};
+    Row editorPort_{look_, "Show to editors", &editorSw_, Switch::kW, 24};
+    Text editorStatus_{look_, 13.0f, Look::C::rowText};
+    Text editorHint_{look_, 11.5f, Look::C::muted};
+    Row editorLink_{look_, "Editor"};
+    String editorUrl_;
 
     Heading hPlaying_{look_, "Playing"};
     Stepper transposeSt_{look_, -2, 2, [](int v) { return v == 0 ? String("0") : String::formatted("%+d", v); }};
@@ -680,6 +695,25 @@ Sheet::MainPage::MainPage(Sheet &s, FM1Editor &ed) : ScrollPage(ed.look()), shee
     stack_.add(ignore_);
     ignore_.setCaption("its notes and knobs on the DAW's MIDI input (Live's All Ins)");
     ignoreSw_.onChange = [this](bool on) { p_.setRemoteIgnoreMidi(on); };
+
+    // EDITORS (Show to editors: EditorPort.h; macOS)
+    const bool ports = EditorPort::available();
+    for (Widget *w : std::initializer_list<Widget *>{&hEditors_, &editorPort_, &editorStatus_, &editorHint_, &editorLink_}) {
+        stack_.add(*w);
+        w->setVisible(ports);
+    }
+    editorPort_.setTooltip("A MIDI port named like this firmware's own USB port, so its web editor or preset manager (in "
+                           "Chrome) finds this FM1VST as if it were an FM-1: back up and restore presets, edit sounds. The "
+                           "editor's messages go straight to the firmware and its answers straight back, never through "
+                           "the DAW; the firmware keeps running for the editor while the host is stopped. Saved with the set.");
+    editorSw_.onChange = [this](bool on) {
+        p_.setEditorPortEnabled(on);
+        refresh();
+    };
+    editorLink_.onClick = [this] {
+        if (editorUrl_.isNotEmpty())
+            juce::URL(editorUrl_).launchInDefaultBrowser();
+    };
 
     // PLAYING
     stack_.add(hPlaying_);
@@ -1084,6 +1118,34 @@ void Sheet::MainPage::refresh(bool full)
         diag << (diag.isEmpty() ? "" : "\n") << "Built without libusb: frames go over SysEx only";
     remoteDiag_.setText(diag);
     ignoreSw_.setOn(p_.getRemoteIgnoreMidi());
+
+    // EDITORS
+    {
+        const FM1Processor::EditorPortStatus ps = p_.editorPortStatus();
+        editorSw_.setOn(ps.on);
+        Colour eled = juce::Colours::transparentBlack;
+        String etext;
+        if (ps.open)
+            eled = C(Look::C::green), etext = ps.name;
+        else if (ps.on)
+            eled = C(Look::C::amber), etext = ps.error.isNotEmpty() ? ps.error : String("starting");
+        else
+            etext = "Off: it would show as " + EditorPort::nameFor(ps.usbName, 1);
+        editorStatus_.setLed(eled);
+        editorStatus_.setText(etext, C(ps.open ? Look::C::rowText : Look::C::muted));
+        String hint = "Open the firmware's editor in Chrome; it finds this FM1VST as an FM-1. Don't enable this port as a "
+                      "MIDI input in your DAW (Live lists it under All Ins).";
+        if (ps.emulated)
+            hint << "\nAn emulated firmware has no USB MIDI: its editor gets no answer.";
+        if (ps.open && (ps.in || ps.out))
+            hint << "\n" << String::formatted("Messages in %u, out %u", ps.in, ps.out)
+                 << (ps.idling ? String::fromUTF8(" \xc2\xb7 running for the editor (the host is stopped)") : String());
+        editorHint_.setText(hint);
+        editorUrl_ = ps.url;
+        editorLink_.setVisible(ps.available && ps.url.isNotEmpty());
+        editorLink_.setValue(ps.url.fromFirstOccurrenceOf("://", false, false).trimCharactersAtEnd("/"));
+        editorLink_.setTooltip(ps.url);
+    }
 
     // PLAYING, HOST CONTROL
     transposeSt_.setValue(p_.getTranspose());
@@ -2035,6 +2097,11 @@ void Sheet::beginRename() { main_->beginRename(); }
 void Sheet::beginSaveAs() { main_->beginSaveAs(); }
 void Sheet::beginDeleteConfirm() { main_->beginDeleteConfirm(); }
 void Sheet::beginResetConfirm() { main_->beginResetConfirm(); }
+void Sheet::scrollToEditors()
+{
+    showPage(kMain);
+    main_->scrollToEditors();
+}
 void Sheet::setBrowserFilter(const String &search, int category)
 {
     firmware_->setFilter(search, category);

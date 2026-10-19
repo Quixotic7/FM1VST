@@ -111,6 +111,15 @@
 //     given to each power-on as the core's boot option "mhz" (fm1core.h OPTIONAL MODULE SYMBOLS). Auto's governor
 //     (EmuClock.h) is fed from processBlock's own timing (two atomics, no lock) by the message thread's timer; a step
 //     down reboots with the flash kept, as a manual change does.
+//
+// SHOW TO EDITORS (setEditorPortEnabled; the switch is in the state; macOS): a virtual MIDI port pair named after the
+// loaded firmware's USB port (EditorPort.h), so the firmware's own web manager finds this instance as an FM-1. The
+// timer (message thread) makes it, and remakes it when the firmware changes. Its messages go straight into the core's
+// MIDI in (pullEditorMidi: whole messages into inRing_, at block start and in the idle clock), and while it is open
+// every SysEx the core sends goes to the port, not to the host; channel messages still go to the host. Nothing of
+// the port's traffic is in the host's MIDI buffers. When no processBlock has started for 50 ms, the port's service
+// thread runs the core (editorIdleTick: devLock_ held, the audio discarded) so a manager is answered while the host
+// does not play.
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 
@@ -122,6 +131,7 @@
 #include <string>
 #include <vector>
 
+#include "EditorPort.h"
 #include "EmuClock.h"
 #include "HostRefresh.h"
 #include "Hub.h"
@@ -395,6 +405,27 @@ public:
     static bool isRemotePanelMidi(const uint8_t *d, int n);
     static bool isRemotePanelMidi(const juce::MidiMessage &m) { return isRemotePanelMidi(m.getRawData(), m.getRawDataSize()); }
 
+    // ---- Show to editors (message thread; stored in the state; see SHOW TO EDITORS above)
+    void setEditorPortEnabled(bool on);
+    bool getEditorPortEnabled() const { return editorOn_.load(); }
+    struct EditorPortStatus {
+        bool available = false;                      // the platform has virtual ports (macOS)
+        bool on = false, open = false, idling = false, emulated = false;
+        juce::String name;                           // the port's name ("" closed)
+        juce::String usbName;                        // the loaded firmware's USB name (what the port is named after)
+        juce::String error;                          // why no port could be made
+        juce::String url;                            // the firmware's manager page, "" none known
+        uint32_t in = 0, out = 0, dropped = 0;       // messages taken by the core, sent back, refused
+        uint64_t idleMs = 0;                         // device ms the idle clock has run
+    };
+    EditorPortStatus editorPortStatus() const;
+    juce::String editorUsbName() const;              // the loaded firmware's USB product string
+    void syncEditorPort();                           // (the timer's work) the port as the switch and the firmware want
+    // the idle clock (the port's service thread; tests): ms device milliseconds of the core, devLock_ held, its audio
+    // and channel messages discarded, its SysEx to the port
+    void editorIdleTick(uint32_t ms);
+    EditorPort *editorPortForTest() { return editorPort_.get(); }
+
     // ---- for tests (call only between processBlock calls, on the thread that calls them) ----
     Device *deviceForTest() { return dev_.get(); }
     RemoteLink *remoteForTest() { return remote_.get(); }
@@ -438,6 +469,7 @@ private:
     {
         drainTier2();
         emuTimer();
+        syncEditorPort();
     }
     void relabelParameters();
     juce::String buttonName(int i) const;
@@ -466,6 +498,7 @@ private:
     void forwardMidi(const juce::MidiMessage &m);
     void flushMidiIn();
     void drainMidiOut(int samplePos);
+    void pullEditorMidi();                           // (devLock_ held) the port's whole messages into inRing_
     void decodePacket(uint32_t pkt, int samplePos);
     void renderSegment(float *L, float *R, int from, int to);
     void resetAudioState();
@@ -630,12 +663,13 @@ private:
     std::array<uint8_t, EMU_NKEY> keyCount_{};           // MIDI notes holding each key
     std::array<uint8_t, EMU_NKEY> midiVel_{};            // the velocity of the MIDI note that pressed each key
     uint32_t remoteKeyTaps_ = 0;                         // this block's key taps from the unit (velocity kRemoteVel)
-    static constexpr uint32_t kInRing = 1024;
+    static constexpr uint32_t kInRing = 4096;
     std::array<uint32_t, kInRing> inRing_{};             // USB-MIDI packets waiting for room in the core
     uint32_t inW_ = 0, inR_ = 0;
     std::vector<uint8_t> sysexOut_;                      // reassembling a SysEx from the core (CIN 4..7)
     bool sysexOutOverflow_ = false;
     juce::MidiBuffer midiOut_;
+    bool toHost_ = true;                                 // (devLock_ held) false in the idle clock: no host to take MIDI
     std::vector<float> scratch_;                         // the right channel when the host gives only one
 
     // Remote FM-1 (see the top): the link (created with the processor; its thread starts with the first enable)
@@ -652,4 +686,8 @@ private:
     bool remotePubValid_ = false;
     uint32_t remotePubMs_ = 0, remotePubWrites_ = 0, remotePubs_ = 0;
     rfm_leds_t remotePubLeds_{};
+
+    // Show to editors (see the top): the port (made with the processor; its devices and thread only while on)
+    std::unique_ptr<EditorPort> editorPort_;
+    std::atomic<bool> editorOn_{false};
 };

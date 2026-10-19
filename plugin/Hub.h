@@ -38,6 +38,7 @@ struct Entry {
     juce::String sha256;                    // lower-case hex, as the catalog gives it
     juce::int64 size = 0;
     juce::String product, source, release, what;
+    juce::String editor;                    // the catalog's `editor`: the firmware's web editor / manager, "" none
     juce::StringArray kinds;                // the Hub's kind(s): synth groove chords drums dev other
     bool beta = false;
     juce::String note;                      // known not to run on fm1-emu (Bubba), else ""

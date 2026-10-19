@@ -167,7 +167,7 @@ juce_add_plugin(FM1VST
     AU_COPY_DIR "${FM1_AU_DIR}")
 target_sources(FM1VST PRIVATE plugin/Processor.cpp plugin/Tier2Parameter.cpp plugin/HostRefresh.cpp plugin/Editor.cpp plugin/Theme.cpp
                               plugin/PanelComponent.cpp plugin/RemoteLink.cpp plugin/Look.cpp plugin/Widgets.cpp plugin/Sheet.cpp
-                              plugin/StandaloneHooks.cpp plugin/Hub.cpp plugin/EmuClock.cpp)
+                              plugin/StandaloneHooks.cpp plugin/Hub.cpp plugin/EmuClock.cpp plugin/EditorPort.cpp)
 # the theme presets (themes/presets.json), embedded: BinaryData::presets_json; the Hub's fallback list
 # (plugin/hub/fallback-catalog.json, the un-gated firmwares only: plugin/Hub.h), BinaryData::fallbackcatalog_json
 juce_add_binary_data(FM1VST_Themes HEADER_NAME BinaryData.h NAMESPACE BinaryData SOURCES themes/presets.json
@@ -462,6 +462,26 @@ add_dependencies(remote_test ${FM1_CORE_TARGETS})
 add_test(NAME remote_test COMMAND remote_test)
 set_tests_properties(remote_test PROPERTIES SKIP_RETURN_CODE 77)   # (a public build: the cores it needs left out)
 set_tests_properties(remote_test PROPERTIES ENVIRONMENT "FM1EMU_REMOTE_FAKE=1" TIMEOUT 180)
+
+# "Show to editors" (plugin/EditorPort.h), headless, on a fake core that answers SysEx from its clock
+# (tests/echo_core.c, a module of its own outside build/cores, so no other test lists it): editor_port_test runs the
+# port faked (FM1EMU_EDITOR_FAKE=1: the data path, the host's MIDI untouched, the idle clock); editor_port_coremidi_test
+# makes the real virtual ports and talks to them as a CoreMIDI client (FM-106's dump request, the echo core, two
+# instances' names), and skips (77) where CoreMIDI or FM-106 is not there
+add_library(echo_core MODULE tests/echo_core.c)
+target_include_directories(echo_core PRIVATE ${FM1_CORE_API_DIR})
+set_target_properties(echo_core PROPERTIES PREFIX "" SUFFIX ".fm1core" OUTPUT_NAME echo C_STANDARD 11
+                      LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/test_cores C_VISIBILITY_PRESET hidden)
+add_executable(editor_port_test tests/editor_port_test.cpp)
+target_link_libraries(editor_port_test PRIVATE FM1VST fm1engine "-framework CoreFoundation")
+target_include_directories(editor_port_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
+target_compile_definitions(editor_port_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS> FM1_BUILT_CORES="${FM1_BUILT_CORES}"
+    FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/editor_port_test_home" FM1_ECHO_CORE="$<TARGET_FILE:echo_core>")
+add_dependencies(editor_port_test ${FM1_CORE_TARGETS} echo_core)
+add_test(NAME editor_port_test COMMAND editor_port_test)
+add_test(NAME editor_port_coremidi_test COMMAND editor_port_test coremidi)
+set_tests_properties(editor_port_test editor_port_coremidi_test PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120
+                     RESOURCE_LOCK fm1_editor_port)
 
 # The Hub's firmwares on the fm1emu core (plugin/Hub.h), headless: a catalog fixture parses (which entries, the fallback
 # list, no gated name in it), a package is downloaded from a file:// fixture Hub and checked (a SHA-256 or size mismatch
