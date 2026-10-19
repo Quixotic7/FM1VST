@@ -12,7 +12,11 @@
 //   (m) the mouse: a right-click off the controls opens the sheet; on a key it still latches the key (no sheet);
 //   (p) the state: the view mode and both sizes round-trip; a state from before them (no viewMode / screenSize, the
 //       old bar's height in editorH) opens the device view at the panel's aspect;
-//   (a) the accent of every theme preset reads on the sheet (3:1).
+//   (a) the accent of every theme preset reads on the sheet (3:1);
+//   (e) emulated firmwares (the Hub unreachable: the bundled list): the browser's engine filter (ui-firmware-all.png,
+//       ui-firmware-emulated.png), a Hub firmware with a native core too picked on its emulated engine (its package
+//       put in the cache first: no network): the main page's Engine, clock and Source rows (ui-sheet-emulated.png),
+//       its About page (ui-about-emulated.png).
 // FM1EMU_HOME points at a scratch folder under the build.
 #include <cstdio>
 #include <cstdlib>
@@ -21,6 +25,7 @@
 
 #include "built_cores.h"
 #include "Editor.h"
+#include "Hub.h"
 #include "Look.h"
 #include "PanelComponent.h"
 #include "Processor.h"
@@ -93,6 +98,8 @@ int main()
     scratch.deleteRecursively();
     scratch.createDirectory();
     setenv("FM1EMU_HOME", scratch.getFullPathName().toRawUTF8(), 1);
+    // (the Hub unreachable: the browser shows the bundled list, and nothing is fetched)
+    setenv("FM1VST_HUB_CATALOG", ("file://" + scratch.getFullPathName() + "/no-hub/catalog.json").toRawUTF8(), 1);
     juce::ScopedJuceInitialiser_GUI gui;
     outDir().createDirectory();
     std::printf("ui_render_test: FM1EMU_HOME=%s, pictures in %s\n", scratch.getFullPathName().toRawUTF8(),
@@ -198,6 +205,47 @@ int main()
         shot(ed, "sheet-tall", 1.0f);
         ed.sheet().close(false);
         check(!ed.sheet().isVisible(), "the sheet closes");
+
+        // ---- (e) emulated firmwares
+        const juce::Rectangle<int> sizeBefore = ed.getLocalBounds();
+        ed.setSize(1402, 861);
+        {
+            juce::SharedResourcePointer<hub::Service> svc;
+            const hub::Catalog cat = svc->catalog();
+            const hub::Entry *fel = cat.find("felucca");
+            juce::MemoryBlock pkg;
+            const bool have = juce::File(FM1_FELUCCA_FWSC).loadFileAsData(pkg);
+            if (fel && have && hub::verify(pkg.getData(), pkg.getSize(), fel->sha256, fel->size).isEmpty() &&
+                hub::store(fel->id, fel->version, fel->sha256, pkg.getData(), pkg.getSize()) != juce::File()) {
+                ed.openSettings(false);
+                for (int i = 0; i < 200 && svc->refreshing(); i++)
+                    juce::Thread::sleep(10);
+                ed.sheet().showPage(Sheet::kFirmware);
+                ed.sheet().refresh();
+                shot(ed, "firmware-all");
+                ed.sheet().setEngineFilter(2);
+                shot(ed, "firmware-emulated");
+                ed.sheet().setEngineFilter(0);
+                ed.sheet().pickInBrowser("felucca", 2);   // (cached: at once)
+                h.run_ms(2500);
+                check(p.isEmulated() && p.getEmuFirmware().id == "felucca", "the browser picks Felucca's emulated engine");
+                ed.sheet().showPage(Sheet::kMain);
+                ed.sheet().refresh();
+                shot(ed, "sheet-emulated");
+                ed.sheet().showPage(Sheet::kAbout);
+                shot(ed, "about-emulated");
+                ed.sheet().showPage(Sheet::kMain);
+                ed.sheet().pickInBrowser("felucca", 1);
+                check(!p.isEmulated() && p.getCoreInfo().info.id == "felucca", "  ... and its Engine switch back to the native core");
+                ed.sheet().close(false);
+            } else {
+                std::printf("  (no Felucca package at %s: the emulated pages are not drawn)\n", FM1_FELUCCA_FWSC);
+            }
+        }
+        p.switchCore("choralroot");               // (the rest of the test is ChoralRoot's, at its size)
+        h.run_ms(1200);
+        ed.coreChanged();
+        ed.setSize(sizeBefore.getWidth(), sizeBefore.getHeight());
 
         // ---- (s) the screen view
         ed.setViewMode(FM1Processor::kViewScreen);

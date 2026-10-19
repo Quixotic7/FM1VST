@@ -89,6 +89,28 @@
 // gunzip` gives the raw image):
 //   {"fm1preset":1,"core":"choralroot","version":"0.1","name":"Warm Pads","date":"2026-10-07T12:00:00.000+02:00",
 //    "size":1048576}
+// An emulated firmware's preset (core "fm1emu") adds "firmware" (its Hub id), "fwVersion" and "sha256" (its package):
+// it loads only on that package, since its flash holds the firmware's own code.
+//
+// EMULATED FIRMWARES (plugin/Hub.h, plugin/EmuClock.h): the fm1emu core (core-glue/fm1emu: fm1-emu's emulated FM-1)
+// running an FM-1 update package, a Hub firmware the user picked or their own .fwsc. The module is one more bundled
+// core; it is not offered as a firmware of its own (listCores() leaves it out: firmwareCores()). What the host keeps
+// of an emulated firmware is its NOR (the first 1 MiB of the core's 0x210000-byte image, without the package slot):
+//   - the package lives in the Hub cache (hub/packages, by SHA-256) and in memory (emuPkg_); every boot composes the
+//     core's image from the NOR and the package (core-glue/fm1emu README "The firmware"), or stages the package alone
+//     (a fresh flash);
+//   - the working flash: home()/fm1emu/<hub id>/<version>-<sha256[0..8]>/flash.bin, so each package version keeps its
+//     own flash (a NOR from another version would put that version's code back over the new one); presets and backups
+//     per firmware: home()/fm1emu/<hub id>/presets, backups;
+//   - the state: core "fm1emu", a child "emu" (id name author version sha256 size pkg source product local), and the
+//     NOR as "flash" (gzip): the package by id and SHA-256, never its bytes. A state whose package is not cached boots
+//     the core empty (its LOAD .FWSC screen), keeps the NOR it brought (emuHeld_: getStateInformation returns it
+//     unchanged), downloads the package from the state's URL (checked against its SHA-256 and size) and then powers on
+//     with that NOR. Offline with the package cached, nothing is fetched.
+//   - the clock: the instance's choice (Auto or MHz, and Auto's current step) in the state ("emuClock", "emuAutoMhz"),
+//     given to each power-on as the core's boot option "mhz" (fm1core.h OPTIONAL MODULE SYMBOLS). Auto's governor
+//     (EmuClock.h) is fed from processBlock's own timing (two atomics, no lock) by the message thread's timer; a step
+//     down reboots with the flash kept, as a manual change does.
 #pragma once
 #include <juce_audio_processors/juce_audio_processors.h>
 
@@ -100,7 +122,9 @@
 #include <string>
 #include <vector>
 
+#include "EmuClock.h"
 #include "HostRefresh.h"
+#include "Hub.h"
 
 #ifndef FM1_DEFAULT_CORE
 #define FM1_DEFAULT_CORE "choralroot"   // the firmware a new instance loads (CMakeLists.txt sets it)
@@ -194,6 +218,7 @@ public:
     // the running bundle's cores folder if it exists, else the build's FM1_CORES_DIR (tests, a dev build)
     static juce::File bundledCoresDir();
     std::vector<CoreInfo> listCores() const;         // bundled + user (a user module with the same id wins)
+    std::vector<CoreInfo> firmwareCores() const;     // listCores() without the fm1emu engine (the native firmwares)
     bool switchCore(const juce::String &id);
     struct CoreStatus {
         bool loaded = false;
@@ -209,7 +234,7 @@ public:
     juce::File coreDir() const;                      // home()/<core-id>
     juce::File presetsDir() const { return coreDir().getChildFile("presets"); }
     juce::File backupsDir() const { return coreDir().getChildFile("backups"); }
-    juce::File workingFlashFile() const { return coreDir().getChildFile("flash.bin"); }
+    juce::File workingFlashFile() const;             // coreDir()/flash.bin (emulated: per package version)
     juce::StringArray listPresets() const;           // names, sorted case-insensitively
     bool savePreset(const juce::String &name);       // overwrites; also writes the working flash
     bool loadPreset(const juce::String &name);       // backup, then a power cycle on the preset's flash
@@ -310,8 +335,48 @@ public:
     // false when nothing changed
     bool getPanelView(PanelView &out) const;
 
-    // the current flash image (synced first when the device runs); empty = a fresh flash
+    // the current flash image (synced first when the device runs); empty = a fresh flash. An emulated firmware: its
+    // NOR (1 MiB), without the package
     std::vector<uint8_t> currentFlash();
+
+    // ---- emulated firmwares (message thread; see EMULATED FIRMWARES above) ----
+    static constexpr const char *kEmuCore = "fm1emu";
+    static constexpr uint32_t kNor = 0x100000;       // the emulated FM-1's NOR: what the host keeps
+    struct EmuFirmware {
+        juce::String id, name, author, version, sha256, pkg, source, product;
+        juce::int64 size = 0;
+        bool local = false;                          // the user's own file (no Hub URL)
+        bool valid() const { return id.isNotEmpty() && sha256.isNotEmpty(); }
+        hub::Entry entry() const;                    // as a Hub entry (to fetch it again)
+        static EmuFirmware of(const hub::Entry &e);
+    };
+    bool isEmulated() const;                         // the fm1emu core with a firmware picked
+    EmuFirmware getEmuFirmware() const;
+    // pick a Hub firmware: from the cache at once, else downloaded on the Hub's worker (the current firmware plays on
+    // meanwhile; getEmuStatus shows the progress) and then booted. The current firmware's flash is saved first, and the
+    // new one boots from its own working flash for that version.
+    void selectEmuFirmware(const hub::Entry &e);
+    // the same, blocking (the download on the calling thread): tests. false and why on failure
+    bool selectEmuFirmwareNow(const hub::Entry &e, juce::String *error = nullptr);
+    // the user's own .fwsc (M-VAVE's stock V15 is recognised by the catalog's SHA-256): copied into the Hub cache, then
+    // picked. "" or why not
+    juce::String openLocalPackage(const juce::File &f);
+    struct EmuStatus {
+        bool busy = false;                           // a download for this instance is under way
+        double progress = 0;                         // 0..1, -1 unknown
+        juce::String text;                           // "Downloading Melodee 1.4.4", or the last error
+        bool error = false;
+        bool waiting = false;                        // the core runs empty: its package is not here (yet)
+    };
+    EmuStatus getEmuStatus() const;
+    // the emulated chip's clock: the choice (emuclock::kAuto or MHz; per instance, in the state) and what runs now
+    int getEmuClockChoice() const { return emuChoice_.load(); }
+    void setEmuClockChoice(int choice);              // an emulated firmware reboots with its flash kept
+    int getEmuMhz() const { return emuclock::mhzFor(emuChoice_.load(), emuAutoMhz_.load()); }
+    // Auto's governor, one report (the timer calls it every half second; tests call it with fake timing)
+    void emuGovernorFeed(double load, double lateMs, double nowMs);
+    juce::String getEmuClockNote() const;            // what the governor last said ("" none)
+    hub::Service &hubService() { return *hub_; }
 
     // ---- Remote FM-1 (message thread; stored in the state). On: the link takes the unit lock and runs; off: SESSION 0,
     // the unit back on its waiting screen. Neither blocks.
@@ -365,9 +430,20 @@ private:
     void bindTier2Locked();                          // devLock_ held: the slots onto loaded_'s map
     void unbindTier2Locked();
     bool pushTier2(int slot, int32_t v, uint8_t kind, int32_t aux = 0);   // audio thread -> the FIFO; false: full
-    void timerCallback() override { drainTier2(); }
+    void timerCallback() override
+    {
+        drainTier2();
+        emuTimer();
+    }
     void relabelParameters();
     juce::String buttonName(int i) const;
+
+    // emulated firmwares (with devLock_ held)
+    bool switchEmuLocked(const EmuFirmware &fw, std::vector<uint8_t> pkg, std::optional<std::vector<uint8_t>> nor);
+    void clearEmuLocked();                           // (a native core takes over)
+    void emuPackageArrived(const EmuFirmware &fw, const juce::File &file, const juce::String &error);
+    void applyEmu(const EmuFirmware &fw, std::vector<uint8_t> pkg);   // message thread: suspend, switch, relabel
+    void emuTimer();                                 // (the timer) Auto's load reports
 
     // with devLock_ held
     bool loadCoreLocked(const juce::String &id);     // load (not boot) the module for id
@@ -395,6 +471,33 @@ private:
     static void remoteLeds(const fm1panel_t *h, rfm_leds_t &l);   // the panel's LED levels as the LEDS planes
 
     void handleAsyncUpdate() override;               // the firmware rebooted itself (exit(0)): power on again
+
+    // emulated firmwares (written with devLock_ held on the message thread)
+    juce::SharedResourcePointer<hub::Service> hub_;
+    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);   // (async callbacks)
+    EmuFirmware emu_;                                // the firmware picked (valid() with the fm1emu core)
+    std::vector<uint8_t> emuPkg_;                    // its package's bytes ("": not here yet)
+    std::optional<std::vector<uint8_t>> emuHeld_;    // the NOR a state brought, kept while its package is missing
+    bool emuRunning_ = false;                        // booted with its package (not the empty LOAD .FWSC screen)
+    juce::String emuPending_;                        // the SHA-256 being fetched for this instance ("" none)
+    EmuFirmware emuPendingFw_;
+    juce::String emuError_;
+    std::atomic<int> emuChoice_{emuclock::kAuto}, emuAutoMhz_{emuclock::kDeviceMhz};
+    // Auto: processBlock's timing (microseconds rendered, of audio made, late), taken by the timer
+    std::atomic<juce::int64> loadBusyUs_{0}, loadAudioUs_{0}, loadLateUs_{0};
+    std::atomic<bool> emuMeasure_{false};            // an emulated firmware runs with its package
+    static constexpr uint32_t kEmuPaceMs = 4;        // an emulated firmware's pacing lead (device.h PACING)
+    mutable std::atomic<int> devLatency_{0};         // the device's own part of the latency (latencyLocked)
+    fm1core_latency_fn latencyFn_ = nullptr;        // (looked up at boot: no dlsym on the audio thread)
+    std::atomic<int> coreLatency_{-1};               // the core's own latency (fm1core_latency_frames), read on the
+                                                     // audio thread after a block: the timer re-reports a change (an
+                                                     // emulated package whose DMA half is larger than 256 frames)
+    emuclock::Governor governor_;
+    double lastReport_ = 0;
+    std::atomic<bool> governorReset_{false};
+    juce::String clockNote_;
+    std::vector<uint8_t> composeEmuImage(const std::vector<uint8_t> &nor) const;
+    int latencyLocked() const;                       // (devLock_ held) the samples the host is told
 
     // the core and its device
     mutable juce::CriticalSection devLock_;

@@ -8,8 +8,13 @@
 //              in), HOST CONTROL (Button parameters, Encoders, steps per turn), LOOK (the themes, a custom one), VIEW
 //              (Device / Screen, the big LCD), DEVICE (Restart, Reset flash: confirmed inline), STANDALONE (the
 //              Standalone app's audio / MIDI settings and its state files; only there), ABOUT
-//   Firmware   the browser: a search field, category chips, a card per firmware (the loaded one outlined)
-//   About      the loaded firmware's descriptor: version, licence, source, gating, credits
+//   Firmware   the browser: a search field, the engine filter (All / Native / Emulated), category chips, a card per
+//              firmware (the loaded one outlined): FM1VST's native cores and the Hub's firmwares in one list (one card
+//              per firmware, its engines as badges: the one running filled), the catalog's state, and "Your own .fwsc"
+//   About      the loaded firmware: version, licence, source, gating, credits (an emulated firmware: the Hub's entry,
+//              its package, the engine and its clock)
+// The main page's FIRMWARE also shows, for an emulated firmware, its download (progress, errors), the Engine switch
+// (a firmware with both), the emulated clock (Auto 240 320 360 480 640 MHz) and a Source link (any firmware).
 //   Audio      (the Standalone) its audio and MIDI devices
 //   Theme      a custom theme: the name, the five colours (Bed and Label optional), Save / Save as default / Delete;
 //              every change previews live on the panel (the scrim dims less on this page)
@@ -20,8 +25,10 @@
 
 #include <memory>
 
+#include "Hub.h"
 #include "Look.h"
 #include "Widgets.h"
+#include "cores.h"
 
 class FM1Editor;
 
@@ -33,7 +40,7 @@ struct FirmwareMeta {
     static const juce::StringArray &categories();   // All Synth Groovebox Chords Drums Other
 };
 
-class Sheet : public juce::Component, private juce::Timer {
+class Sheet : public juce::Component, private juce::Timer, private juce::ChangeListener {
 public:
     explicit Sheet(FM1Editor &ed);
     ~Sheet() override;
@@ -52,6 +59,14 @@ public:
     void beginDeleteConfirm();
     void beginResetConfirm();
     void setBrowserFilter(const juce::String &search, int category);
+    void setEngineFilter(int engine);             // 0 All, 1 Native, 2 Emulated
+    void pickInBrowser(const juce::String &key, int engine = -1);   // a card's click (engine: -1 the default)
+
+    // the browser's sources, read when the sheet opens and when the Hub's catalog changes (never per refresh: a scan
+    // probes every module)
+    const hub::Catalog &catalog() const { return catalog_; }
+    const std::vector<CoreInfo> &natives() const { return natives_; }
+    void reloadSources();
     juce::Rectangle<int> cardBounds() const { return cardBounds_; }
 
     void paint(juce::Graphics &g) override;
@@ -70,6 +85,9 @@ public:
 
 private:
     void timerCallback() override;
+    void changeListenerCallback(juce::ChangeBroadcaster *) override;
+    hub::Catalog catalog_;
+    std::vector<CoreInfo> natives_;
     int sheetWidth() const;
     void layoutCard();
 

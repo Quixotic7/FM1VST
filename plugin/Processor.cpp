@@ -4,6 +4,7 @@
 #include "Editor.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 // ============================================================ parameters ===
@@ -94,6 +95,7 @@ static bool gunzip(const void *data, size_t n, size_t maxBytes, std::vector<uint
 struct PresetHeader {
     int format = 0;
     juce::String core, version, name, date;
+    juce::String firmware, fwVersion, sha256;   // an emulated firmware's (its Hub id, version, package)
     int size = 0;
 };
 
@@ -106,6 +108,11 @@ static juce::MemoryBlock encodePreset(const PresetHeader &h, const std::vector<u
     o->setProperty("name", h.name);
     o->setProperty("date", h.date);
     o->setProperty("size", (int)flash.size());
+    if (h.firmware.isNotEmpty()) {
+        o->setProperty("firmware", h.firmware);
+        o->setProperty("fwVersion", h.fwVersion);
+        o->setProperty("sha256", h.sha256);
+    }
     const juce::String json = juce::JSON::toString(juce::var(o), juce::JSON::FormatOptions{}.withSpacing(juce::JSON::Spacing::none));
     const juce::String line = json.removeCharacters("\r\n");
     juce::MemoryBlock mb(line.toRawUTF8(), line.getNumBytesAsUTF8());
@@ -131,6 +138,9 @@ static bool decodePreset(const void *data, size_t n, size_t maxBytes, PresetHead
     h.name = v.getProperty("name", "").toString();
     h.date = v.getProperty("date", "").toString();
     h.size = (int)v.getProperty("size", 0);
+    h.firmware = v.getProperty("firmware", "").toString();
+    h.fwVersion = v.getProperty("fwVersion", "").toString();
+    h.sha256 = v.getProperty("sha256", "").toString();
     return gunzip(p + hl + 1, n - hl - 1, maxBytes, flash);
 }
 
@@ -177,6 +187,7 @@ FM1Processor::FM1Processor()
 
 FM1Processor::~FM1Processor()
 {
+    alive_->store(false);                        // (a download finishing later reaches nothing)
     stopTimer();
     cancelPendingUpdate();
     remote_.reset();                             // SESSION 0 (the unit back on its waiting screen), the thread joined
@@ -693,7 +704,30 @@ juce::File FM1Processor::bundledCoresDir()
     return d;
 }
 
-juce::File FM1Processor::coreDir() const { return home().getChildFile(coreId_); }
+juce::File FM1Processor::coreDir() const
+{
+    if (coreId_ == kEmuCore && emu_.valid())     // (each emulated firmware its own folder: presets, backups)
+        return home().getChildFile(kEmuCore).getChildFile(juce::File::createLegalFileName(emu_.id));
+    return home().getChildFile(coreId_);
+}
+
+juce::File FM1Processor::workingFlashFile() const
+{
+    if (coreId_ == kEmuCore && emu_.valid())     // (per package version: a NOR holds that version's own code)
+        return coreDir()
+            .getChildFile(juce::File::createLegalFileName(emu_.version).replaceCharacter(' ', '_') + "-" + emu_.sha256.substring(0, 8))
+            .getChildFile("flash.bin");
+    return coreDir().getChildFile("flash.bin");
+}
+
+std::vector<CoreInfo> FM1Processor::firmwareCores() const
+{
+    std::vector<CoreInfo> out;
+    for (const CoreInfo &c : listCores())
+        if (c.id != kEmuCore)
+            out.push_back(c);
+    return out;
+}
 
 std::vector<CoreInfo> FM1Processor::listCores() const
 {
@@ -740,15 +774,47 @@ void FM1Processor::bootLocked()
     if (!loaded_ || dev_)
         return;
     std::vector<uint8_t> bytes;
-    if (pendingFlash_)
-        bytes = *pendingFlash_;
-    else
-        readFileBytes(workingFlashFile(), bytes);
-    pendingFlash_.reset();
+    const bool emu = coreId_ == kEmuCore;
+    if (emu) {
+        // the clock first (a boot option, taken by init), then the image: the NOR (the state's, the held one, else
+        // this version's working flash) with the package, or the package alone (a fresh flash), or nothing at all
+        // (no package here: the core's LOAD .FWSC screen, the NOR held for when it comes)
+        if (auto opt = reinterpret_cast<fm1core_boot_option_fn>(loaded_->symbol(FM1CORE_BOOT_OPTION_SYMBOL)))
+            opt("mhz", juce::String(getEmuMhz()).toRawUTF8());
+        std::vector<uint8_t> nor;
+        bool haveNor = false;
+        if (pendingFlash_)
+            nor = *pendingFlash_, haveNor = true;
+        else if (emuHeld_)
+            nor = *emuHeld_, haveNor = true;
+        else if (emu_.valid())
+            haveNor = readFileBytes(workingFlashFile(), nor);
+        pendingFlash_.reset();
+        if (nor.size() > kNor)
+            nor.resize(kNor);
+        emuRunning_ = emu_.valid() && !emuPkg_.empty();
+        if (emuRunning_) {
+            bytes = composeEmuImage(nor);
+            emuHeld_.reset();
+        } else if (emu_.valid() && haveNor) {
+            emuHeld_ = nor;
+        }
+    } else {
+        if (pendingFlash_)
+            bytes = *pendingFlash_;
+        else
+            readFileBytes(workingFlashFile(), bytes);
+        pendingFlash_.reset();
+    }
+    emuMeasure_.store(emu && emuRunning_);
+    latencyFn_ = reinterpret_cast<fm1core_latency_fn>(loaded_->symbol(FM1CORE_LATENCY_SYMBOL));
+    governorReset_.store(true);
     const uint32_t size = loaded_->core()->flash_size;
     if (bytes.size() > size)
         bytes.resize(size);
     dev_ = std::make_unique<Device>(loaded_->core());
+    if (emu)
+        dev_->set_pace_ms(kEmuPaceMs);           // (the emulated FM-1 by the host's time, evenly: device.h PACING)
     dev_->set_between([this](uint32_t, bool frame) {
         tickTaps();                              // (a Tap's press, counted in device ms)
         if (frame) {
@@ -766,10 +832,23 @@ void FM1Processor::bootLocked()
     remotePubValid_ = false;                     // (a new device: published at once, and the unit's screen resent whole)
     if (remote_)
         remote_->invalidateScreen();
+    setLatencySamples(latencyLocked());
+}
+
+// the latency: the device's own, and an emulated core's FIFO (fm1core_latency_frames: 256 frames before its first audio)
+int FM1Processor::latencyLocked() const
+{
+    int lat = (int)(dev_ ? dev_->latency(sampleRate_) : Device::latency_frames(sampleRate_));
+    devLatency_.store(lat);
+    if (loaded_)
+        if (auto lf = reinterpret_cast<fm1core_latency_fn>(loaded_->symbol(FM1CORE_LATENCY_SYMBOL)))
+            lat += (int)std::lround(lf() * sampleRate_ / 44100.0);
+    return lat;
 }
 
 void FM1Processor::teardownLocked()
 {
+    latencyFn_ = nullptr;
     unbindTier2Locked();                         // (before the module goes: no slot may call into it)
     dev_.reset();
     loaded_.reset();                             // shutdown, unload, the per-instance copy deleted
@@ -799,6 +878,19 @@ void FM1Processor::resetAudioState()            // (devLock_ held, processing st
 std::vector<uint8_t> FM1Processor::currentFlashLocked()
 {
     std::vector<uint8_t> out;
+    if (coreId_ == kEmuCore && loaded_) {        // (an emulated firmware: its NOR only; never the empty core's image)
+        if (dev_ && dev_->booted() && emuRunning_ && dev_->flash()) {
+            dev_->flash_sync();
+            out.assign(dev_->flash(), dev_->flash() + std::min<uint32_t>(kNor, dev_->flash_size()));
+        } else if (pendingFlash_) {
+            out = *pendingFlash_;
+        } else if (emuHeld_) {
+            out = *emuHeld_;
+        } else if (emu_.valid()) {
+            readFileBytes(workingFlashFile(), out);
+        }
+        return out;
+    }
     if (dev_ && dev_->booted() && dev_->flash()) {
         dev_->flash_sync();
         out.assign(dev_->flash(), dev_->flash() + dev_->flash_size());
@@ -820,6 +912,8 @@ bool FM1Processor::saveWorkingFlashLocked()
 {
     if (!loaded_ || !(dev_ && dev_->booted()))
         return false;                            // (never powered on: nothing new to keep)
+    if (coreId_ == kEmuCore && (!emu_.valid() || (!emuRunning_ && !emuHeld_)))
+        return false;                            // (the empty core: no firmware's flash to keep)
     const std::vector<uint8_t> f = currentFlashLocked();
     return !f.empty() && writeFileAtomic(workingFlashFile(), f.data(), f.size());
 }
@@ -885,10 +979,15 @@ bool FM1Processor::switchCoreLocked(const juce::String &id, std::optional<std::v
     }
     saveWorkingFlashLocked();                    // the old core's flash, into its own folder
     const juce::String oldId = coreId_;
+    const EmuFirmware oldEmu = emu_;
+    std::vector<uint8_t> oldPkg = emuPkg_;
     teardownLocked();
     pendingFlash_.reset();
     currentPreset_.clear();
+    clearEmuLocked();                            // (a native core: no emulated firmware)
     if (!loadCoreLocked(id)) {
+        if (oldId == kEmuCore)
+            emu_ = oldEmu, emuPkg_ = std::move(oldPkg);
         const juce::String why = message_;
         loadCoreLocked(oldId);
         message_ = why;
@@ -934,8 +1033,349 @@ FM1Processor::CoreStatus FM1Processor::getCoreInfo() const
 
 void FM1Processor::handleAsyncUpdate()
 {
-    if (halted_.load() && haltCode_.load() == 0x100)   // CR_REBOOT: exit(0) = the firmware reboots the unit
+    // CR_REBOOT: exit(0) = the firmware reboots the unit. (Not the emulated core: its 0x100 is an emulation error, which
+    // would come back at every reboot; it stays halted, the editor offers Restart.)
+    if (halted_.load() && haltCode_.load() == 0x100 && getCoreInfo().info.id != kEmuCore)
         powerCycle();
+}
+
+// ------------------------------------------------- emulated firmwares ---
+static uint32_t crc32Of(const uint8_t *p, size_t n)   // (zlib's CRC-32: the fm1emu image's slot, core-glue/fm1emu sum.rs)
+{
+    static uint32_t table[256];
+    static bool made = false;
+    if (!made) {
+        for (uint32_t i = 0; i < 256; i++) {
+            uint32_t c = i;
+            for (int k = 0; k < 8; k++)
+                c = (c & 1) ? 0xEDB88320u ^ (c >> 1) : c >> 1;
+            table[i] = c;
+        }
+        made = true;
+    }
+    uint32_t c = 0xFFFFFFFFu;
+    for (size_t i = 0; i < n; i++)
+        c = table[(c ^ p[i]) & 0xFF] ^ (c >> 8);
+    return c ^ 0xFFFFFFFFu;
+}
+
+hub::Entry FM1Processor::EmuFirmware::entry() const
+{
+    hub::Entry e;
+    e.id = id, e.name = name, e.author = author, e.version = version, e.sha256 = sha256, e.pkg = pkg, e.source = source;
+    e.product = product, e.size = size;
+    return e;
+}
+
+FM1Processor::EmuFirmware FM1Processor::EmuFirmware::of(const hub::Entry &e)
+{
+    EmuFirmware f;
+    f.id = e.id, f.name = e.name, f.author = e.author, f.version = e.version, f.sha256 = e.sha256.toLowerCase(), f.pkg = e.pkg;
+    f.source = e.source, f.product = e.product, f.size = e.size;
+    return f;
+}
+
+// the core's image (core-glue/fm1emu README "The firmware"): the NOR, then the slot holding the package; a fresh flash
+// (no NOR) is the package alone, staged as it is
+std::vector<uint8_t> FM1Processor::composeEmuImage(const std::vector<uint8_t> &nor) const
+{
+    constexpr size_t kImage = 0x210000, kSlot = 0x100000, kHead = 16;
+    if (nor.empty() || emuPkg_.size() > kImage - kSlot - kHead)
+        return emuPkg_;
+    std::vector<uint8_t> img(kImage, 0xFF);
+    std::memcpy(img.data(), nor.data(), std::min<size_t>(nor.size(), kNor));
+    std::memcpy(&img[kSlot], "FM1EMUPK", 8);
+    const uint32_t len = (uint32_t)emuPkg_.size(), crc = crc32Of(emuPkg_.data(), emuPkg_.size());
+    for (size_t i = 0; i < 4; i++) {
+        img[kSlot + 8 + i] = (uint8_t)(len >> (8 * i));
+        img[kSlot + 12 + i] = (uint8_t)(crc >> (8 * i));
+    }
+    std::memcpy(&img[kSlot + kHead], emuPkg_.data(), emuPkg_.size());
+    return img;
+}
+
+bool FM1Processor::isEmulated() const
+{
+    const juce::ScopedLock l(devLock_);
+    return coreId_ == kEmuCore && emu_.valid();
+}
+
+FM1Processor::EmuFirmware FM1Processor::getEmuFirmware() const
+{
+    const juce::ScopedLock l(devLock_);
+    return coreId_ == kEmuCore ? emu_ : EmuFirmware{};
+}
+
+void FM1Processor::clearEmuLocked()
+{
+    emu_ = {};
+    emuPkg_.clear();
+    emuPkg_.shrink_to_fit();
+    emuHeld_.reset();
+    emuRunning_ = false;
+    emuMeasure_.store(false);
+    emuError_.clear();
+}
+
+bool FM1Processor::switchEmuLocked(const EmuFirmware &fw, std::vector<uint8_t> pkg, std::optional<std::vector<uint8_t>> nor)
+{
+    requestedCore_ = kEmuCore;
+    saveWorkingFlashLocked();                    // the old firmware's flash (native or emulated), into its own folder
+    const juce::String oldId = coreId_;
+    const EmuFirmware oldEmu = emu_;
+    std::vector<uint8_t> oldPkg = emuPkg_;
+    teardownLocked();
+    pendingFlash_.reset();
+    currentPreset_.clear();
+    clearEmuLocked();
+    emu_ = fw;
+    emuPkg_ = std::move(pkg);
+    if (!loadCoreLocked(kEmuCore)) {             // (the module is missing: back to what ran)
+        const juce::String why = message_;
+        clearEmuLocked();
+        if (oldId == kEmuCore)
+            emu_ = oldEmu, emuPkg_ = std::move(oldPkg);
+        loadCoreLocked(oldId);
+        message_ = why;
+        if (prepared_)
+            bootLocked();
+        return false;
+    }
+    if (nor)
+        pendingFlash_ = std::move(nor);          // (none: that version's working flash)
+    halted_.store(false);
+    haltCode_.store(0);
+    if (prepared_)
+        bootLocked();
+    return true;
+}
+
+void FM1Processor::applyEmu(const EmuFirmware &fw, std::vector<uint8_t> pkg)
+{
+    suspendProcessing(true);
+    {
+        const juce::ScopedLock l(devLock_);
+        emuPending_.clear();
+        switchEmuLocked(fw, std::move(pkg), std::nullopt);
+    }
+    relabelParameters();
+    suspendProcessing(false);
+    updateHostDisplay(ChangeDetails().withProgramChanged(true));
+}
+
+void FM1Processor::selectEmuFirmware(const hub::Entry &e)
+{
+    const EmuFirmware fw = EmuFirmware::of(e);
+    juce::MemoryBlock mb;
+    if (hub::readCached(fw.sha256, mb)) {
+        applyEmu(fw, std::vector<uint8_t>((const uint8_t *)mb.getData(), (const uint8_t *)mb.getData() + mb.getSize()));
+        return;
+    }
+    {
+        const juce::ScopedLock l(devLock_);
+        emuPending_ = fw.sha256;
+        emuPendingFw_ = fw;
+        emuError_.clear();
+    }
+    auto alive = alive_;
+    hub_->fetch(e, [this, alive, fw](juce::File f, juce::String err) {
+        if (alive->load())
+            emuPackageArrived(fw, f, err);
+    });
+}
+
+bool FM1Processor::selectEmuFirmwareNow(const hub::Entry &e, juce::String *error)
+{
+    juce::String err;
+    const juce::File f = hub::Service::downloadNow(e, err);
+    juce::MemoryBlock mb;
+    if (f == juce::File() || !f.loadFileAsData(mb)) {
+        if (error)
+            *error = err.isNotEmpty() ? err : "cannot read the package";
+        const juce::ScopedLock l(devLock_);
+        emuError_ = err;
+        return false;
+    }
+    applyEmu(EmuFirmware::of(e), std::vector<uint8_t>((const uint8_t *)mb.getData(), (const uint8_t *)mb.getData() + mb.getSize()));
+    return true;
+}
+
+void FM1Processor::emuPackageArrived(const EmuFirmware &fw, const juce::File &file, const juce::String &error)
+{
+    juce::MemoryBlock mb;
+    const bool ok = file != juce::File() && file.loadFileAsData(mb) &&
+                    hub::verify(mb.getData(), mb.getSize(), fw.sha256, 0).isEmpty();
+    bool pick = false, waiting = false;
+    {
+        const juce::ScopedLock l(devLock_);
+        pick = emuPending_ == fw.sha256;
+        waiting = coreId_ == kEmuCore && emu_.sha256 == fw.sha256 && !emuRunning_;
+        if (pick)
+            emuPending_.clear();
+        if (!ok && (pick || waiting)) {
+            emuError_ = error.isNotEmpty() ? error : fw.name + ": the package could not be read";
+            if (waiting)
+                emuError_ << " (the set's flash is kept)";
+            return;
+        }
+    }
+    if (!ok)
+        return;
+    std::vector<uint8_t> bytes((const uint8_t *)mb.getData(), (const uint8_t *)mb.getData() + mb.getSize());
+    if (waiting) {                               // a state's firmware, waiting for its package: on, with its NOR
+        suspendProcessing(true);
+        {
+            const juce::ScopedLock l(devLock_);
+            emuPkg_ = std::move(bytes);
+            emuError_.clear();
+            if (dev_)
+                powerCycleLocked(std::nullopt);  // (currentFlashLocked: the held NOR)
+        }
+        relabelParameters();
+        suspendProcessing(false);
+    } else if (pick) {
+        applyEmu(fw, std::move(bytes));
+    }
+}
+
+juce::String FM1Processor::openLocalPackage(const juce::File &file)
+{
+    juce::MemoryBlock mb;
+    if (!file.loadFileAsData(mb) || mb.getSize() == 0)
+        return "cannot read " + file.getFullPathName();
+    if (mb.getSize() > 0x210000 - 0x100000 - 16)
+        return file.getFileName() + " is too large for an FM-1 package";
+    const juce::String sha = hub::sha256Hex(mb.getData(), mb.getSize());
+    const hub::Catalog cat = hub_->catalog();
+    EmuFirmware fw;
+    if (const hub::Entry *e = cat.findSha(sha)) {
+        fw = EmuFirmware::of(*e);                // (a Hub package the user had already)
+    } else if (cat.stockSha256.isNotEmpty() && sha == cat.stockSha256) {
+        fw.id = "mvave";
+        fw.name = "M-VAVE stock firmware";
+        fw.author = "M-VAVE";
+        fw.product = cat.stockProduct;
+        fw.version = cat.stockProduct.startsWith("FM-1_") ? "V" + juce::String(cat.stockProduct.fromFirstOccurrenceOf("_", false, false).getIntValue())
+                                                          : juce::String("stock");
+        fw.source = cat.stockSource;
+    } else {
+        fw.id = "local-" + sha.substring(0, 8);
+        fw.name = file.getFileNameWithoutExtension();
+        fw.author = "your file";
+        fw.version = "file";
+    }
+    fw.sha256 = sha;
+    fw.size = (juce::int64)mb.getSize();
+    fw.local = fw.pkg.isEmpty();
+    if (hub::store(fw.id, fw.version, sha, mb.getData(), mb.getSize()) == juce::File())
+        return "cannot write into " + hub::packagesDir().getFullPathName();
+    applyEmu(fw, std::vector<uint8_t>((const uint8_t *)mb.getData(), (const uint8_t *)mb.getData() + mb.getSize()));
+    return {};
+}
+
+FM1Processor::EmuStatus FM1Processor::getEmuStatus() const
+{
+    EmuStatus st;
+    EmuFirmware pending;
+    juce::String pendingSha;
+    {
+        const juce::ScopedLock l(devLock_);
+        pendingSha = emuPending_;
+        pending = emuPendingFw_;
+        st.waiting = coreId_ == kEmuCore && emu_.valid() && !emuRunning_;
+        if (emuError_.isNotEmpty())
+            st.text = emuError_, st.error = true;
+        if (st.waiting && pendingSha.isEmpty()) {
+            pendingSha = emu_.sha256;            // (a state's package on its way)
+            pending = emu_;
+        }
+    }
+    if (pendingSha.isNotEmpty())
+        if (const auto j = hub_->job(pendingSha)) {
+            if (j->running) {
+                st.busy = true;
+                st.progress = j->progress;
+                st.error = false;
+                st.text = juce::String::fromUTF8("Downloading ") + pending.name + " " + pending.version + juce::String::fromUTF8("\xe2\x80\xa6");
+            } else if (j->failed && st.text.isEmpty()) {
+                st.text = j->error, st.error = true;
+            }
+        }
+    if (st.waiting && st.text.isEmpty())
+        st.text = "Waiting for its package";
+    return st;
+}
+
+void FM1Processor::setEmuClockChoice(int choice)
+{
+    if (!emuclock::validChoice(choice))
+        return;
+    const int before = getEmuMhz();
+    emuChoice_.store(choice);
+    if (choice == emuclock::kAuto)
+        emuAutoMhz_.store(emuclock::kDeviceMhz);   // (picking Auto again starts at 360)
+    {
+        const juce::ScopedLock l(devLock_);
+        clockNote_.clear();
+    }
+    governorReset_.store(true);
+    if (isEmulated() && getEmuMhz() != before)
+        powerCycle();                            // (the clock is fixed at power-on: a reboot, the flash kept)
+}
+
+juce::String FM1Processor::getEmuClockNote() const
+{
+    const juce::ScopedLock l(devLock_);
+    return clockNote_;
+}
+
+void FM1Processor::emuGovernorFeed(double load, double lateMs, double nowMs)
+{
+    if (governorReset_.exchange(false))
+        governor_ = emuclock::Governor(emuChoice_.load(), getEmuMhz(), nowMs);
+    const emuclock::Governor::Verdict v = governor_.feed(load, lateMs, nowMs);
+    if (!v.step && !v.warn)
+        return;
+    const int was = governor_.mhz();
+    juce::String name;
+    {
+        const juce::ScopedLock l(devLock_);
+        name = emu_.name;
+        if (v.step)
+            clockNote_ = "Auto: " + juce::String(v.step) + " MHz (this computer could not keep up at " + juce::String(was) + ")";
+        else if (governor_.choice() == emuclock::kAuto)
+            clockNote_ = "This computer can't keep up with " + name + " even at " + juce::String(was) + " MHz: expect dropouts";
+        else
+            clockNote_ = "This computer can't keep up with " + name + " at " + juce::String(was) + " MHz: try Auto or a lower clock";
+    }
+    if (v.step) {
+        emuAutoMhz_.store(v.step);
+        if (isEmulated())
+            powerCycle();                        // (a reboot at the new clock, the flash kept; the next governor starts then)
+    }
+}
+
+void FM1Processor::emuTimer()
+{
+    const double now = juce::Time::getMillisecondCounterHiRes();
+    if (const int cl = coreLatency_.exchange(-1); cl >= 0) {   // (the core's FIFO grew: the host is told)
+        const int lat = devLatency_.load() + (int)std::lround(cl * sampleRate_ / 44100.0);
+        if (lat != getLatencySamples())
+            setLatencySamples(lat);
+    }
+    if (governorReset_.load()) {                 // (a new boot: a new governor, and its grace from now)
+        emuGovernorFeed(0, 0, now);
+        lastReport_ = now;
+        loadBusyUs_.store(0), loadAudioUs_.store(0), loadLateUs_.store(0);
+        return;
+    }
+    if (!emuMeasure_.load() || now - lastReport_ < 500)
+        return;
+    lastReport_ = now;
+    const juce::int64 busy = loadBusyUs_.exchange(0), audio = loadAudioUs_.exchange(0), late = loadLateUs_.exchange(0);
+    if (audio <= 0)
+        return;                                  // (nothing rendered: nothing to judge)
+    emuGovernorFeed((double)busy / (double)audio, (double)late / 1000.0, now);
 }
 
 // ------------------------------------------------------------- presets ---
@@ -964,6 +1404,8 @@ bool FM1Processor::savePreset(const juce::String &name)
             f.assign(loaded_->core()->flash_size, 0xFF);
         h.core = coreId_;
         h.version = juce::String(coreInfo_.version);
+        if (coreId_ == kEmuCore && emu_.valid())
+            h.firmware = emu_.id, h.fwVersion = emu_.version, h.sha256 = emu_.sha256;
         saveWorkingFlashLocked();
     }
     h.name = n;
@@ -984,6 +1426,8 @@ bool FM1Processor::backupLocked(const juce::String &why)
     PresetHeader h;
     h.core = coreId_;
     h.version = juce::String(coreInfo_.version);
+    if (coreId_ == kEmuCore && emu_.valid())
+        h.firmware = emu_.id, h.fwVersion = emu_.version, h.sha256 = emu_.sha256;
     const juce::Time now = juce::Time::getCurrentTime();
     h.date = now.toISO8601(true);
     h.name = "backup before " + why;
@@ -1014,6 +1458,10 @@ bool FM1Processor::loadPreset(const juce::String &name)
         if (loaded_ && readPresetFile(file, loaded_->core()->flash_size, h, f)) {
             if (h.core.isNotEmpty() && h.core != coreId_) {
                 message_ = "preset \"" + name + "\" is for firmware \"" + h.core + "\"";
+            } else if (coreId_ == kEmuCore && (h.firmware != emu_.id || !h.sha256.equalsIgnoreCase(emu_.sha256))) {
+                // (an emulated firmware's flash holds its own code: only the same package can take it)
+                message_ = "preset \"" + name + "\" was made with " + (h.firmware.isNotEmpty() ? h.firmware + " " + h.fwVersion : h.core) +
+                           ": pick that version to load it";
             } else {
                 backupLocked("loading preset " + name);
                 message_ = h.version.isNotEmpty() && h.version != juce::String(coreInfo_.version)
@@ -1095,6 +1543,8 @@ bool FM1Processor::exportPreset(const juce::File &file)
             f.assign(loaded_->core()->flash_size, 0xFF);
         h.core = coreId_;
         h.version = juce::String(coreInfo_.version);
+        if (coreId_ == kEmuCore && emu_.valid())
+            h.firmware = emu_.id, h.fwVersion = emu_.version, h.sha256 = emu_.sha256;
     }
     const juce::File out = file.hasFileExtension(kPresetExt) ? file : file.withFileExtension(kPresetExt);
     h.name = out.getFileNameWithoutExtension();
@@ -1109,9 +1559,10 @@ juce::String FM1Processor::importPreset(const juce::File &file)
     std::vector<uint8_t> f;
     if (!readPresetFile(file, 64u << 20, h, f))
         return {};
-    if (h.core.isNotEmpty() && h.core != coreId_) {
+    if ((h.core.isNotEmpty() && h.core != coreId_) || (coreId_ == kEmuCore && h.firmware != emu_.id)) {
         const juce::ScopedLock l(devLock_);
-        message_ = "\"" + file.getFileName() + "\" is a preset for firmware \"" + h.core + "\"";
+        message_ = "\"" + file.getFileName() + "\" is a preset for firmware \"" +
+                   (h.firmware.isNotEmpty() ? h.firmware : h.core) + "\"";
         return {};
     }
     juce::String n = legalName(h.name.isNotEmpty() ? h.name : file.getFileNameWithoutExtension());
@@ -1479,7 +1930,9 @@ void FM1Processor::snapshotPanel()
 // screen view's side; absent until it was shown), knobDetents, buttonMode (0 Tap, 1 Hold, 2 Toggle-hold), buttonTapMs,
 // encoderMode (0 Absolute, 1 Stepped), encoderSteps (8..64), remote (Remote FM-1 on), remoteIgnoreMidi, a child "theme" (name base membrane knob, and bed / label when the theme
 // sets them; "#RRGGBB") and "flash": the image gzip-compressed (a MemoryBlock property; absent when the instance
-// never had one, i.e. a fresh flash).
+// never had one, i.e. a fresh flash). emuClock ("auto" or the MHz) and emuAutoMhz (Auto's step), always; with an
+// emulated firmware (core "fm1emu"), a child "emu" (id name author version sha256 size pkg source product local), and
+// "flash" is its NOR only (Processor.h EMULATED FIRMWARES).
 void FM1Processor::getStateInformation(juce::MemoryBlock &dest)
 {
     juce::ValueTree t("FM1VST");
@@ -1490,6 +1943,25 @@ void FM1Processor::getStateInformation(juce::MemoryBlock &dest)
         t.setProperty("core", loaded_ ? coreId_ : requestedCore_, nullptr);
         t.setProperty("coreVersion", juce::String(coreInfo_.version), nullptr);
         f = currentFlashLocked();
+        if (coreId_ == kEmuCore && emu_.valid()) {
+            juce::ValueTree e("emu");
+            e.setProperty("id", emu_.id, nullptr);
+            e.setProperty("name", emu_.name, nullptr);
+            e.setProperty("author", emu_.author, nullptr);
+            e.setProperty("version", emu_.version, nullptr);
+            e.setProperty("sha256", emu_.sha256, nullptr);
+            e.setProperty("size", emu_.size, nullptr);
+            e.setProperty("pkg", emu_.pkg, nullptr);
+            e.setProperty("source", emu_.source, nullptr);
+            e.setProperty("product", emu_.product, nullptr);
+            e.setProperty("local", emu_.local, nullptr);
+            t.appendChild(e, nullptr);
+        }
+    }
+    {
+        const int c = emuChoice_.load();
+        t.setProperty("emuClock", c == emuclock::kAuto ? juce::String("auto") : juce::String(c), nullptr);
+        t.setProperty("emuAutoMhz", emuAutoMhz_.load(), nullptr);
     }
     t.setProperty("transpose", transpose_.load(), nullptr);
     t.setProperty("midiNotesPlayKeys", notesPlayKeys_.load(), nullptr);
@@ -1564,7 +2036,13 @@ void FM1Processor::setStateInformation(const void *data, int sizeInBytes)
     setEncoderMode((int)t.getProperty("encoderMode", kEncAbsolute));
     setRemoteIgnoreMidi((bool)t.getProperty("remoteIgnoreMidi", true));
     setRemoteEnabled((bool)t.getProperty("remote", false));   // (on: the unit lock decides who drives the unit)
-    const juce::String id = t.getProperty("core", "choralroot").toString();
+    {
+        const juce::String c = t.getProperty("emuClock", "auto").toString();
+        const int mhz = c == "auto" ? emuclock::kAuto : c.getIntValue();
+        emuChoice_.store(emuclock::validChoice(mhz) ? mhz : emuclock::kAuto);
+        emuAutoMhz_.store(emuclock::mhzFor(emuclock::kAuto, (int)t.getProperty("emuAutoMhz", emuclock::kDeviceMhz)));
+    }
+    juce::String id = t.getProperty("core", "choralroot").toString();
     std::optional<std::vector<uint8_t>> bytes;
     if (const juce::MemoryBlock *z = t.getProperty("flash").getBinaryData()) {
         std::vector<uint8_t> f;
@@ -1572,6 +2050,56 @@ void FM1Processor::setStateInformation(const void *data, int sizeInBytes)
             bytes = std::move(f);
     } else {
         bytes = std::vector<uint8_t>{};          // the state was saved with a fresh flash
+    }
+    if (id == kEmuCore) {
+        // an emulated firmware: its package from the Hub cache by SHA-256 (else fetched), the state's NOR
+        const juce::ValueTree e = t.getChildWithName("emu");
+        EmuFirmware fw;
+        if (e.isValid()) {
+            fw.id = e.getProperty("id", "").toString();
+            fw.name = e.getProperty("name", fw.id).toString();
+            fw.author = e.getProperty("author", "").toString();
+            fw.version = e.getProperty("version", "").toString();
+            fw.sha256 = e.getProperty("sha256", "").toString().toLowerCase();
+            fw.size = (juce::int64)e.getProperty("size", 0);
+            fw.pkg = e.getProperty("pkg", "").toString();
+            fw.source = e.getProperty("source", "").toString();
+            fw.product = e.getProperty("product", "").toString();
+            fw.local = (bool)e.getProperty("local", false);
+        }
+        if (fw.valid()) {
+            std::vector<uint8_t> pkg;
+            juce::MemoryBlock mb;
+            if (hub::readCached(fw.sha256, mb))
+                pkg.assign((const uint8_t *)mb.getData(), (const uint8_t *)mb.getData() + mb.getSize());
+            if (bytes && bytes->size() > kNor)
+                bytes->resize(kNor);
+            const bool missing = pkg.empty();
+            suspendProcessing(true);
+            {
+                const juce::ScopedLock l(devLock_);
+                switchEmuLocked(fw, std::move(pkg), std::move(bytes));
+                currentPreset_ = t.getProperty("preset", "").toString();
+                if (missing && fw.local)
+                    emuError_ = fw.name + ": your own package is not in the cache (" + hub::packagesDir().getFullPathName() +
+                                "): open it again (the set's flash is kept)";
+                else if (missing)
+                    emuPending_ = fw.sha256, emuPendingFw_ = fw;
+            }
+            relabelParameters();
+            suspendProcessing(false);
+            updateHostDisplay(ChangeDetails().withProgramChanged(true));
+            if (missing && !fw.local) {
+                auto alive = alive_;
+                hub_->fetch(fw.entry(), [this, alive, fw](juce::File f, juce::String err) {
+                    if (alive->load())
+                        emuPackageArrived(fw, f, err);
+                });
+            }
+            return;
+        }
+        id = FM1_DEFAULT_CORE;                   // (the engine with no firmware: the default firmware instead)
+        bytes.reset();
     }
     suspendProcessing(true);
     {
@@ -1593,8 +2121,8 @@ void FM1Processor::prepareToPlay(double sampleRate, int maximumExpectedSamplesPe
         prepared_ = true;
         if (!dev_ && loaded_)
             bootLocked();
+        setLatencySamples(latencyLocked());
     }
-    setLatencySamples((int)Device::latency_frames(sampleRate_));
     scratch_.assign((size_t)std::max(1024, maximumExpectedSamplesPerBlock), 0.0f);
     midiOut_.ensureSize(4096);
 }
@@ -1990,6 +2518,9 @@ void FM1Processor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuff
 {
     juce::ScopedNoDenormals noDenormals;
     const int n = buffer.getNumSamples();
+    // (an emulated firmware: the time this block takes, for Auto's clock: EmuClock.h; never a bounce)
+    const bool measure = emuMeasure_.load(std::memory_order_relaxed) && !isNonRealtime();
+    const juce::int64 t0 = measure ? juce::Time::getHighResolutionTicks() : 0;
     midiOut_.clear();
     const juce::ScopedTryLock l(devLock_);
     if (!l.isLocked() || !dev_ || !dev_->booted() || n <= 0 || buffer.getNumChannels() < 1) {
@@ -2035,6 +2566,16 @@ void FM1Processor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuff
     snapshotPanel();
     publishRemote();
     midi.swapWith(midiOut_);
+    if (latencyFn_ && emuMeasure_.load(std::memory_order_relaxed))
+        coreLatency_.store((int)latencyFn_(), std::memory_order_relaxed);
+    if (measure && sampleRate_ > 0) {
+        const double busy = juce::Time::highResolutionTicksToSeconds(juce::Time::getHighResolutionTicks() - t0);
+        const double dur = (double)n / sampleRate_;
+        loadBusyUs_.fetch_add((juce::int64)(busy * 1e6), std::memory_order_relaxed);
+        loadAudioUs_.fetch_add((juce::int64)(dur * 1e6), std::memory_order_relaxed);
+        if (busy > dur)
+            loadLateUs_.fetch_add((juce::int64)((busy - dur) * 1e6), std::memory_order_relaxed);
+    }
 }
 
 // =============================================================== factory ===

@@ -1,0 +1,19 @@
+{
+ "about": "tests/hub_test.cpp's Hub: the catalog.json shape of https://thefirmwarehub.com/catalog.json (2026-10-19), cut down. The test serves it from a scratch folder over file://, with Felucca 1.6.1's package (the Hub's, from the build's FM1EMU_FELUCCA_FWSC) at fw/felucca-1.6.1.fwsc. badsha and badsize point at the same file with a wrong SHA-256 or size; nopkg has no package; the first felucca wins over the repeated id.",
+ "updated": "2026-10-19 05:01 UTC",
+ "firmwares": [
+  {"id": "felucca", "kind": ["groove", "dev"], "name": "Felucca", "author": "Leo Kuroshita (Hügelton Instruments)", "repo": "hugelton/Felucca",
+   "what": "A multi-engine synth and groovebox: eight engines, a sequencer and an arpeggiator.",
+   "version": "1.6.1", "pkg": "fw/felucca-1.6.1.fwsc", "product": "FM-1_916", "size": 610090,
+   "sha256": "dff3a38f7e5b9833e15aba322558c9485e9e422e3ff813c616c91b3584a2d909",
+   "release": "https://github.com/hugelton/Felucca/releases/tag/v1.6.1", "source": "https://github.com/hugelton/Felucca", "beta": false},
+  {"id": "badsha", "kind": "synth", "name": "Bad SHA", "author": "nobody", "version": "1.0", "pkg": "fw/felucca-1.6.1.fwsc", "size": 610090,
+   "sha256": "0000000000000000000000000000000000000000000000000000000000000000", "source": "https://example.invalid/badsha"},
+  {"id": "badsize", "kind": "drums", "name": "Bad Size", "author": "nobody", "version": "1.0", "pkg": "fw/felucca-1.6.1.fwsc", "size": 610091,
+   "sha256": "dff3a38f7e5b9833e15aba322558c9485e9e422e3ff813c616c91b3584a2d909"},
+  {"id": "nopkg", "kind": "other", "name": "No Package", "author": "nobody", "version": "0.1"},
+  {"id": "felucca", "name": "Felucca (a repeated id)", "version": "9.9", "pkg": "fw/other.fwsc", "sha256": "11"}
+ ],
+ "stock": {"pkg": "fw/mvave/FM-1_015.fwsc", "sha256": "db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a", "size": 699956,
+           "product": "FM-1_015", "source": "https://github.com/m-vave/fm1_open/blob/b178ac43c25f010c60a878056fb5331fe693fd62/sdk/firmware/FM-1_015.fwsc"}
+}
