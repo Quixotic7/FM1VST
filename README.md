@@ -417,7 +417,10 @@ cmake --build build-release -j && tools/release_tests.sh build-release && tools/
 release tarball (a bottle built for macOS 15 would not load on macOS 11). `tools/package_release.sh` checks the
 bundles (exactly the public cores, arm64, no Homebrew paths, signatures) and writes
 `build-release/dist/FM1VST-<version>-macOS-arm64.zip` (the three bundles, INSTALL.txt, README.txt, LICENSE,
-licences/), `SHA256SUMS` and the release notes.
+licences/), `FM1VST-<version>-macOS-arm64.pkg` (the installer: one component package per bundle, the app into
+/Applications, the VST3 and the AU into /Library/Audio/Plug-Ins, not relocatable; its templates are in
+tools/release/pkg/; it is expanded and checked, never installed), `SHA256SUMS` and the release notes. The pkg is
+unsigned unless `FM1_INSTALLER_IDENTITY` names a Developer ID Installer identity (productsign).
 
 The Tier 2 slots (the firmware's parameters by name) are off by default; `cmake -B build -DFM1_TIER2_SLOTS=79` turns
 them on (`FM1_TIER2_SLOTS` is a cache variable: a build folder configured before the default became 0 keeps 79 until

@@ -1,14 +1,16 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # FM1VST's release: the public build (FM1_PUBLIC_BUILD=ON: the 10 un-gated cores, Felucca the default) for Apple
-# silicon, tested, checked and zipped by the same scripts a local run uses (tools/release_tests.sh,
-# tools/package_release.sh).
-#   - a tag v<version> (git tag v0.3.0 && git push origin v0.3.0): builds and publishes the GitHub Release (the zip,
-#     SHA256SUMS, the notes); the tag must equal CMakeLists.txt's project(FM1VST VERSION ..)
+# silicon, tested, checked, zipped and packaged as an installer (.pkg) by the same scripts a local run uses
+# (tools/release_tests.sh, tools/package_release.sh).
+#   - a tag v<version> (git tag v0.3.1 && git push origin v0.3.1): builds and publishes the GitHub Release (the zip,
+#     the pkg, SHA256SUMS, the notes); the tag must equal CMakeLists.txt's project(FM1VST VERSION ..)
 #   - Run workflow (workflow_dispatch), or a push to the release-ci branch: the same build as a dry run, uploaded as an
 #     artifact, nothing published
 # Unsigned (ad-hoc) for now. Developer ID signing and notarisation run once these secrets exist (until then those steps
 # are skipped): MACOS_CERT_P12 (base64 of the .p12), MACOS_CERT_PASSWORD, MACOS_SIGN_IDENTITY ("Developer ID
-# Application: .. (TEAMID)"), and for notarisation APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD.
+# Application: .. (TEAMID)"), and for notarisation APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD. The installer package is
+# signed (productsign, in tools/package_release.sh) when MACOS_INSTALLER_IDENTITY ("Developer ID Installer: ..
+# (TEAMID)", its certificate in the same .p12) is set as well, and then notarised and stapled with the zip.
 # A failing build step publishes the tail of its log as an error annotation (.github/scripts/logged.sh).
 name: release
 
@@ -39,6 +41,7 @@ jobs:
       HOMEBREW_NO_AUTO_UPDATE: '1'
       HOMEBREW_NO_INSTALL_CLEANUP: '1'
       MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+      MACOS_INSTALLER_IDENTITY: ${{ secrets.MACOS_INSTALLER_IDENTITY }}
       APPLE_ID: ${{ secrets.APPLE_ID }}
     steps:
       - name: Check out (with every submodule)
@@ -133,9 +136,14 @@ jobs:
             codesign --verify --deep --strict --verbose=2 "$b"
           done
 
-      - name: Package
+      - name: Package (the zip, and the pkg, productsigned only with the secrets)
         shell: bash
-        run: .github/scripts/logged.sh package tools/package_release.sh "$BUILD_DIR" "$DIST_DIR"
+        run: |
+          # (the installer identity's certificate is in the keychain the signing step made: only with MACOS_SIGN_IDENTITY)
+          if [ -n "$MACOS_SIGN_IDENTITY" ] && [ -n "$MACOS_INSTALLER_IDENTITY" ]; then
+            export FM1_INSTALLER_IDENTITY="$MACOS_INSTALLER_IDENTITY"
+          fi
+          .github/scripts/logged.sh package tools/package_release.sh "$BUILD_DIR" "$DIST_DIR"
 
       - name: Notarise (skipped without the secrets)
         if: env.MACOS_SIGN_IDENTITY != '' && env.APPLE_ID != ''
@@ -152,8 +160,21 @@ jobs:
           for b in "$art/VST3/FM1VST.vst3" "$art/AU/FM1VST.component" "$art/Standalone/FM1VST.app"; do
             xcrun stapler staple "$b"
           done
-          # the zip again, now with the stapled tickets (and its checks again)
+          # the zip and the pkg again, now with the stapled tickets (and their checks again)
+          if [ -n "$MACOS_INSTALLER_IDENTITY" ]; then export FM1_INSTALLER_IDENTITY="$MACOS_INSTALLER_IDENTITY"; fi
           tools/package_release.sh "$BUILD_DIR" "$DIST_DIR"
+          # the signed pkg notarised and stapled too (stapling changes it: SHA256SUMS and the notes' sums again)
+          if [ -n "$MACOS_INSTALLER_IDENTITY" ]; then
+            pkg="$DIST_DIR/FM1VST-$VERSION-macOS-arm64.pkg"
+            old="$(shasum -a 256 "$pkg" | cut -d' ' -f1)"
+            xcrun notarytool submit "$pkg" --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+              --password "$APPLE_APP_PASSWORD" --wait
+            xcrun stapler staple "$pkg"
+            (cd "$DIST_DIR" && shasum -a 256 "FM1VST-$VERSION-macOS-arm64.zip" "FM1VST-$VERSION-macOS-arm64.pkg" > SHA256SUMS)
+            new="$(shasum -a 256 "$pkg" | cut -d' ' -f1)"
+            sed -i '' "s/$old/$new/" "$DIST_DIR/RELEASE-NOTES.md"
+            pkgutil --check-signature "$pkg"
+          fi
 
       - name: Upload the build
         if: always()
@@ -162,6 +183,7 @@ jobs:
           name: FM1VST-${{ env.VERSION }}-macOS-arm64
           path: |
             ${{ env.DIST_DIR }}/*.zip
+            ${{ env.DIST_DIR }}/*.pkg
             ${{ env.DIST_DIR }}/SHA256SUMS
             ${{ env.DIST_DIR }}/RELEASE-NOTES.md
           if-no-files-found: warn
@@ -186,4 +208,5 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             ${{ env.DIST_DIR }}/FM1VST-${{ env.VERSION }}-macOS-arm64.zip
+            ${{ env.DIST_DIR }}/FM1VST-${{ env.VERSION }}-macOS-arm64.pkg
             ${{ env.DIST_DIR }}/SHA256SUMS
