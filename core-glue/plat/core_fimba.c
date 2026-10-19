@@ -23,7 +23,10 @@
 
 #define OM_HOST 1                         /* the device's .pool section off (plat.h OM_POOL) */
 #define OM_VERSION FM1CORE_VERSION
+#define FELUCCA_ID "FM-1_8000601"          /* the package identity: build.py --release 0.6.1 (FM-1_8 00 06 01) */
+#define FM1CORE_PL_SX 1                   /* the installer's M-UPGRADE identity (plat_sx.h) */
 #include "plat_hal.h"
+#include "plat_sx.h"
 
 /* ---------------------------------------------------------------- the firmware --- */
 #define __attribute__(x)                  /* (as the host simulator) */
@@ -37,6 +40,27 @@ static inline int32_t clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ?
 #include "app/project.c"
 #include "app/ui.c"
 #undef __attribute__
+
+/* ---------------------------------------------------------------- the managers' SysEx (plat_sx.h) --- */
+/* The installer (the hub's, fm1ota-style) finds the unit by the M-UPGRADE identity: main_fm1.c's loop runs
+ * ota_service (the firmware's ota.c, through common/sysex_ota.h). The update key
+ * F0 22 24 35 7F F7 and UBOOT's F0 22 24 35 7D F7 are not taken (plat_sx.h): no read requests follow (the installer
+ * times out), nothing is written, the core runs on. */
+#define FM1SX_OTA_C "../../cores/fm1-fimba/firmware/src/ota.c"
+#define FM1SX_OTA_IN fm1core_pl_sxi
+#define FM1SX_OTA_OUT fm1core_pl_sxo
+#define FM1SX_OTA_MS() fm1_ms
+#include "sysex_ota.h"
+static int fm1core_fimba_sx_accept(const uint8_t *f, uint32_t n)
+{
+    return fm1sx_is_mupg(f, n);
+}
+static void fm1core_fimba_sx_service(void)   /* main_fm1.c fm1_main, each pass (the update key's ota_req: not taken) */
+{
+    ota_service();                        /* M-UPGRADE handshake (other SysEx is dropped) */
+}
+#define FM1CORE_PL_SX_ACCEPT fm1core_fimba_sx_accept
+#define FM1CORE_PL_SX_SERVICE() fm1core_fimba_sx_service()
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME "FiMba-1"

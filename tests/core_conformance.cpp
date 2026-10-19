@@ -6,7 +6,8 @@
 // On the loaded module, through the engine's Device as the plugin drives it:
 //   1. descriptor  ABI 6, id / name / version / source_url / family / license filled (family and licence as CMake's
 //                  fm1_add_core gave them), gated NULL or a reason, the 14 button names, the keymap (every key id
-//                  0..40 once on rows 1..4), the required entry points, a 1 MiB flash, the credits NULL or text;
+//                  0..40 once on rows 1..4), the required entry points, a flash image of at least 1 MiB in whole
+//                  4 KiB sectors (the NOR; fm1emu's adds a package slot), the credits NULL or text;
 //                  after init the panel table (btn_id a permutation of 0..13, enc_id of 0..6, enc_dir +-1)
 //   2. screen      boots from a fresh flash (the staged boot, as the plugin does); the LCD is not blank (two or more
 //                  colours) within boot_ms (3 s) of device time; written to OUT_DIR/<id>.ppm
@@ -210,7 +211,9 @@ int main(int argc, char **argv)
         check(c->panel && c->options && c->init && c->tick && c->frame && c->idle && c->audio && c->midi_in &&
                   c->midi_out_take && c->shutdown && c->halted && c->flash_stage && c->flash && c->flash_dirty,
               "the panel and the required entry points");
-        check(c->flash_size == 0x100000u, "a 1 MiB flash (" + std::to_string(c->flash_size) + ")");
+        // (at least the 1 MiB NOR, whole 4 KiB sectors: the fm1emu core's image is its NOR and a package slot)
+        check(c->flash_size >= 0x100000u && c->flash_size % 4096u == 0,
+              "a flash image of at least 1 MiB, whole sectors (" + std::to_string(c->flash_size) + ")");
         std::printf("        (%u parameters%s%s%s)\n", (unsigned)c->nparams, c->knob_target ? ", knob targets" : "",
                     c->flash_sync ? ", flash_sync" : "", c->boot_options ? ", a boot guard" : "");
         Device d(c);

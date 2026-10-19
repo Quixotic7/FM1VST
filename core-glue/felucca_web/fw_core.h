@@ -24,9 +24,26 @@
  *                        run out, so the music is written now if it changed and nothing sounds)
  *
  * Added here (what the web unit leaves out of main.c): the boot guard (fm1_cstart: a second failed boot in a row
- * enters UBOOT = exit(3)), OCT- + OCT+ held 5 s (UBOOT, its countdown) and the USB UBOOT SysEx (exit(3)); a 30 s
- * clean run clears the guard. Not here: the erase stall (the web unit's st_erase is a static the glue cannot wrap),
- * USB audio, the editor's SysEx, the second core (every web unit builds it off).
+ * enters UBOOT = exit(3)), OCT- + OCT+ held 5 s (UBOOT, its countdown); a 30 s clean run clears the guard; and the
+ * managers' SysEx (FM1CORE_FW_EDITOR_C, below). Not here: the erase stall (the web unit's st_erase is a static the
+ * glue cannot wrap), USB audio, the second core (every web unit builds it off).
+ *
+ * THE MANAGERS (research/managers-2026-10-19/MANAGERS.md). midi_in takes each packet as the device's EP1 does, through
+ * usb.c midi_in_event (channel messages and clock into the MIDI ring as before; SysEx bytes to sysex_byte: its DX7 /
+ * UBOOT detection), and into the glue's frame buffer (common/sysex.h: FL frames 7D 46 4C and M-UPGRADE frames only,
+ * one at a time; a new one waits: midi_in 0, retry). After each web_ms the device main loop's two services run on it:
+ * the firmware's own editor.c ed_service (the web editor's protocol: INFO, the parameters, presets, projects, samples,
+ * WATCH pushes, BACKUP_LIST / GET / PUT, compiled in from the firmware's tree with its usb.c hooks pointed at the
+ * glue: ota_wire_send = the reply ring, ota_frame_get / done = the frame buffer, so_w / so_r / SXQ = the ring's) and
+ * ota.c's ota_service (the M-UPGRADE identity: common/sysex_ota.h). Its flash writes are the web unit's st_* on nor[]
+ * (storage.c), the samples' fl_erase4k / fl_write the same; the editor's wait for the transport to stop before a
+ * flash write (ed_flash_stop: fm1_wdt_feed in a loop on fm1_ms, which the device's ISRs advance) runs the audio ISR's
+ * milliseconds itself while the transport is busy (fm1core_fw_wait: the stop comes at the next audio block, as on the
+ * device; the few ms of audio join the ring); elsewhere fm1_wdt_feed stays the watchdog kick it is (nothing). The update start (F0 22 24 35 7F F7) has no
+ * effect (no ota_session here) and the UBOOT key (F0 22 24 35 7D F7, usb.uboot_req) is ignored: neither halts.
+ *   FM1CORE_FW_EDITOR_C   "<path>/firmware/src/editor.c" (relative to this folder): the editor service (none: no
+ *                         SysEx service, the packets go to midi_in_event only)
+ *   FM1CORE_FW_OTA_C      "<path>/firmware/src/ota.c" and FELUCCA_ID (the device unit's): the M-UPGRADE identity
  *
  * A firmware's unit (core_<id>.c) sets, then includes this file:
  *   FM1CORE_FW_P           the entry points' prefix (fm1core_<P>_init ..)                     (required)
@@ -62,6 +79,107 @@
 #endif
 
 #include FM1CORE_FW_WEB_C
+
+/* ---------------------------------------------------- the managers' SysEx --- */
+#if defined(FM1CORE_FW_EDITOR_C) || defined(FM1CORE_FW_OTA_C)
+#define FM1CORE_FW_SX 1
+#include "sysex.h"                        /* (core-glue/common) the frame buffer and the reply ring */
+static fm1sx_in_t fm1core_fw_sxi;
+static fm1sx_out_t fm1core_fw_sxo;
+static int fm1core_fw_sx_accept(const uint8_t *f, uint32_t n)
+{
+#ifdef FM1CORE_FW_OTA_C
+    if (fm1sx_is_mupg(f, n))
+        return 1;
+#endif
+    return fm1sx_is_fl(f, n);
+}
+#else
+#define FM1CORE_FW_SX 0
+#endif
+#ifdef FM1CORE_FW_EDITOR_C
+/* usb.c's SysEx plumbing (FELUCCA_OTA), which the web unit builds out, on the glue's ring and frame buffer */
+static int ota_wire_send(const uint8_t *p, uint32_t n) { return fm1sx_send(&fm1core_fw_sxo, p, n); }
+static int ota_frame_get(const uint8_t **p, uint32_t *n) { return fm1sx_frame(&fm1core_fw_sxi, p, n); }
+static void ota_frame_done(void) { fm1sx_done(&fm1core_fw_sxi); }
+#define FM1SX_OTA_TRANSPORT_DONE 1
+#define SXQ FM1SX_OUT_PKTS                /* editor.c ed_room: a push only into a half-empty ring */
+#define so_w (fm1core_fw_sxo.w)
+#define so_r (fm1core_fw_sxo.r)
+/* the sample slots' flash driver (hal/fm1_flash.h) on the web unit's NOR: an erase, a write (a NOR write clears bits),
+ * the XIP cache's invalidation (none here) */
+static int fm1core_fw_fl_erase4k(uint32_t off, uint32_t *took)
+{
+    if (took)
+        *took = 0;
+    return st_erase(off & ~4095u);
+}
+static int fm1core_fw_fl_write(uint32_t off, const uint8_t *src, uint32_t n) { return st_prog(off, src, n); }
+#define fl_erase4k fm1core_fw_fl_erase4k
+#define fl_write fm1core_fw_fl_write
+#define fl_inval(off, n) ((void)(off), (void)(n))
+/* one millisecond of the device's interrupts, from inside the main loop's wait (editor.c ed_flash_stop: "the audio
+ * ISR stops it at its next block"): web_ms's clock and the audio halves due, without its main loop pass */
+static void fm1core_fw_isr_ms(void)
+{
+    fm1_ms++;
+    web_ticks += 1000u * FM1_TICKS_PER_US;
+    web_samples_due += FS;
+    while (web_samples_due >= 1000u * HALF_FRAMES) {
+        uint32_t k;
+        const int32_t *o = &abuf[web_half * HALF_WORDS];
+        web_samples_due -= 1000u * HALF_FRAMES;
+        fm1_alnk0_irq();
+        for (k = 0; k < HALF_FRAMES; k++) {
+            uint32_t i = (ring_w++ % RING) * 2u;
+            ring[i] = (float)o[2u * k] / 8388608.0f;
+            ring[i + 1] = (float)o[2u * k + 1u] / 8388608.0f;
+        }
+        web_half ^= 1u;
+    }
+}
+static void fm1core_fw_audio_silence(void) {}   /* (storage_hw.c: the DMA's buffer zeroed before an erase) */
+#define audio_silence fm1core_fw_audio_silence
+/* fm1_wdt_feed inside the editor: the watchdog's kick (nothing here), or, while the transport is asked to stop or
+ * still runs (ed_flash_stop's loop), the device's next millisecond of interrupts, so the loop ends as on the device */
+static void fm1core_fw_wait(void)
+{
+    if (transport_req || transport_busy())
+        fm1core_fw_isr_ms();
+}
+#define fm1_wdt_feed() fm1core_fw_wait()
+#define __attribute__(x)                  /* (as hostsim.c builds the firmware: no .pool section on the host) */
+#include FM1CORE_FW_EDITOR_C
+#undef __attribute__
+#undef fm1_wdt_feed
+#undef audio_silence
+#undef fl_erase4k
+#undef fl_write
+#undef fl_inval
+#undef so_w
+#undef so_r
+#endif
+#ifdef FM1CORE_FW_OTA_C
+#define FM1SX_OTA_C FM1CORE_FW_OTA_C
+#define FM1SX_OTA_IN fm1core_fw_sxi
+#define FM1SX_OTA_OUT fm1core_fw_sxo
+#define FM1SX_OTA_MS() fm1_ms
+#define __attribute__(x)
+#include "sysex_ota.h"
+#undef __attribute__
+#endif
+static void fm1core_fw_sx_service(void)  /* main.c's loop: ed_service (editor frames, WATCH pushes), then ota_service */
+{
+#ifdef FM1CORE_FW_EDITOR_C
+    ed_service();
+#endif
+#ifdef FM1CORE_FW_OTA_C
+    ota_service();
+#elif FM1CORE_FW_SX
+    if (fm1sx_frame(&fm1core_fw_sxi, &(const uint8_t *){0}, &(uint32_t){0}))
+        fm1sx_done(&fm1core_fw_sxi);      /* (a frame no service took: freed, as ota_take would) */
+#endif
+}
 
 #include "exit_end.h"
 
@@ -217,15 +335,11 @@ static int fm1core_fw_uboot(void)        /* 1: UBOOT (the core halts) */
         fm1core_exit(3);
         return 1;
     }
-    if (usb.uboot_req) {                  /* SysEx F0 22 24 35 7D F7 from the host */
+    if (usb.uboot_req) {                  /* SysEx F0 22 24 35 7D F7 from the host: the device would reset into the
+                                           * ROM's USB boot (an installer's first step); a core is not updated that
+                                           * way, so the key is ignored: the firmware runs on, nothing written */
         usb.uboot_req = 0;
-        fm1core_fw_uboot_screen("UBOOT (USB)");
-#if FM1CORE_FW_BOOTGUARD
-        bootguard.pending = 0;
-#endif
-        printf("%s: UBOOT requested over USB\n", FM1CORE_ID);
-        fm1core_exit(3);
-        return 1;
+        printf("%s: UBOOT requested over USB: ignored (no update inside a core)\n", FM1CORE_ID);
     }
     return 0;
 }
@@ -368,6 +482,10 @@ void FM1CORE_FW(init)(int demo)
     uint32_t i;
     (void)demo;
     fm1core_exit_cleanup = fm1core_fw_cleanup;
+#if FM1CORE_FW_SX
+    fm1sx_in_init(&fm1core_fw_sxi, fm1core_fw_sx_accept);
+    fm1sx_out_reset(&fm1core_fw_sxo);
+#endif
 #if FM1CORE_FW_BOOTGUARD
     if (fm1core_fw_guard())
         return;
@@ -404,6 +522,8 @@ static void fm1core_fw_ms_run(void)      /* frame / idle: the input, the device'
     FM1CORE_FW_AFTER_MS();
     if (fm1core_halted())
         return;
+    if (web_booted && !web_boot_ms)       /* (main.c's loop has started) */
+        fm1core_fw_sx_service();
     fm1core_fw_out();
 }
 void FM1CORE_FW(frame)(void) { fm1core_fw_ms_run(); }
@@ -435,11 +555,25 @@ int FM1CORE_FW(midi_in)(uint32_t pkt)
         return 1;                         /* (halted: taken and dropped, never "retry") */
     if (MQ - (mi_w - mi_r) < 8u)          /* (usb.c ep1_take: room kept for TRS MIDI) */
         return 0;
+#if FM1CORE_FW_SX
+    if (fm1sx_in_would_refuse(&fm1core_fw_sxi, pkt))
+        return 0;                         /* (a request waits for the main loop: this one after it) */
+    midi_in_event(pkt);                   /* (usb.c ep1_take: as the device's endpoint takes it) */
+    fm1sx_in_pkt(&fm1core_fw_sxi, pkt);
+    return 1;
+#else
     return midi_enqueue(pkt, 1u) ? 1 : 0;
+#endif
 }
 int FM1CORE_FW(midi_out_take)(uint32_t *pkt)
 {
-    if (fm1core_halted() || mo_r == mo_w)
+    if (fm1core_halted())
+        return 0;
+#if FM1CORE_FW_SX
+    if (fm1sx_take(&fm1core_fw_sxo, pkt))
+        return 1;                         /* (usb.c ep1_tx: SysEx first, never split by notes) */
+#endif
+    if (mo_r == mo_w)
         return 0;
     *pkt = midi_out_q[mo_r % MQ];
     mo_r++;

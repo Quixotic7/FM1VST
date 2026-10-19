@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The settings sheet (see Sheet.h).
+#include "EditorPort.h"
 #include "Sheet.h"
 
 #include "Editor.h"
 #include "StandaloneHooks.h"
+
+#include <algorithm>
+#include <optional>
 
 using juce::Colour;
 using juce::Rectangle;
@@ -484,6 +488,12 @@ public:
     void beginDeleteConfirm();
     void beginResetConfirm();
     void endInline();
+    void scrollToEditors()                        // (tests: the Editors section at the top of the view)
+    {
+        endInline();
+        refresh(false);
+        vp_.setViewPosition(0, juce::jmax(0, hEditors_.getY() - 8));
+    }
 
 private:
     void refreshPresets();
@@ -492,6 +502,7 @@ private:
     void showPresetList();
     void exportPreset();
     void importPreset();
+    void showClockMenu();
 
     Sheet &sheet_;
     FM1Editor &ed_;
@@ -503,6 +514,13 @@ private:
 
     Heading hFirmware_{look_, "Firmware", true};
     FirmwareCard firmware_{look_};
+    Text emuStatus_{look_, 12.0f, Look::C::muted};
+    Segmented engineSeg_{look_, {"Native", "Emulated"}};
+    Row engine_{look_, "Engine", &engineSeg_, 170, 30};
+    Pill clockP_{look_, "Auto"};
+    Row clock_{look_, "Emulated clock", &clockP_, 150, 30};
+    Row source_{look_, "Source"};
+    String sourceUrl_;
     Heading hPreset_{look_, "Preset"};
     PresetNav presetNav_{look_};
     InlineEdit edit_{look_};
@@ -518,6 +536,14 @@ private:
     Text remoteDiag_{look_, 11.5f, Look::C::muted};
     Switch ignoreSw_{look_};
     Row ignore_{look_, "Ignore the FM-1's own MIDI", &ignoreSw_, Switch::kW, 24};
+
+    Heading hEditors_{look_, "Editors"};
+    Switch editorSw_{look_};
+    Row editorPort_{look_, "Show to editors", &editorSw_, Switch::kW, 24};
+    Text editorStatus_{look_, 13.0f, Look::C::rowText};
+    Text editorHint_{look_, 11.5f, Look::C::muted};
+    Row editorLink_{look_, "Editor"};
+    String editorUrl_;
 
     Heading hPlaying_{look_, "Playing"};
     Stepper transposeSt_{look_, -2, 2, [](int v) { return v == 0 ? String("0") : String::formatted("%+d", v); }};
@@ -572,6 +598,29 @@ Sheet::MainPage::MainPage(Sheet &s, FM1Editor &ed) : ScrollPage(ed.look()), shee
     stack_.add(hFirmware_);
     stack_.add(firmware_);
     firmware_.onClick = [this] { sheet_.showPage(kFirmware); };
+    stack_.add(emuStatus_);
+    stack_.add(engine_);
+    engine_.setControlWidth(engineSeg_.preferredWidth());
+    engine_.setTooltip("This firmware runs two ways. Native: FM1VST's core, compiled from its source for this computer: "
+                       "light on the CPU. Emulated: its own FM-1 package from the Firmware Hub on fm1-emu, the FM-1's chip "
+                       "emulated instruction by instruction: the Hub's latest version, heavier on the CPU. Each keeps its "
+                       "own flash.");
+    engineSeg_.onChange = [this](int i) {
+        const FM1Processor::EmuFirmware fw = p_.getEmuFirmware();
+        const String key = fw.valid() ? fw.id : hub::hubIdForCore(u8(p_.getCoreInfo().info.id));
+        sheet_.pickInBrowser(key, i == 0 ? 1 : 2);
+    };
+    stack_.add(clock_);
+    clock_.setTooltip("The emulated FM-1's chip clock (the real one runs at about 320 to 360 MHz). Auto starts at 360 and "
+                      "steps down (320, 240, 180, 120) when this computer can't keep up; 480 and 640 are an overclock, "
+                      "more headroom for heavy firmwares. A change restarts the firmware with its flash kept. Saved with "
+                      "the set.");
+    clockP_.onClick = [this] { showClockMenu(); };
+    stack_.add(source_);
+    source_.onClick = [this] {
+        if (sourceUrl_.isNotEmpty())
+            juce::URL(sourceUrl_).launchInDefaultBrowser();
+    };
 
     // PRESET
     stack_.add(hPreset_);
@@ -646,6 +695,25 @@ Sheet::MainPage::MainPage(Sheet &s, FM1Editor &ed) : ScrollPage(ed.look()), shee
     stack_.add(ignore_);
     ignore_.setCaption("its notes and knobs on the DAW's MIDI input (Live's All Ins)");
     ignoreSw_.onChange = [this](bool on) { p_.setRemoteIgnoreMidi(on); };
+
+    // EDITORS (Show to editors: EditorPort.h; macOS)
+    const bool ports = EditorPort::available();
+    for (Widget *w : std::initializer_list<Widget *>{&hEditors_, &editorPort_, &editorStatus_, &editorHint_, &editorLink_}) {
+        stack_.add(*w);
+        w->setVisible(ports);
+    }
+    editorPort_.setTooltip("A MIDI port named like this firmware's own USB port, so its web editor or preset manager (in "
+                           "Chrome) finds this FM1VST as if it were an FM-1: back up and restore presets, edit sounds. The "
+                           "editor's messages go straight to the firmware and its answers straight back, never through "
+                           "the DAW; the firmware keeps running for the editor while the host is stopped. Saved with the set.");
+    editorSw_.onChange = [this](bool on) {
+        p_.setEditorPortEnabled(on);
+        refresh();
+    };
+    editorLink_.onClick = [this] {
+        if (editorUrl_.isNotEmpty())
+            juce::URL(editorUrl_).launchInDefaultBrowser();
+    };
 
     // PLAYING
     stack_.add(hPlaying_);
@@ -874,6 +942,28 @@ void Sheet::MainPage::importPreset()
                           });
 }
 
+void Sheet::MainPage::showClockMenu()
+{
+    juce::PopupMenu m;
+    m.setLookAndFeel(&look_);
+    const int cur = p_.getEmuClockChoice();
+    for (int c : emuclock::kChoices) {
+        String t = c == emuclock::kAuto ? "Auto (now " + String(p_.getEmuMhz()) + " MHz)" : String(c) + " MHz";
+        if (emuclock::inDeviceRange(c))
+            t << String::fromUTF8(" \xc2\xb7 the FM-1's own");
+        else if (emuclock::isOverclock(c))
+            t << String::fromUTF8(" \xc2\xb7 overclock");
+        m.addItem(c + 1, t, true, c == cur);
+    }
+    juce::Component::SafePointer<MainPage> self(this);
+    m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&clockP_).withMinimumWidth(clockP_.getWidth()), [self](int r) {
+        if (self && r > 0) {
+            self->p_.setEmuClockChoice(r - 1);
+            self->refresh();
+        }
+    });
+}
+
 void Sheet::MainPage::refreshPresets()
 {
     presets_ = p_.listPresets();
@@ -914,7 +1004,33 @@ void Sheet::MainPage::refresh(bool full)
 {
     // FIRMWARE
     const FM1Processor::CoreStatus s = p_.getCoreInfo();
-    if (s.loaded) {
+    const FM1Processor::EmuFirmware fw = p_.getEmuFirmware();
+    const bool emu = fw.valid();
+    const String key = emu ? fw.id : hub::hubIdForCore(u8(s.info.id));
+    const hub::Entry *he = sheet_.catalog().find(key);
+    bool hasNative = false;
+    for (const CoreInfo &c : sheet_.natives())
+        hasNative = hasNative || u8(c.id) == hub::coreIdForHub(key);
+    const FM1Processor::EmuStatus es = p_.getEmuStatus();
+    if (emu) {
+        const hub::Entry e = he ? *he : fw.entry();
+        // (a firmware with a native core too: that core's tag and author, as the browser shows them)
+        const FirmwareMeta nm = FirmwareMeta::of(hub::coreIdForHub(key), {});
+        const String tag = hasNative ? nm.tag : he ? he->tag() : String();
+        String meta = String::fromUTF8("Emulated \xc2\xb7 ") + String(p_.getEmuMhz()) + String::fromUTF8(" MHz \xc2\xb7 ") +
+                      (tag.isNotEmpty() ? tag + String::fromUTF8(" \xc2\xb7 ") : String()) + (hasNative ? nm.author : e.shortAuthor());
+        Colour mc = C(Look::C::muted);
+        if (s.halted) {
+            meta = "Halted (exit " + String(s.haltCode & 0xFF) + "): Restart below";
+            mc = C(Look::C::red);
+        } else if (es.waiting) {
+            meta = "Not running: its package is not here";
+            mc = C(Look::C::amber);
+        }
+        firmware_.set(fw.name, fw.version, meta, mc);
+        about_.setLabel("About " + fw.name);
+        about_.setValue(fw.version);
+    } else if (s.loaded) {
         const FirmwareMeta m = FirmwareMeta::of(u8(s.info.id), u8(s.info.source_url));
         String meta = m.category + String::fromUTF8(" \xc2\xb7 ") + m.tag + String::fromUTF8(" \xc2\xb7 ") + m.author;
         Colour mc = C(Look::C::muted);
@@ -933,6 +1049,45 @@ void Sheet::MainPage::refresh(bool full)
         about_.setLabel("About the firmware");
         about_.setValue({});
     }
+    // the download, the engine, the clock, the source
+    {
+        String st;
+        Colour sc = C(Look::C::muted);
+        if (es.busy)
+            st = es.text + (es.progress >= 0 ? " " + String(juce::roundToInt(es.progress * 100)) + " %" : String());
+        else if (es.text.isNotEmpty())
+            st = es.text, sc = C(es.error ? Look::C::red : Look::C::amber);
+        emuStatus_.setText(st, sc);
+        emuStatus_.setLed(es.busy ? look_.accent() : juce::Colours::transparentBlack);
+        emuStatus_.setVisible(st.isNotEmpty());
+    }
+    engine_.setVisible(he != nullptr && hasNative);
+    engineSeg_.setSelected(emu ? 1 : 0);
+    if (he && hasNative)
+        engine_.setCaption(emu ? "the Hub's package " + he->version + " on fm1-emu" : "FM1VST's core " + u8(s.info.version),
+                           C(Look::C::muted));
+    clock_.setVisible(emu);
+    {
+        const int c = p_.getEmuClockChoice(), mhz = p_.getEmuMhz();
+        clockP_.setText(c == emuclock::kAuto ? "Auto" : String(c) + " MHz");
+        clock_.setControlWidth(juce::jmax(96, clockP_.preferredWidth()));
+        const String note = p_.getEmuClockNote();   // (Auto's step, or one waiting for the transport to stop)
+        if (note.isNotEmpty())
+            clock_.setCaption(note, C(Look::C::amber));
+        else
+            clock_.setCaption(String(mhz) + " MHz now" +
+                              (emuclock::isOverclock(mhz) ? String::fromUTF8(" \xc2\xb7 overclock")
+                               : emuclock::inDeviceRange(mhz) ? String::fromUTF8(" \xc2\xb7 the FM-1's own range")
+                                                              : String::fromUTF8(" \xc2\xb7 below the FM-1's")),
+                          C(Look::C::muted));
+    }
+    sourceUrl_ = emu ? fw.source : u8(s.info.source_url);
+    if (sourceUrl_.contains("@"))                // (a core's "repo@commit": the commit's tree)
+        sourceUrl_ = sourceUrl_.upToFirstOccurrenceOf("@", false, false) + "/tree/" + sourceUrl_.fromFirstOccurrenceOf("@", false, false);
+    source_.setVisible(sourceUrl_.startsWith("http"));
+    source_.setValue(sourceUrl_.fromFirstOccurrenceOf("://", false, false).upToFirstOccurrenceOf("/tree/", false, false)
+                         .upToFirstOccurrenceOf("/blob/", false, false));
+    source_.setTooltip(sourceUrl_);
     power_.setCaption(s.halted ? "halted (exit " + String(s.haltCode & 0xFF) + "): restart it" : String("power off and on again"),
                       C(s.halted ? Look::C::red : Look::C::muted));
     restartP_.setKind(s.halted ? Look::Primary : Look::Plain);
@@ -963,6 +1118,34 @@ void Sheet::MainPage::refresh(bool full)
         diag << (diag.isEmpty() ? "" : "\n") << "Built without libusb: frames go over SysEx only";
     remoteDiag_.setText(diag);
     ignoreSw_.setOn(p_.getRemoteIgnoreMidi());
+
+    // EDITORS
+    {
+        const FM1Processor::EditorPortStatus ps = p_.editorPortStatus();
+        editorSw_.setOn(ps.on);
+        Colour eled = juce::Colours::transparentBlack;
+        String etext;
+        if (ps.open)
+            eled = C(Look::C::green), etext = ps.name;
+        else if (ps.on)
+            eled = C(Look::C::amber), etext = ps.error.isNotEmpty() ? ps.error : String("starting");
+        else
+            etext = "Off: it would show as " + EditorPort::nameFor(ps.usbName, 1);
+        editorStatus_.setLed(eled);
+        editorStatus_.setText(etext, C(ps.open ? Look::C::rowText : Look::C::muted));
+        String hint = "Open the firmware's editor in Chrome; it finds this FM1VST as an FM-1. Don't enable this port as a "
+                      "MIDI input in your DAW (Live lists it under All Ins).";
+        if (ps.emulated)
+            hint << "\nAn emulated firmware has no USB MIDI: its editor gets no answer.";
+        if (ps.open && (ps.in || ps.out))
+            hint << "\n" << String::formatted("Messages in %u, out %u", ps.in, ps.out)
+                 << (ps.idling ? String::fromUTF8(" \xc2\xb7 running for the editor (the host is stopped)") : String());
+        editorHint_.setText(hint);
+        editorUrl_ = ps.url;
+        editorLink_.setVisible(ps.available && ps.url.isNotEmpty());
+        editorLink_.setValue(ps.url.fromFirstOccurrenceOf("://", false, false).trimCharactersAtEnd("/"));
+        editorLink_.setTooltip(ps.url);
+    }
 
     // PLAYING, HOST CONTROL
     transposeSt_.setValue(p_.getTranspose());
@@ -1072,22 +1255,40 @@ private:
     int sel_ = 0, hoverI_ = -1;
 };
 
+// one firmware of the browser: FM1VST's native core, the Hub's package (emulated), or both
+struct FirmwareItem {
+    String key;                                   // the Hub's id (a native core's own id mapped: hub::hubIdForCore)
+    String name, tag, author, category;
+    std::optional<CoreInfo> native;
+    std::optional<hub::Entry> emu;
+    bool nativeBehind() const { return native && emu && hub::hubNewer(emu->version, u8(native->version)); }
+    // the engine a click starts: the one there is; with both, native unless its version is behind the Hub's (RemoteFM1's
+    // newest-wins)
+    int defaultEngine() const { return !native ? 2 : !emu ? 1 : nativeBehind() ? 2 : 1; }
+    String version(int engine) const { return engine == 1 && native ? u8(native->version) : emu ? emu->version : String(); }
+};
+
 class CoreCard : public Widget {
 public:
-    CoreCard(Look &l, const CoreInfo &c) : Widget(l), info(c)
+    CoreCard(Look &l, FirmwareItem it) : Widget(l), item(std::move(it))
     {
-        meta = FirmwareMeta::of(u8(c.id), u8(c.source_url));
-        name = u8(c.name);
-        setTooltip(name + " " + u8(c.version) + "\n" + meta.tag + String::fromUTF8(" \xc2\xb7 ") + meta.author +
-                   (c.license.empty() ? String() : "\n" + u8(c.license)) + (c.gated.empty() ? String() : "\nNot in public builds: " + u8(c.gated)));
+        String tip = item.name;
+        if (item.native)
+            tip << "\nNative: FM1VST's core " << u8(item.native->version)
+                << (item.native->license.empty() ? String() : ", " + u8(item.native->license))
+                << (item.native->gated.empty() ? String() : "\nNot in public builds: " + u8(item.native->gated));
+        if (item.emu)
+            tip << "\nEmulated: the Hub's package " << item.emu->version << " on fm1-emu" << (item.emu->beta ? " (beta)" : "")
+                << (item.emu->note.isNotEmpty() ? "\nKnown not to run on fm1-emu: " + item.emu->note : String());
+        tip << "\n" << item.tag << String::fromUTF8(" \xc2\xb7 ") << item.author;
+        setTooltip(tip);
     }
-    CoreInfo info;
-    FirmwareMeta meta;
-    String name;
-    bool current = false;
+    FirmwareItem item;
+    int running = 0;                              // the engine running it now: 0 none, 1 native, 2 emulated
     std::function<void()> onClick;
     void paint(juce::Graphics &g) override
     {
+        const bool current = running != 0;
         const Rectangle<float> r = getLocalBounds().toFloat().reduced(0.5f);
         g.setColour(current ? C(Look::C::raised).interpolatedWith(look.accent(), 0.08f) : C(hover_ ? Look::C::raisedHover : Look::C::raised));
         g.fillRoundedRectangle(r, 10);
@@ -1101,17 +1302,38 @@ public:
         Rectangle<float> in = r.reduced(12, 9);
         Rectangle<float> top = in.removeFromTop(19);
         const juce::Font vf = Look::font(11.0f, Look::SemiBold);
-        const String v = u8(info.version);
+        const String v = item.version(running ? running : item.defaultEngine());
         const float vw = juce::jmin(top.getWidth() * 0.45f, Look::textWidth(vf, v) + 2);
         g.setFont(vf);
         g.setColour(look.accent());
         g.drawText(v, top.removeFromRight(vw), juce::Justification::centredRight, true);
         g.setFont(Look::font(14.0f, Look::Bold));
         g.setColour(C(Look::C::text));
-        g.drawFittedText(name, top.withTrimmedRight(6).toNearestInt(), juce::Justification::centredLeft, 1, 0.8f);
+        g.drawFittedText(item.name, top.withTrimmedRight(6).toNearestInt(), juce::Justification::centredLeft, 1, 0.8f);
+        // the engines: N (native) and E (emulated) badges, the running one filled
+        const juce::Font bf = Look::font(9.5f, Look::Bold);
+        g.setFont(bf);
+        Rectangle<float> line = in;
+        for (int e = 2; e >= 1; e--) {
+            if ((e == 1 && !item.native) || (e == 2 && !item.emu))
+                continue;
+            const String t = e == 1 ? "NATIVE" : "EMU";
+            const Rectangle<float> b = line.removeFromRight(Look::textWidth(bf, t) + 10).withSizeKeepingCentre(Look::textWidth(bf, t) + 10, 15);
+            line.removeFromRight(4);
+            const bool on = running == e;
+            const bool dim = e == 2 && item.emu->note.isNotEmpty();
+            g.setColour(on ? look.accent() : C(Look::C::line));
+            if (on)
+                g.fillRoundedRectangle(b, 4);
+            else
+                g.drawRoundedRectangle(b.reduced(0.5f), 4, 1.0f);
+            g.setColour(on ? look.onAccent() : C(dim ? Look::C::red : Look::C::muted));
+            g.drawText(t, b, juce::Justification::centred, false);
+        }
         g.setFont(Look::font(11.5f, Look::Medium));
         g.setColour(C(Look::C::muted));
-        g.drawFittedText(meta.tag + String::fromUTF8(" \xc2\xb7 ") + meta.author, in.toNearestInt(), juce::Justification::centredLeft, 1, 0.8f);
+        g.drawFittedText(item.tag + String::fromUTF8(" \xc2\xb7 ") + item.author, line.withTrimmedRight(4).toNearestInt(),
+                         juce::Justification::centredLeft, 1, 0.8f);
     }
     void mouseUp(const juce::MouseEvent &e) override
     {
@@ -1171,12 +1393,26 @@ public:
                 sheet_.close();
         };
         stack_.add(searchHolder_);
+        stack_.add(engineRow_);
+        engineRow_.setControlWidth(engineSeg_.preferredWidth());
+        engineRow_.setTooltip("Native: FM1VST's cores, each compiled from its firmware's source (light on the CPU). Emulated: "
+                              "every firmware on the FM-1 Firmware Hub, its own package run on fm1-emu, the FM-1's chip "
+                              "emulated (heavier). A package is downloaded from the Hub when you pick it, and kept.");
+        engineSeg_.onChange = [this](int i) {
+            engineSel_ = i;
+            filter();
+        };
         stack_.add(chips_);
         chips_.onChange = [this](int i) {
             chipSel_ = i;
             filter();
         };
+        stack_.add(status_);
         stack_.add(grid_);
+        stack_.add(own_);
+        own_.setCaption("M-VAVE's stock V15 (your FM-1.fwsc) or any FM-1 package");
+        own_.setValue(String::fromUTF8("Open\xe2\x80\xa6"));
+        own_.onClick = [this] { openOwn(); };
     }
     void paintOverChildren(juce::Graphics &g) override
     {
@@ -1184,33 +1420,111 @@ public:
                                  vp_.getViewPosition();
         Look::strokeIcon(g, Look::Search, Rectangle<float>((float)r.getX() + 11, (float)r.getCentreY() - 7, 14, 14), C(Look::C::muted), 1.5f);
     }
+    // the items: the native cores and the Hub's firmwares, one per firmware, by name
+    std::vector<FirmwareItem> items() const
+    {
+        std::vector<FirmwareItem> out;
+        for (const CoreInfo &c : sheet_.natives()) {
+            FirmwareItem it;
+            it.key = hub::hubIdForCore(u8(c.id));
+            const FirmwareMeta m = FirmwareMeta::of(u8(c.id), u8(c.source_url));
+            it.name = u8(c.name), it.tag = m.tag, it.author = m.author, it.category = m.category;
+            it.native = c;
+            out.push_back(std::move(it));
+        }
+        for (const hub::Entry &e : sheet_.catalog().firmwares) {
+            auto f = std::find_if(out.begin(), out.end(), [&](const FirmwareItem &i) { return i.key == e.id; });
+            if (f != out.end()) {
+                f->emu = e;
+                continue;
+            }
+            FirmwareItem it;
+            it.key = e.id, it.name = e.name, it.tag = e.tag(), it.author = e.shortAuthor(), it.category = e.category();
+            it.emu = e;
+            out.push_back(std::move(it));
+        }
+        std::sort(out.begin(), out.end(), [](const FirmwareItem &a, const FirmwareItem &b) {
+            return a.name.compareNatural(b.name) < 0;
+        });
+        return out;
+    }
     void rebuild()
     {
-        const std::vector<CoreInfo> list = ed_.proc().listCores();
-        const String cur = u8(ed_.proc().getCoreInfo().info.id);
+        std::vector<FirmwareItem> list = items();
         bool same = list.size() == grid_.cards.size();
         for (size_t i = 0; same && i < list.size(); i++)
-            same = list[i].id == grid_.cards[i]->info.id && list[i].version == grid_.cards[i]->info.version;
+            same = list[i].key == grid_.cards[i]->item.key && list[i].version(1) == grid_.cards[i]->item.version(1) &&
+                   list[i].version(2) == grid_.cards[i]->item.version(2) && (bool)list[i].native == (bool)grid_.cards[i]->item.native &&
+                   (bool)list[i].emu == (bool)grid_.cards[i]->item.emu;
         if (!same) {
             grid_.cards.clear();
-            for (const CoreInfo &c : list) {
-                auto card = std::make_unique<CoreCard>(look_, c);
+            for (FirmwareItem &it : list) {
+                auto card = std::make_unique<CoreCard>(look_, std::move(it));
                 CoreCard *p = card.get();
-                card->onClick = [this, p] { choose(u8(p->info.id)); };
+                card->onClick = [this, p] { sheet_.pickInBrowser(p->item.key, engineSel_ == 0 ? -1 : engineSel_); };
                 grid_.addAndMakeVisible(*card);
                 grid_.cards.push_back(std::move(card));
             }
         }
-        for (auto &c : grid_.cards)
-            c->current = u8(c->info.id) == cur;
-        search_.setTextToShowWhenEmpty("Search " + String((int)list.size()) + " firmwares", C(Look::C::muted));
+        markRunning();
+        search_.setTextToShowWhenEmpty("Search " + String((int)grid_.cards.size()) + " firmwares", C(Look::C::muted));
+        tick();
         filter();
+    }
+    void markRunning()
+    {
+        FM1Processor &p = ed_.proc();
+        const FM1Processor::EmuFirmware fw = p.getEmuFirmware();
+        const String cur = fw.valid() ? fw.id : hub::hubIdForCore(u8(p.getCoreInfo().info.id));
+        for (auto &c : grid_.cards) {
+            const int r = c->item.key != cur ? 0 : fw.valid() ? 2 : 1;
+            if (r != c->running) {
+                c->running = r;
+                c->repaint();
+            }
+        }
+    }
+    // the catalog's state and a download's progress (the editor's timer)
+    void tick()
+    {
+        const hub::Catalog &cat = sheet_.catalog();
+        hub::Service &svc = ed_.proc().hubService();
+        int nEmu = 0, nNat = 0;
+        for (const auto &c : grid_.cards)
+            nEmu += (bool)c->item.emu, nNat += (bool)c->item.native;
+        String t = String(nNat) + " native, " + String(nEmu) + " on the Hub";
+        Colour col = C(Look::C::muted);
+        if (svc.refreshing())
+            t << String::fromUTF8(" \xc2\xb7 checking the Hub\xe2\x80\xa6");
+        else if (cat.origin == "live")
+            t << String::fromUTF8(" \xc2\xb7 the Hub's catalog, ") << cat.updated;
+        else if (cat.origin == "cache")
+            t << String::fromUTF8(" \xc2\xb7 offline: the catalog of ") << cat.updated, col = C(Look::C::amber);
+        else
+            t << String::fromUTF8(" \xc2\xb7 offline: the built-in list (") << cat.updated << ")", col = C(Look::C::amber);
+        const FM1Processor::EmuStatus es = ed_.proc().getEmuStatus();
+        if (es.busy)
+            t << "\n" << es.text << (es.progress >= 0 ? " " + String(juce::roundToInt(es.progress * 100)) + " %" : String());
+        else if (es.error && es.text.isNotEmpty())
+            t << "\n" << es.text, col = C(Look::C::red);
+        if (t != status_.text()) {
+            status_.setText(t, col);
+            status_.setLed(es.busy || svc.refreshing() ? look_.accent() : juce::Colours::transparentBlack);
+            relayout();
+        }
+        markRunning();
     }
     void setFilter(const String &text, int category)
     {
         search_.setText(text, false);
         chipSel_ = category;
         chips_.setSelected(category);
+        filter();
+    }
+    void setEngine(int e)
+    {
+        engineSel_ = juce::jlimit(0, 2, e);
+        engineSeg_.setSelected(engineSel_);
         filter();
     }
     void focusSearch()
@@ -1225,22 +1539,34 @@ private:
         const String q = search_.getText().trim();
         const String want = chipSel_ <= 0 ? String() : FirmwareMeta::categories()[chipSel_];
         for (auto &c : grid_.cards) {
-            const bool catOk = want.isEmpty() || c->meta.category == want;
-            const String hay = c->name + " " + u8(c->info.id) + " " + c->meta.tag + " " + c->meta.author + " " + c->meta.category;
-            c->setVisible(catOk && (q.isEmpty() || hay.containsIgnoreCase(q)));
+            const FirmwareItem &it = c->item;
+            const bool engOk = engineSel_ == 0 || (engineSel_ == 1 && it.native) || (engineSel_ == 2 && it.emu);
+            const bool catOk = want.isEmpty() || it.category == want;
+            const String hay = it.name + " " + it.key + " " + it.tag + " " + it.author + " " + it.category +
+                               (it.native ? " native" : "") + (it.emu ? " emulated emu hub" : "");
+            c->setVisible(engOk && catOk && (q.isEmpty() || hay.containsIgnoreCase(q)));
         }
         grid_.resized();
         relayout();
         grid_.repaint();
     }
-    void choose(const String &id)
+    void openOwn()
     {
-        FM1Processor &p = ed_.proc();
-        if (id != u8(p.getCoreInfo().info.id)) {
-            p.switchCore(id);
-            ed_.coreChanged();
-        }
-        sheet_.showPage(kMain);
+        chooser_ = std::make_unique<juce::FileChooser>("Open an FM-1 package", juce::File::getSpecialLocation(juce::File::userHomeDirectory),
+                                                       "*.fwsc");
+        juce::Component::SafePointer<FirmwarePage> self(this);
+        chooser_->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+                              [self](const juce::FileChooser &fc) {
+                                  const juce::File f = fc.getResult();
+                                  if (!self || f == juce::File())
+                                      return;
+                                  const String err = self->ed_.proc().openLocalPackage(f);
+                                  self->ed_.coreChanged();
+                                  if (err.isEmpty())
+                                      self->sheet_.showPage(kMain);
+                                  else
+                                      self->status_.setText(err, C(Look::C::red));
+                              });
     }
 
     Sheet &sheet_;
@@ -1248,9 +1574,14 @@ private:
     Look &look_;
     juce::TextEditor search_;
     Holder searchHolder_{look_, search_, 46};
+    Segmented engineSeg_{look_, {"All", "Native", "Emulated"}};
+    Row engineRow_{look_, "Engine", &engineSeg_, 220, 30};
     Chips chips_{look_, FirmwareMeta::categories()};
+    Text status_{look_, 11.5f, Look::C::muted};
     CardGrid grid_{look_};
-    int chipSel_ = 0;
+    Row own_{look_, "Your own .fwsc"};
+    std::unique_ptr<juce::FileChooser> chooser_;
+    int chipSel_ = 0, engineSel_ = 0;
 };
 
 // =============================================================== about ===
@@ -1260,7 +1591,7 @@ public:
     {
         stack_.add(title_);
         title_.setPadding(6, 10);
-        for (KeyValue *k : {&core_, &licence_, &source_, &gated_, &module_})
+        for (KeyValue *k : {&author_, &core_, &clock_, &licence_, &source_, &package_, &gated_, &module_})
             stack_.add(*k);
         stack_.add(hCredits_);
         stack_.add(credits_);
@@ -1271,7 +1602,27 @@ public:
     {
         const FM1Processor::CoreStatus s = ed_.proc().getCoreInfo();
         const CoreInfo &c = s.info;
-        if (!s.loaded) {
+        const FM1Processor::EmuFirmware fw = ed_.proc().getEmuFirmware();
+        for (KeyValue *k : {&author_, &clock_, &package_})
+            k->setVisible(fw.valid());
+        if (s.loaded && fw.valid()) {
+            // an emulated firmware: the Hub's entry (or the user's file), its package, the engine
+            title_.setText(fw.name + "  " + fw.version, C(Look::C::text));
+            author_.setValue(fw.author);
+            core_.setValue(u8(c.name) + ": " + u8(c.version) + " (the fm1emu core, core ABI " + String((int)c.abi) +
+                           String::fromUTF8("): fm1-emu by Joakim Eriksson, MIT, runs the firmware's own FM-1 package"));
+            clock_.setValue(String(ed_.proc().getEmuMhz()) + " MHz (" + String(emuclock::choiceName(ed_.proc().getEmuClockChoice())) + ")");
+            licence_.setValue(fw.local ? String("your own file's") : String("the firmware's own: see its source"));
+            source_.setValue(fw.source.isNotEmpty() ? fw.source : String("(no public source)"));
+            package_.setValue((fw.pkg.isNotEmpty() ? fw.pkg : String("your file")) + "\nSHA-256 " + fw.sha256.substring(0, 16) +
+                              String::fromUTF8("\xe2\x80\xa6") + (fw.size > 0 ? ", " + String(fw.size) + " bytes" : String()));
+            package_.setTooltip("SHA-256 " + fw.sha256);
+            module_.setValue(u8(c.path));
+            for (KeyValue *k : {&core_, &licence_, &source_, &module_})
+                k->setVisible(true);
+            gated_.setVisible(false);
+            credits_.setText(c.credits.empty() ? String("(none)") : u8(c.credits), C(Look::C::rowText));
+        } else if (!s.loaded) {
             title_.setText("No firmware loaded", C(Look::C::text));
             for (KeyValue *k : {&core_, &licence_, &source_, &gated_, &module_})
                 k->setVisible(false);
@@ -1300,7 +1651,7 @@ private:
     Look &look_;
     Text title_{look_, 19.0f, Look::C::text, Look::Bold};
     KeyValue core_{look_, "Core"}, licence_{look_, "Licence"}, source_{look_, "Source"}, gated_{look_, "Gated"},
-        module_{look_, "Module"};
+        module_{look_, "Module"}, author_{look_, "Author"}, clock_{look_, "Clock"}, package_{look_, "Package"};
     Heading hCredits_{look_, "Credits and notices"};
     Text credits_{look_, 12.5f, Look::C::rowText, Look::Regular};
     Heading hPlugin_{look_, "FM1VST"};
@@ -1518,6 +1869,8 @@ Sheet::Sheet(FM1Editor &ed) : ed_(ed), look_(ed.look()), back_(ed.look(), Look::
 {
     setWantsKeyboardFocus(true);
     setInterceptsMouseClicks(true, true);
+    catalog_ = ed.proc().hubService().catalog();  // (the native cores are scanned when the sheet opens)
+    ed.proc().hubService().addChangeListener(this);
     main_ = std::make_unique<MainPage>(*this, ed);
     firmware_ = std::make_unique<FirmwarePage>(*this, ed);
     about_ = std::make_unique<AboutPage>(*this, ed);
@@ -1535,13 +1888,58 @@ Sheet::Sheet(FM1Editor &ed) : ed_(ed), look_(ed.look()), back_(ed.look(), Look::
 
 Sheet::~Sheet()
 {
+    ed_.proc().hubService().removeChangeListener(this);
     stopTimer();
     if (audio_)
         fm1standalone::saveAudioState();
 }
 
+void Sheet::reloadSources()
+{
+    natives_ = ed_.proc().firmwareCores();
+    catalog_ = ed_.proc().hubService().catalog();
+}
+
+void Sheet::changeListenerCallback(juce::ChangeBroadcaster *)
+{
+    // the Hub's catalog came (or a download moved): the browser's list again, when it shows
+    const hub::Catalog c = ed_.proc().hubService().catalog();
+    const bool changed = c.updated != catalog_.updated || c.origin != catalog_.origin || c.firmwares.size() != catalog_.firmwares.size();
+    catalog_ = c;
+    if (page_ == kFirmware)
+        changed ? firmware_->rebuild() : firmware_->tick();
+    else if (page_ == kMain && isOpen())
+        main_->refresh(false);
+}
+
+void Sheet::setEngineFilter(int engine) { firmware_->setEngine(engine); }
+
+void Sheet::pickInBrowser(const String &key, int engine)
+{
+    FM1Processor &p = ed_.proc();
+    std::optional<FirmwareItem> it;
+    for (FirmwareItem &i : firmware_->items())
+        if (i.key == key)
+            it = std::move(i);
+    if (!it)
+        return;
+    if (engine < 1 || (engine == 1 && !it->native) || (engine == 2 && !it->emu))
+        engine = it->defaultEngine();
+    const FM1Processor::EmuFirmware fw = p.getEmuFirmware();
+    if (engine == 1) {
+        if (fw.valid() || u8(p.getCoreInfo().info.id) != u8(it->native->id))
+            p.switchCore(u8(it->native->id));
+    } else if (!(fw.valid() && fw.sha256 == it->emu->sha256)) {
+        p.selectEmuFirmware(*it->emu);           // (from the cache at once; else downloaded, the progress on the main page)
+    }
+    ed_.coreChanged();
+    showPage(kMain);
+}
+
 void Sheet::open(bool animate)
 {
+    reloadSources();
+    ed_.proc().hubService().refresh();           // (the worker: at most every 10 minutes)
     showPage(kMain);
     refresh();
     setVisible(true);
@@ -1667,9 +2065,12 @@ void Sheet::showPage(Page p)
     if (current_ && current_ != next)
         current_->setVisible(false);
     current_ = next;
-    if (p == kFirmware)
+    if (p == kFirmware) {
+        if (natives_.empty())
+            reloadSources();
+        ed_.proc().hubService().refresh();
         firmware_->rebuild();
-    else if (p == kAbout)
+    } else if (p == kAbout)
         about_->refresh();
     else if (p == kTheme)
         theme_->begin();
@@ -1688,12 +2089,19 @@ void Sheet::refresh()
 {
     if (page_ == kMain)
         main_->refresh(false);
+    else if (page_ == kFirmware)
+        firmware_->tick();
 }
 
 void Sheet::beginRename() { main_->beginRename(); }
 void Sheet::beginSaveAs() { main_->beginSaveAs(); }
 void Sheet::beginDeleteConfirm() { main_->beginDeleteConfirm(); }
 void Sheet::beginResetConfirm() { main_->beginResetConfirm(); }
+void Sheet::scrollToEditors()
+{
+    showPage(kMain);
+    main_->scrollToEditors();
+}
 void Sheet::setBrowserFilter(const String &search, int category)
 {
     firmware_->setFilter(search, category);

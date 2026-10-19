@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# The fm1emu core: fm1-emu's emulated FM-1 (cores/fm1-emu, MIT, unmodified) behind FM1VST's core ABI
+# (core-api/fm1core.h ABI 6), as a loadable module. Built by core-glue/fm1emu/core.cmake (cargo build --release),
+# copied to <build>/cores/fm1emu.fm1core. Only fm1-core and fm1-soc (and fm1-isa under them): nih-plug and the
+# other front-ends of fm1-emu are not used.
+[package]
+name = "fm1emu-core"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-only"
+publish = false
+
+[lib]
+name = "fm1emu_core"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+fm1-core = { path = "../../cores/fm1-emu/crates/fm1-core" }
+fm1-soc = { path = "../../cores/fm1-emu/crates/fm1-soc" }
+
+# a workspace of its own (not fm1-emu's, which excludes it; nothing above it)
+[workspace]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+debug = false
+# (unwind, not abort: every entry point catches a panic and halts the core instead of taking the host down)
+panic = "unwind"

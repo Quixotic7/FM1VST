@@ -8,12 +8,12 @@
  *          own), cpu1_boot (inline), audio_init
  *   frame  the splash's time (main.c's fm1_delay_ms(30) + (900): sloopDX's 32 algorithm frames, ORBIT's logo
  *          guard), then the main loop's body every 15 ms: the 30 s healthy mark, the battery and MASTER pots,
- *          OCT- + OCT+ held 5 s (UBOOT), the USB UBOOT request, ui_input, ui_leds, ui_draw, autosave_tick,
- *          sections_flush (sloopDX: midi_pc_take)
- *   idle   the loop's wait for the next frame: ui_input
+ *          OCT- + OCT+ held 5 s (UBOOT), the managers' SysEx (ed_service, ota_service: sloop_sx.h), the USB UBOOT
+ *          request (ignored), ui_input, ui_leds, ui_draw, autosave_tick, sections_flush (sloopDX: midi_pc_take)
+ *   idle   the loop's wait for the next frame: ui_input, ed_service
  *   tick   TIMER5's ms and the matrix scan's debounce (a press at once, a release after ~9 ms open)
  *   audio  the ALNK0 ISR, one 256-frame half per two ABI blocks (common/fifo), silent while a flash erase stalls
- * Not done (hardware): USB enumeration, the TRS UART, the web editor's SysEx and the update modes (FELUCCA_OTA),
+ * Not done (hardware): USB enumeration, the TRS UART, the update modes (FELUCCA_OTA: the M-UPGRADE session, UBOOT),
  * the panel calibration at power-on (OCT- + OCT+ held while switching on: panel_setup waits for presses inside one
  * call; the panel table is the plugin's own wiring, and a stored table is still read from the settings). */
 #include <stdio.h>
@@ -137,6 +137,7 @@ void fm1core_sl_fw_init(int demo)
     fm1core_sl_audio_stopped = 0;
     usb.up = 1;                                   /* a host is there: MIDI out flows (usb.c midi_out_event) */
     usb.config = 1;
+    fm1core_sl_sx_init();                         /* (usb_start: nothing received or queued yet) */
     atexit(fm1core_sl_fw_exit);
     fm1fifo_init(&fm1core_sl_fifo, HALF_FRAMES, 2, FM1FIFO_S32, OUT_SHIFT, fm1core_sl_render, NULL);
     fm1core_sl_looping = 0;
@@ -276,15 +277,14 @@ void fm1core_sl_fw_frame(void)                    /* main.c fm1_main's loop body
             return;
         }
     }
-    if (usb.uboot_req) {                          /* SysEx F0 22 24 35 7D F7 from the host */
-        fm1_audio_stop();
-        persist_flush_now();
-        lcd_fill(0, 0, 240, 240, C_BLACK);
-        draw_text_box(0, 110, 240, &FONT_S, "UBOOT (USB)", C_WHITE, 1);
-        bootguard.pending = 0;
-        printf("%s: UBOOT requested over USB\n", FM1CORE_ID);
-        fm1_enter_uboot();
-        return;
+    fm1core_sl_sx_service(1);                     /* main.c: ed_service, ota_service (the web editor, M-UPGRADE) */
+    /* (main.c: usb.ota_req, M-UPGRADE's update start, runs ota_session: usb.c without FELUCCA_OTA never sets it) */
+    if (usb.uboot_req) {                          /* SysEx F0 22 24 35 7D F7 from the host: the device would save,
+                                                   * detach and enter its ROM loader; a core has none (an installer
+                                                   * would write the firmware there): the key is ignored, the core
+                                                   * plays on. OCT- + OCT+ held 5 s above still leaves (exit 3) */
+        usb.uboot_req = 0;
+        printf("%s: UBOOT key over USB ignored (no ROM loader in a core)\n", FM1CORE_ID);
     }
 #if FM1CORE_SL_FW == FM1CORE_SL_DX
     midi_pc_take();                               /* a MIDI Program Change: its preset */
@@ -307,10 +307,12 @@ void fm1core_sl_fw_frame(void)                    /* main.c fm1_main's loop body
     fm1core_sl_frames++;
 }
 
-void fm1core_sl_fw_idle(void)                     /* main.c: ui_input while it waits for the next frame */
+void fm1core_sl_fw_idle(void)                     /* main.c: ui_input and ed_service while it waits for the next frame */
 {
-    if (fm1core_sl_looping)
+    if (fm1core_sl_looping) {
         ui_input();
+        fm1core_sl_sx_service(0);
+    }
 }
 
 void fm1core_sl_fw_master(int32_t m) { fm1core_sl_master = m < 0 ? 0 : m > 1023 ? 1023 : m; }
@@ -329,15 +331,11 @@ void fm1core_sl_fw_audio(int16_t *out, uint32_t frames)
 }
 
 /* ----------------------------------------------------------------- MIDI --- */
-int fm1core_sl_fw_midi_in(uint32_t pkt)
-{
-    if (MQ - (mi_w - mi_r) < 8u)                  /* (usb.c's EP1 room) */
-        return 0;
-    midi_in_event(pkt);
-    return 1;
-}
+int fm1core_sl_fw_midi_in(uint32_t pkt) { return fm1core_sl_sx_in(pkt); }   /* (sloop_sx.h: usb.c and the frame) */
 int fm1core_sl_fw_midi_out_take(uint32_t *pkt)
 {
+    if (fm1sx_take(&fm1core_sl_sxo, pkt))
+        return 1;                                 /* (usb.c ep1_tx: SysEx first, never split by notes) */
     if (mo_r == mo_w)
         return 0;
     *pkt = midi_out_q[mo_r % MQ];

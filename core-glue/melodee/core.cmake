@@ -2,16 +2,16 @@
 # Melodee (https://github.com/keremimo/melodee, Felucca's fork with Prophet, FM6, CZ-1, SID and the x0x 909):
 # core-glue/melodee/ is its emulator over the unmodified sources (cmake/FM1Cores.cmake: fm1_add_core).
 # x0x_drum_tables.h is not written by build.py generate() (build_app runs tools/gen_909_tables.py): EXTRA_GEN.
-# GATED: the firmware bundles two sets of third-party sound data whose owners grant no licence (LICENSING.md, "Third-
-# party material"): Casio's 64 CZ-1 preset tones ("no licence is granted for them by this project") and Sequential's
-# 200 Prophet-5/10 factory programs ("the rights stay with Sequential"). The code is GPL-3.0-only (with MIT, BSD-3,
-# Apache-2.0 and OFL parts, all compatible). Un-gating needs Casio's and Sequential's permission, or a Melodee build
-# without the two banks (the firmware has no switch for that today).
+# UN-GATED (the owner's call, 2026-10-19): the firmware bundles two sets of third-party sound data whose owners grant
+# no licence (LICENSING.md, "Third-party material"): Casio's 64 CZ-1 preset tones and Sequential's 200 Prophet-5/10
+# factory programs. They ship compiled into the firmware (melodee_cz1.h, melodee_prophet_factory.h, made at build
+# time), as Melodee's own packages carry them; no raw .syx (assets/cz1-factory, assets/prophet5-factory) is
+# distributed: tools/package_release.sh checks the release for them. The credits name both sets' owners. The code is
+# GPL-3.0-only (with MIT, BSD-3, Apache-2.0 and OFL parts, all compatible).
 fm1_add_core(melodee ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/melodee UNIT core_melodee.c
              DESC core_melodee_desc.c PREFIX ME FAMILY melodee LICENSE GPL-3.0-only
-             CREDITS "The CZ engine's phase functions, envelope rate law and amplitude curve: adapted from the MAME uPD933 device model by Devin Acker, BSD-3-Clause:"
+             CREDITS "The CZ-1 engine's factory tones are Casio's CZ-1 preset tones A-1 .. H-8 (Casio Computer Co., Ltd., 1986), and the PROPHET engine's factory presets are Sequential's Prophet-5 / 10 factory programs v1.03 (Sequential, 2025). Both are included as sound data for compatibility, compiled into the firmware. The rights stay with Casio and Sequential (LICENSING.md).\n\nThe CZ engine's phase functions, envelope rate law and amplitude curve: adapted from the MAME uPD933 device model by Devin Acker, BSD-3-Clause:"
              CREDITS_FILES LICENSES/BSD-3-Clause-uPD933.txt
-             GATED "bundles Casio CZ-1 preset tones and Sequential Prophet-5 factory programs with no licence granted (LICENSING.md)"
              GEN ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h melodee_tables.h melodee_fm6.h melodee_cz1.h
                  melodee_prophet_factory.h x0x_drum_tables.h
              EXTRA_GEN "tools/gen_909_tables.py build/gen/x0x_drum_tables.h"

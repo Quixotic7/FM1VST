@@ -12,4 +12,7 @@
 #define FM1CORE_FW_WEB_C "../../cores/ghoulbox-fm1-dungeon-synth/web/emu/felucca_web.c"
 #define FM1CORE_FW_ANIM_IDLE 1
 #define FM1CORE_FW_BOOTGUARD 0
+#define FM1CORE_FW_EDITOR_C "../../cores/ghoulbox-fm1-dungeon-synth/firmware/src/editor.c"   /* the web editor's SysEx */
+#define FM1CORE_FW_OTA_C "../../cores/ghoulbox-fm1-dungeon-synth/firmware/src/ota.c"         /* the M-UPGRADE identity */
+#define FELUCCA_ID "FM-1_900"                                             /* (felucca.c) */
 #include "fw_core.h"

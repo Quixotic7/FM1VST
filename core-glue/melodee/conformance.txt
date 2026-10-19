@@ -1,4 +1,4 @@
-# Melodee 1.4.3: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# Melodee 1.4.4: tests/core_conformance.cpp's script for this core (see its header for the directives)
 # the flash round trip: the first FM1P_PERSIST parameter of the map, the default
 # the boot guard: a second failed boot in a row enters UBOOT (exit(3))
 reboot-guard 2

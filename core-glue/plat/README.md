@@ -44,8 +44,28 @@ on `audio()`'s pull (`common/fifo.c`) would put the screens 2.9 ms behind the si
 - The splash and its 330..430 ms of delays: the UI starts at power-on, as in the firmware's own host simulator and
   browser emulator (the hub's "Play in browser").
 - HARDWARE CALIBRATION (OCT- + OCT+ held at power-on: a blocking loop) and SAFE MODE (two failed boots).
-- USB SysEx: the screen reader (`announce.c` links, nobody listens), the updater, X0X's sample upload (`editor.c`) and
-  backup (`backup.c`). The render load (no wall clock): the overload guards see 0 %.
+- The updater: the update key (F0 22 24 35 7F F7) and UBOOT's (F0 22 24 35 7D F7) are not taken (see "The managers'
+  SysEx"). The render load (no wall clock): the overload guards see 0 %.
+
+### The managers' SysEx
+
+`plat_sx.h` (on `core-glue/common/sysex.h`) is usb.c's SysEx path: SysEx packets go to one frame buffer (only the
+frames a service reads; F0 refused while one waits: `midi_in` 0, retry), never into the app's MIDI queue; replies
+leave ahead of the notes. `plat_glue.h` runs the unit's service where `main_fm1.c` runs it (after the UBOOT hold,
+before the frame), with the firmware's own handlers compiled from the submodule:
+
+| core | manager | handlers |
+|---|---|---|
+| `x0x` | `web/backup/index.html` (backup / restore), the break-loop page, a screen reader | `ota.c` (identity `FM-1_9010100`), `backup.c` (with `main_fm1.c`'s hooks redone in `core_x0x.c`), `editor.c` (INFO, PING, the sample slots), `announce.c` |
+| `fomni` | the installer, a screen reader | `ota.c` (`FM-1_8000400`, via `common/sysex_ota.h`), `announce.c` |
+| `fimba`, `fartmachine` | the installer | `ota.c` (`FM-1_8000601`, `FM-1_701`) |
+
+X0X's restore waits as the device does (`ota.c` read requests to the host, then RESTORE FROM USB? with SEL / HOME):
+its service runs on a coroutine (`common/coro.h`, `FM1CORE_PL_SX_CORO`) that yields at `fm1_wdt_feed`; while it waits
+the passes only resume it (no frame drawn, `flash_sync` deferred), the tick, the input and the audio go on. The
+restore writes the NOR image as the device does (staged copies, the journal record at 0xE1000, `rs_boot` at power-on).
+The update never runs: the identity is answered, the update key is not taken, so an installer times out and writes
+nothing.
 
 ### Versions
 
@@ -62,8 +82,8 @@ power-on").
 
 **X0X's break-loop slots** (3 x 80 KiB at 0xA0000 + k x 0x14000: header, up to 16 IMA ADPCM zones) are read in place
 from the image (`SMP_USER_XIP`) and scanned at power-on (`smp_user_scan`), as on the device. They persist with the
-flash image (the plugin's state), so a staged image that holds slots (a device's flash) plays them. The core has no
-way to upload a slot (the device's is `editor.c`'s SysEx over USB).
+flash image (the plugin's state), so a staged image that holds slots (a device's flash) plays them. A slot is loaded
+over SysEx as on the device (`editor.c`: SMP_BEGIN / WRITE / END, `tools/fm1_sample_upload.py`).
 
 ## Golden checks
 

@@ -1,0 +1,64 @@
+From 75b8b3ede82e212fb411498dc49bfb425b514ddb Mon Sep 17 00:00:00 2001
+From: Michael P Jones <QuixoticSeven@gmail.com>
+Date: Sun, 18 Oct 2026 23:33:49 -0700
+Subject: [PATCH 3/4] fm1-soc: the TIMER4 count without a u128 division
+
+Every TIMER4 CNT read (0x10804, the firmwares' microsecond clock, polled
+in their main loops) computed cycles * 24 MHz / hz in u128: in wasm a
+compiler-rt call, 1.5 % of Melodee's time in the browser. Split into the
+whole seconds and the rest it stays in u64 and gives the same value
+(a test checks it against the u128 form at 100..640 MHz).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ crates/fm1-soc/src/lib.rs    | 16 ++++++++++++++++
+ crates/fm1-soc/src/periph.rs |  6 +++++-
+ 2 files changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/crates/fm1-soc/src/lib.rs b/crates/fm1-soc/src/lib.rs
+index 2b51099..a020055 100644
+--- a/crates/fm1-soc/src/lib.rs
++++ b/crates/fm1-soc/src/lib.rs
+@@ -886,6 +886,22 @@ pub fn write_boot_info(soc: &mut Soc, at: u32, flash: &[u8]) -> u32 {
+ mod tests {
+     use super::*;
+ 
++    #[test]
++    fn timer4_count_without_u128() {
++        // TIMER4 CNT = cycles * 24 MHz / hz, as the u128 division gave it, at the site's clocks
++        // and an hour or so into a session
++        for mhz in [100u64, 240, 320, 360, 480, 640] {
++            let mut p = periph::Periph::default();
++            p.hz = mhz * 1_000_000;
++            p.write(0x10800, 1);
++            for cycles in [0u64, 1, 15, 359_999_999, 360_000_001, 7_777_777_777, 1_234_567_890_123] {
++                p.cycles = cycles;
++                let want = (cycles as u128 * 24_000_000 / p.hz as u128) as u32;
++                assert_eq!(p.read(0x10804), Some(want), "{mhz} MHz, cycle {cycles}");
++            }
++        }
++    }
++
+     #[test]
+     fn flash_writes_show_through_xip() {
+         // a booted package's window (0x80000 bytes, flash 0x4000..0x84000): erasing the sector
+diff --git a/crates/fm1-soc/src/periph.rs b/crates/fm1-soc/src/periph.rs
+index 88a4b19..8a26d1a 100644
+--- a/crates/fm1-soc/src/periph.rs
++++ b/crates/fm1-soc/src/periph.rs
+@@ -672,7 +672,11 @@ impl Periph {
+                     }
+                     self.last_cnt_read = self.cycles;
+                 }
+-                ((self.cycles - self.t4_base) as u128 * T4_HZ as u128 / self.hz as u128) as u32
++                // (cycles * T4_HZ / hz, split so it stays in u64: a u128 division per read
++                // was 1.5 % of a busy firmware's time in the browser build; the same value)
++                let d = self.cycles - self.t4_base;
++                let hz = self.hz.max(1);
++                ((d / hz) * T4_HZ + (d % hz) * T4_HZ / hz) as u32
+             }
+             0x10400 | 0x10500 | 0x10600 | 0x10700 => {
+                 let t = &self.tmr[((addr - 0x10400) >> 8) as usize];
+-- 
+2.42.0
+

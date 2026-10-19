@@ -22,7 +22,7 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | Felucca 1.6.1 | GPL-3.0 (engines MIT) | the original | native + wasm (`web/emu/felucca_web.c`) | A |
 | Rainbow Mode 1.1.5-rb | GPL-3.0 | Felucca 1.1.5 | native + wasm (felucca_web) | A |
 | GHOULBOX 2.3.2 | GPL-3.0 (+ OFL fonts) | Felucca 1.4.1 | native + wasm (felucca_web) | A |
-| JIANT FM 0.8.5 (c524e3c) | GPL-3.0 (+ CMUdict BSD-2) | Felucca 1.1.5.1 + SLOOP songs | native + wasm (felucca_web) | A |
+| JIANT FM 0.9.9 (0912abb) | GPL-3.0 (+ CMUdict BSD-2) | Felucca 1.1.5.1 + SLOOP songs | native + wasm (felucca_web) | A |
 | DUELL 0.2.20-beta | GPL-3.0 + naming terms | Felucca main | felucca_web (native via its check) | A |
 | ChoralRoot 0.25.1 | GPL-3.0 | Felucca 1.0 + Melodee ports | native emulator + wasm | B |
 | PurpleMonkey 0.11 | GPL-3.0 | ChoralRoot 44453d0 + SLOOP drums | native emulator + wasm | B |
@@ -36,7 +36,7 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | sloopDX 4.0 (eeec0a6) | GPL-3.0 | SLOOP 2.7 | native tests | D |
 | ORBIT 0.7.1 | GPL-3.0 + **OP-1 material** | SLOOP / Felucca | native preview + hostsim | D |
 | No Man Sky FM 0.4 (main) | GPL-3.0 (+ credit request) | SLOOP 2.7.1 | wasm only | D |
-| OberVave 1.5 | GPL-3.0 | Dinghy (zvenson) | native `tests/host.c` + wasm | E |
+| OberVave 1.5.1 | GPL-3.0 | Dinghy (zvenson) | native `tests/host.c` + wasm | E |
 | Frodhes 0.9.2 | GPL-3.0 | Dinghy | native + wasm | E |
 | FM-106 Beta4 | GPL-3.0 (KR-106 port: **provenance unchecked**) | Dinghy + a second core | native (needs a shim) | E |
 | Melodee 1.4.3 | GPL-3.0 (+ BSD-3 uPD933) | Felucca 1.0 + x0x 909 + Prophet / SID / CZ | native (`hostsim`, `ui_test`) | F |
@@ -137,12 +137,12 @@ so these need an answer first:
 | DUELL | naming terms for unofficial builds | an unmodified build at a release tag is probably fine; ask the author |
 | No Man Sky FM | credit request | credited in the About box (the descriptor's credits, ABI 6) |
 | X0X | 909 hi-hat / ride / crash samples "ER-99 via 9W9", GPL-3.0 | gated until ER-99's author confirms they are not TR-909 ROM recordings |
+| ChoralRoot, Melodee | Casio's CZ-1 preset tones and Sequential's Prophet-5 factory programs, no licence granted | un-gated (the owner's call, 2026-10-19): they ship compiled into the firmware, credited to Casio and Sequential; no raw .syx is distributed (tools/package_release.sh checks) |
 
-Gated today (left out of FM1_PUBLIC_BUILD): choralroot and melodee (Casio CZ-1 tones, Sequential Prophet-5
-programs), fm106 (Juno-106 patch data), duell (naming terms), rainbow (character look-alikes), fartmachine
-(recordings), orbit (OP-1 material, the Hugelton atlas), sloop and sloopdx (the Hugelton atlas), nomansky (game
-art), x0x (the cymbal samples). A public build bundles the other ten: felucca, ghoulbox, jiant, purplemonkey,
-coralflower, fomni, fimba, amb, obervave, frodhes.
+Gated today (left out of FM1_PUBLIC_BUILD): fm106 (Juno-106 patch data), duell (naming terms), rainbow (character
+look-alikes), fartmachine (recordings), orbit (OP-1 material, the Hugelton atlas), sloop and sloopdx (the Hugelton
+atlas), nomansky (game art), x0x (the cymbal samples). A public build bundles the other twelve: choralroot (the
+default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee, fomni, fimba, amb, obervave, frodhes.
 
 ## 7. Rules
 

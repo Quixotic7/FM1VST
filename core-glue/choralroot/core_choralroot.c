@@ -46,6 +46,7 @@
  * the web build's emu_web.c does: the open "reads" the staged bytes into emu_flash[], every later write-through is
  * dropped (emu_flash[] is the truth; the host reads it with flash()). Any other path is real stdio. */
 #include "nor_stdio.h"
+#include "crf_sx_pre.h"                   /* the managers' SysEx: CRB_SEND / CZ_SEND on the glue's ring (crf_glue.h) */
 
 #define FELUCCA_VERSION "ChoralRoot " FM1CORE_VERSION
 #include "../../cores/ChoralRootFM1/tools/emu/emu_fw.c"
@@ -72,6 +73,10 @@ static int fm1core_cr_sync(void)
 #define FM1CORE_CRF_LEVELS 4
 #define FM1CORE_CRF_PA2 1
 #define FM1CORE_CRF_FLASH_SYNC fm1core_cr_sync
+#define FM1CORE_CRF_SX 1                  /* cr_backup.c: the device manager's, the installer's backup and restore */
+#define FM1CORE_CRF_EMU_SX 1
+#define FM1CORE_CRF_OTA_C "../../cores/ChoralRootFM1/firmware/src/ota.c"
+#define FELUCCA_ID "FM-1_920"             /* (choralroot.c: the package identity) */
 #include "crf_glue.h"
 
 /* Options > Chord Keys (emu_fw_layout(): 1 FM-1, the default since 0.25.1; 0 Classic) changes the panel's labels: the

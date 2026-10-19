@@ -22,7 +22,10 @@
 
 #define OM_HOST 1                         /* the device's .pool section off (plat.h OM_POOL) */
 #define OM_VERSION FM1CORE_VERSION
+#define FELUCCA_ID "FM-1_8000400"          /* the package identity: build.py --release 0.4 (FM-1_8 00 04 00) */
+#define FM1CORE_PL_SX 1                   /* the installer's M-UPGRADE identity (plat_sx.h) */
 #include "plat_hal.h"
+#include "plat_sx.h"
 
 /* ---------------------------------------------------------------- the firmware --- */
 #define __attribute__(x)                  /* (as the host simulator) */
@@ -35,17 +38,40 @@ static inline int32_t clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ?
 #define ANN_DATA OM_POOL
 #include "ann_words.h"
 #include "announce.c"
-static int ann_wire_send(const uint8_t *p, uint32_t n)   /* (no SysEx path to a screen reader: not sent) */
+static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room (nobody reading), not sent */
 {
-    (void)p;
-    (void)n;
-    return -1;
+    return fm1core_pl_sx_send(p, n);
 }
 #include "app/panel.c"
 #include "app/plat_fm1.c"
 #include "app/project.c"
 #include "app/ui.c"
 #undef __attribute__
+
+/* ---------------------------------------------------------------- the managers' SysEx (plat_sx.h) --- */
+/* The installer (the hub's, fm1ota-style) finds the unit by the M-UPGRADE identity: main_fm1.c's loop runs
+ * the screen reader's frame, then ota_service (the firmware's ota.c, through common/sysex_ota.h). The update key
+ * F0 22 24 35 7F F7 and UBOOT's F0 22 24 35 7D F7 are not taken (plat_sx.h): no read requests follow (the installer
+ * times out), nothing is written, the core runs on. */
+#define FM1SX_OTA_C "../../cores/fm1-fomni/firmware/src/ota.c"
+#define FM1SX_OTA_IN fm1core_pl_sxi
+#define FM1SX_OTA_OUT fm1core_pl_sxo
+#define FM1SX_OTA_MS() fm1_ms
+#include "sysex_ota.h"
+static int fm1core_fomni_sx_accept(const uint8_t *f, uint32_t n)
+{
+    return fm1sx_is_mupg(f, n) || FM1CORE_PL_SX_READER(f, n);
+}
+static void fm1core_fomni_sx_service(void)   /* main_fm1.c fm1_main, each pass (the update key's ota_req: not taken) */
+{
+    const uint8_t *p;
+    uint32_t n;
+    if (fm1sx_frame(&fm1core_pl_sxi, &p, &n) && ann_frame(p, n, fm1_ms))   /* a screen reader's, before the updater */
+        fm1sx_done(&fm1core_pl_sxi);
+    ota_service();                        /* M-UPGRADE handshake (other SysEx is dropped) */
+}
+#define FM1CORE_PL_SX_ACCEPT fm1core_fomni_sx_accept
+#define FM1CORE_PL_SX_SERVICE() fm1core_fomni_sx_service()
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME "FoMni"

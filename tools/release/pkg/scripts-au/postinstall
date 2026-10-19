@@ -1,0 +1,8 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+# FM1VST's Audio Unit package (tools/package_release.sh), after FM1VST.component is in
+# /Library/Audio/Plug-Ins/Components: macOS's Audio Unit cache is refreshed, so a DAW sees the new version. Only for an
+# install onto the startup disk ($3, the target volume, is /): another volume's cache is not this Mac's.
+[ "$3" = "/" ] || exit 0
+killall -9 AudioComponentRegistrar 2>/dev/null || true
+exit 0

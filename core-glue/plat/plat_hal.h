@@ -21,7 +21,14 @@
 static volatile uint32_t fm1_ms;          /* the device ms since power-on (fm1core_pl_tick) */
 #define FM1_TICKS_PER_US 24u              /* TIMER4 at 24 MHz */
 static uint32_t fm1_ticks(void) { return fm1t_ticks24(); }
+#if defined FM1CORE_PL_SX_CORO && FM1CORE_PL_SX_CORO
+#include "coro.h"
+/* where the device feeds its watchdog while it waits (ota.c ota_idle, X0X's rs_ask loops): the SysEx service's
+ * coroutine yields, one device ms passes (plat_sx.h); outside the coroutine nothing, as before */
+static void fm1_wdt_feed(void) { fm1coro_yield(); }
+#else
 static void fm1_wdt_feed(void) {}
+#endif
 static void fm1_delay_ms(uint32_t ms) { (void)ms; }   /* (only panel_setup's, which the core never runs) */
 #define RING_PUBLISH() __asm__ volatile("" ::: "memory")
 static uint32_t irq_save(void) { return 0; }      /* one thread runs the whole device (the ABI's contract) */

@@ -154,6 +154,27 @@ void Device::pop(float &l, float &r)          // one device frame, the clock run
     r = (float)ring_[2 * i + 1] * (1.0f / 32768.0f);
 }
 
+// pacing: the clock up to the end of this host block plus the lead, before any frame is taken (see device.h)
+void Device::pace(uint32_t n, double host_rate)
+{
+    if (pace_rate_ != host_rate) {          // (a new rate: counted from the device's own time)
+        pace_rate_ = host_rate;
+        host_done_ = (uint64_t)((double)dev_ms_ * host_rate / 1000.0);
+    }
+    host_done_ += n;
+    const uint32_t want = (uint32_t)std::ceil((double)host_done_ * 1000.0 / host_rate) + pace_ms_;
+    while (dev_ms_ < want)
+        run_ms();
+}
+
+uint32_t Device::latency(double host_rate) const
+{
+    if (!pace_ms_)
+        return latency_frames(host_rate);
+    return (uint32_t)std::ceil((pace_ms_ * (double)EMU_FS / 1000.0 + (host_rate == (double)EMU_FS ? 0 : Lagrange4::LOOKAHEAD)) *
+                               host_rate / (double)EMU_FS);
+}
+
 void Device::render(float *L, float *R, uint32_t n, double host_rate)
 {
     if (!booted_) {
@@ -161,6 +182,8 @@ void Device::render(float *L, float *R, uint32_t n, double host_rate)
         std::memset(R, 0, n * sizeof *R);
         return;
     }
+    if (pace_ms_)
+        pace(n, host_rate);
     if (host_rate == (double)EMU_FS) {        // bypass: the device's samples as they are
         rs_rate_ = 0;
         for (uint32_t k = 0; k < n; k++)

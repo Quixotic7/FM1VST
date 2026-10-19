@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The Melodee core: Melodee's firmware (https://github.com/keremimo/melodee, Felucca's fork with the Prophet, FM6,
- * CZ-1, SID and x0x 909 engines; the pinned, unmodified submodule cores/melodee at v1.4.3) built as one translation unit with this
+ * CZ-1, SID and x0x 909 engines; the pinned, unmodified submodule cores/melodee at v1.4.4) built as one translation unit with this
  * repo's glue, the equivalent of ChoralRoot's emulator unit:
  *   melodee_fw.c        the emu_fw_* hooks (power-on, the 1 ms tick, the UI frame, audio, MIDI), as emu_fw.c
  *   melodee_firmware.h  the include list (hostsim.c's sound side, the HAL, audio.c, the UI, storage), as

@@ -139,8 +139,8 @@ static void me_uboot(const char *what, const char *log)   /* main.c: the UBOOT s
 
 /* main.c fm1_main from the timer's start: the waits, Calibration if OCT- + OCT+ are held, the GLO values as last
  * used and the BOOT project, the splash's end, then the loop. Its body in main.c's order; built out with the
- * hardware: usb_retry (usb.up is always 1 here: usb_start is the SIE), ua_off_apply (USB audio), ed_service /
- * ota_service (the editor, the update), cdc_task; the battery ADC (song.batt_raw stays 0: usb.config shows
+ * hardware: usb_retry (usb.up is always 1 here: usb_start is the SIE), ua_off_apply (USB audio), ota_session (the
+ * update; ed_service and ota_service are in), cdc_task; the battery ADC (song.batt_raw stays 0: usb.config shows
  * external power, ui_draw.c batt_shown) */
 static void me_main(void *arg)
 {
@@ -197,10 +197,14 @@ static void me_main(void *arg)
         }
         cz_service();
         fm6_service();                            /* DX7 SysEx for FM6, a pending FM6 settings save */
-        if (usb.uboot_req) {                      /* SysEx F0 22 24 35 7D F7 from the host */
+        ed_service();                             /* web editor SysEx (melodee_firmware.h: the managers) */
+        ota_service();                            /* M-UPGRADE handshake (its update, usb.ota_req, never starts here) */
+        usb.ota_req = 0;
+        if (usb.uboot_req) {                      /* SysEx F0 22 24 35 7D F7 from the host: the device resets into
+                                                   * the ROM's USB boot for an installer; a core is not updated that
+                                                   * way, so the key is ignored: the firmware runs on, nothing written */
             usb.uboot_req = 0;
-            me_uboot("UBOOT (USB)", "UBOOT requested over USB");
-            return;
+            printf("melodee: UBOOT requested over USB: ignored (no update inside a core)\n");
         }
         melodee_dbg.ui_frames++;
         melodee_dbg.page = ui.page;
@@ -216,6 +220,7 @@ static void me_main(void *arg)
         while (fm1_ms - m < 15u) {                /* ~60 UI frames/s at most */
             fm1coro_yield();                      /* (the next device ms) */
             ui_input();
+            ed_service();                         /* editor replies without waiting for the next frame */
         }
     }
 }
@@ -230,6 +235,8 @@ void emu_fw_init(int demo)
     if (emu_hal.ready == 2u)                      /* simulated time (set before init) */
         emu_sim = 1;
     fm1core_exit_park = fm1coro_park;             /* (an exit() on the loop's coroutine: it is never resumed) */
+    fm1sx_in_init(&fm1core_me_sxi, fm1core_me_sx_accept);
+    fm1sx_out_reset(&fm1core_me_sxo);
 
     /* power-on, main.c fm1_cstart + fm1_main's order up to the timer's start: the guard, the default palette, the
      * splash, the flash (persist_boot: settings, projects, pattern banks, user presets, the FM6 / CZ / Prophet
@@ -366,12 +373,17 @@ int emu_fw_midi_in(uint32_t pkt)
 {
     if (MQ - (mi_w - mi_r) < EP1_ROOM - 16u)      /* (usb.c ep1_take: room kept for TRS MIDI) */
         return 0;
+    if (fm1sx_in_would_refuse(&fm1core_me_sxi, pkt))
+        return 0;                                 /* (a request waits for the main loop: this one after it) */
     midi_in_event(pkt);
+    fm1sx_in_pkt(&fm1core_me_sxi, pkt);           /* (and the managers' frame buffer: melodee_firmware.h) */
     return 1;
 }
 
 int emu_fw_midi_out_take(uint32_t *pkt)
 {
+    if (fm1sx_take(&fm1core_me_sxo, pkt))
+        return 1;                                 /* (usb.c ep1_tx: SysEx first, never split by notes) */
     if (mo_r == mo_w)                             /* usb.c ep1_tx */
         return 0;
     *pkt = midi_out_q[mo_r % MQ];

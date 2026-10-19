@@ -21,4 +21,7 @@
         if (((fm1_led_hi[c] >> (r)) & 1u) && (lv) < FM1CORE_JIANT_HI_LEVEL)                                  \
             (lv) = FM1CORE_JIANT_HI_LEVEL;                                                                   \
     } while (0)
+#define FM1CORE_FW_EDITOR_C "../../cores/JIANT/firmware/src/editor.c"   /* the web editor's SysEx */
+#define FM1CORE_FW_OTA_C "../../cores/JIANT/firmware/src/ota.c"         /* the M-UPGRADE identity */
+#define FELUCCA_ID "FM-1_900"                                             /* (felucca.c) */
 #include "fw_core.h"

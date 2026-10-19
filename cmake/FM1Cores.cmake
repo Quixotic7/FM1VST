@@ -46,7 +46,9 @@
 # (STATIC, for tests that link a core directly) and <id>_core (MODULE: build/cores/<id>.fm1core, exporting only
 # fm1core_get); appends <id> to FM1_CORE_IDS (the bundles and the per-core tests take them from there) and records
 # the glue folder, family and licence as the global properties FM1_CORE_GLUE_<id>, FM1_CORE_FAMILY_<id>,
-# FM1_CORE_LICENSE_<id> (the conformance test reads <glue>/conformance.txt).
+# FM1_CORE_LICENSE_<id> (the conformance test reads <glue>/conformance.txt), and FM1_CORE_VERSION_<id>,
+# FM1_CORE_COMMIT_<id>, FM1_CORE_SOURCE_<id> (the release manifest, CMakeLists.txt); a gated core a public build
+# leaves out is appended to FM1_CORES_LEFT_OUT.
 set(FM1_COMMON_DIR ${CMAKE_CURRENT_LIST_DIR}/../core-glue/common)
 get_filename_component(FM1_COMMON_DIR ${FM1_COMMON_DIR} ABSOLUTE)
 set(FM1_COMMON_SOURCES ${FM1_COMMON_DIR}/nor.c ${FM1_COMMON_DIR}/fifo.c ${FM1_COMMON_DIR}/coro.c)
@@ -93,8 +95,12 @@ function(fm1_add_core id glue)
     if(NOT A_LICENSE)
         set(A_LICENSE "GPL-3.0-only")
     endif()
+    if(A_GATED)   # (every gated id, built or not: hub_test checks no gated firmware is in the Hub's fallback list)
+        set_property(GLOBAL APPEND PROPERTY FM1_CORES_GATED_ALL ${id})
+    endif()
     if(A_GATED AND FM1_PUBLIC_BUILD)
         message(STATUS "${id} core: left out of this public build (gated: ${A_GATED})")
+        set_property(GLOBAL APPEND PROPERTY FM1_CORES_LEFT_OUT ${id})
         return()
     endif()
     if(NOT A_SOURCE OR NOT A_UNIT OR NOT A_DESC)
@@ -293,5 +299,8 @@ function(fm1_add_core id glue)
     set_property(GLOBAL PROPERTY FM1_CORE_GLUE_${id} ${glue})
     set_property(GLOBAL PROPERTY FM1_CORE_FAMILY_${id} ${A_FAMILY})
     set_property(GLOBAL PROPERTY FM1_CORE_LICENSE_${id} ${A_LICENSE})
+    set_property(GLOBAL PROPERTY FM1_CORE_VERSION_${id} "${ver}")
+    set_property(GLOBAL PROPERTY FM1_CORE_COMMIT_${id} "${commit}")
+    set_property(GLOBAL PROPERTY FM1_CORE_SOURCE_${id} "${src}")
     set(FM1_CORE_IDS ${FM1_CORE_IDS} ${id} PARENT_SCOPE)
 endfunction()

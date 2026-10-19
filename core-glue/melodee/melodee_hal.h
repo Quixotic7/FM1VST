@@ -140,4 +140,6 @@ static uint32_t fl_jedec_ram(void) { return 0x856014u; }   /* the FM-1's 1 MiB p
 static void fl_plain_window_init(void) {}         /* (the image is plaintext) */
 static int st_read(uint32_t off, void *dst, uint32_t n) { return fm1nor_read(off, dst, n); }
 static int st_erase(uint32_t off) { return fm1nor_erase(off); }
-static int st_prog(uint32_t off, const void *src, uint32_t n) { return fm1nor_prog(off, src, n); }
+/* storage_hw.c st_prog -> hal/fm1_flash.h fl_write, which programs page by page (a record that starts past a page's
+ * start, the compact user preset bank's, spans pages): fm1nor_prog_span splits it the same way */
+static int st_prog(uint32_t off, const void *src, uint32_t n) { return fm1nor_prog_span(off, src, n); }

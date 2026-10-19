@@ -1,0 +1,16 @@
+# The public release's cores (tools/package_release.sh): the build's manifest must hold exactly these, in a public
+# build (FM1_PUBLIC_BUILD=ON: every other core is gated, CORES-PLAN.md 6). id <TAB> the name shown in the README.
+# Un-gating a core means adding its line here.
+choralroot	ChoralRoot
+felucca	Felucca
+ghoulbox	GHOULBOX
+jiant	JIANT FM
+purplemonkey	PurpleMonkey
+coralflower	CoralFlower
+melodee	Melodee
+fomni	FoMni-1
+fimba	FiMba-1
+amb	AMB-1
+obervave	OberVave
+frodhes	Frodhes
+fm1emu	FM-1 (emulated)

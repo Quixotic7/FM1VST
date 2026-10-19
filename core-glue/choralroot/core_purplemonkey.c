@@ -21,6 +21,7 @@
 #include "exit.h"
 #include "env.h"                         /* getenv -> NULL (common/env.h) */
 #include "nor_stdio.h"
+#include "crf_sx_pre.h"                   /* the managers' SysEx transport (crf_glue.h) */
 
 #define FELUCCA_VERSION "PurpleMonkey " FM1CORE_VERSION
 #include "../../cores/PurpleMonkeyFM1/tools/emu/pm_emu_fw.c"
@@ -36,4 +37,9 @@ static int fm1core_pm_sync(void) { return 1; }   /* (nothing to save) */
 #define FM1CORE_CRF_LEVELS 2
 #define FM1CORE_CRF_PA2 0
 #define FM1CORE_CRF_FLASH_SYNC fm1core_pm_sync
+#define FM1CORE_CRF_SX 2                  /* pm_info.c: INFO, the installers' "which firmware is this?" (the device's
+                                           * whole SysEx service: it stores nothing, so there is no backup) */
+#define FM1CORE_CRF_PMI_C "../../cores/PurpleMonkeyFM1/firmware/src/pm_info.c"
+#define FM1CORE_CRF_OTA_C "../../cores/PurpleMonkeyFM1/firmware/src/ota.c"
+#define FELUCCA_ID "FM-1_927"             /* (purplemonkey.c: the package identity) */
 #include "crf_glue.h"

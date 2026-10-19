@@ -32,6 +32,8 @@ public:
     const fm1core_t *core() const { return core_; }
     const std::string &source_path() const { return source_; }   // the module it was copied from
     const std::string &copy_path() const { return copy_; }       // the per-instance copy dlopen'ed
+    // an optional symbol of this copy (fm1core.h "OPTIONAL MODULE SYMBOLS"), nullptr when the module has none
+    void *symbol(const char *name) const;
 
 private:
     friend class CoreLoader;

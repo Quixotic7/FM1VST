@@ -1,4 +1,4 @@
-# OberVave 1.5: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# OberVave 1.5.1: tests/core_conformance.cpp's script for this core (see its header for the directives)
 # the splash stands 2.4 s from power-on (obv_ui.h ui_splash): the key after it
 settle_ms 3000
 # the flash round trip: PRESETS three detents on (program 04), saved in the settings record (2 s after the change,

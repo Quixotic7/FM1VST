@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<!-- FM1VST's installer (tools/package_release.sh: productbuild over the three component packages, @VERSION@ set) -->
+<installer-gui-script minSpecVersion="2">
+    <title>FM1VST @VERSION@</title>
+    <welcome file="welcome.txt" mime-type="text/plain"/>
+    <license file="LICENSE.txt" mime-type="text/plain"/>
+    <options customize="always" require-scripts="false" hostArchitectures="arm64"/>
+    <domains enable_localSystem="true" enable_anywhere="false" enable_currentUserHome="false"/>
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="11.0"/>
+        </allowed-os-versions>
+    </volume-check>
+    <choices-outline>
+        <line choice="app"/>
+        <line choice="vst3"/>
+        <line choice="au"/>
+    </choices-outline>
+    <choice id="app" title="Desktop app" start_selected="true" start_enabled="true" start_visible="true"
+            description="FM1VST.app, the Standalone (no DAW needed), in /Applications.">
+        <pkg-ref id="com.quixotic7.fm1vst.app"/>
+    </choice>
+    <choice id="vst3" title="VST3" start_selected="true" start_enabled="true" start_visible="true"
+            description="FM1VST.vst3 (Ableton Live, Bitwig, Reaper, Cubase ..) in /Library/Audio/Plug-Ins/VST3.">
+        <pkg-ref id="com.quixotic7.fm1vst.vst3"/>
+    </choice>
+    <choice id="au" title="Audio Unit" start_selected="true" start_enabled="true" start_visible="true"
+            description="FM1VST.component (Logic Pro, GarageBand, Live ..) in /Library/Audio/Plug-Ins/Components. The Audio Unit cache is refreshed after it is in place.">
+        <pkg-ref id="com.quixotic7.fm1vst.au"/>
+    </choice>
+    <pkg-ref id="com.quixotic7.fm1vst.app" version="@VERSION@" onConclusion="none">FM1VST-app.pkg</pkg-ref>
+    <pkg-ref id="com.quixotic7.fm1vst.vst3" version="@VERSION@" onConclusion="none">FM1VST-vst3.pkg</pkg-ref>
+    <pkg-ref id="com.quixotic7.fm1vst.au" version="@VERSION@" onConclusion="none">FM1VST-au.pkg</pkg-ref>
+</installer-gui-script>

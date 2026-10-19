@@ -259,6 +259,20 @@ static inline const char *fm1core_credits(const fm1core_t *c)
 
 typedef const fm1core_t *(*fm1core_get_fn)(uint32_t abi_version);
 
+/* ---- OPTIONAL MODULE SYMBOLS (no ABI change: not in the descriptor; a host finds them with dlsym, LoadedCore::symbol,
+ * and a module without them is simply without the feature). Same threading as the entry points.
+ *   uint32_t fm1core_latency_frames(void)
+ *       the core's own added audio delay in 44.1 kHz frames, beyond the device clock's (fm1emu: its FIFO's L; valid
+ *       after the first audio, a default before)
+ *   int fm1core_boot_option(const char *key, const char *value)
+ *       an option for the next power-on, set before init: 1 taken, 0 an unknown key, -1 a bad value (unchanged).
+ *       fm1emu: "mhz" = "60".."1000", the emulated chip's clock (default 360; the plugin offers Auto 240 320 360 480
+ *       640: plugin/EmuClock.h) */
+#define FM1CORE_LATENCY_SYMBOL "fm1core_latency_frames"
+#define FM1CORE_BOOT_OPTION_SYMBOL "fm1core_boot_option"
+typedef uint32_t (*fm1core_latency_fn)(void);
+typedef int (*fm1core_boot_option_fn)(const char *key, const char *value);
+
 #if defined(__GNUC__) || defined(__clang__)
 #define FM1CORE_EXPORT __attribute__((visibility("default")))
 #else

@@ -220,3 +220,5 @@ LoadedCore::~LoadedCore()
     if (!dir_.empty())
         fs::remove(dir_, ec);
 }
+
+void *LoadedCore::symbol(const char *name) const { return handle_ && name ? dlsym(handle_, name) : nullptr; }

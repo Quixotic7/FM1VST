@@ -1,0 +1,21 @@
+# fm1emu with Felucca 1.6.1 (FM1EMU_FWSC): tests/core_conformance.cpp's script (see its header for the directives)
+boot_ms 5000
+settle_ms 2000
+# the flash round trip as the native felucca core's (core-glue/felucca_web/conformance_felucca.txt): the palette
+# (the settings record): HOME held opens the menu at DISPLAY > COLOR, KNOB 1 steps the palette, HOME closes the
+# menu; the firmware writes the record itself over SPI (settings_poll, transport stopped); after the reboot (case 2:
+# the image with its package) HOME shows the other palette
+save wait 1500
+save btn HOME down
+save wait 1200
+save btn HOME up
+save wait 400
+save knob KNOB1 +1
+save wait 400
+save btn HOME 100
+save wait 2000
+save quit
+saved wait 2500
+saved quit
+saved-lcd-differs
+reboot none fm1-soc models no reset: a firmware's UBOOT / reboot request has nothing to reach

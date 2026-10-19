@@ -24,6 +24,9 @@
     } while (0)
 #define FM1CORE_FW_LED(c, r, lv) fm1core_du_led((c), (r), &(lv))
 static void fm1core_du_led(uint32_t c, uint32_t r, uint32_t *lv);
+#define FM1CORE_FW_EDITOR_C "../../cores/DUELL/felucca-base/firmware/src/editor.c"   /* the web editor's SysEx */
+#define FM1CORE_FW_OTA_C "../../cores/DUELL/felucca-base/firmware/src/ota.c"         /* the M-UPGRADE identity */
+#define FELUCCA_ID "FM-1_900"                                             /* (felucca.c) */
 #include "fw_core.h"
 
 /* the keyboard's sets: a level /240 of lit each (web_kl: out | scale << 8 | root << 16 | the played peak << 24,

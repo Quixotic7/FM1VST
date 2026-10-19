@@ -29,6 +29,7 @@ halts the core (`halted()`), it never ends the host. The flash is a 1 MiB RAM im
 | `panel.h` | the HAL shapes to and from `fm1panel_t` | `FM1P_EMU_IN / _BOOT / _BOOTED(panel, hal)` (an emu-style HAL), `fm1p_take_key_taps / _button_taps / _enc / _role`, `fm1p_edges` (masks to press / release edges), `fm1p_vel / fm1p_lean`, `fm1p_label_of / fm1p_labels`, `fm1p_panel_default` + `FM1P_KEYMAP_INIT` (the FM-1's factory wiring), `fm1p_leds_planes(panel, planes, levels, n, play_green_pos)`, `fm1p_leds_brightest` + `fm1p_duty_level(mask)` (PWM duty planes: the brightest wins), `fm1p_led_id`, `fm1p_led_pos`, `fm1p_lcd_out` (big-endian, counted), `fm1p_lcd_out_native` (native-endian, compared), `fm1p_emu_hal_t` |
 | `env.h` | no environment inside a core: `getenv` is NULL in the firmware unit (include after `exit.h`, before the firmware), so a host's EMU_C1=thread or a host sim's test switch never reaches it | `fm1core_getenv` (as `getenv`) |
 | `ppm.h` | the LCD as 8-bit RGB (c * 255 / 31, as the host sims write theirs) and 240 x 240 P6 files, for the tests and the golden checks | `fm1g_rgb_of`, `fm1g_lcd_rgb`, `fm1g_write_ppm`, `fm1g_write_lcd_ppm`, `fm1g_read_ppm` |
+| `sysex.h`, `sysex_ota.h` | the managers' SysEx (research/managers-2026-10-19/MANAGERS.md): one request frame kept for the firmware's own service, the replies as CIN 4..7 packets; a firmware's own ota.c for the M-UPGRADE identity | `fm1sx_in_init(&in, accept)`, `fm1sx_in_would_refuse` / `fm1sx_in_pkt` (in midi_in), `fm1sx_frame` / `fm1sx_done` (the service), `fm1sx_send` / `fm1sx_take` (the ring; midi_out_take serves it first), `fm1sx_is_fl` / `fm1sx_is_mupg`; sysex_ota.h: `FM1SX_OTA_C`, `FM1SX_OTA_IN / _OUT / _MS()`, `FELUCCA_ID` |
 | `version.h` | what CMake passes in | `FM1CORE_ID`, `FM1CORE_VERSION`, `FM1CORE_COMMIT`, `FM1CORE_FAMILY`, `FM1CORE_LICENSE`, `FM1CORE_GATED_OR_NULL`, `FM1CORE_CREDITS_OR_NULL` (fm1_add_core `CREDITS` / `CREDITS_FILES`: the descriptor's `.credits`), `FM1CORE_SOURCE_URL(repo)`, `APP_VER` (= the version unless DEFINES set it) |
 
 The tests: `tests/common/{fifo,coro,nor}_test.c` (`ctest -R common`; nor_test covers ticks and panel too).
@@ -85,6 +86,20 @@ the FM1P_B_* labels and FM1P_E_* roles.
 
 Velocity: `key_vel[k]` is set before a key's bit goes down; 0 means none given (the firmware's default; a mouse
 click). The plugin feeds MIDI note velocity and 100 for a key on Remote FM-1.
+
+### sysex
+
+The device's usb.c keeps one SysEx frame (sx_frame, 640 bytes) for its main loop's services (editor.c / cr_backup.c
+ed_service, ota.c ota_service) and sends their replies from a ring ahead of its MIDI out; the emulator and web units
+build that plumbing out (FELUCCA_OTA 0). A glue gives each packet to the firmware as before (its own parsers: DX7,
+CZ-1, the UBOOT flag) and to an `fm1sx_in_t` whose `accept` filter keeps only the services' frames (FL 7D 46 4C, the
+M-UPGRADE 00 32 .., a firmware's own); while one waits, the next frame's F0 is refused (midi_in 0: the host retries
+it after its next render), so nothing is lost and nothing else waits. After its frame / idle (main.c's two places)
+the glue runs the firmware's service on it, with the firmware's send hook (`ota_wire_send`, `CRB_SEND`, `CZ_SEND`) on
+the `fm1sx_out_t` ring. The update itself (F0 22 24 35 7F F7) is never run and the UBOOT key (F0 22 24 35 7D F7) is
+ignored: neither halts a core. A firmware's "restart" (ChoralRoot's 72) is `fm1core_exit(0)` once the reply has left
+the ring: the host powers the core on again from its flash image. tests/sysex_test.cpp drives every core with its
+managers' requests.
 
 ## Adding a core
 

@@ -32,7 +32,18 @@
  *   static void fm1core_dg_info(char *buf, uint32_t n);        ui_info: the page, the program
  * and may define FM1CORE_DG_LED_BG(col) (a packed row-bit backlight plane, FM1P_LED_FAINT) and
  * FM1CORE_DG_SYSEX_IN(p, n) (a received SysEx message, the 7-bit bytes between F0 and F7, handled before the next
- * pass as the device's platform_poll does). */
+ * pass as the device's platform_poll does), and FM1CORE_DG_OTA_C with FELUCCA_ID (the firmware's ota.c and its
+ * package identity: the M-UPGRADE handshake, see "the managers' SysEx" below).
+ *
+ * THE MANAGERS' SYSEX (research/managers-2026-10-19/MANAGERS.md). The device's usb.c keeps every SysEx frame for
+ * platform_poll, which hands FM-106's Roland frames (41 ..) to its librarian handler and the rest to ota.c's
+ * ota_service (the M-UPGRADE identity, "who are you?"; the installer's update itself starts on the separate key
+ * F0 22 24 35 7F F7, and F0 22 24 35 7D F7 is UBOOT: usb.c only sets flags for them). Here midi_in collects frames
+ * (up to FM1CORE_DG_SX_N waiting: a new frame's F0 is refused while they are full, midi_in 0 = retry, so a burst of
+ * requests is never dropped), each tick hands them to FM1CORE_DG_SYSEX_IN before the pass, and replies leave through
+ * the MIDI out queue as USB-MIDI SysEx packets. fm1core_dg_ota_frame(p, n) gives one frame to ota_service; ota.c's
+ * update steps are never reached (nothing acts on the update key or UBOOT's: the core runs on) and its flash hooks
+ * refuse. */
 #pragma once
 
 fm1panel_t fm1core_dg_panel;
@@ -47,7 +58,8 @@ static uint16_t fm1core_dg_fb_seen[FM1P_LCD_W * FM1P_LCD_H];
 static uint8_t fm1core_dg_booted;
 
 #ifdef FM1CORE_DG_SYSEX_IN
-/* SysEx in: USB-MIDI packets (CIN 4..7) collected into whole messages, handled at the next tick */
+/* SysEx in: USB-MIDI packets (CIN 4..7) collected into whole messages, handled at the next tick (a frame's F0 while
+ * FM1CORE_DG_SX_N wait: refused, midi_in 0, the host offers it again) */
 #define FM1CORE_DG_SX_MAX 640u
 #define FM1CORE_DG_SX_N 4u
 static uint8_t fm1core_dg_sx[FM1CORE_DG_SX_N][FM1CORE_DG_SX_MAX], fm1core_dg_sx_cur[FM1CORE_DG_SX_MAX];
@@ -73,6 +85,46 @@ static void fm1core_dg_sx_byte(uint8_t b)
         else
             fm1core_dg_sx_on = 0;         /* (too long: dropped) */
     }
+}
+static int fm1core_dg_sx_full(uint32_t pkt)   /* a new frame's F0 and no room for it */
+{
+    return ((pkt >> 8) & 0xFFu) == 0xF0u && fm1core_dg_sx_w - fm1core_dg_sx_r >= FM1CORE_DG_SX_N;
+}
+#endif
+
+#ifdef FM1CORE_DG_OTA_C
+/* ota.c's hooks on this transport: the frame being handled (fm1core_dg_ota_frame), the replies into the MIDI out
+ * queue, the device's ms; the update's flash steps refused (never reached: nothing starts an update here) */
+static const uint8_t *fm1core_dg_ota_p;
+static uint32_t fm1core_dg_ota_n;
+static int ota_wire_send(const uint8_t *p, uint32_t n)
+{
+    fm1core_dg_sysex_out(p, n);
+    return 0;
+}
+static int ota_frame_get(const uint8_t **p, uint32_t *n)
+{
+    if (!fm1core_dg_ota_p)
+        return 0;
+    *p = fm1core_dg_ota_p;
+    *n = fm1core_dg_ota_n;
+    return 1;
+}
+static void ota_frame_done(void) { fm1core_dg_ota_p = NULL; }
+static uint32_t ota_now_ms(void) { return fm1t_ms(); }
+static void ota_idle(void) {}
+static int ota_erase(uint32_t off) { (void)off; return -1; }
+static int ota_prog(uint32_t off, const void *p, uint32_t n) { (void)off; (void)p; (void)n; return -1; }
+static int ota_fread(uint32_t off, void *p, uint32_t n) { (void)off; (void)p; (void)n; return -1; }
+static void ota_show(uint32_t step, int32_t code) { (void)step; (void)code; }
+static void ota_commit(const uint8_t *parm) { (void)parm; }
+#include FM1CORE_DG_OTA_C
+static void fm1core_dg_ota_frame(const uint8_t *p, uint32_t n)   /* platform_poll: ota_service() on this frame */
+{
+    fm1core_dg_ota_p = p;
+    fm1core_dg_ota_n = n;
+    ota_service();
+    fm1core_dg_ota_p = NULL;
 }
 #endif
 
@@ -246,6 +298,8 @@ int fm1core_dg_midi_in(uint32_t pkt)
     if (!fm1core_dg_running())
         return 1;                          /* (halted: taken and dropped) */
 #ifdef FM1CORE_DG_SYSEX_IN
+    if (fm1core_dg_sx_full(pkt))
+        return 0;                          /* (the frames waiting first: this one after the next tick) */
     if (cin >= 0x4u && cin <= 0x7u) {
         static const uint8_t NB[4] = {3, 1, 2, 3};
         uint32_t i;

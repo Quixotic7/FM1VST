@@ -29,7 +29,8 @@
  *   FM1CORE_PL_DIM_ON (optional)         whether the dim plane shows (default: fm1_led_dim_div != 0; FiMba's HAL
  *                                        has no divider: always)
  *   FM1CORE_PL_NAME                      for the log lines ("X0X")
- * Optional: FM1CORE_PL_TICK_HOOK() (each device ms, after the input: fm1-base's app_tick), FM1CORE_PL_KEY_HOOK(down,
+ * Optional: FM1CORE_PL_SX (1: the managers' SysEx, plat_sx.h included before the firmware's sources: see
+ * there), FM1CORE_PL_TICK_HOOK() (each device ms, after the input: fm1-base's app_tick), FM1CORE_PL_KEY_HOOK(down,
  * up, held) (the note keys that went down / up this ms, and those held now: fm1-base's velocity and pressure), FM1CORE_PL_DEFAULT_MASTER (the pot's position
  * when the host gives none, 0..1023: the firmware's own default MASTER), FM1CORE_PL_PALETTE (the palette set at
  * power-on, default 1).
@@ -37,6 +38,26 @@
  * Simulated time only (fm1core.h): nothing here reads the host's clock. */
 #pragma once
 
+#ifndef FM1CORE_PL_SX
+#define FM1CORE_PL_SX 0
+#endif
+#if !FM1CORE_PL_SX
+static const uint8_t fm1core_pl_sx_held = 0;     /* (no SysEx service: plat_sx.h not included) */
+#endif
+/* the SysEx service's coroutine (FM1CORE_PL_SX_CORO): one pass of the service each time it is resumed */
+#if FM1CORE_PL_SX && FM1CORE_PL_SX_CORO
+static fm1coro_t *fm1core_pl_sx_co;
+static void fm1core_pl_sx_main(void *arg)
+{
+    (void)arg;
+    for (;;) {
+        fm1coro_yield();                         /* (started at init: waits here for the first pass with work) */
+        fm1core_pl_sx_held = 1;
+        FM1CORE_PL_SX_SERVICE();
+        fm1core_pl_sx_held = 0;
+    }
+}
+#endif
 #ifndef FM1CORE_PL_DEFAULT_MASTER
 #define FM1CORE_PL_DEFAULT_MASTER 724     /* -> master_q12 = 724^2 >> 8 = 2047: plat_fm1.c's 2048 */
 #endif
@@ -156,7 +177,7 @@ int fm1core_pl_boot_options(int fail, const char *reason, int stage)
 
 static void fm1core_pl_exit(void)                /* at shutdown: save_on_exit, the lazy save written */
 {
-    if (fm1core_pl_save_on_exit && fm1core_pl_up)
+    if (fm1core_pl_save_on_exit && fm1core_pl_up && !fm1core_pl_sx_held)
         fm1core_pl_sync();
 }
 
@@ -166,6 +187,25 @@ void fm1core_pl_init(int demo)
     uint32_t i;
     (void)demo;
     fm1core_exit_cleanup = fm1nor_close;
+#if FM1CORE_PL_SX
+    fm1sx_in_init(&fm1core_pl_sxi, FM1CORE_PL_SX_ACCEPT);
+    fm1sx_out_reset(&fm1core_pl_sxo);
+#if FM1CORE_PL_SX_CORO
+    if (fm1core_pl_sx_co && fm1core_pl_sx_held) {   /* (powered on again while a service waited: a fresh one) */
+        fm1coro_free(fm1core_pl_sx_co);
+        fm1core_pl_sx_co = NULL;
+    }
+    fm1core_pl_sx_held = 0;
+    if (!fm1core_pl_sx_co)
+        fm1core_pl_sx_co = fm1coro_new(fm1core_pl_sx_main, NULL, 0);
+    if (!fm1core_pl_sx_co) {
+        printf("%s: no memory for the SysEx service's stack: halted\n", FM1CORE_PL_NAME);
+        exit(1);
+        return;
+    }
+    fm1coro_resume(fm1core_pl_sx_co);           /* (its stack set up now, not on the first request) */
+#endif
+#endif
     fm1core_pl_in();                             /* (ready = 2: simulated time, always here) */
     /* fm1_cstart: the guard */
     if (fm1core_pl_guard.pending)
@@ -256,9 +296,34 @@ void fm1core_pl_tick(uint32_t ms)
     fm1core_pl_render_due(ms);                   /* the audio "interrupt": before this ms's UI */
 }
 
+/* ---- the managers' SysEx (FM1CORE_PL_SX, plat_sx.h): the service at its place in main_fm1.c's loop, after the
+ * UBOOT hold and before the app's extras and the frame. With FM1CORE_PL_SX_CORO it runs on a coroutine: a service
+ * that waits (X0X's restore) holds the main loop as on the device: the passes after it only resume the service, no
+ * frame is drawn and nothing else of the loop runs until it returns; the tick (the input, the audio) goes on */
+static int fm1core_pl_sx_run(void)              /* 1: the main loop stays in the service (this pass ends here) */
+{
+#if FM1CORE_PL_SX && FM1CORE_PL_SX_CORO
+    if (!fm1core_pl_sx_held && !(FM1CORE_PL_SX_WORK()))
+        return 0;
+    if (fm1coro_resume(fm1core_pl_sx_co) < 0)
+        return 0;
+    return fm1core_pl_sx_held;
+#elif FM1CORE_PL_SX
+    FM1CORE_PL_SX_SERVICE();
+    return 0;
+#else
+    return 0;
+#endif
+}
+
 /* one pass of main_fm1.c's loop */
 static void fm1core_pl_pass(void)
 {
+    if (fm1core_pl_sx_held) {                    /* (inside the service since an earlier pass: only it runs) */
+        if (fm1core_pl_sx_run())
+            return;
+        goto served;
+    }
     {   /* the 30 s mark: this boot did not fail */
         if (fm1_ms > 30000u && fm1core_pl_guard.pending)
             fm1core_pl_guard.pending = fm1core_pl_guard.failed = 0;
@@ -287,6 +352,9 @@ static void fm1core_pl_pass(void)
             return;
         }
     }
+    if (fm1core_pl_sx_run())
+        return;
+served:
     fm1core_pl_loop();
     if (!fm1core_pl_framed || fm1_ms - fm1core_pl_last_frame >= FM1CORE_PL_FRAME_MS) {
         fm1core_pl_last_frame = fm1_ms;
@@ -333,6 +401,15 @@ int fm1core_pl_midi_in(uint32_t pkt)            /* usb.c: into midi_in_q (the re
 {
     if (fm1core_halted())
         return 1;                                /* (halted: taken and dropped, never "retry") */
+#if FM1CORE_PL_SX
+    {   /* usb.c ep1_rx: SysEx to the frame collector only (sysex_byte), never into the app's queue */
+        const uint32_t cin = pkt & 15u;
+        if (fm1sx_in_would_refuse(&fm1core_pl_sxi, pkt))
+            return 0;                            /* (a request waits for the main loop: this one after it) */
+        if (cin >= 4u && cin <= 7u)
+            return fm1sx_in_pkt(&fm1core_pl_sxi, pkt);
+    }
+#endif
     if (MQ - (mi_w - mi_r) < 8u)                 /* (room kept for the TRS jack, as usb.c's ep1_take) */
         return 0;
     midi_in_q[mi_w % MQ] = pkt;
@@ -342,7 +419,13 @@ int fm1core_pl_midi_in(uint32_t pkt)            /* usb.c: into midi_in_q (the re
 }
 int fm1core_pl_midi_out_take(uint32_t *pkt)
 {
-    if (fm1core_halted() || fm1core_pl_mo_r == fm1core_pl_mo_w)
+    if (fm1core_halted())
+        return 0;
+#if FM1CORE_PL_SX
+    if (fm1sx_take(&fm1core_pl_sxo, pkt))
+        return 1;                                /* (usb.c ep1_tx: SysEx first, never split by notes) */
+#endif
+    if (fm1core_pl_mo_r == fm1core_pl_mo_w)
         return 0;
     *pkt = fm1core_pl_mo_q[fm1core_pl_mo_r % MQ];
     fm1core_pl_mo_r++;
@@ -387,5 +470,18 @@ int fm1core_pl_flash_sync(void)
 {
     if (fm1core_halted() || !fm1core_pl_up)
         return 1;
+    if (fm1core_pl_sx_held)
+        return 0;                                /* (a restore owns the store: the device saves nothing meanwhile) */
     return fm1core_pl_sync();
 }
+
+#if FM1CORE_PL_SX && FM1CORE_PL_SX_CORO
+/* the module's unload: the service's stack */
+__attribute__((destructor)) static void fm1core_pl_sx_fini(void)
+{
+    if (fm1core_pl_sx_co && !fm1coro_inside()) {
+        fm1coro_free(fm1core_pl_sx_co);
+        fm1core_pl_sx_co = NULL;
+    }
+}
+#endif

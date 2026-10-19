@@ -1,0 +1,288 @@
+From 83afb3c5eed0c0a5d2bde2a0e4063a7a8751ac98 Mon Sep 17 00:00:00 2001
+From: Michael P Jones <QuixoticSeven@gmail.com>
+Date: Sun, 18 Oct 2026 21:54:27 -0700
+Subject: [PATCH] fm1-soc: model the P33 power-domain bridge and its register
+ file
+
+JL_P33 (0x13E00: PMU_CON, RTC_CON, SPI_CON, SPI_DAT) was unknown MMIO, so
+every P33 read returned 0. Firmwares that read back what they wrote saw
+their writes vanish: Melodee 1.4 verifies its stock-V15 supply setup
+(P3_ANA_CON0/5/6/9) and, when the check fails, never starts CPU1 or (in
+its no-fallback build) halts before the LCD is initialised.
+
+The bridge now shifts three-byte frames (op/address-high, address-low,
+data) into a 2 x 1 KiB register file (P33 bank, RTC bank via SPI_CON bit
+8); write/or/and/xor update a register, a read returns it in SPI_DAT.
+Transfers finish at once (busy bit 1 reads 0, as before). Registers reset
+to 0, so a firmware that only writes P33 sees no change. FM1_P33_TRACE
+prints each frame.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ crates/fm1-soc/src/lib.rs |   9 ++
+ crates/fm1-soc/src/p33.rs | 171 ++++++++++++++++++++++++++++++++++++++
+ docs/stock-firmware.md    |   1 +
+ 3 files changed, 181 insertions(+)
+ create mode 100644 crates/fm1-soc/src/p33.rs
+
+diff --git a/crates/fm1-soc/src/lib.rs b/crates/fm1-soc/src/lib.rs
+index 4543ad1..2b51099 100644
+--- a/crates/fm1-soc/src/lib.rs
++++ b/crates/fm1-soc/src/lib.rs
+@@ -12,6 +12,7 @@
+ //!   0x1180_0-    USB
+ //!   0x1210_0-    UART1 (MIDI IN)
+ //!   0x1310_0-    ADC
++//!   0x13e0_0-    P33 (power domain registers over a byte bridge, model in p33.rs)
+ //!   0x1eee000-   interrupt controller (0x1eee008 bit14 = ready, polled by the
+ //!                RAM early-init; the rest stored bits)
+ //!   0x1eee240    DBG_MSG debug box (console)
+@@ -28,6 +29,7 @@ use fm1_core::Bus;
+ pub mod script;
+ pub mod fwsc;
+ mod lcd;
++pub mod p33;
+ pub mod machine;
+ pub mod periph;
+ mod ram;
+@@ -76,6 +78,7 @@ enum Region {
+     Spi2,
+     Crc,
+     Rand,
++    P33,
+     XipFlash,
+     Dbg,
+     Irqc,
+@@ -165,6 +168,8 @@ pub struct Soc {
+     crc: u16,
+     /// The random number generator's state (JL_RAND, 0x13B00: R64L / R64H).
+     rand: u64,
++    /// The power domain (JL_P33, 0x13E00): its bridge and register file.
++    pub p33: p33::P33,
+     /// The cores' hardware lock (`lockset` / `lockclr`): which core holds it.
+     lock_owner: Option<u32>,
+     /// FM1_GPIO_TRACE: GPIO register writes by address (debugging port use).
+@@ -218,6 +223,7 @@ impl Soc {
+             lock_owner: None,
+             crc: 0,
+             rand: 0x9e37_79b9_7f4a_7c15,
++            p33: p33::P33::default(),
+             cpu1_release: false,
+             audio_trace: std::env::var_os("FM1_AUDIO_TRACE").is_some(),
+             xip_flash: true,
+@@ -322,6 +328,7 @@ impl Soc {
+             0x13100..=0x1311f => Region::Adc,
+             0x13500..=0x1350f => Region::Crc,
+             0x13b00..=0x13b07 => Region::Rand,
++            0x13e00..=0x13e0f => Region::P33,
+             0x11900..=0x119ff => Region::Ana,
+             0x20000..=0x2ffff => Region::Bt,
+             0x1eee240..=0x1eee24f => Region::Dbg,
+@@ -657,6 +664,7 @@ impl Soc {
+             }
+             Region::Dbg => self.sfr_get(addr),
+             Region::Crc => if addr == 0x13504 { self.crc as u32 } else { 0 },
++            Region::P33 => self.p33.read(addr),
+             // JL_RAND (0x13B00 R64L, 0x13B04 R64H): a new number at every read, from a fixed
+             // seed so runs repeat. Read as 0 it hung the stock firmware ~8 s after boot: a
+             // routine in its audio driver parks the task when a random word equals a fixed
+@@ -780,6 +788,7 @@ impl Soc {
+             // each write to [+0] feeds one byte through CRC-16/CCITT (0x1021, MSB first).
+             // The stock NOR file system checks every directory entry with it.
+             Region::Rand => {}
++            Region::P33 => self.p33.write(addr, value),
+             Region::Crc => match addr {
+                 0x13500 => {
+                     let mut c = self.crc ^ ((value as u16 & 0xff) << 8);
+diff --git a/crates/fm1-soc/src/p33.rs b/crates/fm1-soc/src/p33.rs
+new file mode 100644
+index 0000000..6bb3493
+--- /dev/null
++++ b/crates/fm1-soc/src/p33.rs
+@@ -0,0 +1,171 @@
++//! P33: the power-management domain's register file, reached through a byte-serial bridge
++//! (JL_P33 at 0x13E00, SDK WL82.h: PMU_CON +0, RTC_CON +4, SPI_CON +8, SPI_DAT +C).
++//!
++//! The bridge (SDK p33.h `p33_cs_h` / `p33_cs_l`; the FM-1 firmwares' `fm1__p33_xfer`):
++//! - SPI_CON bit 0 selects the domain (a frame starts), bit 8 with it picks the RTC bank
++//!   (addresses with bit 15 set, `RTC_SFR_BEGIN`); clearing bit 0 ends the frame.
++//! - A byte goes out when SPI_CON is written with bit 4 set (the "kick"); bit 1 reads busy.
++//!   Here a byte moves at once: bit 1 and bit 4 always read 0.
++//! - SPI_DAT holds the byte to send and, after a transfer, the byte received.
++//! - A frame is three bytes: `op << 5 | addr[9:8]` with bit 7 for a read (op: 0 write, 1 or,
++//!   2 and, 3 xor), then `addr[7:0]`, then the data (a dummy for a read, whose value then
++//!   reads back in SPI_DAT).
++//!
++//! The registers are plain storage (reset value 0), with two exceptions where reading the
++//! stored byte back would be wrong: P3_WDT_CON's bit 6 is the watchdog-clear strobe the feed
++//! writes, and P3_PR_PWR bit 4 is the soft-reset request (neither is modelled further).
++//! Firmwares that read back what they wrote (Melodee 1.4: its supply setup and watchdog arm
++//! verify every field, and a failed check keeps CPU1 off or halts) need the storage; before
++//! this the block was unknown MMIO and every read returned 0.
++
++const P3_WDT_CON: usize = 0x80;
++const P3_PR_PWR: usize = 0xa0;
++
++pub struct P33 {
++    con: u32,
++    dat: u32,
++    pmu_con: u32,
++    rtc_con: u32,
++    /// bytes received in this frame (0..3)
++    pos: u8,
++    head: u8,
++    addr: u16,
++    /// the P33 bank (0x000..0x3FF) and the RTC bank (bit 15 addresses)
++    regs: Box<[[u8; 1024]; 2]>,
++    /// FM1_P33_TRACE: print each frame
++    trace: bool,
++}
++
++impl Default for P33 {
++    fn default() -> Self {
++        P33 {
++            con: 0,
++            dat: 0,
++            pmu_con: 0,
++            rtc_con: 0,
++            pos: 0,
++            head: 0,
++            addr: 0,
++            regs: Box::new([[0; 1024]; 2]),
++            trace: std::env::var_os("FM1_P33_TRACE").is_some(),
++        }
++    }
++}
++
++impl P33 {
++    pub fn read(&self, addr: u32) -> u32 {
++        match addr & 0xf {
++            0x0 => self.pmu_con,
++            0x4 => self.rtc_con,
++            0x8 => self.con & !0x12,
++            0xc => self.dat,
++            _ => 0,
++        }
++    }
++
++    pub fn write(&mut self, addr: u32, value: u32) {
++        match addr & 0xf {
++            0x0 => self.pmu_con = value,
++            0x4 => self.rtc_con = value,
++            0x8 => {
++                if value & 1 == 0 || self.con & 1 == 0 {
++                    // chip select released (or just taken): a new frame
++                    self.pos = 0;
++                }
++                self.con = value & !0x12;
++                if value & 0x10 != 0 && value & 1 != 0 {
++                    self.transfer();
++                }
++            }
++            0xc => self.dat = value & 0xff,
++            _ => {}
++        }
++    }
++
++    /// The register `addr` of the bank picked by SPI_CON bit 8 (a debugger's view).
++    pub fn reg(&self, rtc: bool, addr: u16) -> u8 {
++        self.regs[rtc as usize][(addr & 0x3ff) as usize]
++    }
++
++    fn transfer(&mut self) {
++        let b = (self.dat & 0xff) as u8;
++        match self.pos {
++            0 => {
++                self.head = b;
++                self.addr = ((b as u16) & 3) << 8;
++                self.pos = 1;
++            }
++            1 => {
++                self.addr |= b as u16;
++                self.pos = 2;
++            }
++            2 => {
++                let bank = ((self.con >> 8) & 1) as usize;
++                let a = self.addr as usize;
++                let r = &mut self.regs[bank][a];
++                if self.head & 0x80 != 0 {
++                    self.dat = *r as u32;
++                } else {
++                    let v = match (self.head >> 5) & 3 {
++                        0 => b,
++                        1 => *r | b,
++                        2 => *r & b,
++                        _ => *r ^ b,
++                    };
++                    // strobes: the watchdog clear, the soft-reset request
++                    *r = match (bank, a) {
++                        (0, P3_WDT_CON) => v & !0x40,
++                        (0, P3_PR_PWR) => v & !0x10,
++                        _ => v,
++                    };
++                }
++                if self.trace {
++                    let op = if self.head & 0x80 != 0 { "rd" } else { ["wr", "or", "and", "xor"][((self.head >> 5) & 3) as usize] };
++                    println!("p33 {}{op} {:#05x} {b:#04x} -> {:#04x}", if bank == 1 { "rtc " } else { "" }, a, self.regs[bank][a]);
++                }
++                self.pos = 3;
++            }
++            _ => {}
++        }
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::P33;
++
++    // one frame as the FM-1 firmwares send it (Melodee hal/fm1_sys.h fm1__p33_op / fm1_p33_read)
++    fn frame(p: &mut P33, rtc: bool, bytes: [u8; 3]) -> u8 {
++        let sel = if rtc { 0x101 } else { 0x001 };
++        p.write(0x13e08, 0);
++        p.write(0x13e08, sel);
++        for b in bytes {
++            p.write(0x13e0c, b as u32);
++            let con = p.read(0x13e08);
++            p.write(0x13e08, con | 0x10);
++            assert_eq!(p.read(0x13e08) & 2, 0, "never busy");
++        }
++        let v = p.read(0x13e0c) as u8;
++        p.write(0x13e08, p.read(0x13e08) & !0x101);
++        v
++    }
++
++    #[test]
++    fn write_modify_read() {
++        let mut p = P33::default();
++        assert_eq!(frame(&mut p, false, [0x80, 0x09, 0x5e]), 0, "reset value");
++        frame(&mut p, false, [0x00, 0x09, 0x10]); // write
++        frame(&mut p, false, [0x20, 0x09, 0x0f]); // or
++        assert_eq!(frame(&mut p, false, [0x80, 0x09, 0x5e]), 0x1f);
++        frame(&mut p, false, [0x40, 0x09, 0xf3]); // and
++        frame(&mut p, false, [0x60, 0x09, 0x01]); // xor
++        assert_eq!(frame(&mut p, false, [0x80, 0x09, 0x5e]), 0x12);
++        // address bits 9:8 in the first byte; the RTC bank is separate
++        frame(&mut p, false, [0x01, 0x09, 0xaa]);
++        assert_eq!(p.reg(false, 0x109), 0xaa);
++        assert_eq!(frame(&mut p, true, [0x80, 0x09, 0x5e]), 0);
++        // the watchdog clear strobe does not read back
++        frame(&mut p, false, [0x00, 0x80, 0x5d]);
++        assert_eq!(frame(&mut p, false, [0x80, 0x80, 0x5e]), 0x1d);
++    }
++}
+diff --git a/docs/stock-firmware.md b/docs/stock-firmware.md
+index cdaa994..4fdc757 100644
+--- a/docs/stock-firmware.md
++++ b/docs/stock-firmware.md
+@@ -39,6 +39,7 @@ firmwares from their whole package.
+ | `idle` | 0.44x real time | waits for an interrupt: with `skip_idle`, time jumps to the next event |
+ | random number generator (`0x13B00`) | ~8 s after boot the UI froze and keys were ignored | xorshift from a fixed seed; a routine in the audio driver parks its task when a random word equals a fixed descrambled one, which a constant 0 always did |
+ | two stacks | interrupts clobbered task stacks or tasks never switched | see below |
++| P33 bridge (`0x13E00`) | (not the stock firmware: it never reads back) Melodee 1.4 halted before its first frame: its supply-setup check read every P33 register as 0 | three-byte frames (op and address high, address low, data) into a register file, P33 and RTC banks (`p33.rs`); reads return what was written |
+ 
+ ## The stack model (`Cpu::user`)
+ 
+-- 
+2.42.0
+

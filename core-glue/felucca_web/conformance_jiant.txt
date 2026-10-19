@@ -1,16 +1,17 @@
-# JIANT FM 0.8.5: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# JIANT FM 0.9.9: tests/core_conformance.cpp's script for this core (see its header for the directives)
 # its signature splash runs ~2 s (SPL_WRITE + SPL_HOLD) with the keys held off (kb_boot_hold): the key after it
 settle_ms 2500
 # the flash round trip: DISPLAY > LARGE (the settings record; the autosave is off by default in JIANT): HOME held opens
-# the menu at DISPLAY > COLOR, PRESETS two rows down to LARGE, OCT+ turns it ON, HOME closes it; after the reboot HOME
-# shows the large text. (Not the palette: JIANT 0.6.81 sets a saved record without its JIANT_PAL_SEEN mark back to
+# the menu at DISPLAY > COLOR, SELECT four rows down to LARGE (0.9.2: SELECT walks the MENU's rows, PRESETS does nothing
+# there; 0.8.9 / 0.9.7 put SKIN and SCOPE above it), OCT+ turns it ON, HOME closes it; after the reboot HOME shows the
+# large text. (Not the palette: JIANT 0.6.81 sets a saved record without its JIANT_PAL_SEEN mark back to
 # the JIANT palette once, and a fresh unit's first record has no mark: settings_persist.c settings_jiant_once)
 save wait 2500
 save btn HOME down
 save wait 1200
 save btn HOME up
 save wait 400
-save knob PRESETS +2
+save knob SELECT +4
 save wait 300
 save btn OCT+ 100
 save wait 400

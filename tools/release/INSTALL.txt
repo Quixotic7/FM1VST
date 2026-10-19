@@ -1,0 +1,93 @@
+Installing FM1VST @VERSION@ (macOS 11 or later, Apple silicon)
+===================================================================
+
+Two downloads hold the same three builds of the instrument:
+
+  FM1VST-@VERSION@-macOS-arm64.pkg   the installer (the easy way)
+  FM1VST-@VERSION@-macOS-arm64.zip   this zip, for copying the bundles by hand
+
+  FM1VST.vst3        VST3 plug-in (Ableton Live, Bitwig, Reaper, Cubase ..)
+  FM1VST.component   Audio Unit (Logic Pro, GarageBand, Live ..)
+  FM1VST.app         the Standalone app (no DAW needed)
+
+
+With the installer (.pkg)
+-------------------------
+
+It installs, for every user of the Mac, the ones you tick (all three by default): FM1VST.app into /Applications,
+FM1VST.vst3 into /Library/Audio/Plug-Ins/VST3, FM1VST.component into /Library/Audio/Plug-Ins/Components. It
+replaces an older FM1VST in those places, and refreshes macOS's Audio Unit cache afterwards.
+
+The package is not signed with an Apple Developer ID, so macOS will not open it with a double-click at first:
+
+  macOS 14 or earlier   right-click (or Control-click) the .pkg, choose Open, then Open again.
+  macOS 15 or later     double-click it once and close the warning; then System Settings > Privacy & Security,
+                        scroll to Security and click "Open Anyway" next to the FM1VST message (it shows for about
+                        an hour after the attempt). This works on older macOS too.
+  Terminal              xattr -d com.apple.quarantine ~/Downloads/FM1VST-@VERSION@-macOS-arm64.pkg, then
+                        double-click it.
+
+What the installer puts in place has no quarantine flag (unlike bundles copied out of a downloaded zip), so there is
+no xattr step afterwards.
+
+If you installed FM1VST 0.3.0 from its zip into your own ~/Library/Audio/Plug-Ins (VST3 or Components), delete those
+copies after installing: the installer uses /Library/Audio/Plug-Ins, and a DAW would list FM1VST twice.
+
+
+By hand, from the zip
+---------------------
+
+Copy the ones you use:
+
+  FM1VST.vst3        -> ~/Library/Audio/Plug-Ins/VST3/
+  FM1VST.component   -> ~/Library/Audio/Plug-Ins/Components/
+  FM1VST.app         -> /Applications (or anywhere)
+
+(~/Library is the Library folder in your home folder. In Finder: Go > Go to Folder, then type the path. Create the
+VST3 or Components folder if it is missing. /Library/Audio/Plug-Ins/... works too, for every user of the Mac.)
+
+This release is not signed with an Apple Developer ID nor notarised, so macOS quarantines what came out of the zip
+and refuses to open it ("FM1VST is damaged" or "cannot be opened because the developer cannot be verified"). After
+copying, remove the quarantine flag in Terminal:
+
+  xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/FM1VST.vst3
+  xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/FM1VST.component
+  xattr -dr com.apple.quarantine /Applications/FM1VST.app
+
+Or, without Terminal: open the Standalone app once (or load the plug-in in your DAW), let macOS refuse it, then go to
+System Settings > Privacy & Security, scroll to Security and click "Open Anyway" next to the FM1VST message. For the
+app on macOS 14 or earlier, right-click > Open also works.
+
+Check the download first if you like: shasum -a 256 FM1VST-@VERSION@-macOS-arm64.zip (or .pkg), compared with
+SHA256SUMS on the release page.
+
+
+Making your DAW see it
+----------------------
+
+  Ableton Live   Settings > Plug-Ins: turn on "Use VST3 Plug-in System Folders" (and "Use Audio Units"), then
+                 press Rescan (hold Option while clicking Rescan for a full rescan). FM1VST appears under
+                 Plug-Ins > Quixotic7.
+  Logic Pro      Restart Logic: it validates new Audio Units at launch. If FM1VST is listed as failed, open
+                 Settings > Plug-in Manager, select FM1VST and click "Reset & Rescan Selection". It is under
+                 Instrument > AU Instruments > Quixotic7 > FM1VST.
+  Other hosts    rescan plug-ins in the host's settings.
+
+If the Audio Unit still does not show up, run "killall -9 AudioComponentRegistrar" in Terminal (or log out and back
+in) and rescan.
+
+
+Remote FM-1
+-----------
+
+FM1VST can use a real M-VAVE FM-1 as its panel. The unit must run the RemoteFM1 firmware:
+https://quixotic7.github.io/RemoteFM1/ . Then turn on Remote FM-1 in FM1VST's settings sheet (the corner button).
+
+
+Your files
+----------
+
+FM1VST keeps its data in ~/Library/Application Support/fm1emu/ (presets, themes, extra cores you add to its cores/
+folder) and running copies of the cores in ~/Library/Caches/fm1emu/. Uninstalling is deleting the three bundles
+(/Applications and /Library/Audio/Plug-Ins/... after the installer, ~/Library/Audio/Plug-Ins/... after a copy by
+hand) and, if you like, those two folders.
