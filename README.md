@@ -24,7 +24,7 @@ The editor is the FM-1 panel itself (phase 3): LEDs, LCD, mouse and keyboard as 
 | `core-glue/felucca/`, `core-glue/melodee/` | the Felucca and Melodee cores, the same three files (`core_<id>.c`, `core_<id>_params.c`, `core_<id>_desc.c`) plus, because these firmwares have no emulator of their own, its equivalent written here: `<id>_fw.c` (the `emu_fw_*` hooks, as ChoralRoot's `emu_fw.c`), `<id>_firmware.h` (the include list, as `emu_firmware.h`) and `<id>_hal.h` (the HAL on the host, as `emu_hal_fw.h`) |
 | `cores/` | the firmwares, git submodules, read-only, pinned (below) |
 | `remote/RemoteFM1` | [RemoteFM1](https://github.com/Quixotic7/RemoteFM1) (submodule, pinned at `acd77af`, read-only): the protocol and libremotefm1, the host library behind Remote FM-1 (below) |
-| `plugin/` | the JUCE plugin: `Processor.{h,cpp}` (`FM1Processor`: the core and its `Device` on the audio thread, parameters and the Tier 2 feedback loop, MIDI, state, presets, the firmware switch; the threading and file layout are in its header comment), `Tier2Parameter.{h,cpp}` (a rebindable host parameter slot, and `KnobParameter`: a physical knob that follows the firmware's screen), `Editor.{h,cpp}` (the settings bar and the panel; the theme picker), `PanelComponent.{h,cpp}` (the FM-1 panel: the emulator's drawing, layout, mouse and key map), `Theme.{h,cpp}` (colour themes: the derived palette, the presets, custom theme files) and `RemoteLink.{h,cpp}` (Remote FM-1: the session thread, the unit lock, the event queue and the screen snapshot) |
+| `plugin/` | the JUCE plugin: `Processor.{h,cpp}` (`FM1Processor`: the core and its `Device` on the audio thread, parameters and the Tier 2 feedback loop, MIDI, state, presets, the firmware switch; the threading and file layout are in its header comment), `Tier2Parameter.{h,cpp}` (a rebindable host parameter slot, and `KnobParameter`: a physical knob that follows the firmware's screen), `Editor.{h,cpp}` (the device and screen views, the corner button), `Sheet.{h,cpp}` (the settings sheet: firmware browser, presets, Remote FM-1, playing, host control, themes, view, device, about), `Widgets.{h,cpp}` and `Look.{h,cpp}` (the sheet's controls; the palette, the type and the LookAndFeel), `StandaloneHooks.{h,cpp}` (the Standalone app's audio / MIDI settings in the sheet), `fonts/` (Inter Tight, OFL 1.1, and its build step), `PanelComponent.{h,cpp}` (the FM-1 panel: the emulator's drawing, layout, mouse and key map), `Theme.{h,cpp}` (colour themes: the derived palette, the presets, custom theme files) and `RemoteLink.{h,cpp}` (Remote FM-1: the session thread, the unit lock, the event queue and the screen snapshot) |
 | `engine/` | C++17, no JUCE: `cores.{h,cpp}` (find and load modules, one private copy per instance), `device.{h,cpp}` (the single-thread device clock, input, LEDs, LCD, `render` at any host rate), `resampler.h` (4-point Lagrange) |
 | `tests/` | `core_smoke`, `param_test` and `core_conformance` (per core), `common/` (the glue helpers), `replay_test`, `double_load_test`, `halt_test`, `plugin_test`, `tier2_test`, `panel_render_test`, `remote_test`, and `script_runner` (the emulator's script grammar on a `Device`) |
 
@@ -246,9 +246,24 @@ bass on channel 2 once a bass sound is chosen), so it can drive other instrument
 ## The panel (phase 3)
 
 The editor is the FM-1 itself: a port of the ChoralRoot emulator's window (`tools/emu/emu.c`, `keymap.c`) as a JUCE
-component (`plugin/PanelComponent.{h,cpp}`) under a slim settings bar (firmware, presets and their buttons, Transpose,
-Button params, the two MIDI toggles, Theme, Big LCD, the status with Power on). The host parameters have no generic list any more;
-they remain the host's.
+component (`plugin/PanelComponent.{h,cpp}`), edge to edge, with nothing around it. The host parameters have no generic
+list any more; they remain the host's.
+
+- **Two views** (saved with the set): **Device**, the whole panel (resizable, its aspect locked), and **Screen**, the
+  240 x 240 LCD alone in a thin bezel in a square window (resizable; nearest-neighbour at whole multiples of the
+  screen's pixels, else scaled up nearest-neighbour and smoothed down, so it stays crisp; the computer keys still play
+  the panel). Each view remembers its own size.
+- **Settings are out of sight.** A small round button fades in at the top-right corner while the mouse moves over the
+  editor (on the body's empty corner: never over a control) and fades out 1.5 s after it stops. While Remote FM-1 is
+  on, the button carries a small LED that stays when it fades (green: connected; amber: searching, in use or lost); a
+  halted firmware keeps it shown, ringed in red. The button, or a **right-click anywhere off the controls** (on a key
+  or button a right-click still latches it), opens the **settings sheet** from the right: FIRMWARE (a browser with
+  search, category chips and a card per firmware), PRESET (‹ name ›, Save, Save as and Rename typed in place, Delete
+  confirmed in place, Export, Import), REMOTE FM-1, PLAYING (Transpose, the two MIDI options), HOST CONTROL (Button
+  parameters, Encoders, steps), LOOK (the themes as swatches, a custom theme), VIEW (Device / Screen, the big LCD),
+  DEVICE (Restart, Reset flash, confirmed in place), ABOUT (the firmware's descriptor: version, licence, source,
+  gating, credits); in the Standalone app also its audio / MIDI settings and state files (its own "Options" bar is
+  hidden). Esc or a click beside the sheet closes it; while it is open the computer keys still play the panel.
 
 - **Drawing.** The panel in the designer geometry (904 x 566 units, the 876 x 538 view shown), drawn with the
   emulator's own rasteriser (anti-aliased rounded boxes, rings, round-capped pointers, its 5x7 font): the body, the
@@ -266,7 +281,7 @@ they remain the host's.
   panel's aspect kept and snaps to an integer multiple of the LCD when one is within 8 %: the LCD is then drawn
   nearest-neighbour, pixel for pixel (at other sizes it is smoothed). The default size puts the panel at 1.6 points
   per unit (1401 x 861 points: about 80 % of a 1080p screen's height; the LCD at 1x, 2x on Retina). **Big LCD** (the
-  bar's button, or the backtick key) shows the LCD above the panel as a square as wide as the panel (snapped down to
+  sheet's VIEW, or the backtick key) shows the LCD above the panel as a square as wide as the panel (snapped down to
   a multiple of 240 when one is within 10 %; the frame letterboxes in the window). The size and the big-LCD view are
   remembered per instance in the state.
 - **Mouse:** click a key or a button to press it (released on mouse up); right-click or ctrl-click latches it down
@@ -291,7 +306,7 @@ they remain the host's.
   track activators), so the top button row has a **fallback row**, `C V B N M ,` (not `keymap.c`'s: the bottom
   letter row, left to right as the buttons); the panel prints both on those buttons ("F5/C" .. "F10/,"). A host may
   also keep Tab, Esc and Return for itself: OCT- / OCT+ are `Z` / `X` too. Click the panel once so it has the
-  keyboard focus (the bar's controls never take it away).
+  keyboard focus (the settings sheet passes the keys on to it while open).
 
   A held key is pressed once (the key repeat is ignored) and let go on its release; when a host swallows the
   release, the panel finds the key up anyway: it checks on every key event and 30 times a second while a key is
@@ -323,7 +338,7 @@ membrane, the knob pointer by contrast with the knob, the text on caps and beds 
 - **Presets** (`themes/presets.json`, embedded in the plugin): Black, Black/Green, Cool Gray, Orange, Purple,
   White/Blue (sampled from M-VAVE's product photos in `reference/MVaveOfficialColors/`) and Emulator (the ChoralRoot
   emulator's own palette).
-- **Custom:** the Theme menu's **Custom...** opens colour pickers for Base, Membrane and Knobs, Bed and Label with an
+- **Custom:** the sheet's LOOK **+** opens colour pickers for Base, Membrane and Knobs, Bed and Label with an
   "override" switch each, and a name; every change previews live. **Save** writes
   `~/Library/Application Support/fm1emu/themes/<name>.json`; **Save as default** also makes it the theme new
   instances start with (`fm1emu/settings.json`, `"defaultTheme"`); **Delete** removes the file. Custom themes are
@@ -334,7 +349,7 @@ membrane, the knob pointer by contrast with the knob, the text on caps and beds 
   ```
 
 - **In the state:** the theme's name and colours are stored with the instance, so a set reopens looking the same even
-  when its custom theme file is gone (the menu then lists it as "<name> (this set)").
+  when its custom theme file is gone (the sheet then names it "<name> (this set)").
 
 ## Remote FM-1
 
@@ -514,5 +529,10 @@ The firmware is the work of several projects, each included as an unmodified git
   [cores/ChoralRootFM1/LICENSING.md](cores/ChoralRootFM1/LICENSING.md).
 
 The glue in `core-glue/` (this repo's, GPL-3.0-only) compiles those sources as they are.
+
+The editor's type is **Inter Tight** (`plugin/fonts/InterTight-VF.ttf`, Copyright 2022 The Inter Project Authors),
+under the SIL Open Font License 1.1 ([plugin/fonts/OFL.txt](plugin/fonts/OFL.txt)); the build cuts four static weights
+from it (subset to Latin) and embeds them. Each bundle carries the licence as
+`Contents/Resources/licenses/InterTight-OFL.txt`.
 
 This project is independent of and unaffiliated with M-VAVE.

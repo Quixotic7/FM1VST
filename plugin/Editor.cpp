@@ -2,492 +2,274 @@
 // The editor (see Editor.h).
 #include "Editor.h"
 
-static const juce::Colour kBarBg(0xFF17171A);
+#include "StandaloneHooks.h"
 
-// ===================================================== the theme editor ===
-ThemeEditorPanel::ThemeEditorPanel()
+#include <cmath>
+
+using juce::Rectangle;
+
+// ========================================================== screen view ===
+ScreenView::ScreenView(PanelComponent &panel) : panel_(panel)
 {
-    static const char *const titles[5] = {"Base", "Membrane", "Knobs", "Bed", "Label"};
-    for (int i = 0; i < 5; i++) {
-        Column &c = cols_[(size_t)i];
-        c.optional = i >= 3;
-        c.title.setText(titles[i], juce::dontSendNotification);
-        c.title.setJustificationType(juce::Justification::centredLeft);
-        addAndMakeVisible(c.title);
-        c.sel = std::make_unique<juce::ColourSelector>(juce::ColourSelector::showColourAtTop | juce::ColourSelector::editableColour |
-                                                       juce::ColourSelector::showColourspace);
-        c.sel->addChangeListener(this);
-        addAndMakeVisible(*c.sel);
-        if (c.optional) {
-            c.enable.setButtonText(juce::String("override ") + juce::String(titles[i]).toLowerCase());
-            c.enable.onClick = [this, i] {
-                cols_[(size_t)i].sel->setEnabled(cols_[(size_t)i].enable.getToggleState());
-                changed();
-            };
-            addAndMakeVisible(c.enable);
+    setWantsKeyboardFocus(true);
+    setOpaque(true);
+}
+
+Rectangle<float> ScreenView::bezelArea() const
+{
+    const float w = (float)juce::jmin(getWidth(), getHeight());
+    return getLocalBounds().toFloat().withSizeKeepingCentre(w, w).reduced(juce::jmax(6.0f, w * 0.028f));
+}
+
+Rectangle<float> ScreenView::lcdAreaFor(float scale) const
+{
+    const float w = (float)juce::jmin(getWidth(), getHeight());
+    const Rectangle<float> avail = bezelArea().reduced(juce::jmax(8.0f, w * 0.032f));
+    const float phys = std::floor(avail.getWidth() * scale);
+    float size = phys;
+    const int n = (int)(phys / EMU_LCD_W);
+    if (n >= 1 && (float)(n * EMU_LCD_W) >= 0.94f * phys)   // (a whole multiple within 6 %: pixel for pixel)
+        size = (float)(n * EMU_LCD_W);
+    const float x = std::round((avail.getCentreX() * scale - size / 2)), y = std::round((avail.getCentreY() * scale - size / 2));
+    return {x / scale, y / scale, size / scale, size / scale};
+}
+
+Rectangle<float> ScreenView::lcdArea() const { return lcdAreaFor(lastScale_); }
+
+void ScreenView::paint(juce::Graphics &g)
+{
+    float s = g.getInternalContext().getPhysicalPixelScaleFactor();
+    if (!(s > 0))
+        s = 1;
+    lastScale_ = s;
+    const Palette &p = panel_.palette();
+    // the body's colour around a black bezel, as on the unit
+    g.fillAll(p.plate);
+    const Rectangle<float> bz = bezelArea();
+    const float rad = juce::jmax(8.0f, bz.getWidth() * 0.035f);
+    g.setColour(p.edge);
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(1.5f), rad + 3, 1.0f);
+    juce::Path bezel;
+    bezel.addRoundedRectangle(bz, rad);
+    juce::DropShadow(juce::Colours::black.withAlpha(0.35f), juce::roundToInt(rad), {0, 2}).drawForPath(g, bezel);
+    g.setColour(p.screenBezel);
+    g.fillPath(bezel);
+    g.setColour(p.outline);
+    g.strokePath(bezel, juce::PathStrokeType(1.0f));
+
+    // the LCD in physical pixels
+    const Rectangle<float> l = lcdAreaFor(s);
+    const juce::Graphics::ScopedSaveState save(g);
+    g.addTransform(juce::AffineTransform::scale(1.0f / s));
+    const Rectangle<int> px(juce::roundToInt(l.getX() * s), juce::roundToInt(l.getY() * s), juce::roundToInt(l.getWidth() * s),
+                            juce::roundToInt(l.getHeight() * s));
+    const juce::Image &src = panel_.lcdImage();
+    const int side = px.getWidth();
+    if (side % EMU_LCD_W == 0) {
+        lastN_ = side / EMU_LCD_W;
+        g.setImageResamplingQuality(juce::Graphics::lowResamplingQuality);
+        g.drawImageTransformed(src, juce::AffineTransform::scale((float)lastN_).translated((float)px.getX(), (float)px.getY()));
+        return;
+    }
+    // up to the next whole multiple nearest-neighbour (at most 4x: past that the smoothing is under a pixel), then
+    // smoothed down: sharp pixel edges at any size
+    lastN_ = 0;
+    const int m = juce::jlimit(1, 4, (side + EMU_LCD_W - 1) / EMU_LCD_W);
+    if (!cache_.isValid() || cacheN_ != m || cacheSerial_ != serial_ || cacheSrc_ != (const void *)&src) {
+        cache_ = juce::Image(juce::Image::ARGB, EMU_LCD_W * m, EMU_LCD_H * m, false, juce::SoftwareImageType());
+        const juce::Image::BitmapData sd(src, juce::Image::BitmapData::readOnly);
+        juce::Image::BitmapData dd(cache_, juce::Image::BitmapData::readWrite);
+        for (int y = 0; y < cache_.getHeight(); y++) {
+            const uint32_t *sr = (const uint32_t *)(const void *)sd.getLinePointer(y / m);
+            uint32_t *dr = (uint32_t *)(void *)dd.getLinePointer(y);
+            for (int x = 0; x < cache_.getWidth(); x++)
+                dr[x] = sr[x / m];
         }
+        cacheN_ = m;
+        cacheSerial_ = serial_;
+        cacheSrc_ = &src;
     }
-    addAndMakeVisible(nameLabel_);
-    addAndMakeVisible(name_);
-    name_.onTextChange = [this] { changed(); };
-    for (auto *b : {&save_, &default_, &delete_, &close_})
-        addAndMakeVisible(*b);
-    save_.onClick = [this] {
-        if (onSave)
-            onSave(theme(), false);
-    };
-    default_.onClick = [this] {
-        if (onSave)
-            onSave(theme(), true);
-    };
-    delete_.onClick = [this] {
-        if (onDelete)
-            onDelete(theme().name);
-    };
-    close_.onClick = [this] {
-        if (onClose)
-            onClose();
-    };
-    note_.setJustificationType(juce::Justification::centredLeft);
-    note_.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
-    addAndMakeVisible(note_);
+    g.setImageResamplingQuality(juce::Graphics::highResamplingQuality);
+    g.drawImage(cache_, px.toFloat());
 }
 
-ThemeEditorPanel::~ThemeEditorPanel()
+void ScreenView::mouseDown(const juce::MouseEvent &e)
 {
-    for (Column &c : cols_)
-        c.sel->removeChangeListener(this);
+    if (isShowing())
+        grabKeyboardFocus();
+    if (e.mods.isPopupMenu() && onContextMenu)
+        onContextMenu();
 }
 
-void ThemeEditorPanel::setTheme(const Theme &t)
+// =============================================================== editor ===
+void FM1Editor::Constrainer::checkBounds(Rectangle<int> &b, const Rectangle<int> &previous, const Rectangle<int> &limits, bool top,
+                                         bool left, bool bottom, bool right)
 {
-    setting_ = true;
-    const Palette p = derive(t);
-    cols_[0].sel->setCurrentColour(t.base, juce::dontSendNotification);
-    cols_[1].sel->setCurrentColour(t.membrane, juce::dontSendNotification);
-    cols_[2].sel->setCurrentColour(t.knob, juce::dontSendNotification);
-    cols_[3].sel->setCurrentColour(t.bed.value_or(p.bed), juce::dontSendNotification);
-    cols_[4].sel->setCurrentColour(t.label.value_or(p.label), juce::dontSendNotification);
-    cols_[3].enable.setToggleState(t.bed.has_value(), juce::dontSendNotification);
-    cols_[4].enable.setToggleState(t.label.has_value(), juce::dontSendNotification);
-    cols_[3].sel->setEnabled(t.bed.has_value());
-    cols_[4].sel->setEnabled(t.label.has_value());
-    name_.setText(t.name, juce::dontSendNotification);
-    setting_ = false;
-}
-
-Theme ThemeEditorPanel::theme() const
-{
-    Theme t;
-    t.name = name_.getText().trim();
-    t.base = cols_[0].sel->getCurrentColour().withAlpha((juce::uint8)255);
-    t.membrane = cols_[1].sel->getCurrentColour().withAlpha((juce::uint8)255);
-    t.knob = cols_[2].sel->getCurrentColour().withAlpha((juce::uint8)255);
-    t.bed = cols_[3].enable.getToggleState() ? std::optional<juce::Colour>(cols_[3].sel->getCurrentColour().withAlpha((juce::uint8)255))
-                                             : std::nullopt;
-    t.label = cols_[4].enable.getToggleState() ? std::optional<juce::Colour>(cols_[4].sel->getCurrentColour().withAlpha((juce::uint8)255))
-                                               : std::nullopt;
-    return t;
-}
-
-void ThemeEditorPanel::changeListenerCallback(juce::ChangeBroadcaster *) { changed(); }
-
-void ThemeEditorPanel::changed()
-{
-    if (!setting_ && onChange)
-        onChange(theme());
-}
-
-void ThemeEditorPanel::paint(juce::Graphics &g)
-{
-    g.setColour(kBarBg.withAlpha(0.97f));
-    g.fillRoundedRectangle(getLocalBounds().toFloat(), 8.0f);
-    g.setColour(juce::Colours::white.withAlpha(0.25f));
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 8.0f, 1.0f);
-}
-
-void ThemeEditorPanel::resized()
-{
-    auto r = getLocalBounds().reduced(10);
-    auto bottom = r.removeFromBottom(26);
-    nameLabel_.setBounds(bottom.removeFromLeft(44));
-    name_.setBounds(bottom.removeFromLeft(180));
-    for (auto *b : {&save_, &default_, &delete_, &close_}) {
-        bottom.removeFromLeft(6);
-        b->setBounds(bottom.removeFromLeft(b == &default_ ? 120 : 64));
-    }
-    bottom.removeFromLeft(8);
-    note_.setBounds(bottom);
-    r.removeFromBottom(8);
-    const int w = r.getWidth() / 5;
-    for (Column &c : cols_) {
-        auto col = r.removeFromLeft(w).reduced(4, 0);
-        auto head = col.removeFromTop(22);
-        if (c.optional) {
-            c.title.setBounds(head.removeFromLeft(48));
-            c.enable.setBounds(head);
-        } else {
-            c.title.setBounds(head);
-        }
-        c.sel->setBounds(col);
-    }
-}
-
-// ================================================================ editor ===
-void FM1Editor::Constrainer::checkBounds(juce::Rectangle<int> &b, const juce::Rectangle<int> &previous,
-                                         const juce::Rectangle<int> &limits, bool top, bool left, bool bottom, bool right)
-{
-    if (!(bigLcd && bigLcd())) {             // the panel's aspect (with the big LCD shown: free, letterboxed)
+    const int m = mode ? mode() : FM1Processor::kViewDevice;
+    const bool vertical = (top || bottom) && !(left || right);
+    if (m == FM1Processor::kViewScreen) {        // square
+        const int s = juce::jlimit(getMinimumWidth(), getMaximumWidth(), vertical ? b.getHeight() : b.getWidth());
+        b.setSize(s, s);
+    } else if (!(bigLcd && bigLcd())) {          // the panel's aspect (with the big LCD: free, letterboxed)
         const double a = PanelComponent::frameAspect(false);
-        int w = b.getWidth();
-        if ((top || bottom) && !(left || right))
-            w = juce::roundToInt((b.getHeight() - kBarH) * a);
+        int w = vertical ? juce::roundToInt(b.getHeight() * a) : b.getWidth();
         w = juce::jlimit(getMinimumWidth(), getMaximumWidth(), w);
-        b.setSize(w, kBarH + juce::roundToInt(w / a));
+        b.setSize(w, juce::roundToInt(w / a));
     }
     juce::ComponentBoundsConstrainer::checkBounds(b, previous, limits, top, left, bottom, right);
 }
 
-juce::Point<int> FM1Editor::defaultSize() { return {1402, kBarH + 861}; }
-
 FM1Editor::FM1Editor(FM1Processor &p)
-    : juce::AudioProcessorEditor(p), proc_(p), store_(FM1Processor::home()), panel_(p)
+    : juce::AudioProcessorEditor(p), proc_(p), store_(FM1Processor::home()), panel_(p), screen_(panel_), corner_(look_), sheet_(*this)
 {
+    setLookAndFeel(&look_);
     addAndMakeVisible(panel_);
+    addChildComponent(screen_);
+    addAndMakeVisible(corner_);
+    addChildComponent(sheet_);
+
     panel_.setButtonNames(proc_.buttonNames());
     panel_.setTheme(proc_.getTheme());
+    look_.setAccentFrom(proc_.getTheme());
     themeSerial_ = proc_.themeSerial();
     panel_.setBigLcd(proc_.getBigLcd());
     panel_.onBigLcdToggled = [this](bool on) { setBigLcd(on); };
-
-    addAndMakeVisible(cores_);
-    cores_.setTooltip("Firmware");
-    cores_.onChange = [this] {
-        const int i = cores_.getSelectedItemIndex();
-        if (i >= 0 && i < (int)coreList_.size() && juce::String(coreList_[(size_t)i].id) != juce::String(proc_.getCoreInfo().info.id)) {
-            proc_.switchCore(coreList_[(size_t)i].id);
-            refreshPresets();
-            refreshStatus();
+    panel_.onContextMenu = [this] { openSettings(); };
+    panel_.onLcdChanged = [this] {
+        if (screen_.isVisible()) {
+            screen_.serial_++;
+            screen_.lcdChanged();
         }
     };
+    screen_.onContextMenu = [this] { openSettings(); };
+    corner_.onClick = [this] { openSettings(); };
+    corner_.setTooltip("Settings (or right-click the panel)");
 
-    addAndMakeVisible(presets_);
-    presets_.setTextWhenNothingSelected("(no preset)");
-    presets_.setTooltip("Presets of this firmware (the whole flash)");
-    presets_.onChange = [this] {
-        const juce::String n = presets_.getText();
-        if (n.isNotEmpty() && n != proc_.currentPresetName() && presetList_.contains(n)) {
-            proc_.loadPreset(n);
-            refreshStatus();
-        }
-    };
+    addMouseListener(&watcher_, true);
+    chrome_.fn = [this] { chromeTick(); };
 
-    for (auto *b : {&save_, &saveAs_, &rename_, &delete_, &reset_, &export_, &import_, &power_, &bigLcd_, &info_})
-        addAndMakeVisible(*b);
-    save_.onClick = [this] {
-        const juce::String n = proc_.currentPresetName();
-        if (n.isEmpty())
-            saveAs_.triggerClick();
-        else
-            proc_.savePreset(n), refreshPresets();
-    };
-    saveAs_.onClick = [this] {
-        askName("Save preset as", proc_.currentPresetName(), [this](juce::String n) {
-            proc_.savePreset(n);
-            refreshPresets();
-        });
-    };
-    rename_.onClick = [this] {
-        const juce::String from = proc_.currentPresetName();
-        if (from.isEmpty())
-            return;
-        askName("Rename preset", from, [this, from](juce::String to) {
-            proc_.renamePreset(from, to);
-            refreshPresets();
-        });
-    };
-    delete_.onClick = [this] {
-        const juce::String n = proc_.currentPresetName();
-        if (n.isEmpty())
-            return;
-        juce::AlertWindow::showOkCancelBox(juce::MessageBoxIconType::QuestionIcon, "Delete preset",
-                                           "Delete \"" + n + "\"?", "Delete", "Cancel", this,
-                                           juce::ModalCallbackFunction::create([this, n](int r) {
-                                               if (r == 1) {
-                                                   proc_.deletePreset(n);
-                                                   refreshPresets();
-                                               }
-                                           }));
-    };
-    reset_.onClick = [this] {
-        juce::AlertWindow::showOkCancelBox(juce::MessageBoxIconType::WarningIcon, "Reset flash",
-                                           "Erase this firmware's whole flash (a backup is written first)?", "Reset",
-                                           "Cancel", this, juce::ModalCallbackFunction::create([this](int r) {
-                                               if (r == 1) {
-                                                   proc_.resetFlash();
-                                                   refreshPresets();
-                                                   refreshStatus();
-                                               }
-                                           }));
-    };
-    export_.onClick = [this] {
-        const juce::String n = proc_.currentPresetName().isEmpty() ? juce::String("FM1") : proc_.currentPresetName();
-        chooser_ = std::make_unique<juce::FileChooser>(
-            "Export preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile(n + ".fm1preset"),
-            "*.fm1preset");
-        chooser_->launchAsync(juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::warnAboutOverwriting,
-                              [this](const juce::FileChooser &fc) {
-                                  const juce::File f = fc.getResult();
-                                  if (f != juce::File())
-                                      proc_.exportPreset(f);
-                              });
-    };
-    import_.onClick = [this] {
-        chooser_ = std::make_unique<juce::FileChooser>("Import preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
-                                                       "*.fm1preset");
-        chooser_->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-                              [this](const juce::FileChooser &fc) {
-                                  const juce::File f = fc.getResult();
-                                  if (f != juce::File()) {
-                                      proc_.importPreset(f);
-                                      refreshPresets();
-                                      refreshStatus();
-                                  }
-                              });
-    };
-    power_.onClick = [this] {
-        proc_.powerCycle();
-        refreshStatus();
-    };
-    bigLcd_.setClickingTogglesState(true);
-    bigLcd_.setTooltip("Show the LCD big above the panel (` key)");
-    bigLcd_.setToggleState(proc_.getBigLcd(), juce::dontSendNotification);
-    bigLcd_.onClick = [this] { setBigLcd(bigLcd_.getToggleState()); };
-    info_.setTooltip("About the firmware: its version, licence, source and credits");
-    info_.onClick = [this] { showFirmwareInfo(); };
-
-    addAndMakeVisible(transpose_);
-    for (int o = -2; o <= 2; o++)
-        transpose_.addItem(o == 0 ? juce::String("Transpose 0") : juce::String::formatted("Transpose %+d oct", o), o + 3);
-    transpose_.setSelectedId(proc_.getTranspose() + 3, juce::dontSendNotification);
-    transpose_.onChange = [this] { proc_.setTranspose(transpose_.getSelectedId() - 3); };
-
-    addAndMakeVisible(buttonMode_);
-    for (int m = 0; m < 3; m++)
-        buttonMode_.addItem("Button params: " + FM1Processor::buttonModeName(m), m + 1);
-    buttonMode_.setSelectedId(proc_.getButtonMode() + 1, juce::dontSendNotification);
-    buttonMode_.setTooltip("What the btn_* host parameters (a Roto-Control's buttons, automation) do: Tap: each press "
-                           "(the value going on) is one tap on the device, whatever the controller sends after (for "
-                           "toggle buttons); Hold: on = held (momentary buttons: long presses, layer locks); "
-                           "Toggle-hold: each press toggles held. The panel's own mouse and keys are always real "
-                           "presses.");
-    buttonMode_.onChange = [this] { proc_.setButtonMode(buttonMode_.getSelectedId() - 1); };
-
-    addAndMakeVisible(encMode_);
-    for (int m = 0; m < 2; m++)
-        encMode_.addItem("Encoders: " + FM1Processor::encoderModeName(m), m + 1);
-    encMode_.setSelectedId(proc_.getEncoderMode() + 1, juce::dontSendNotification);
-    encMode_.setTooltip("What the seven encoder parameters (Knob Select .. Knob 4) take from the host. Absolute: the "
-                        "value of what the knob turns now. Stepped: a controller whose knobs click in steps (a "
-                        "Roto-Control knob set to 24 steps): each click is one detent of the FM-1's encoder, as on "
-                        "the unit (Tempo 1 BPM per click, a menu one row), and the firmware's value is sent back. "
-                        "Knob Master (the pot) is always absolute.");
-    encMode_.onChange = [this] { proc_.setEncoderMode(encMode_.getSelectedId() - 1); };
-    addAndMakeVisible(encSteps_);
-    for (int n = FM1Processor::kMinEncSteps; n <= FM1Processor::kMaxEncSteps; n++)
-        encSteps_.addItem(juce::String(n) + " steps", n);
-    encSteps_.setSelectedId(proc_.getEncoderSteps(), juce::dontSendNotification);
-    encSteps_.setTooltip("Stepped: the controller's steps per full turn of a knob (the Roto-Control's step setting)");
-    encSteps_.onChange = [this] { proc_.setEncoderSteps(encSteps_.getSelectedId()); };
-
-    addAndMakeVisible(notesPlayKeys_);
-    notesPlayKeys_.setToggleState(proc_.getMidiNotesPlayKeys(), juce::dontSendNotification);
-    notesPlayKeys_.onClick = [this] { proc_.setMidiNotesPlayKeys(notesPlayKeys_.getToggleState()); };
-    addAndMakeVisible(keyNotesToFw_);
-    keyNotesToFw_.setToggleState(proc_.getKeyNotesToFirmware(), juce::dontSendNotification);
-    keyNotesToFw_.onClick = [this] { proc_.setKeyNotesToFirmware(keyNotesToFw_.getToggleState()); };
-
-    addAndMakeVisible(themes_);
-    themes_.setTooltip("Panel colours");
-    themes_.onChange = [this] {
-        const int id = themes_.getSelectedId();
-        if (id == 10000) {
-            openThemeEditor();
-            refreshThemes();                     // (the menu shows the theme again, not "Custom...")
-        } else if (id >= 1 && id <= (int)themeItems_.size()) {
-            applyTheme(themeItems_[(size_t)id - 1]);
-        }
-    };
-
-    addAndMakeVisible(status_);
-    status_.setJustificationType(juce::Justification::centredLeft);
-
-    addAndMakeVisible(remote_);
-    remote_.setToggleState(proc_.getRemoteEnabled(), juce::dontSendNotification);
-    remote_.setTooltip("Remote FM-1: a real FM-1 running the RemoteFM1 firmware, on USB, becomes this panel: its keys, "
-                       "buttons, knobs and MASTER play the firmware here, and this screen and its LEDs show on the "
-                       "unit. One FM1VST at a time drives the unit (another instance or the Standalone shows \"in "
-                       "use\" and takes over when that one lets go). Saved with the set.");
-    remote_.onClick = [this] {
-        proc_.setRemoteEnabled(remote_.getToggleState());
-        refreshRemote();
-    };
-    addAndMakeVisible(remoteMenu_);
-    remoteMenu_.setTooltip("Remote FM-1 options");
-    remoteMenu_.onClick = [this] { showRemoteMenu(); };
-    addAndMakeVisible(remoteStatus_);
-    remoteStatus_.setJustificationType(juce::Justification::centredLeft);
-    remoteStatus_.setFont(juce::FontOptions(12.0f));
-
-    // the bar's controls never take the keyboard focus: a click on them leaves the computer keys on the panel
-    for (juce::Component *c : std::initializer_list<juce::Component *>{
-             &cores_, &presets_, &transpose_, &themes_, &buttonMode_, &encMode_, &encSteps_, &save_, &saveAs_, &rename_, &delete_, &reset_,
-             &export_, &import_, &power_, &bigLcd_, &info_, &notesPlayKeys_, &keyNotesToFw_, &remote_, &remoteMenu_}) {
-        c->setWantsKeyboardFocus(false);
-        c->setMouseClickGrabsKeyboardFocus(false);
-    }
-
-    refreshCores();
-    refreshPresets();
-    refreshThemes();
-    refreshStatus();
-    refreshRemote();
-    lastCore_ = juce::String(proc_.getCoreInfo().info.id);
-
+    constrainer_.mode = [this] { return mode_; };
     constrainer_.bigLcd = [this] { return panel_.bigLcd(); };
-    constrainer_.setSizeLimits(760, kBarH + 300, 5000, 4000);
+    mode_ = proc_.getViewMode();
+    panel_.setVisible(mode_ == FM1Processor::kViewDevice);
+    screen_.setVisible(mode_ == FM1Processor::kViewScreen);
+    updateLimits();
     setConstrainer(&constrainer_);
     setResizable(true, true);
-    juce::Point<int> sz = proc_.getEditorSize();
-    if (sz.x <= 0 || sz.y <= 0)
-        sz = defaultSize();
-    setSize(juce::jlimit(760, 5000, sz.x), juce::jlimit(kBarH + 300, 4000, sz.y));
+    sheet_.toFront(false);
+    if (mode_ == FM1Processor::kViewScreen) {
+        const int s = proc_.getScreenSize() > 0 ? proc_.getScreenSize() : defaultScreenSize();
+        setSize(juce::jlimit(kMinScreen, kMaxScreen, s), juce::jlimit(kMinScreen, kMaxScreen, s));
+    } else {
+        juce::Point<int> sz = proc_.getEditorSize();
+        if (sz.x <= 0 || sz.y <= 0)
+            sz = defaultSize();
+        const int w = juce::jlimit(kMinW, kMaxW, sz.x);
+        setSize(w, panel_.bigLcd() ? juce::jlimit(300, 4000, sz.y) : juce::roundToInt((float)w / PanelComponent::frameAspect(false)));
+    }
+    lastCore_ = juce::String(proc_.getCoreInfo().info.id);
+    refreshChrome();
     startTimerHz(4);
 }
 
-FM1Editor::~FM1Editor() { stopTimer(); }
-
-void FM1Editor::paint(juce::Graphics &g) { g.fillAll(kBarBg); }
-
-void FM1Editor::mouseDown(const juce::MouseEvent &)
+FM1Editor::~FM1Editor()
 {
-    if (panel_.isShowing())
-        panel_.grabKeyboardFocus();
+    stopTimer();
+    chrome_.stopTimer();
+    removeMouseListener(&watcher_);
+    setLookAndFeel(nullptr);
+}
+
+void FM1Editor::paint(juce::Graphics &g) { g.fillAll(Look::col(Look::C::window)); }
+
+void FM1Editor::resized()
+{
+    const Rectangle<int> r = getLocalBounds();
+    panel_.setBounds(r);
+    screen_.setBounds(r);
+    sheet_.setBounds(r);
+    layoutChrome();
+    if (mode_ == FM1Processor::kViewScreen)
+        proc_.setScreenSize(getWidth());
+    else
+        proc_.setEditorSize(getWidth(), getHeight());
 }
 
 void FM1Editor::focusGained(FocusChangeType)
 {
-    if (panel_.isShowing() && !themeEditor_)
-        panel_.grabKeyboardFocus();
+    if (sheet_.isOpen())
+        sheet_.grabKeyboardFocus();
+    else
+        focusActiveView();
 }
 
-void FM1Editor::resized()
+void FM1Editor::focusActiveView()
 {
-    auto r = getLocalBounds();
-    auto bar = r.removeFromTop(kBarH).reduced(4, 3);
-    auto row1 = bar.removeFromTop(bar.getHeight() / 2).reduced(0, 1);
-    auto row2 = bar.reduced(0, 1);
-    cores_.setBounds(row1.removeFromLeft(170));
-    row1.removeFromLeft(4);
-    presets_.setBounds(row1.removeFromLeft(180));
-    row1.removeFromLeft(6);
-    remote_.setBounds(row1.removeFromLeft(104));
-    remoteMenu_.setBounds(row1.removeFromLeft(22));
-    power_.setBounds(row1.removeFromRight(80));
-    row1.removeFromRight(4);
-    row1.removeFromLeft(4);                      // the status: what the preset buttons leave (their full 84 points first)
-    remoteStatus_.setBounds(row1.removeFromLeft(juce::jlimit(0, 230, row1.getWidth() - 7 * 88)));
-    const int bw = juce::jmin(84, juce::jmax(40, row1.getWidth() / 7 - 4));   // (the seven alike)
-    for (auto *b : {&save_, &saveAs_, &rename_, &delete_, &reset_, &export_, &import_}) {
-        row1.removeFromLeft(4);
-        b->setBounds(row1.removeFromLeft(bw));
+    juce::Component &v = activeView();
+    if (v.isShowing())
+        v.grabKeyboardFocus();
+}
+
+void FM1Editor::parentHierarchyChanged()
+{
+    if (isStandalone() && !standaloneDone_ && getParentComponent()) {
+        standaloneDone_ = true;
+        juce::Component::SafePointer<FM1Editor> self(this);
+        juce::MessageManager::callAsync([self] {
+            if (self)
+                fm1standalone::tweakWindow(*self);
+        });
     }
-    transpose_.setBounds(row2.removeFromLeft(130));
-    row2.removeFromLeft(4);
-    buttonMode_.setBounds(row2.removeFromLeft(190));
-    row2.removeFromLeft(4);
-    encMode_.setBounds(row2.removeFromLeft(160));
-    row2.removeFromLeft(4);
-    encSteps_.setBounds(row2.removeFromLeft(88));
-    row2.removeFromLeft(4);
-    notesPlayKeys_.setBounds(row2.removeFromLeft(160));
-    keyNotesToFw_.setBounds(row2.removeFromLeft(225));
-    row2.removeFromLeft(4);
-    themes_.setBounds(row2.removeFromLeft(150));
-    row2.removeFromLeft(4);
-    bigLcd_.setBounds(row2.removeFromLeft(70));
-    row2.removeFromLeft(4);
-    info_.setBounds(row2.removeFromLeft(56));
-    row2.removeFromLeft(8);
-    status_.setBounds(row2);
-    panel_.setBounds(r);
-    if (themeEditor_) {
-        const int w = juce::jmin(960, r.getWidth() - 20), h = juce::jmin(320, r.getHeight() - 20);
-        themeEditor_->setBounds(r.withSizeKeepingCentre(w, h));
+}
+
+void FM1Editor::updateLimits()
+{
+    if (mode_ == FM1Processor::kViewScreen) {
+        constrainer_.setSizeLimits(kMinScreen, kMinScreen, kMaxScreen, kMaxScreen);
+    } else if (panel_.bigLcd()) {
+        constrainer_.setSizeLimits(kMinW, 300, kMaxW, 4000);
+    } else {
+        const float a = PanelComponent::frameAspect(false);
+        constrainer_.setSizeLimits(kMinW, juce::roundToInt((float)kMinW / a), kMaxW, juce::roundToInt((float)kMaxW / a));
     }
-    proc_.setEditorSize(getWidth(), getHeight());
+}
+
+void FM1Editor::setViewMode(int m)
+{
+    m = juce::jlimit(0, 1, m);
+    proc_.setViewMode(m);
+    if (m == mode_)
+        return;
+    mode_ = m;
+    panel_.setVisible(m == FM1Processor::kViewDevice);
+    screen_.setVisible(m == FM1Processor::kViewScreen);
+    updateLimits();
+    if (m == FM1Processor::kViewScreen) {
+        const int s = juce::jlimit(kMinScreen, kMaxScreen, proc_.getScreenSize() > 0 ? proc_.getScreenSize() : defaultScreenSize());
+        setSize(s, s);
+    } else {
+        juce::Point<int> sz = proc_.getEditorSize();
+        if (sz.x <= 0 || sz.y <= 0)
+            sz = defaultSize();
+        const int w = juce::jlimit(kMinW, kMaxW, sz.x);
+        setSize(w, panel_.bigLcd() ? juce::jlimit(300, 4000, sz.y) : juce::roundToInt((float)w / PanelComponent::frameAspect(false)));
+    }
+    resized();
+    if (!sheet_.isOpen())
+        focusActiveView();
 }
 
 void FM1Editor::setBigLcd(bool on)
 {
     panel_.setBigLcd(on);
     proc_.setBigLcd(on);
-    bigLcd_.setToggleState(on, juce::dontSendNotification);
-    if (!on)                                     // back to the panel's aspect
-        setSize(getWidth(), kBarH + juce::roundToInt((float)getWidth() / PanelComponent::frameAspect(false)));
-}
-
-void FM1Editor::refreshCores()
-{
-    coreList_ = proc_.listCores();
-    const juce::String cur(proc_.getCoreInfo().info.id);
-    cores_.clear(juce::dontSendNotification);
-    for (size_t i = 0; i < coreList_.size(); i++) {
-        cores_.addItem(juce::String(coreList_[i].name) + " " + coreList_[i].version, (int)i + 1);
-        if (juce::String(coreList_[i].id) == cur)
-            cores_.setSelectedItemIndex((int)i, juce::dontSendNotification);
+    if (mode_ == FM1Processor::kViewDevice) {
+        updateLimits();
+        if (!on)                                 // back to the panel's aspect
+            setSize(getWidth(), juce::roundToInt((float)getWidth() / PanelComponent::frameAspect(false)));
     }
-}
-
-void FM1Editor::refreshPresets()
-{
-    presetList_ = proc_.listPresets();
-    presets_.clear(juce::dontSendNotification);
-    for (int i = 0; i < presetList_.size(); i++)
-        presets_.addItem(presetList_[i], i + 1);
-    const int i = presetList_.indexOf(proc_.currentPresetName());
-    if (i >= 0)
-        presets_.setSelectedItemIndex(i, juce::dontSendNotification);
-}
-
-// presets, then the custom themes, then the state's own theme when no file has it, then "Custom..."
-void FM1Editor::refreshThemes()
-{
-    const Theme cur = proc_.getTheme();
-    themeItems_.clear();
-    themes_.clear(juce::dontSendNotification);
-    int sel = 0;
-    auto add = [&](const Theme &t, const juce::String &text) {
-        themeItems_.push_back(t);
-        const int id = (int)themeItems_.size();
-        themes_.addItem(text, id);
-        if (!sel && t.name.equalsIgnoreCase(cur.name))
-            sel = id;
-    };
-    for (const Theme &t : ThemeStore::presets())
-        add(t, t.name);
-    const std::vector<Theme> customs = store_.customs();
-    if (!customs.empty())
-        themes_.addSeparator();
-    for (const Theme &t : customs)
-        add(t, t.name);
-    if (!sel) {                                  // (a custom theme whose file is gone: the state's colours)
-        themes_.addSeparator();
-        add(cur, cur.name + " (this set)");
-    }
-    themes_.addSeparator();
-    themes_.addItem("Custom...", 10000);
-    themes_.setSelectedId(sel, juce::dontSendNotification);
+    layoutChrome();
+    sheet_.refresh();
 }
 
 void FM1Editor::applyTheme(const Theme &t)
@@ -495,198 +277,125 @@ void FM1Editor::applyTheme(const Theme &t)
     proc_.setTheme(t);
     themeSerial_ = proc_.themeSerial();
     panel_.setTheme(t);
+    look_.setAccentFrom(t);
+    screen_.repaint();
+    sheet_.repaint();
 }
 
-void FM1Editor::openThemeEditor()
+void FM1Editor::coreChanged()
 {
-    if (!themeEditor_) {
-        themeEditor_ = std::make_unique<ThemeEditorPanel>();
-        themeEditor_->onChange = [this](const Theme &t) { applyTheme(t); };
-        themeEditor_->onSave = [this](const Theme &t, bool asDefault) {
-            if (t.name.isEmpty()) {
-                themeEditor_->setNote("give the theme a name");
-                return false;
-            }
-            const auto p = ThemeStore::preset(t.name);
-            if (p && !p->sameColours(t)) {
-                themeEditor_->setNote("\"" + t.name + "\" is a preset: pick another name");
-                return false;
-            }
-            if (!p && !store_.save(t)) {
-                themeEditor_->setNote("cannot write " + store_.fileFor(t.name).getFullPathName());
-                return false;
-            }
-            if (asDefault)
-                store_.setDefaultName(t.name);
-            applyTheme(t);
-            refreshThemes();
-            themeEditor_->setNote(asDefault ? "saved; the default for new instances" : "saved to " + store_.fileFor(t.name).getFullPathName());
-            return true;
-        };
-        themeEditor_->onDelete = [this](const juce::String &n) {
-            themeEditor_->setNote(store_.remove(n) ? "deleted \"" + n + "\" (this instance keeps its colours)"
-                                                   : "\"" + n + "\" is not a custom theme file");
-            refreshThemes();
-        };
-        themeEditor_->onClose = [this] {
-            juce::Component::SafePointer<FM1Editor> self(this);
-            juce::MessageManager::callAsync([self] {
-                if (self) {
-                    self->themeEditor_.reset();
-                    self->panel_.grabKeyboardFocus();
-                }
-            });
-        };
-        addAndMakeVisible(*themeEditor_);
-    }
-    Theme t = proc_.getTheme();
-    if (ThemeStore::isPresetName(t.name))
-        t.name = "My " + t.name.replace("/", " ");
-    themeEditor_->setTheme(t);
-    themeEditor_->setNote("changes preview live; Save writes " + store_.themesDir().getFullPathName() + "/<name>.json");
-    resized();
-    themeEditor_->toFront(false);
+    lastCore_ = juce::String(proc_.getCoreInfo().info.id);
+    panel_.setButtonNames(proc_.buttonNames());
+    refreshChrome();
+    sheet_.refresh();
 }
 
-void FM1Editor::refreshStatus()
+void FM1Editor::openSettings(bool animate)
 {
-    const FM1Processor::CoreStatus s = proc_.getCoreInfo();
-    juce::String t = s.loaded ? juce::String(s.info.name) + " " + s.info.version : juce::String("no firmware loaded");
-    if (s.halted)
-        t << "  |  HALTED (exit " << (s.haltCode & 0xFF) << "): Power on to restart";
-    if (s.message.isNotEmpty())
-        t << "  |  " << s.message;
-    if (t != lastStatus_) {
-        status_.setText(t, juce::dontSendNotification);
-        status_.setColour(juce::Label::textColourId, s.halted ? juce::Colours::orangered : juce::Colours::white);
-        lastStatus_ = t;
-    }
-    if (juce::String(s.info.id) != lastCore_) {  // (a core switch: its button labels)
-        lastCore_ = juce::String(s.info.id);
-        panel_.setButtonNames(proc_.buttonNames());
-    }
+    hideChromeNow();
+    sheet_.open(animate);
 }
 
-void FM1Editor::showFirmwareInfo()
+// ------------------------------------------------------------- chrome ---
+// the button's place: on the body's empty top-right corner (the drawing's units 860, 46: clear of KNOB4, its printed
+// name and caption at every size; ui_render_test checks it), 17.5 units wide within 22 .. 28 points; with the big LCD
+// shown, the window's corner (the panel is below the LCD's band); in the screen view, on the bezel's corner
+Rectangle<float> FM1Editor::cornerCircle() const
 {
-    const FM1Processor::CoreStatus s = proc_.getCoreInfo();
-    const CoreInfo &c = s.info;
-    auto u = [](const std::string &t) { return juce::String::fromUTF8(t.c_str()); };
-    juce::String t;
-    if (!s.loaded) {
-        t << "No firmware loaded." << (s.message.isNotEmpty() ? "\n" + s.message : juce::String());
-    } else {
-        t << u(c.name) << " " << u(c.version) << "\n";
-        t << "Core: " << u(c.id) << " (" << (c.family.empty() ? u(c.id) : u(c.family)) << " glue, core ABI "
-          << (int)c.abi << ")\n";
-        t << "Licence: " << (c.license.empty() ? juce::String("(not given)") : u(c.license)) << "\n";
-        t << "Source: " << u(c.source_url) << "\n";
-        if (!c.gated.empty())
-            t << "Left out of public FM1VST builds: " << u(c.gated) << "\n";
-        t << "Module: " << u(c.path) << "\n";
-        t << "\nCredits and notices\n";
-        t << (c.credits.empty() ? juce::String("(none beyond the licence)") : u(c.credits)) << "\n";
+    if (mode_ == FM1Processor::kViewScreen) {
+        // (centred on the bezel's rounded corner, in the body's margin)
+        const float d = juce::jlimit(22.0f, 28.0f, std::round((float)juce::jmin(getWidth(), getHeight()) * 0.045f));
+        const float c = juce::jmax(d / 2 + 3, screen_.bezelArea().getX());
+        return Rectangle<float>(d, d).withCentre({(float)getWidth() - c, c});
     }
-    t << "\nFM1VST " << JucePlugin_VersionString << ": the FM-1 emulator, GPL-3.0-only.";
-    auto *ed = new juce::TextEditor();
-    ed->setMultiLine(true, true);
-    ed->setReadOnly(true);
-    ed->setScrollbarsShown(true);
-    ed->setCaretVisible(false);
-    ed->setFont(juce::FontOptions(13.0f));
-    ed->setText(t, false);
-    ed->setSize(560, 420);
-    juce::DialogWindow::LaunchOptions o;
-    o.content.setOwned(ed);
-    o.dialogTitle = "About " + (s.loaded ? u(c.name) : juce::String("the firmware"));
-    o.componentToCentreAround = this;
-    o.escapeKeyTriggersCloseButton = true;
-    o.useNativeTitleBar = true;
-    o.resizable = true;
-    o.launchAsync();
+    const float d = juce::jlimit(22.0f, 28.0f, std::round(17.5f * panel_.pointsPerUnit()));
+    if (panel_.bigLcd())                         // (the window's corner: above the panel, over the big LCD's band)
+        return Rectangle<float>(d, d).withCentre({(float)getWidth() - d / 2 - 8, d / 2 + 8});
+    return Rectangle<float>(d, d).withCentre(panel_.unitToLocal(860.0f, 46.0f) + panel_.getPosition().toFloat());
 }
 
-void FM1Editor::refreshRemote()
+void FM1Editor::layoutChrome()
+{
+    const Rectangle<float> c = cornerCircle();
+    corner_.setBounds(c.expanded((float)CornerButton::kPad).getSmallestIntegerContainer());
+}
+
+void FM1Editor::activity()
+{
+    lastMove_ = juce::Time::getMillisecondCounterHiRes();
+    if (!chrome_.isTimerRunning() || chrome_.getTimerInterval() > 20) {
+        lastTick_ = lastMove_;
+        chrome_.startTimerHz(60);
+    }
+}
+
+void FM1Editor::chromeTick()
+{
+    const double now = juce::Time::getMillisecondCounterHiRes();
+    const float dt = (float)juce::jlimit(0.0, 100.0, now - lastTick_);
+    lastTick_ = now;
+    const bool want = !sheet_.isOpen() && (now - lastMove_ < 1500.0 || corner_.hovered() || corner_.isMouseButtonDown());
+    const bool alarm = halted_;
+    float f = corner_.fade();
+    f = want || alarm ? juce::jmin(1.0f, f + dt / 150.0f) : juce::jmax(0.0f, f - dt / 350.0f);
+    corner_.setFade(f);
+    if (f <= 0.0f && !want)
+        chrome_.stopTimer();
+    else if (f >= 1.0f && (want || alarm) && chrome_.getTimerInterval() < 50)
+        chrome_.startTimer(100);                 // (shown: only the timeout to watch)
+}
+
+void FM1Editor::showChromeNow()
+{
+    lastMove_ = juce::Time::getMillisecondCounterHiRes();
+    corner_.setFade(1.0f);
+    lastTick_ = lastMove_;
+    chrome_.startTimer(100);
+}
+
+void FM1Editor::hideChromeNow()
+{
+    lastMove_ = -1e9;
+    corner_.setFade(0.0f);
+    chrome_.stopTimer();
+}
+
+void FM1Editor::refreshChrome()
 {
     const RemoteLink::Status st = proc_.remoteStatus();
-    const bool on = proc_.getRemoteEnabled();
-    if (remote_.getToggleState() != on)
-        remote_.setToggleState(on, juce::dontSendNotification);   // (a state restore)
-    const juce::String t = on || st.state != RemoteLink::kOff ? juce::String(st.text) : juce::String();
-    if (t == lastRemote_)
-        return;
-    lastRemote_ = t;
-    remoteStatus_.setText(t, juce::dontSendNotification);
-    remoteStatus_.setTooltip(t + (st.lastLog.empty() ? juce::String() : "\n" + juce::String(st.lastLog)));
-    const juce::Colour c = st.state == RemoteLink::kConnected ? juce::Colour(0xFF7FE08A)
-                           : st.state == RemoteLink::kInUse || st.state == RemoteLink::kError || st.state == RemoteLink::kLost
-                               ? juce::Colours::orange
-                               : juce::Colours::lightgrey;
-    remoteStatus_.setColour(juce::Label::textColourId, c);
-}
-
-void FM1Editor::showRemoteMenu()
-{
-    const RemoteLink::Status st = proc_.remoteStatus();
-    juce::PopupMenu m;
-    m.addSectionHeader("Remote FM-1");
-    m.addItem(1, "Ignore the FM-1's own MIDI (its notes and knobs on the DAW's MIDI input, e.g. Live's All Ins)", true,
-              proc_.getRemoteIgnoreMidi());
-    m.addSeparator();
-    m.addItem(2, "Status: " + juce::String(st.text.empty() ? "off" : st.text), false, false);
-    if (!st.lastLog.empty())
-        m.addItem(3, "Last: " + juce::String(st.lastLog), false, false);
-    if (st.sessions || st.frames)
-        m.addItem(4, juce::String::formatted("Sessions %u, frames %u (acknowledged %u), panel events %u", st.sessions,
-                                             st.frames, st.acks, st.eventsIn), false, false);
-    if (!RemoteLink::hasBulk())
-        m.addItem(5, "Built without libusb: frames go over SysEx only", false, false);
-    juce::Component::SafePointer<FM1Editor> self(this);
-    m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&remoteMenu_), [self](int r) {
-        if (self && r == 1)
-            self->proc_.setRemoteIgnoreMidi(!self->proc_.getRemoteIgnoreMidi());
-    });
+    juce::Colour led = juce::Colours::transparentBlack;
+    if (st.state == RemoteLink::kConnected)
+        led = Look::col(Look::C::green);
+    else if (proc_.getRemoteEnabled() || st.state != RemoteLink::kOff)
+        led = Look::col(Look::C::amber);
+    corner_.setLed(led);
+    const bool halted = proc_.getCoreInfo().halted;
+    halted_ = halted;
+    corner_.setAlarm(halted);
+    if (halted && corner_.fade() < 1.0f && !chrome_.isTimerRunning() && !sheet_.isOpen()) {
+        lastTick_ = juce::Time::getMillisecondCounterHiRes();
+        chrome_.startTimerHz(60);
+    }
 }
 
 void FM1Editor::timerCallback()
 {
-    refreshStatus();
-    refreshRemote();
-    const juce::StringArray p = proc_.listPresets();
-    if (p != presetList_ || presets_.getText() != proc_.currentPresetName())
-        refreshPresets();
-    if (transpose_.getSelectedId() != proc_.getTranspose() + 3)
-        transpose_.setSelectedId(proc_.getTranspose() + 3, juce::dontSendNotification);
-    if (buttonMode_.getSelectedId() != proc_.getButtonMode() + 1)
-        buttonMode_.setSelectedId(proc_.getButtonMode() + 1, juce::dontSendNotification);
-    if (encMode_.getSelectedId() != proc_.getEncoderMode() + 1)
-        encMode_.setSelectedId(proc_.getEncoderMode() + 1, juce::dontSendNotification);
-    if (encSteps_.getSelectedId() != proc_.getEncoderSteps())
-        encSteps_.setSelectedId(proc_.getEncoderSteps(), juce::dontSendNotification);
-    encSteps_.setEnabled(proc_.getEncoderMode() == FM1Processor::kEncStepped);
-    if (keyNotesToFw_.getToggleState() != proc_.getKeyNotesToFirmware())
-        keyNotesToFw_.setToggleState(proc_.getKeyNotesToFirmware(), juce::dontSendNotification);
-    if (notesPlayKeys_.getToggleState() != proc_.getMidiNotesPlayKeys())
-        notesPlayKeys_.setToggleState(proc_.getMidiNotesPlayKeys(), juce::dontSendNotification);
+    refreshChrome();
+    if (juce::String(proc_.getCoreInfo().info.id) != lastCore_)   // (a core switch: its button labels)
+        coreChanged();
     if (proc_.themeSerial() != themeSerial_) {   // (a state restore set another theme)
         themeSerial_ = proc_.themeSerial();
-        panel_.setTheme(proc_.getTheme());
-        refreshThemes();
+        const Theme t = proc_.getTheme();
+        panel_.setTheme(t);
+        look_.setAccentFrom(t);
+        screen_.repaint();
+        sheet_.repaint();
     }
     if (proc_.getBigLcd() != panel_.bigLcd())
         setBigLcd(proc_.getBigLcd());
-}
-
-void FM1Editor::askName(const juce::String &title, const juce::String &initial, std::function<void(juce::String)> done)
-{
-    auto *w = new juce::AlertWindow(title, "Name:", juce::MessageBoxIconType::NoIcon, this);
-    w->addTextEditor("name", initial);
-    w->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
-    w->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
-    w->enterModalState(true, juce::ModalCallbackFunction::create([w, done](int r) {
-                           const juce::String n = w->getTextEditorContents("name").trim();
-                           if (r == 1 && n.isNotEmpty())
-                               done(n);
-                       }),
-                       true);
+    if (proc_.getViewMode() != mode_)             // (a state restore)
+        setViewMode(proc_.getViewMode());
+    layoutChrome();                               // (the panel snaps to the screen's pixel scale at its first paint)
+    if (sheet_.isOpen())
+        sheet_.refresh();
 }

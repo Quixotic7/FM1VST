@@ -425,7 +425,7 @@ void PanelComponent::setBigLcd(bool on)
 // emu.c relayout: fit the frame (the big LCD, if shown, a square as wide as the panel; the panel) in the
 // component's physical pixels, keeping the aspect ratio; snap to an integer scale of the panel's 240x240 screen when
 // one is within 8 %
-void PanelComponent::relayout(float s)
+PanelComponent::Layout PanelComponent::computeLayout(float s) const
 {
     Layout L;
     L.scale = s;
@@ -466,6 +466,12 @@ void PanelComponent::relayout(float s)
         L.nBig = size % EMU_LCD_W == 0 ? size / EMU_LCD_W : 0;
         L.lcdBig = {L.frX + (L.pixW - size) / 2, L.frY + (L.lcdPx - size) / 2, size, size};
     }
+    return L;
+}
+
+void PanelComponent::relayout(float s)
+{
+    const Layout L = computeLayout(s);
     const bool resize = !panel_.isValid() || L.pixW != panel_.getWidth() || L.pixH != panel_.getHeight() || std::fabs(L.k - lay_.k) > 1e-6f;
     lay_ = L;
     layoutDirty_ = false;
@@ -660,6 +666,8 @@ void PanelComponent::refresh()
             }
         }
         lcdImagesDirty_ = true;
+        if (onLcdChanged)
+            onLcdChanged();
         if (!layoutDirty_) {
             repaintPx(lay_.lcdSmall);
             if (bigLcd_)
@@ -719,6 +727,48 @@ juce::Point<int> PanelComponent::playGreenPx() const
 {
     const R r = geo().btn[EMU_B_PLAY];
     return {lay_.frX + (int)std::floor((r.x + 6 - VIEW.x) * lay_.k), lay_.frY + lay_.lcdPx + (int)std::floor((r.y + r.h - 6 - VIEW.y) * lay_.k)};
+}
+
+// ------------------------------------------------- the editor's chrome ---
+// (the layout the next paint will use: the last paint's pixel scale, 1 before the first)
+float PanelComponent::pointsPerUnit() const
+{
+    const float s = lay_.scale > 0 ? lay_.scale : 1.0f;
+    return computeLayout(s).k / s;
+}
+
+juce::Point<float> PanelComponent::unitToLocal(float ux, float uy) const
+{
+    const float s = lay_.scale > 0 ? lay_.scale : 1.0f;
+    const Layout L = computeLayout(s);
+    return {((float)L.frX + (ux - VIEW.x) * L.k) / s, ((float)L.frY + (float)L.lcdPx + (uy - VIEW.y) * L.k) / s};
+}
+
+// everything a click, a wheel or the eye needs on the panel: the keys and buttons (with the OCT hints under them),
+// each knob with its printed name, its caption and its key hint, the screen
+bool PanelComponent::overlapsControl(juce::Rectangle<float> local) const
+{
+    const float ppu = pointsPerUnit();
+    if (!(ppu > 0))
+        return false;
+    const juce::Point<float> o = unitToLocal(VIEW.x, VIEW.y);
+    const juce::Rectangle<float> u((local.getX() - o.x) / ppu + VIEW.x, (local.getY() - o.y) / ppu + VIEW.y, local.getWidth() / ppu,
+                                   local.getHeight() / ppu);
+    auto hitR = [&](const R &r) { return u.intersects(juce::Rectangle<float>(r.x, r.y, r.w, r.h)); };
+    for (int i = 0; i < EMU_NKEY; i++)
+        if (hitR(geo().key[i]))
+            return true;
+    for (int i = 0; i < EMU_NB; i++) {
+        R r = geo().btn[i];
+        if (i >= EMU_B_OCTDN)
+            r.h += 11;
+        if (hitR(r))
+            return true;
+    }
+    for (int i = 0; i < EMU_NE; i++)
+        if (hitR(R{ENC_CX[i] - 44, ENC_LY[i] - 7, 88, ENC_CY[i] + ENC_R + 14 - (ENC_LY[i] - 7)}))
+            return true;
+    return hitR(SCREEN);
 }
 
 // ================================================================= input ===
@@ -860,8 +910,11 @@ void PanelComponent::mouseDown(const juce::MouseEvent &e)
     float ux, uy;
     int kind, idx;
     mouseKind_ = -1;
-    if (!toUnits(e.position, ux, uy) || !hit(ux, uy, kind, idx))
+    if (!toUnits(e.position, ux, uy) || !hit(ux, uy, kind, idx)) {
+        if (e.mods.isPopupMenu() && onContextMenu)   // (right-click off the controls: the editor's settings)
+            onContextMenu();
         return;
+    }
     if (kind == KM_SELECT) {
         selKnob_ = idx;
         dragKnob_ = idx;
