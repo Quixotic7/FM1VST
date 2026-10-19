@@ -8,8 +8,9 @@
  *   FM1CORE_SL_ORBIT    ORBIT 0.7.1     SLOOP 2.4+ line, one core, ORBIT's engines and screens
  *   FM1CORE_SL_NMS      No Man Sky 0.4  SLOOP 2.7.1 with ui_nms / ui_game (no ui_song, icons, ui_vis), its tree
  *                                       one level down (cores/nomanskyFM/firmware)
- * Built out (they need the hardware), as the firmwares' host builds leave them out: FELUCCA_OTA (the M-UPGRADE
- * update entry and with it editor.c, the web editor's SysEx, and recovery.c), FELUCCA_CDC (console.c), FELUCCA_UAC
+ * Built out (they need the hardware), as the firmwares' host builds leave them out: FELUCCA_OTA (usb.c's SysEx
+ * plumbing, the M-UPGRADE update session and recovery.c; editor.c, the web editor's SysEx, and ota.c's identity are
+ * built on the glue's transport instead: sloop_sx.h), FELUCCA_CDC (console.c), FELUCCA_UAC
  * (USB audio in), cpu1.c (the device's boot of the second core: its jobs run inline, sloop_hal.h). lcd.c (the SPI
  * driver) is replaced by sloop_hal.h's lcd_fill / lcd_blit. main.c IS built: its felucca_init (the parts' power-on
  * sounds, autosave_resume, the settings into the song) is called verbatim; fm1_main / fm1_cstart / the TIMER5 ISR
@@ -99,6 +100,7 @@
 #include "storage.c"
 #include "upreset.c"
 #include "project.c"
+#include "sloop_sx.h"                              /* ota.c (the identity) and editor.c, where felucca.c has them */
 #if FM1CORE_SL_FW != FM1CORE_SL_NMS
 #include "splash.c"
 #endif
