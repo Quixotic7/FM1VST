@@ -36,7 +36,7 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | sloopDX 4.0 (eeec0a6) | GPL-3.0 | SLOOP 2.7 | native tests | D |
 | ORBIT 0.7.1 | GPL-3.0 + **OP-1 material** | SLOOP / Felucca | native preview + hostsim | D |
 | No Man Sky FM 0.4 (main) | GPL-3.0 (+ credit request) | SLOOP 2.7.1 | wasm only | D |
-| OberVave 1.5 | GPL-3.0 | Dinghy (zvenson) | native `tests/host.c` + wasm | E |
+| OberVave 1.5.1 | GPL-3.0 | Dinghy (zvenson) | native `tests/host.c` + wasm | E |
 | Frodhes 0.9.2 | GPL-3.0 | Dinghy | native + wasm | E |
 | FM-106 Beta4 | GPL-3.0 (KR-106 port: **provenance unchecked**) | Dinghy + a second core | native (needs a shim) | E |
 | Melodee 1.4.3 | GPL-3.0 (+ BSD-3 uPD933) | Felucca 1.0 + x0x 909 + Prophet / SID / CZ | native (`hostsim`, `ui_test`) | F |
