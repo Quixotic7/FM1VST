@@ -3,6 +3,30 @@
 FM1VST's releases. The version is `project(FM1VST VERSION ..)` in CMakeLists.txt (the plugin shows it in its
 settings sheet); a release is the tag `v<version>` on it (.github/workflows/release.yml builds and publishes it).
 
+## Unreleased: the firmwares' own editors and managers
+
+### Show to editors (macOS)
+
+A new switch in the settings sheet, **Show to editors**, makes a virtual MIDI port named like the loaded firmware's
+USB port with " (FM1VST)" after it: "Felucca (FM1VST)", "ChoralRoot FM-1 (FM1VST)", "Melodee (FM1VST)", "JIANT FM
+(FM1VST)" and so on. A firmware's own web editor or manager in Chrome finds FM1VST as if it were an FM-1 and talks to
+the firmware running in the plugin: its info, its backup (list, download, restore) and its preset stores. The sheet
+links the firmware's manager page where one is known. A second instance gets "(FM1VST 2)". The switch is saved with
+the project.
+
+- **The firmwares answer.** The cores now run their own SysEx services, as on the device: the ChoralRoot family's
+  device manager and backup, Felucca's editor and backup page and those of its forks (JIANT, GHOULBOX, Rainbow,
+  DUELL), Melodee's editor and shared library, the SLOOP family's editors (SLOOP, sloopDX, ORBIT, NoMansky),
+  X0X's backup page, FM-106's Librarian, and the M-UPGRADE identity the installers and fm1-editor.com ask for.
+- **Also while the host is stopped.** When no audio block has come for 50 ms, the port runs the firmware's clock
+  itself, so a manager is answered (in a few ms) with the transport stopped, and a press on the plugin's panel still
+  reaches the firmware (X0X's restore asks for SEL). A firmware's own reboot (ChoralRoot's RESTART) powers it on
+  again from its flash.
+- **Kept apart from the DAW.** The port's traffic never appears in the track's MIDI, and the firmware's SysEx goes
+  to the port only while it is on.
+- **No updates through it.** The update keys an installer sends (UBOOT, OTA start) are dropped, and the cores ignore
+  them: an installer page pointed at the port cannot halt the firmware.
+
 ## 0.4.0 (2026-10-19): every Hub firmware on an emulated FM-1; ChoralRoot and Melodee
 
 ### Every Firmware Hub firmware, emulated

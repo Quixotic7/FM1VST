@@ -480,8 +480,10 @@ target_compile_definitions(editor_port_test PRIVATE $<TARGET_PROPERTY:FM1VST,COM
 add_dependencies(editor_port_test ${FM1_CORE_TARGETS} echo_core)
 add_test(NAME editor_port_test COMMAND editor_port_test)
 add_test(NAME editor_port_coremidi_test COMMAND editor_port_test coremidi)
-set_tests_properties(editor_port_test editor_port_coremidi_test PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120
-                     RESOURCE_LOCK fm1_editor_port)
+# the managers end to end through the real port (INFO, LIST, GET, a PUT read back; playing and idle; the latencies)
+add_test(NAME editor_port_managers_test COMMAND editor_port_test managers)
+set_tests_properties(editor_port_test editor_port_coremidi_test editor_port_managers_test PROPERTIES SKIP_RETURN_CODE 77
+                     TIMEOUT 600 RESOURCE_LOCK fm1_editor_port)
 
 # The Hub's firmwares on the fm1emu core (plugin/Hub.h), headless: a catalog fixture parses (which entries, the fallback
 # list, no gated name in it), a package is downloaded from a file:// fixture Hub and checked (a SHA-256 or size mismatch

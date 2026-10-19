@@ -232,7 +232,8 @@ void EditorPort::run()
 }
 
 // ------------------------------------------------------------ the tables ---
-// core id or Hub id -> the firmware's USB product string (its usb.c), MANAGERS.md section 3
+// core id or Hub id -> the firmware's USB product string: its usb.c STR2 / USB_STRS, or (fm1-base apps: AMB-1) its
+// fm1.toml usb_product, which build.py passes as FELUCCA_USB_PRODUCT
 juce::String EditorPort::usbProductName(const juce::String &idIn)
 {
     const juce::String id = idIn.toLowerCase();
@@ -247,7 +248,7 @@ juce::String EditorPort::usbProductName(const juce::String &idIn)
         {"sloopdx", "Felucca"},            {"floyd", "Felucca"},                {"sloopbanks", "Felucca"},
         {"orbit", "Felucca"},              {"ghoulbox", "Felucca"},             {"rainbow", "Felucca"},
         {"nomansky", "Felucca"},           {"nmsfm", "Felucca"},                {"obervave", "Felucca"},
-        {"frodhes", "Felucca"},            {"dinghy", "Felucca"},               {"amb", "Felucca"},
+        {"frodhes", "Felucca"},            {"dinghy", "Felucca"},               {"amb", "AMB-1 FM-1"},
         {"salt", "Felucca"},               {"jangada", "Felucca"},              {"waveloop", "Felucca"},
         {"gammawave", "Felucca"},          {"fm1quest", "Felucca"},             {"grimm", "Felucca"},
         {"zp12", "Felucca"},

@@ -11,9 +11,14 @@
 //                               against the echo core, idle and while playing; ChoralRoot's INFO, LIST and RESTART (its
 //                               SysEx glue; the reboot powered on again with the host idle); two instances get distinct
 //                               names; no SysEx in the host's MIDI out. Exit 77 (skipped) without CoreMIDI or FM-106.
+//   editor_port_test managers   the managers end to end through the CoreMIDI port (runManagers): INFO, LIST, GET, a
+//                               PUT read back, for every firmware with a backup manager, playing and idle; a table of
+//                               the latencies
 #include <CoreFoundation/CoreFoundation.h>
 
+#include <algorithm>
 #include <chrono>
+#include <functional>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -146,7 +151,9 @@ static int runFake()
     } table[] = {{"choralroot", "ChoralRoot FM-1"}, {"purplemonkey", "ChoralRoot FM-1"}, {"felucca", "Felucca"},
                  {"sloop", "Felucca"},              {"melodee", "Melodee"},              {"jiant", "JIANT FM"},
                  {"duell", "DUELL"},                {"x0x", "X0X FM-1"},                 {"fm106", "FM-106"},
-                 {"coralflower", "CoralFlower FM-1"}, {"fart", "FoMni FM-1"},           {"unknown-fw", "FM-1"}};
+                 {"coralflower", "CoralFlower FM-1"}, {"fart", "FoMni FM-1"},           {"amb", "AMB-1 FM-1"},
+                 {"fimba", "FiMba FM-1"},           {"fomni", "FoMni FM-1"},             {"obervave", "Felucca"},
+                 {"unknown-fw", "FM-1"}};
     bool all = true;
     for (auto &t : table)
         all = all && EditorPort::usbProductName(t.id) == t.usb;
@@ -479,10 +486,607 @@ static int runCoreMidi()
     return fails ? 1 : 0;
 }
 
+// ========================================================= managers mode ===
+// The firmwares' managers end to end through the real CoreMIDI port: a client finds "<USB name> (FM1VST)" and sends
+// the managers' own requests (MANAGERS.md section 2; the same bytes as tests/sysex_test.cpp): INFO, the backup's LIST,
+// a GET of one object, a PUT of a changed preset read back (X0X: its backup page's 0x42 backup and 0x41 restore, SEL
+// pressed on the panel). Each firmware twice: the host playing (processBlock at its pace), then idle (no block: the
+// port's idle clock). The latencies are printed as a table.
+static uint32_t crc32Of(const uint8_t *p, size_t n)
+{
+    uint32_t c = 0xFFFFFFFFu;
+    for (size_t i = 0; i < n; i++) {
+        c ^= p[i];
+        for (int k = 0; k < 8; k++)
+            c = c >> 1 ^ (c & 1u ? 0xEDB88320u : 0u);
+    }
+    return ~c;
+}
+static Bytes fl(uint8_t cmd, const Bytes &args = {})
+{
+    Bytes f = {0xF0, 0x7D, 0x46, 0x4C, cmd};
+    f.insert(f.end(), args.begin(), args.end());
+    f.push_back(0xF7);
+    return f;
+}
+static std::function<bool(const Bytes &)> flReply(uint8_t cmd)
+{
+    return [cmd](const Bytes &f) { return f.size() >= 6 && f[1] == 0x7D && f[2] == 0x46 && f[3] == 0x4C && f[4] == cmd; };
+}
+static Bytes flArgs(const Bytes &f) { return f.size() >= 6 ? Bytes(f.begin() + 5, f.end() - 1) : Bytes(); }
+static void u32(Bytes &a, uint32_t v)
+{
+    for (int i = 0; i < 5; i++)
+        a.push_back((uint8_t)(v >> (7 * i) & 127u));
+}
+static uint32_t r32(const Bytes &a, size_t p)
+{
+    return (uint32_t)a[p] | (uint32_t)a[p + 1] << 7 | (uint32_t)a[p + 2] << 14 | (uint32_t)a[p + 3] << 21 |
+           (uint32_t)a[p + 4] << 28;
+}
+static Bytes pack7(const uint8_t *p, size_t n)                  // bkPack
+{
+    Bytes a;
+    for (size_t off = 0; off < n; off += 7) {
+        const size_t k = std::min<size_t>(7, n - off);
+        uint8_t m = 0;
+        for (size_t i = 0; i < k; i++)
+            m |= (uint8_t)(p[off + i] >> 7 << i);
+        a.push_back(m);
+        for (size_t i = 0; i < k; i++)
+            a.push_back(p[off + i] & 127u);
+    }
+    return a;
+}
+static bool unpack7(const Bytes &a, size_t from, size_t size, Bytes &out)   // bkUnpack
+{
+    out.assign(size, 0);
+    size_t i = from, j = 0;
+    while (j < size) {
+        const size_t n = std::min<size_t>(7, size - j);
+        if (i >= a.size())
+            return false;
+        const uint8_t m = a[i++];
+        for (size_t k = 0; k < n; k++) {
+            if (i >= a.size() || a[i] > 127)
+                return false;
+            out[j++] = (uint8_t)(a[i++] | (m >> k & 1u) << 7);
+        }
+    }
+    return i == a.size();
+}
+// the update framing (X0X web/backup/index.html PB.frame / parseFrame): F0 pack7(00 59 cmd len24 body ~sum) F7
+static Bytes updUnpack(const Bytes &f)
+{
+    Bytes out;
+    uint32_t acc = 0, nb = 0;
+    for (size_t i = 1; i + 1 < f.size(); i++) {
+        acc |= (uint32_t)(f[i] & 127u) << nb;
+        nb += 7;
+        if (nb >= 8) {
+            out.push_back((uint8_t)acc);
+            acc >>= 8;
+            nb -= 8;
+        }
+    }
+    return out;
+}
+static Bytes updWire(const Bytes &m)
+{
+    Bytes f = {0xF0};
+    uint32_t acc = 0, nb = 0;
+    for (uint8_t b : m) {
+        acc |= (uint32_t)b << nb;
+        nb += 8;
+        while (nb >= 7) {
+            f.push_back(acc & 0x7Fu);
+            acc >>= 7;
+            nb -= 7;
+        }
+    }
+    if (nb)
+        f.push_back(acc & 0x7Fu);
+    f.push_back(0xF7);
+    return f;
+}
+static Bytes updFrame(uint8_t cmd, const Bytes &body)
+{
+    const size_t n = body.size();
+    Bytes m = {0x00, 0x59, cmd, (uint8_t)(n & 0xFF), (uint8_t)(n >> 8 & 0xFF), 0};
+    uint32_t sum = 0;
+    for (uint8_t b : body)
+        m.push_back(b), sum += b;
+    m.push_back((uint8_t)~sum);
+    return updWire(m);
+}
+static bool updParse(const Bytes &f, uint8_t &cmd, Bytes &body)
+{
+    if (f.size() < 2 || f.front() != 0xF0 || f.back() != 0xF7)
+        return false;
+    const Bytes u = updUnpack(f);
+    if (u.size() < 7 || u[0] != 0 || u[1] != 0x59)
+        return false;
+    const size_t n = (size_t)u[3] | (size_t)u[4] << 8 | (size_t)u[5] << 16;
+    if (n + 7 != u.size())
+        return false;
+    uint32_t sum = 0;
+    for (size_t i = 6; i < 6 + n; i++)
+        sum += u[i];
+    if ((uint8_t)~sum != u[6 + n])
+        return false;
+    cmd = u[2];
+    body.assign(u.begin() + 6, u.begin() + 6 + (std::ptrdiff_t)n);
+    return true;
+}
+static Bytes le32(uint32_t v) { return {(uint8_t)v, (uint8_t)(v >> 8), (uint8_t)(v >> 16), (uint8_t)(v >> 24)}; }
+static uint32_t rd32le(const Bytes &b, size_t o)
+{
+    return (uint32_t)b[o] | (uint32_t)b[o + 1] << 8 | (uint32_t)b[o + 2] << 16 | (uint32_t)b[o + 3] << 24;
+}
+
+// a DX7 32-voice VMEM bulk dump (fm1-editor.com, Dexed), voices named "SYSEX Vnn"
+static Bytes dx7Bulk()
+{
+    Bytes d(4096, 0);
+    for (int v = 0; v < 32; v++) {
+        uint8_t *o = &d[(size_t)v * 128];
+        for (int op = 0; op < 6; op++) {
+            uint8_t *x = &o[op * 17];
+            x[0] = x[1] = x[2] = x[3] = 99;
+            x[4] = 99;
+            x[14] = op == 5 ? 99 : 70;
+            x[15] = 2;
+        }
+        o[102] = o[103] = o[104] = o[105] = 99;
+        o[106] = o[107] = o[108] = o[109] = 50;
+        o[110] = (uint8_t)(v % 32);
+        o[111] = 7;
+        o[117] = 24;
+        char name[11];
+        std::snprintf(name, sizeof name, "SYSEX V%02d ", v + 1);
+        std::memcpy(&o[118], name, 10);
+    }
+    Bytes f = {0xF0, 0x43, 0x00, 0x09, 0x20, 0x00};
+    uint32_t sum = 0;
+    for (uint8_t b : d)
+        f.push_back(b), sum += b;
+    f.push_back((uint8_t)(-(int)sum & 127));
+    f.push_back(0xF7);
+    return f;
+}
+
+struct MObj {
+    uint32_t id, size, crc;
+};
+static const MObj *findObj(const std::vector<MObj> &m, uint32_t id)
+{
+    for (const MObj &o : m)
+        if (o.id == id)
+            return &o;
+    return nullptr;
+}
+
+// one manager on the port: one request in flight, as every manager sends them
+struct Manager {
+    Client &c;
+    Host &h;
+    bool playing = true;
+    std::string why;
+    uint8_t bk = 65;                             // FL 65 / 66 / 67; SLOOP's editor.c v6: 34 / 35 / 36
+    size_t listHdr = 2;
+    double worst = 0;                            // the longest single request
+    void step()
+    {
+        if (playing)
+            h.play(3);
+        else
+            pump(2);
+    }
+    void settle(double ms)                       // time passing with nothing sent (the host as the mode says)
+    {
+        const double end = nowMs() + ms;
+        while (nowMs() < end)
+            step();
+    }
+    double request(const Bytes &q, const std::function<bool(const Bytes &)> &match, Bytes &reply, double limit)
+    {
+        c.take();
+        const double t0 = nowMs();
+        c.out->sendMessageNow(msgOf(q));
+        while (nowMs() - t0 < limit) {
+            step();
+            for (auto &b : c.take())
+                if (match(b)) {
+                    reply = std::move(b);
+                    const double t = nowMs() - t0;
+                    worst = std::max(worst, t);
+                    return t;
+                }
+        }
+        return -1;
+    }
+    double info(std::string &version)
+    {
+        Bytes r;
+        const double t = request(fl(1), flReply(1), r, 1500);
+        version.clear();
+        for (uint8_t b : flArgs(r)) {
+            if (!b)
+                break;
+            version += (char)b;
+        }
+        return t;
+    }
+    double list(std::vector<MObj> &m)
+    {
+        Bytes r;
+        const double t = request(fl(bk), flReply(bk), r, 3000);
+        if (t < 0)
+            return why = "LIST: no reply", -1;
+        const Bytes a = flArgs(r);
+        const size_t hd = listHdr;
+        if (a.size() < hd + 1 || (hd == 2 && a[0] != 1) || a[hd - 1] != 0)
+            return why = "LIST: rc", -1;
+        const size_t n = a[hd];
+        if (a.size() != hd + 1 + n * 11)
+            return why = "LIST: length", -1;
+        m.clear();
+        for (size_t i = 0; i < n; i++)
+            m.push_back({a[hd + 1 + i * 11], r32(a, hd + 1 + i * 11 + 1), r32(a, hd + 1 + i * 11 + 6)});
+        return t;
+    }
+    double get(const MObj &o, Bytes &bytes)      // captureBackup for one object: 256-byte chunks
+    {
+        const double t0 = nowMs();
+        bytes.assign(o.size, 0);
+        for (uint32_t off = 0; off < o.size; off += 256) {
+            const uint32_t size = std::min<uint32_t>(256, o.size - off);
+            Bytes args = {(uint8_t)o.id};
+            u32(args, off);
+            args.push_back(size & 127u);
+            args.push_back((uint8_t)(size >> 7));
+            Bytes r, chunk;
+            if (request(fl(bk + 1, args), flReply(bk + 1), r, 1000) < 0)
+                return why = "GET " + std::to_string(o.id) + " @" + std::to_string(off) + ": no reply", -1;
+            const Bytes a = flArgs(r);
+            if (a.size() < 9 || a[1] || a[0] != o.id || r32(a, 2) != off || (a[7] | a[8] << 7) != (int)size ||
+                !unpack7(a, 9, size, chunk))
+                return why = "GET " + std::to_string(o.id) + ": unexpected reply", -1;
+            std::copy(chunk.begin(), chunk.end(), bytes.begin() + off);
+        }
+        if (crc32Of(bytes.data(), bytes.size()) != o.crc)
+            return why = "GET " + std::to_string(o.id) + ": CRC differs from LIST's", -1;
+        return nowMs() - t0;
+    }
+    int putOp(const Bytes &args, double limit = 4000)
+    {
+        Bytes r;
+        if (request(fl(bk + 2, args), flReply(bk + 2), r, limit) < 0)
+            return -1;
+        const Bytes a = flArgs(r);
+        return a.size() >= 3 ? a[2] : -1;
+    }
+    double put(uint32_t id, const Bytes &b)      // restoreBackup: begin / data / commit
+    {
+        const double t0 = nowMs();
+        Bytes begin = {0, (uint8_t)id};
+        u32(begin, (uint32_t)b.size());
+        u32(begin, crc32Of(b.data(), b.size()));
+        int rc = putOp(begin);
+        for (uint32_t off = 0; !rc && off < b.size(); off += 256) {
+            Bytes d = {1, (uint8_t)id};
+            u32(d, off);
+            const size_t n = std::min<size_t>(256, b.size() - off);
+            const Bytes pk = pack7(b.data() + off, n);
+            d.insert(d.end(), pk.begin(), pk.end());
+            if ((rc = putOp(d)))
+                putOp({3, (uint8_t)id});
+        }
+        if (!rc)
+            rc = putOp({2, (uint8_t)id}, 5000);
+        if (rc)
+            return why = "PUT " + std::to_string(id) + ": rc " + std::to_string(rc), -1;
+        return nowMs() - t0;
+    }
+
+    // ---- X0X's backup page
+    double x0xBackup(Bytes &image)
+    {
+        c.take();
+        image.clear();
+        const double t0 = nowMs();
+        c.out->sendMessageNow(msgOf(updFrame(0x42, {0x58, 0x30, 0x58, 0x42})));
+        while (nowMs() - t0 < 20000) {
+            step();
+            for (auto &f : c.take()) {
+                uint8_t cmd;
+                Bytes b;
+                if (!updParse(f, cmd, b))
+                    continue;
+                if (cmd == 0x42 && b.size() >= 4) {
+                    if (rd32le(b, 0) != image.size())
+                        return why = "backup: a frame's offset skips", -1;
+                    image.insert(image.end(), b.begin() + 4, b.end());
+                } else if (cmd == 0x43 && b.size() >= 10) {
+                    if (b[8] || rd32le(b, 0) != image.size() || rd32le(b, 4) != crc32Of(image.data(), image.size()))
+                        return why = "backup: the end frame's status, length or CRC-32", -1;
+                    return nowMs() - t0;
+                }
+            }
+        }
+        return why = "backup: no end frame", -1;
+    }
+    // 0x41 (length, CRC-32), the device's reads answered from the image, SEL pressed on the panel when it asks
+    double x0xRestore(FM1Processor &p, const Bytes &image)
+    {
+        c.take();
+        const double t0 = nowMs();
+        Bytes q = le32((uint32_t)image.size()), cr = le32(crc32Of(image.data(), image.size()));
+        q.insert(q.end(), cr.begin(), cr.end());
+        c.out->sendMessageNow(msgOf(updFrame(0x41, q)));
+        double selAt = 0;
+        while (nowMs() - t0 < 30000) {
+            step();
+            if (selAt > 0 && nowMs() >= selAt) {
+                p.panelButton(EMU_B_SEL, true);  // (a person's press on the panel, after the question is up)
+                p.panelButton(EMU_B_SEL, false);
+                selAt = 0;
+            }
+            for (auto &f : c.take()) {
+                const Bytes u = f.size() >= 3 ? updUnpack(f) : Bytes();
+                if (u.size() != 15 || u[0] != 0 || u[1] != 0x59 || u[2] != 0x30)
+                    continue;
+                const uint8_t flg = u[6];
+                const uint32_t addr = rd32le(u, 7), len = (uint32_t)u[11] | (uint32_t)u[12] << 8 | (uint32_t)u[13] << 16;
+                const uint32_t top = addr & 0xFF000000u;
+                Bytes data;
+                if (top == 0xC0000000u || top == 0xC1000000u || top == 0xCF000000u)
+                    data = {0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0};
+                else if (len > 512 || addr >= image.size())
+                    return why = "restore: a read outside the image", -1;
+                else {
+                    data.assign(image.begin() + (std::ptrdiff_t)addr,
+                                image.begin() + (std::ptrdiff_t)std::min<size_t>(image.size(), (size_t)addr + len));
+                    data.resize(len, 0);
+                }
+                const uint32_t n = (uint32_t)data.size();
+                Bytes m = {0x00, 0x59, 0x30, (uint8_t)((n + 8) & 0xFF), (uint8_t)((n + 8) >> 8), 0, flg};
+                const Bytes a = le32(addr);
+                m.insert(m.end(), a.begin(), a.end());
+                m.push_back(n & 0xFF);
+                m.push_back(n >> 8 & 0xFF);
+                m.push_back(0);
+                m.insert(m.end(), data.begin(), data.end());
+                uint32_t s2 = 0;
+                for (size_t i = 6; i < m.size(); i++)
+                    s2 += m[i];
+                m.push_back((uint8_t)~s2);
+                c.out->sendMessageNow(msgOf(updWire(m)));
+                if (addr == 0xC1000000u)
+                    selAt = nowMs() + 100;
+                else if (top == 0xC0000000u)
+                    return nowMs() - t0;
+                else if (top == 0xCF000000u)
+                    return why = "restore: the device's code " + std::to_string(addr & 0xFFFF), -1;
+            }
+        }
+        return why = "restore: no result", -1;
+    }
+};
+
+// a firmware's manager: how a preset is made to change (the store its editor sends), and which object holds it
+struct MProfile {
+    const char *id;
+    const char *info;                            // INFO's version starts with this
+    enum { DX7, STORE19, LIB80, SLOOP, X0X } kind;
+};
+static const MProfile kManagers[] = {
+    {"choralroot", "ChoralRoot ", MProfile::DX7}, {"felucca", "FELUCCA v", MProfile::STORE19},
+    {"jiant", "JIANT ", MProfile::STORE19},       {"ghoulbox", "FELUCCA ", MProfile::STORE19},
+    {"rainbow", "FELUCCA ", MProfile::STORE19},   {"duell", "FELUCCA DUELL", MProfile::STORE19},
+    {"melodee", "MELODEE ", MProfile::LIB80},     {"sloop", "FELUCCA SLOOP", MProfile::SLOOP},
+    {"sloopdx", "FELUCCA sloopDX", MProfile::SLOOP}, {"orbit", "FELUCCA ORBIT", MProfile::SLOOP},
+    {"nomansky", "FELUCCA NMS", MProfile::SLOOP}, {"x0x", "X0X ", MProfile::X0X},
+};
+
+struct MRow {
+    std::string id, port;
+    double info[2] = {-1, -1}, list[2] = {-1, -1}, get[2] = {-1, -1}, put[2] = {-1, -1}, worst[2] = {0, 0};
+    uint32_t getBytes = 0, putId = 0;
+    bool ok[2] = {false, false};
+};
+
+static size_t findText(const Bytes &b, const char *t)
+{
+    const size_t n = std::strlen(t);
+    for (size_t i = 0; i + n <= b.size(); i++)
+        if (!std::memcmp(&b[i], t, n))
+            return i;
+    return std::string::npos;
+}
+
+static void runManager(const MProfile &pr, MRow &row)
+{
+    FM1Processor p;
+    if (!p.switchCore(pr.id)) {
+        check(false, std::string(pr.id) + " loads");
+        return;
+    }
+    Host h(p);
+    h.play(3000);                                // (booted, past the splash)
+    p.setEditorPortEnabled(true);
+    const auto st = p.editorPortStatus();
+    row.port = st.name.toStdString();
+    Client c;
+    if (!(st.open && waitListed(st.name, true) && c.connect(st.name))) {
+        check(false, std::string(pr.id) + ": a client finds \"" + row.port + "\"");
+        return;
+    }
+    Manager m{c, h, true, {}};
+    if (pr.kind == MProfile::SLOOP)
+        m.bk = 34, m.listHdr = 1;
+    m.settle(100);
+
+    // the preset the manager will change: made once, the host playing (the editor's own store / a DX7 bulk dump)
+    uint32_t target = 0;
+    size_t letter = 0;                           // the byte of the target object that is a preset name's letter
+    Bytes x0xA, x0xB;                            // X0X: the fresh project's backup, and one after a panel change
+    std::vector<MObj> was, man;
+    Bytes r, obj;
+    bool prep = true;
+    if (pr.kind == MProfile::DX7) {
+        c.out->sendMessageNow(msgOf(dx7Bulk()));
+        m.settle(1500);
+        const MObj *o = m.list(man) >= 0 ? findObj(man, 8) : nullptr;
+        prep = o && o->size >= 32 * 112 && m.get(*o, obj) >= 0;
+        target = 8;
+        letter = prep ? o->size - 32 * 112 + 104 : 0;
+        prep = prep && (obj[letter] & 127u) == 'S';
+    } else if (pr.kind == MProfile::STORE19 || pr.kind == MProfile::LIB80 || pr.kind == MProfile::SLOOP) {
+        const bool lib = pr.kind == MProfile::LIB80;
+        const Bytes args = lib ? Bytes{3, 0, 0, 0, 'S', 'Y', 'S', 'E', 'X'} : Bytes{0, 'S', 'Y', 'S', 'E', 'X', 0};
+        const size_t rcAt = lib ? 3 : 1;
+        prep = m.list(was) >= 0;
+        const uint8_t cmd = lib ? 80 : 19;
+        prep = prep && m.request(fl(cmd, args), flReply(cmd), r, 5000) >= 0 && flArgs(r).size() > rcAt &&
+               flArgs(r)[rcAt] == 0;
+        prep = prep && m.list(man) >= 0;
+        const MObj *o = nullptr;
+        if (prep && pr.kind == MProfile::SLOOP) {
+            o = findObj(man, 6);
+        } else if (prep) {
+            for (const MObj &n : man) {
+                const MObj *w = findObj(was, n.id);
+                if (n.size && (!w || w->size != n.size || w->crc != n.crc)) {
+                    o = &n;
+                    break;
+                }
+            }
+        }
+        prep = o && m.get(*o, obj) >= 0;
+        if (prep) {
+            target = o->id;
+            letter = findText(obj, "SYSEX");
+            prep = letter != std::string::npos;
+        }
+    } else {                                     // X0X: a backup, a step written on the panel and saved, a backup
+        prep = m.x0xBackup(x0xA) >= 0;
+        p.panelKey(2, true);
+        p.panelKey(2, false);
+        m.settle(400);
+        p.deviceForTest()->flash_sync();         // (AUTOSAVE's write; between blocks, on the thread that runs them)
+        m.settle(100);
+        prep = prep && m.x0xBackup(x0xB) >= 0 && x0xB != x0xA;
+    }
+    check(prep, std::string(pr.id) + ": a preset to change (" + m.why + ")");
+    if (!prep)
+        return;
+    row.putId = target;
+
+    for (int mode = 0; mode < 2; mode++) {      // 0: the host playing, 1: idle (no processBlock at all)
+        m.playing = mode == 0;
+        m.worst = 0;
+        m.why.clear();
+        if (!m.playing)
+            m.settle(200);                       // (no block for 50 ms: the idle clock has the core)
+        const std::string tag = std::string(pr.id) + (m.playing ? " (playing)" : " (idle)");
+        std::string v;
+        row.info[mode] = m.info(v);
+        const bool infoOk = row.info[mode] >= 0 && row.info[mode] < 300 && v.rfind(pr.info, 0) == 0;
+        check(infoOk, tag + ": INFO \"" + v + "\" in " + std::to_string((int)row.info[mode]) + " ms (< 300)");
+        bool ok = infoOk;
+        if (pr.kind == MProfile::X0X) {
+            // LIST: the page's handshake, the M-UPGRADE identity (34 bytes decoded, FM-1_9..)
+            auto idMatch = [](const Bytes &f) {
+                const Bytes d = f.size() >= 4 && f[1] == 0x00 && f[2] == 0x32 ? updUnpack(f) : Bytes();
+                return d.size() == 34 && d[0] == 0 && d[1] == 0x59 && d[2] == 0x11;
+            };
+            row.list[mode] = m.request(sx({0xF0, 0x00, 0x32, 0x45, 0x00, 0x00, 0x00, 0x40, 0x7F, 0xF7}), idMatch, r, 1000);
+            check(row.list[mode] >= 0, tag + ": the page's identity query answered in " +
+                                           std::to_string((int)row.list[mode]) + " ms");
+            Bytes cur, back;
+            row.get[mode] = m.x0xBackup(cur);
+            row.getBytes = (uint32_t)cur.size();
+            const Bytes &want = mode == 0 ? x0xB : x0xA;   // (playing: B is current, A restored; idle: the reverse)
+            const Bytes &to = mode == 0 ? x0xA : x0xB;
+            check(row.get[mode] >= 0 && cur == want, tag + ": backup (0x42) " + std::to_string(cur.size()) + " bytes in " +
+                                                         std::to_string((int)row.get[mode]) + " ms " + m.why);
+            row.put[mode] = m.x0xRestore(p, to);
+            const bool got = row.put[mode] >= 0 && m.x0xBackup(back) >= 0;
+            check(got && back == to, tag + ": restore (0x41, SEL on the panel) of the other project in " +
+                                         std::to_string((int)row.put[mode]) + " ms, read back by a backup " + m.why);
+            ok = ok && row.list[mode] >= 0 && row.get[mode] >= 0 && cur == want && got && back == to;
+        } else {
+            row.list[mode] = m.list(man);
+            check(row.list[mode] >= 0, tag + ": LIST " + std::to_string(man.size()) + " objects in " +
+                                           std::to_string((int)row.list[mode]) + " ms " + m.why);
+            const MObj *o = row.list[mode] >= 0 ? findObj(man, target) : nullptr;
+            Bytes before, back;
+            row.get[mode] = o ? m.get(*o, before) : -1;
+            row.getBytes = o ? o->size : 0;
+            check(row.get[mode] >= 0, tag + ": GET object " + std::to_string(target) + " (" + std::to_string(row.getBytes) +
+                                          " bytes) in " + std::to_string((int)row.get[mode]) + " ms " + m.why);
+            Bytes after = before;
+            if (letter < after.size())
+                after[letter] = (uint8_t)((after[letter] & 0x80u) | (m.playing ? 'Z' : 'Y'));
+            row.put[mode] = row.get[mode] >= 0 ? m.put(target, after) : -1;
+            std::vector<MObj> m2;
+            const bool got = row.put[mode] >= 0 && m.list(m2) >= 0 && findObj(m2, target) &&
+                             m.get(*findObj(m2, target), back) >= 0;
+            check(got && back == after && after != before,
+                  tag + ": PUT object " + std::to_string(target) + " with a preset renamed (\"" +
+                      std::string(1, (char)(after[letter] & 127u)) + "YSEX\") in " + std::to_string((int)row.put[mode]) +
+                      " ms, read back " + m.why);
+            ok = ok && row.list[mode] >= 0 && row.get[mode] >= 0 && got && back == after;
+        }
+        row.worst[mode] = m.worst;
+        row.ok[mode] = ok;
+        if (!m.playing)
+            check(p.editorPortStatus().idling, tag + ": answered by the idle clock (no block ran)");
+    }
+    p.setEditorPortEnabled(false);
+    waitListed(st.name, false);
+}
+
+static int runManagers()
+{
+    std::vector<MRow> rows;
+    for (const MProfile &pr : kManagers) {
+        if (!built_cores().count(pr.id)) {
+            std::printf("[%s: not in this build]\n", pr.id);
+            continue;
+        }
+        std::printf("[CoreMIDI managers: %s]\n", pr.id);
+        rows.push_back({});
+        rows.back().id = pr.id;
+        runManager(pr, rows.back());
+    }
+    auto ms = [](double t) { return t < 0 ? std::string("FAIL") : std::to_string((int)(t + 0.5)); };
+    std::printf("\n%-11s %-28s | %-24s | %-24s | %-6s\n", "firmware", "port", "playing: INFO LIST GET PUT",
+                "idle: INFO LIST GET PUT", "GET B");
+    for (const MRow &r : rows) {
+        std::string pl, id;
+        for (int k = 0; k < 2; k++) {
+            std::string &s = k ? id : pl;
+            s = ms(r.info[k]) + " " + ms(r.list[k]) + " " + ms(r.get[k]) + " " + ms(r.put[k]) + (r.ok[k] ? "" : " !");
+        }
+        std::printf("%-11s %-28s | %-24s | %-24s | %u\n", r.id.c_str(), r.port.c_str(), pl.c_str(), id.c_str(),
+                    r.getBytes);
+    }
+    std::printf("(ms; GET: the object's chunks in all; PUT: begin, data, commit; X0X: LIST is its identity query, GET "
+                "its 0x42 backup, PUT its 0x41 restore with SEL pressed)\n");
+    if (rows.empty()) {
+        std::printf("SKIP: none of the managers' firmwares is in this build\n");
+        return 77;
+    }
+    return fails ? 1 : 0;
+}
+
 int main(int argc, char **argv)
 {
-    const bool coremidi = argc > 1 && std::strcmp(argv[1], "coremidi") == 0;
-    const juce::File scratch = juce::File(FM1_SCRATCH_DIR).getChildFile(coremidi ? "coremidi" : "fake");
+    const bool managers = argc > 1 && std::strcmp(argv[1], "managers") == 0;
+    const bool coremidi = managers || (argc > 1 && std::strcmp(argv[1], "coremidi") == 0);
+    const juce::File scratch = juce::File(FM1_SCRATCH_DIR).getChildFile(managers ? "managers" : coremidi ? "coremidi" : "fake");
     scratch.deleteRecursively();
     scratch.createDirectory();
     setenv("FM1EMU_HOME", scratch.getFullPathName().toRawUTF8(), 1);
@@ -492,7 +1096,7 @@ int main(int argc, char **argv)
         setenv("FM1EMU_EDITOR_FAKE", "1", 1);
     juce::ScopedJuceInitialiser_GUI gui;
     std::printf("editor_port_test (%s): FM1EMU_HOME=%s\n", coremidi ? "CoreMIDI" : "fake port", scratch.getFullPathName().toRawUTF8());
-    const int rc = coremidi ? runCoreMidi() : runFake();
+    const int rc = managers ? runManagers() : coremidi ? runCoreMidi() : runFake();
     if (rc == 77)
         return 77;
     std::printf("%s: %d failure(s)\n", fails ? "FAIL" : "PASS", fails);

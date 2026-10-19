@@ -2309,6 +2309,8 @@ void FM1Processor::editorIdleTick(uint32_t ms)
     if (!dev_ || !dev_->booted() || dev_->halted())
         return;
     toHost_ = false;
+    applyTier1();                                // (the panel and the parameters, as at a block's start: a manager that
+    applyHostParameters();                       // waits for a press on the unit, X0X's restore, gets it while idle)
     pullEditorMidi();
     for (uint32_t i = 0; i < ms; i++) {
         dev_->run_ms();
