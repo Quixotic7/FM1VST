@@ -77,9 +77,13 @@ tar -xjf "$work/libusb.tar.bz2" -C "$work/src" --strip-components 1
 (
     cd "$work/src"
     export MACOSX_DEPLOYMENT_TARGET="$target"
+    # the toolchain's clang called by path does not find the SDK by itself (configure: "C compiler cannot create
+    # executables" on the macOS runner): name it, as SDKROOT and -isysroot
+    sdk="$(xcrun --sdk macosx --show-sdk-path)"
+    export SDKROOT="$sdk"
     ./configure --prefix="$prefix" --enable-static --disable-shared --disable-dependency-tracking \
-        CC="$(xcrun -f clang)" CFLAGS="-arch arm64 -mmacosx-version-min=$target -O2" \
-        LDFLAGS="-arch arm64 -mmacosx-version-min=$target"
+        CC="$(xcrun -f clang)" CFLAGS="-arch arm64 -isysroot $sdk -mmacosx-version-min=$target -O2" \
+        LDFLAGS="-arch arm64 -isysroot $sdk -mmacosx-version-min=$target"
     make -j "$(sysctl -n hw.ncpu)"
     make install
 ) >&2
