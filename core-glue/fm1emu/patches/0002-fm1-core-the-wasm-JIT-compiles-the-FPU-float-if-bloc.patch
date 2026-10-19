@@ -1,0 +1,316 @@
+From 4952c6662d5ed3e4d5298d30682502c9fe8edcb1 Mon Sep 17 00:00:00 2001
+From: Michael P Jones <QuixoticSeven@gmail.com>
+Date: Sun, 18 Oct 2026 23:33:49 -0700
+Subject: [PATCH 2/4] fm1-core: the wasm JIT compiles the FPU, float if-blocks
+ and calls through a register
+
+Profiled in the browser build (V8's profiler, the JIT's own helper counts),
+three kinds of instruction kept busy firmwares out of compiled code:
+
+- every FPU op (`3f e5`: + - * /, the multiply-accumulates, ftoi/ftou,
+  itof/utof) was a helper call out of the compiled region: ~18 M a second
+  in Melodee 1.4.4 with a chord held, on both cores;
+- an `iff (R op R) {` block with a float compare was a helper call, and an
+  if-else one was not compiled at all (its then-part ran interpreted);
+- `call R` and `goto R` had no micro-op: each went through `step` and
+  `exec_syntax`, and ended the compiled run (Melodee's UI calls through
+  function pointers, ~2 M a second).
+
+The FPU ops now compile to the wasm float instructions `fpu_d` compiles to
+(f32.add/sub/mul/div, mul then add/sub for ops 7 and 8, the saturating
+truncations, the conversions), so the results are the same bits. fmin and
+fmax (Rust's NaN rules) and unknown unary codes stay with the helper. The
+if-blocks use `cmp`'s float compares for families 8 and up, as `cmp_cond`
+does, and an if-else block's then-part now comes along for any family.
+`call R` / `goto R` are micro-ops (CallR / GotoR, the arms of exec_syntax):
+they end a block, and compiled code goes on through the region's jump
+table as a return does. The AArch64 JIT runs the two new micro-ops through
+its helper.
+
+Melodee 1.4.4 in Node at 360 MHz: 0.97 -> 0.69 of real time. X0X 1.1.0
+0.60 -> 0.58, Felucca 1.6.1, ChoralRoot 0.25.1 unchanged to slightly
+faster. Screens and audio are identical to before for the single-core
+firmwares; Melodee's audio differs a little from the second second of a
+chord on: cpu1 runs after each 1024-instruction slice of cpu0, and the
+slices now end at other block boundaries (with this change Melodee's
+compiled and interpreted runs agree, which they did not before).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ crates/fm1-core/src/jit_wasm.rs | 117 ++++++++++++++++++++++----------
+ crates/fm1-core/src/lib.rs      |  42 ++++++++++--
+ 2 files changed, 121 insertions(+), 38 deletions(-)
+
+diff --git a/crates/fm1-core/src/jit_wasm.rs b/crates/fm1-core/src/jit_wasm.rs
+index f78db1f..5c2bc1b 100644
+--- a/crates/fm1-core/src/jit_wasm.rs
++++ b/crates/fm1-core/src/jit_wasm.rs
+@@ -329,6 +329,15 @@ const I64_SHR_U: u8 = 0x88;
+ const I64_CONST: u8 = 0x42;
+ const I64_EQZ: u8 = 0x50;
+ const F32_REINTERPRET_I32: u8 = 0xbe;
++const I32_REINTERPRET_F32: u8 = 0xbc;
++const F32_ADD: u8 = 0x92;
++const F32_SUB: u8 = 0x93;
++const F32_MUL: u8 = 0x94;
++const F32_DIV: u8 = 0x95;
++const F32_CONVERT_I32_S: u8 = 0xb2;
++const F32_CONVERT_I32_U: u8 = 0xb3;
++/// the 0xfc prefix: i32.trunc_sat_f32_s (0), _u (1), what Rust's `f32 as i32 / u32` compile to
++const MISC: u8 = 0xfc;
+ const I32_EXTEND8_S: u8 = 0xc0;
+ const I32_EXTEND16_S: u8 = 0xc1;
+ const VOID: u8 = 0x40;
+@@ -605,6 +614,28 @@ impl Gen<'_> {
+         }
+         self.set(L_B);
+     }
++    /// push whether an `if (..) {` block's condition holds for locals a and b (`exec_fast`'s
++    /// IfBlk: family 2 the bit test, else `cmp_cond`, whose float families compare as floats)
++    fn if_taken(&mut self, fam: u8, alt: bool) {
++        if fam == 2 {
++            self.get(L_A);
++            self.get(L_B);
++            self.op(I32_AND);
++            self.i32c(0);
++            self.op(I32_NE);
++            self.i32c(alt as u32);
++            self.op(I32_EQ);
++        } else if fam >= 8 {
++            self.cmp(crate::cond_of_fam(fam as u64, alt));
++        } else {
++            self.get(L_A);
++            self.get(L_B);
++            self.op(match fam { 0 => I32_EQ, 1 => I32_GE_U, 4 => I32_GT_U, 5 => I32_GE_S, _ => I32_GT_S });
++            if alt {
++                self.op(I32_EQZ);
++            }
++        }
++    }
+     /// push the compare of locals a and b
+     fn cmp(&mut self, c: Cond) {
+         let float = c.is_float();
+@@ -1259,7 +1290,7 @@ fn block<B: Bus>(g: &mut Gen<'_>, pc0: u32, ops: &[crate::BOp]) {
+                 g.goto(target, count, false);
+                 g.end();
+             }
+-            Fast::IfBlk { a, rk, fam, alt, has_else: true, rv, then_d, else_d } if fam < 8 && g.pred.is_none() => {
++            Fast::IfBlk { a, rk, fam, alt, has_else: true, rv, then_d, else_d } if g.pred.is_none() => {
+                 // the region brought its then-part along (`Cpu::wasm_region`): the rest of this
+                 // block's ops. Not taken: on at the else part. Taken: the then-part, then past
+                 // the else part (the interpreter's pred_skips, kept by check_brk on an exit)
+@@ -1268,22 +1299,7 @@ fn block<B: Bus>(g: &mut Gen<'_>, pc0: u32, ops: &[crate::BOp]) {
+                 g.rhs(rk, rv);
+                 g.ld_reg(a);
+                 g.set(L_A);
+-                if fam == 2 {
+-                    g.get(L_A);
+-                    g.get(L_B);
+-                    g.op(I32_AND);
+-                    g.i32c(0);
+-                    g.op(I32_NE);
+-                    g.i32c(alt as u32);
+-                    g.op(I32_EQ);
+-                } else {
+-                    g.get(L_A);
+-                    g.get(L_B);
+-                    g.op(match fam { 0 => I32_EQ, 1 => I32_GE_U, 4 => I32_GT_U, 5 => I32_GE_S, _ => I32_GT_S });
+-                    if alt {
+-                        g.op(I32_EQZ);
+-                    }
+-                }
++                g.if_taken(fam, alt);
+                 g.op(I32_EQZ);
+                 g.if_();
+                 g.goto(then_end, count, false);
+@@ -1298,27 +1314,12 @@ fn block<B: Bus>(g: &mut Gen<'_>, pc0: u32, ops: &[crate::BOp]) {
+                 pc = next_pc;
+                 continue;
+             }
+-            Fast::IfBlk { a, rk, fam, alt, has_else: false, rv, then_d, .. } if fam < 8 => {
++            Fast::IfBlk { a, rk, fam, alt, has_else: false, rv, then_d, .. } => {
+                 // taken: the then-part follows; not taken: skip it
+                 g.rhs(rk, rv);
+                 g.ld_reg(a);
+                 g.set(L_A);
+-                if fam == 2 {
+-                    g.get(L_A);
+-                    g.get(L_B);
+-                    g.op(I32_AND);
+-                    g.i32c(0);
+-                    g.op(I32_NE);
+-                    g.i32c(alt as u32);
+-                    g.op(I32_EQ);
+-                } else {
+-                    g.get(L_A);
+-                    g.get(L_B);
+-                    g.op(match fam { 0 => I32_EQ, 1 => I32_GE_U, 4 => I32_GT_U, 5 => I32_GE_S, _ => I32_GT_S });
+-                    if alt {
+-                        g.op(I32_EQZ);
+-                    }
+-                }
++                g.if_taken(fam, alt);
+                 g.op(I32_EQZ);
+                 g.if_();
+                 g.goto(next_pc.wrapping_add(then_d as u32), count, false);
+@@ -1356,6 +1357,54 @@ fn block<B: Bus>(g: &mut Gen<'_>, pc0: u32, ops: &[crate::BOp]) {
+                 g.jump_local(L_VAL, count);
+                 ended = true;
+             }
++            Fast::CallR { r } | Fast::GotoR { r } => {
++                g.ld_reg(r);
++                g.set(L_VAL);
++                if matches!(op.fast, Fast::CallR { .. }) {
++                    g.get(L_CPU);
++                    g.i32c(next_pc);
++                    g.mem_op(I32_STORE, 2, off_rets());
++                }
++                g.jump_local(L_VAL, count);
++                ended = true;
++            }
++            // the FPU (`fpu_d`): the same wasm float ops its Rust compiles to, so the same bits;
++            // fmin / fmax (Rust's NaN rules) and unknown unary codes stay with the helper
++            Fast::FOp { d, a, b, op } if matches!(op, 0..=3 | 7 | 8 | 0x1f | 0x5f | 0x8f | 0x9f) => {
++                g.get(L_CPU);
++                let f = |g: &mut Gen<'_>, r: u8| {
++                    g.ld_reg(r);
++                    g.op(F32_REINTERPRET_I32);
++                };
++                match op {
++                    0..=3 => {
++                        f(g, a);
++                        f(g, b);
++                        g.op([F32_ADD, F32_SUB, F32_MUL, F32_DIV][op as usize]);
++                        g.op(I32_REINTERPRET_F32);
++                    }
++                    7 | 8 => {
++                        // acc +- a * b, the product rounded first (not fused)
++                        f(g, d);
++                        f(g, a);
++                        f(g, b);
++                        g.op(F32_MUL);
++                        g.op(if op == 7 { F32_ADD } else { F32_SUB });
++                        g.op(I32_REINTERPRET_F32);
++                    }
++                    0x1f | 0x5f => {
++                        f(g, a);
++                        g.op(MISC);
++                        uleb(&mut g.c, if op == 0x1f { 0 } else { 1 });
++                    }
++                    _ => {
++                        g.ld_reg(a);
++                        g.op(if op == 0x8f { F32_CONVERT_I32_S } else { F32_CONVERT_I32_U });
++                        g.op(I32_REINTERPRET_F32);
++                    }
++                }
++                g.mem_op(I32_STORE, 2, off_reg(d));
++            }
+             // ---- everything else: the interpreter's executor for this one op
+             other => {
+                 let p: &'static Fast = Box::leak(Box::new(other));
+diff --git a/crates/fm1-core/src/lib.rs b/crates/fm1-core/src/lib.rs
+index d69aa41..dcf9f0a 100644
+--- a/crates/fm1-core/src/lib.rs
++++ b/crates/fm1-core/src/lib.rs
+@@ -627,9 +627,9 @@ impl Cpu {
+             // an if-else block at the end, its then-part plain: compiled with the then-part in
+             // tow (`jit_wasm`'s IfBlk), going on at the else part or past it
+             if let Some(last) = tail.filter(|_| ops.len() + 1 == all_len) {
+-                if let Fast::IfBlk { has_else: true, fam, then_d, else_d, .. } = last.fast {
++                if let Fast::IfBlk { has_else: true, then_d, else_d, .. } = last.fast {
+                     let next = pc + ops.iter().chain([&last]).map(|o| o.len as u32).sum::<u32>();
+-                    if let Some(then) = (fam < 8).then(|| self.then_part(bus, next, then_d)).flatten() {
++                    if let Some(then) = self.then_part(bus, next, then_d) {
+                         let then_end = next.wrapping_add(then_d as u32);
+                         ops.push(last);
+                         ops.extend(then);
+@@ -653,6 +653,8 @@ impl Cpu {
+                     // the callee, and where it returns to (its return finds that block in the
+                     // region: `jit_wasm::Gen::jump_local`)
+                     Fast::Call { target } => queue.extend([target, end]),
++                    // (a call through a register: where it returns to)
++                    Fast::CallR { .. } => queue.push_back(end),
+                     Fast::IfBlk { has_else: false, then_d, .. } => queue.extend([end, end.wrapping_add(then_d as u32)]),
+                     f if f.may_jump() => {}
+                     _ => queue.push_back(end),
+@@ -1007,6 +1009,12 @@ impl Cpu {
+                 return Some(target);
+             }
+             Fast::Rts => return Some(self.rets),
++            Fast::CallR { r } => {
++                let t = self.regs[(r & 15) as usize];
++                self.rets = next_pc;
++                return Some(t);
++            }
++            Fast::GotoR { r } => return Some(self.regs[(r & 15) as usize]),
+             Fast::A4 { d, s, op, rk, rv } => {
+                 let rhs = match rk { 0 => self.regs[(rv & 15) as usize], 1 => rv, _ => 1u32 << (self.regs[(rv & 15) as usize] & 31) };
+                 self.regs[(d & 15) as usize] = self.alu_f(op, self.regs[(s & 15) as usize], rhs);
+@@ -4099,6 +4107,25 @@ mod tests {
+         assert_eq!((cpu.pc, cpu.regs[0]), (18, 1));
+     }
+ 
++    #[test]
++    fn call_through_a_register() {
++        // `c5 00` call r5: a micro-op now (it ends a block, compiled code jumps on), the same
++        // effect as exec_syntax's arm: rets = the next pc, pc = r5
++        let mut mem = vec![0u8; 0x100];
++        mem[..2].copy_from_slice(&[0xc5, 0x00]);
++        mem[0x40..0x42].copy_from_slice(&[0xc5, 0x00]);
++        let mut ram = FlatRam::new(mem);
++        let mut cpu = Cpu::new(0);
++        cpu.regs[5] = 0x40;
++        cpu.step(&mut ram).unwrap();
++        assert_eq!((cpu.pc, cpu.rets), (0x40, 2));
++        cpu.regs[5] = 0x80;
++        cpu.step(&mut ram).unwrap();
++        assert_eq!((cpu.pc, cpu.rets, cpu.insn_count), (0x80, 0x42, 2));
++        let w = ram.read32(0) as u64;
++        assert!(matches!(fast_of(&fm1_isa::decode_win(w, 0).unwrap(), "call R"), Some(Fast::CallR { r: 5 })));
++    }
++
+     #[test]
+     fn short_shift_by_32() {
+         // `df a0` r7 = r5 >>> 32, `32 a0` r2 = r3 << 32 (count field 0 = 32)
+@@ -4358,7 +4385,7 @@ impl Fast {
+             Fast::BrR { a, b, .. } => (m(a) | m(b), 0),
+             Fast::BitBr { r, mk, mv, .. } => (m(r) | rhs(mk, mv), 0),
+             Fast::DecBr { r, .. } => (m(r), m(r)),
+-            Fast::Tb { r, .. } => (m(r), 0),
++            Fast::Tb { r, .. } | Fast::CallR { r } | Fast::GotoR { r } => (m(r), 0),
+             Fast::Goto { .. } | Fast::Call { .. } | Fast::Rts | Fast::Nop | Fast::SpAdd { .. }
+             | Fast::PushRet | Fast::PopRet | Fast::PopRets => (0, 0),
+             Fast::PushRets { n } => (range(n), 0),
+@@ -4378,7 +4405,7 @@ impl Fast {
+         matches!(
+             self,
+             Fast::BrI { .. } | Fast::BrR { .. } | Fast::Goto { .. } | Fast::Call { .. } | Fast::Rts
+-                | Fast::BitBr { .. } | Fast::DecBr { .. } | Fast::PopPc { .. } | Fast::PopRet | Fast::PopMask { .. }
++                | Fast::CallR { .. } | Fast::GotoR { .. } | Fast::BitBr { .. } | Fast::DecBr { .. } | Fast::PopPc { .. } | Fast::PopRet | Fast::PopMask { .. }
+                 | Fast::IfBlk { .. } | Fast::BrIEq { .. } | Fast::BrINe { .. } | Fast::Tb { .. }
+         )
+     }
+@@ -4550,6 +4577,10 @@ enum Fast {
+     Goto { target: u32 },
+     Call { target: u32 },
+     Rts,
++    /// `call R`: rets = the next pc, then on at the register's value
++    CallR { r: u8 },
++    /// `goto R`
++    GotoR { r: u8 },
+     /// `R = R op x` from the 4-byte ALU decoder: rk 0 = register, 1 =
+     /// immediate, 2 = `1 << R`.
+     A4 { d: u8, s: u8, op: Op, rk: u8, rv: u32 },
+@@ -5172,6 +5203,9 @@ fn fast_of(insn: &Instruction, s: &'static str) -> Option<Fast> {
+         }
+         "call #i" => Some(Fast::Call { target: target(0)? }),
+         "rts" => Some(Fast::Rts),
++        // (exec_syntax's arms: rets first, then the register's target; r is never rets)
++        "call R" => Some(Fast::CallR { r: r(0)? }),
++        "goto R" => Some(Fast::GotoR { r: r(0)? }),
+         "{rets} = [sp++]" => Some(Fast::PopRets),
+         "tbb [R]" | "tbh [R]" => Some(Fast::Tb { r: r(0)?, half: s.starts_with("tbh") }),
+         "R = R & ~R" => Some(Fast::Alu3 { d: r(0)?, a: r(1)?, b: r(2)?, op: Op::AndNot }),
+-- 
+2.42.0
+

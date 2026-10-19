@@ -1,7 +1,7 @@
 # core-glue/fm1emu: the emulated FM-1 as a core
 
 `fm1emu.fm1core` is Joakim Eriksson's [fm1-emu](https://github.com/joakimeriksson/fm1-emu) (`cores/fm1-emu`, MIT,
-pinned at 5fbb066, unmodified) behind FM1VST's core ABI (`core-api/fm1core.h`, ABI 6). Every other core is a firmware
+pinned at 5fbb066, with the patches in `patches/`; the submodule itself is never modified) behind FM1VST's core ABI (`core-api/fm1core.h`, ABI 6). Every other core is a firmware
 compiled for the host. This one emulates the FM-1's SoC instruction by instruction, so it runs an FM-1 update package
 (`.fwsc`) as the unit would: M-VAVE's stock firmware and the community firmwares, unchanged.
 
@@ -9,7 +9,24 @@ The core is a Rust `cdylib` in this folder (`Cargo.toml`, `src/`). It depends on
 `fm1-soc` crates (and `fm1-isa` under them), all by path. It uses no crates.io dependency and not nih-plug.
 `core.cmake` runs `cargo build --release` (with `CARGO_TARGET_DIR=<build>/fm1emu-cargo`) and copies the dylib to
 `<build>/cores/fm1emu.fm1core`, next to the other cores, where CoreLoader finds them. The module exports
-`fm1core_get` and `fm1core_latency_frames`.
+`fm1core_get`, `fm1core_latency_frames` and `fm1core_boot_option` (fm1core.h "OPTIONAL MODULE SYMBOLS"). It is bundled
+in every build, the public one too (MIT, no firmware in it; `FM1_EXTRA_CORE_IDS` in the top-level CMakeLists): the
+plugin offers it as the engine of the Hub's firmwares (plugin/Hub.h), never as a firmware of its own.
+
+## The patches
+
+`core.cmake` builds a copy of the pinned commit (`git archive` into `<build>/fm1emu-src`) with `patches/*.patch`
+applied in name order, from a manifest it generates in `<build>/fm1emu-crate` (this folder's Cargo.toml pointed at the
+copy). A new patch is a file dropped into `patches/`; the descriptor's version names them (`fm1-emu 5fbb066 +
+0001+0002+0003+0004`). `-DFM1EMU_PATCHES=OFF` builds the plain commit. They are RemoteFM1's (web/engines/emu/patches,
+`patches/UPSTREAM.md`: what each fixes and its pull request text), copied unchanged:
+
+| patch | what | in this native build |
+|---|---|---|
+| 0001 | fm1-soc: the P33 power-domain bridge (Melodee 1.4.4 never drew without it) | applies: Melodee boots, draws and plays (fm1emu_test 8) |
+| 0002 | fm1-core: the **wasm** JIT compiles the FPU, float if-blocks, `call R` / `goto R` | mostly wasm-only (`jit_wasm.rs` is `cfg(target_arch = "wasm32")`); its `CallR` / `GotoR` micro-ops are shared code, which the AArch64 JIT runs through its helper |
+| 0003 | fm1-soc: the TIMER4 count without a u128 division | applies (the firmwares' microsecond clock) |
+| 0004 | fm1-web: run for a span of emulated time (`fm1_run_frames`) | wasm front end only (`crates/fm1-web`, not built here). The native equivalent is the host's: tick() is one device ms, and the plugin paces by time (engine/device.h PACING) |
 
 | file | what |
 |---|---|
@@ -66,6 +83,10 @@ case 2.
 
 The clock is synchronous and starts no thread.
 
+- **The chip's clock** is 360 MHz by default (the FM-1 runs at about 320..360). `fm1core_boot_option("mhz", "60".."1000")`
+  before init picks another: it sets fm1-soc's `periph.hz` (instructions per emulated second; every timer the firmware
+  sees scales with it) and tick()'s cycles per ms. The plugin offers Auto 240 320 360 480 640 (plugin/EmuClock.h,
+  RemoteFM1's cpu.js). ui_info reports `clock N MHz` and the cycle count.
 - **`tick(ms)`** first takes the panel's input:
   - key and button edges become `Action::Key` (ids 14..40 and 0..13);
   - a tap goes down now and comes up 20 ms of device time later;
@@ -73,12 +94,16 @@ The clock is synchronous and starts no thread.
   - a change to `master` becomes `Action::Adc{ch: 4}`;
   - queued MIDI bytes become `Action::Midi`.
 
-  It then runs `run_dual` / `run_blocks` until `soc.periph.cycles >= (ms + 1) * 240e6 / 1000`, at 240 MHz, with
-  `skip_idle` and the JIT on as fm1-emu's plugin runs. Each call is given the cycles left, capped at 1 ms of
-  instructions. An overshoot (an idle skip can jump tens of ms during a boot) is carried: the following ticks run
-  nothing until the device clock is behind again. The machine never runs a fixed instruction count per tick.
+  It then runs `run_dual` / `run_blocks` until `soc.periph.cycles >= (ms + 1) * hz / 1000`, with `skip_idle` and the
+  JIT on as fm1-emu's plugin runs. Each call is given the cycles left, capped at 1 ms of instructions. An overshoot (an
+  idle skip can jump tens of ms during a boot) is carried: the following ticks run nothing until the device clock is
+  behind again. The machine never runs a fixed instruction count per tick, and never a DMA half at once: one tick is
+  one device ms whatever the firmware's half size.
 - **`frame()`** copies the LCD and the LEDs out. **`idle()`** copies only the LEDs. Both read the input too.
 - **`audio(out, 128)`** pops from the stream (see "Audio").
+- **The host paces it by time** (engine/device.h PACING, `Device::set_pace_ms(4)` in the plugin and core_bench): each
+  host block runs its own span of device time plus a 4 ms lead, not "until a frame is there" (which ran ~3 device ms
+  inside whichever host block first needed a frame, and nothing in the others).
 
 ## Audio
 
@@ -143,9 +168,10 @@ The real unit has the matrix scan and the double buffer too. The native cores sk
 
 ## LEDs
 
-`soc.periph.led_take()` gives each key id's on-fraction since the last take. The LEDs are taken over at least 8 ms of
-device time, because a shorter window flickers. Each fraction maps to `panel->led[col][row - 1]` through the keymap,
-as `level = f / 0.08 * 255`, clamped.
+`soc.periph.led_take()` gives each key id's on-fraction since the last take. The LEDs are taken every 33 ms of device
+time and a level is the mean of the last three takes (100 ms), as RemoteFM1's site shows them: shorter windows
+flicker (Melodee's multiplexed LEDs flipped ~27 times a second at the old 8 ms). Each fraction maps to
+`panel->led[col][row - 1]` through the keymap, as `level = f / 0.08 * 255`, clamped.
 
 The fractions measured with `FM1EMU_LED_TRACE=1`:
 
@@ -211,6 +237,29 @@ fm1-emu outputs 6 dB lower than the native Felucca core. fm1-soc takes the DAC's
   0 on Felucca. Both kept running with the JIT on.
 - Latency is as above. `fm1core_latency_frames` via dlsym returns 256.
 - With the JIT off, Felucca runs on the interpreter.
+
+### Speed at 360 MHz, every Hub firmware (2026-10-19)
+
+`FM1EMU_PKG_DIR=<the Hub's 57 packages> FM1_BENCH_MHZ=360 tests/fm1emu_bench.sh BUILD 10`, patches 0001..0004, JIT on,
+512-frame host blocks at 48 kHz, paced, one at a time on this Mac. Real-time factor (render s per wall s):
+
+| x real | firmwares |
+|---|---|
+| 3.5..4.0 | ChoralRoot 0.25.1 (3.6), SLOOP Floyd FM, SLOOP DX7 Banks, Hortator, Tuna, Fart Machine One, Vector37 |
+| 3.0..3.4 | Felucca, Felucca 8 Patterns, Felucca [Salt], DUELL, sloopDX, No Man Sky FM, FM1 Quest, NOIZ DEMONS, WaveLoop, MAKU, winampFM |
+| 2.5..2.9 | AMB-1, fm1-chord, CoralFlower, CTL-1, FoMni, FuMi-1, HYP-1, Jangada, MYCELIUM, ORBIT, PIGEON, Polly, Rainbow Mode, Skiff, SLOOP, Tonitor, Pocket GammaWave, FiMba-1 |
+| 2.0..2.4 | GHOULBOX, GR!MM, JIANT FM, PurpleMonkey, TRIBE, X0X-RMX, OberVave 1.5.1, MIN-1, Shine On, FOMAJAM |
+| 1.5..1.9 | X0X 1.1.0 (1.9), Dinghy, ETCH, CS-1, MC-1, FM-106 (1.6), Frodhes (1.6), Melodee 1.4.4 (1.5), BEETLE (1.5) |
+| 1.0 | zp12 2.4.2: one core's whole time; 610 of 937 blocks late |
+| 0.1 | Bubba Machine: listed with its note (boots black, needs M-VAVE's loader) |
+
+Every run had 0 underflows and 0 drops. Silent under the bench's held chord (the firmware needs other input to play,
+or does not run): ChoralRoot, BEETLE, CS-1, CTL-1, PIGEON, TRIBE, Bubba. The bench also prints the slowest host block
+and the late ones (longer than they last): at 512 frames most firmwares have none; Melodee 35 of 937, Tonitor 23, X0X
+4, zp12 610. At 64-frame blocks pacing took X0X from 2537 late blocks of 7500 to 193, Melodee from 3104 to 637: what
+remains is the firmware's own load pattern within emulated time (it renders a DMA half in a burst of CPU, then idles,
+and the idle is skipped cheaply), which only a separate emulation thread with a lead could hide. The table below is
+the earlier one, at 240 MHz before the patches.
 
 ### Speed (the real-time factor)
 
@@ -294,6 +343,13 @@ submodule stays unmodified) or an `mmap` interposer in the glue. The interposer 
 - **The interpreter's speed** is the JIT-off column of the speed table: 1.1x..1.4x real time for the community
   firmwares, 2.8x for the stock V15. One instance then takes 70..90 % of a core, and FM-106 has 10 % headroom left.
   It works, but a host without allow-jit is not a practical home for this core.
+
+## The plugin (done: plugin/Hub.h, Processor.h EMULATED FIRMWARES)
+
+The steps below are how the plugin runs a package: the Hub's (downloaded, checked against the catalog's SHA-256 and
+size, cached in `<app support>/FM1VST/hub/packages`) or the user's own file. It keeps the NOR only (the first 1 MiB of
+the image) and composes the image from it and the cached package at each boot; the plugin state names the package by
+id and SHA-256.
 
 ## What the host's "Load .fwsc…" entry must do
 

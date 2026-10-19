@@ -1,0 +1,70 @@
+From acafdf051de48634cd2d395405cab3c8723bb302 Mon Sep 17 00:00:00 2001
+From: Michael P Jones <QuixoticSeven@gmail.com>
+Date: Sun, 18 Oct 2026 23:33:49 -0700
+Subject: [PATCH 4/4] fm1-web: run for a span of emulated time (fm1_run_frames,
+ fm1_time_frames)
+
+fm1_render runs the machine until the I2S DMA has produced the frames
+asked for. A firmware with 512-frame DMA halves (X0X 1.1.0) then costs
+nothing for three 128-frame quanta and a whole half's emulation, 10 ms of
+a 2.7 ms quantum, in the fourth: Chrome's 256-frame audio callbacks miss
+their deadline every 11.6 ms (156 glitches in 10 s at 360 MHz, heard as
+garbled, distorted audio although the machine keeps up on average).
+
+fm1_run_frames(frames, max_insns) runs a span of emulated time and queues
+the audio; fm1_render(n, 0) hands it out without running; fm1_time_frames
+reports the emulated time. A host can then pace the machine by time, a
+quantum's span per quantum with a few tens of ms buffered ahead, so the
+work per quantum is even. (RemoteFM1's engine: 40 ms ahead, 0 glitches.)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ crates/fm1-web/src/lib.rs | 32 ++++++++++++++++++++++++++++++++
+ 1 file changed, 32 insertions(+)
+
+diff --git a/crates/fm1-web/src/lib.rs b/crates/fm1-web/src/lib.rs
+index 8d876a2..e536118 100644
+--- a/crates/fm1-web/src/lib.rs
++++ b/crates/fm1-web/src/lib.rs
+@@ -288,6 +288,38 @@ pub extern "C" fn fm1_render(frames: u32, max_insns: u32) -> u32 {
+     have as u32
+ }
+ 
++/// Run the machine for `frames` 44.1 kHz frames of emulated time (at most `max_insns`
++/// instructions), queueing the audio the I2S DMA produced; returns the frames queued, which
++/// `fm1_render(n, 0)` then hands out without running. A host that paces the machine by time
++/// (a fixed span of emulated time per audio quantum, a little ahead of what it plays) spreads
++/// the work evenly: run by audio alone, a firmware with 512-frame DMA halves costs nothing for
++/// three quanta and a whole half's emulation in the fourth.
++#[no_mangle]
++pub extern "C" fn fm1_run_frames(frames: u32, max_insns: u32) -> u32 {
++    let Some(m) = machine() else { return 0 };
++    m.started = true;
++    #[cfg(target_arch = "wasm32")]
++    {
++        let per = unsafe { JIT_PER_RENDER };
++        fm1_core::jit_wasm::COMPILE_BUDGET.store(if per == 0 { u32::MAX } else { per }, std::sync::atomic::Ordering::Relaxed);
++    }
++    let target = m.soc.periph.cycles + (frames as u128 * m.soc.periph.hz as u128 / 44_100) as u64;
++    let mut spent = 0u32;
++    while m.soc.periph.cycles < target && spent < max_insns && !m.halted {
++        m.run(20_000);
++        spent += 20_000;
++        m.audio.extend(m.soc.periph.audio.drain(..));
++    }
++    unsafe { INSNS += spent as u64 };
++    (m.audio.len() / 2) as u32
++}
++
++/// Emulated time since boot in 44.1 kHz frames (fractional).
++#[no_mangle]
++pub extern "C" fn fm1_time_frames() -> f64 {
++    machine().map_or(0.0, |m| m.soc.periph.cycles as f64 * 44_100.0 / m.soc.periph.hz as f64)
++}
++
+ #[no_mangle]
+ pub extern "C" fn fm1_out_l() -> *const f32 {
+     #[allow(static_mut_refs)]
+-- 
+2.42.0
+

@@ -95,6 +95,16 @@ public:
     // what render buffers ahead, in host frames: one internal block (128 frames at 44.1 kHz) plus the
     // resampler's lookahead (2 input frames) when it is not bypassed
     static uint32_t latency_frames(double host_rate);
+    // PACING (set_pace_ms(ms), 0 = off, the default): render() runs the clock by the host's time, not by its demand
+    // for frames: before a block, every device ms up to the block's end plus `ms` (the lead). Demand alone runs a
+    // whole internal block's worth (~3 device ms) inside whichever host block first needs a frame of it, and nothing in
+    // the others: for a native core that is nothing, but an emulated one (fm1emu: 2..4x real time) then spends ~1.5 ms
+    // in one 64-frame block of 1.3 ms and is late, though it keeps up on average. Paced, each host block runs its own
+    // span of device time (1 ms granularity), evenly. The lead must cover an internal block (2.9 ms) and the
+    // resampler's lookahead: 4 ms; it is the added latency (latency()).
+    void set_pace_ms(uint32_t ms) { pace_ms_ = ms; }
+    uint32_t pace_ms() const { return pace_ms_; }
+    uint32_t latency(double host_rate) const;   // this device's: latency_frames, or paced, the lead
 
     static constexpr uint32_t RING = 8192;  // stereo frames
 
@@ -110,5 +120,9 @@ private:
     uint32_t ring_w_ = 0, ring_r_ = 0;
     Lagrange4 rs_;
     double rs_rate_ = 0;                    // the host rate rs_ is set up for (0: none)
+    uint32_t pace_ms_ = 0;
+    uint64_t host_done_ = 0;                // host frames rendered at pace_rate_ (pacing)
+    double pace_rate_ = 0;
+    void pace(uint32_t n, double host_rate);
     Between between_;
 };

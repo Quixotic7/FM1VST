@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! The fm1emu core: Joakim Eriksson's fm1-emu (cores/fm1-emu, MIT, unmodified; its crates fm1-core and fm1-soc)
+//! The fm1emu core: Joakim Eriksson's fm1-emu (cores/fm1-emu, MIT; its crates fm1-core and fm1-soc, built from a copy
+//! of the pinned commit with core-glue/fm1emu/patches applied: core.cmake)
 //! as one more FM1VST core module (core-api/fm1core.h ABI 6). Where the other cores are a firmware compiled for
 //! the host, this one is the FM-1's SoC emulated instruction by instruction, running any FM-1 update package
 //! (.fwsc): M-VAVE's stock firmware and every community firmware, unchanged. README.md (next to this file) has
@@ -28,8 +29,13 @@ use std::time::{Duration, Instant};
 // ------------------------------------------------------------------------------------------------ constants
 const RAM_BASE: u32 = 0x01c0_0000;
 const RAM_SIZE: usize = 1 << 20;
-/// the chip's clock (fm1-emu's plugin: MHZ = 240)
-const HZ: u64 = 240_000_000;
+/// the emulated chip's clock by default: 360 MHz (the real FM-1 runs at about 320..360; fm1-emu's own plugin uses 240).
+/// The host picks another before init with fm1core_boot_option("mhz", ..): it sets fm1-soc's `periph.hz` (the
+/// instructions per emulated second, which scales every timer the firmware sees) and tick()'s cycles per millisecond.
+pub const DEFAULT_MHZ: u32 = 360;
+/// the clocks fm1core_boot_option accepts (MHz)
+const MHZ_MIN: u32 = 60;
+const MHZ_MAX: u32 = 1000;
 /// the NOR (1 MiB), its sectors
 const NOR: usize = fm1_soc::FLASH_SIZE;
 const SECTOR: usize = 4096;
@@ -47,8 +53,11 @@ pub const LATENCY: u32 = 256;
 /// a tap (keys_tap / buttons_tap): down now, up this much device time later
 const TAP_MS: u64 = 20;
 /// the LEDs' on-fractions are taken over at least this much device time (the matrix scans its 11 columns in
-/// ~1.1 ms on Felucca, slower on the stock firmware): a shorter window flickers
-const LED_WINDOW_MS: u64 = 8;
+/// ~1.1 ms on Felucca, slower on the stock firmware), and a level is the mean of the last LED_AVG takes: 100 ms, as
+/// RemoteFM1's site shows them (web/engines/emu/engine.js: 30 Hz samples, the last three). A shorter window flickers:
+/// Melodee's multiplexed LEDs flipped ~27 times a second at 8 ms
+const LED_WINDOW_MS: u64 = 33;
+const LED_AVG: usize = 3;
 /// the on-fraction of a steadily lit LED: the LED lines drive one matrix column at a time, so a lit LED is on
 /// about 1 scan step in 11 (fm1-live's panel.rs `bright`: full at 0.08). Calibrated on Felucca 1.6.1 and the
 /// stock V15 (README "LEDs"): FM1P_LED_LIT at this fraction and above
@@ -67,9 +76,9 @@ struct Machine {
 
 impl Machine {
     /// engine.rs Machine::boot: a package's stock image on a fresh SoC, the SPL's boot parameters in r0
-    fn boot(st: fm1_soc::Stock, jit: bool) -> Machine {
+    fn boot(st: fm1_soc::Stock, jit: bool, hz: u64) -> Machine {
         let mut soc = Soc::new(RAM_SIZE, st.xip);
-        soc.periph.hz = HZ;
+        soc.periph.hz = hz;
         soc.periph.skip_idle = true;
         let mut cpu = Cpu::new(st.entry);
         cpu.jit_on = jit;
@@ -150,7 +159,9 @@ struct State {
     rev_seen: u32,
     jit: bool,
     jit_note: &'static str,
-    // the clock
+    // the clock: the emulated chip's (Hz; fm1core_boot_option "mhz", taken at the next init) and the device ms
+    hz: u64,
+    hz_next: u64,
     ms: u64,
     // input
     down: [bool; 41],
@@ -163,6 +174,10 @@ struct State {
     // output
     lcd_rev: u32,
     led_ms: u64,
+    /// the last LED_AVG takes' on-fractions (key ids 0..40), a ring
+    led_hist: [[f32; 41]; LED_AVG],
+    led_at: usize,
+    led_had: usize,
     /// FM1EMU_LED_TRACE: print the LEDs' on-fractions (the calibration of LED_LIT_FRACTION)
     led_trace: bool,
     // speed: emulated ms per wall ms spent in tick, over the last second of device time
@@ -185,15 +200,20 @@ impl State {
             rev_seen: 0,
             jit: true,
             jit_note: "",
+            hz: DEFAULT_MHZ as u64 * 1_000_000,
+            hz_next: DEFAULT_MHZ as u64 * 1_000_000,
             ms: 0,
             down: [false; 41],
             tap_until: [0; 41],
             master: 0,
             midi: VecDeque::new(),
-            fifo: fifo::Fifo::new(LATENCY),
+            fifo: fifo::Fifo::new(LATENCY, DEFAULT_MHZ as u64 * 1_000_000),
             halves_seen: 0,
             lcd_rev: u32::MAX,
             led_ms: 0,
+            led_hist: [[0.0; 41]; LED_AVG],
+            led_at: 0,
+            led_had: 0,
             led_trace: false,
             speed: 0.0,
             win_ms: 0,
@@ -337,7 +357,7 @@ fn boot_package(s: &mut State, pkg: Vec<u8>, nor: Option<&[u8]>, from: &str) -> 
         return Err(format!("{}: an SMK-37 package", st.identity));
     }
     let identity = st.identity.clone();
-    let mut m = Box::new(Machine::boot(st, s.jit));
+    let mut m = Box::new(Machine::boot(st, s.jit, s.hz));
     if let Some(nor) = nor {
         for at in (0..NOR).step_by(SECTOR) {
             if nor[at..at + SECTOR] != m.soc.flash.mem[at..at + SECTOR] {
@@ -455,7 +475,16 @@ fn leds_out(s: &mut State) {
         return;
     }
     s.led_ms = now;
-    let f = m.soc.periph.led_take();
+    let take = m.soc.periph.led_take();
+    s.led_hist[s.led_at].copy_from_slice(&take[..41]);
+    s.led_at = (s.led_at + 1) % LED_AVG;
+    s.led_had = (s.led_had + 1).min(LED_AVG);
+    let mut f = [0f32; 41];
+    for h in s.led_hist.iter().take(s.led_had) {
+        for (o, v) in f.iter_mut().zip(h.iter()) {
+            *o += v / s.led_had as f32;
+        }
+    }
     if s.led_trace {
         let lit: Vec<String> = (0..41).filter(|&i| f[i] > 0.005).map(|i| format!("{i}:{:.3}", f[i])).collect();
         eprintln!("fm1emu leds {now} ms: {}", lit.join(" "));
@@ -528,9 +557,12 @@ extern "C" fn init(_demo: i32) {
         s.down = [false; 41];
         s.tap_until = [0; 41];
         s.midi.clear();
-        s.fifo = fifo::Fifo::new(LATENCY);
+        s.hz = s.hz_next;
+        s.fifo = fifo::Fifo::new(LATENCY, s.hz);
         s.lcd_rev = u32::MAX;
         s.led_ms = 0;
+        s.led_at = 0;
+        s.led_had = 0;
         power_on(s);
         // MASTER: the host's value, or (0) the machine's default (fm1-soc's ADC channel 4: 900)
         let mv = rd_i32(&p.master);
@@ -563,11 +595,11 @@ extern "C" fn tick(ms: u32) {
             m.soc.periph.apply(&Action::Midi { b });
         }
         let t0 = Instant::now();
-        let target = (ms as u64 + 1) * HZ / 1000;
+        let target = (ms as u64 + 1) * s.hz / 1000;
         loop {
-            // (before the first DMA half, short steps: its end is the stream's time origin, fifo.rs)
+            // (before the first DMA half, short steps of 10 us: its end is the stream's time origin, fifo.rs)
             let first = !s.fifo.started;
-            let step = if first { 2400 } else { HZ / 1000 };
+            let step = if first { s.hz / 100_000 } else { s.hz / 1000 };
             if let Err(e) = m.run_to(target, step, first) {
                 halt(s, e);
                 return;
@@ -669,15 +701,18 @@ fn info_text(s: &State) -> String {
         format!("{} {} bytes sha256 {} from {}", p.identity, p.bytes.len(), p.sha, p.from)
     });
     let ms = s.m.as_ref().map_or(0, |m| m.soc.periph.ms());
+    let cycles = s.m.as_ref().map_or(0, |m| m.soc.periph.cycles);
     let f = &s.fifo;
     format!(
-        "fm1emu {mode}; {pkg}; board FM-1; H {} L {}; margin {}..{}; speed {:.1}x; {} ms; underflows {} dropped {} gaps {}; {}",
+        "fm1emu {mode}; {pkg}; board FM-1; clock {} MHz; H {} L {}; margin {}..{}; speed {:.1}x; {} ms; cycles {}; underflows {} dropped {} gaps {}; {}",
+        s.hz / 1_000_000,
         f.half,
         f.lat,
         if f.low == i64::MAX { 0 } else { f.low },
         if f.high == i64::MIN { 0 } else { f.high },
         s.speed,
         ms,
+        cycles,
         f.underflows,
         f.dropped,
         f.gaps,
@@ -748,7 +783,7 @@ extern "C" fn shutdown() {
             }
             drop(m); // (the machine's memory; fm1-core's JIT pages: README "Memory")
         }
-        s.fifo = fifo::Fifo::new(s.fifo.lat);
+        s.fifo = fifo::Fifo::new(s.fifo.lat, s.hz);
         s.midi = VecDeque::new();
         s.source = None;
         s.staged = None;
@@ -812,7 +847,8 @@ fn leak(s: &str) -> *const c_char {
 }
 
 const CREDITS: &str = "The emulator: fm1-emu by Joakim Eriksson (https://github.com/joakimeriksson/fm1-emu), \
-used unmodified (its fm1-core, fm1-soc and fm1-isa crates). The firmware a user loads carries its own licence.\n\
+its fm1-core, fm1-soc and fm1-isa crates, with FM1VST's patches (core-glue/fm1emu/patches: the P33 power block, \
+JIT and timer speed-ups; offered upstream). The firmware a user loads carries its own licence.\n\
 \n\
 fm1-emu's credits: built on the community's reverse engineering of the FM-1: AL-255/FM-1-RE, ip2k/lunar-modulator, \
 kagaimiq's jielie, the hardware layer of hugelton/Felucca and awesome-fm-1. Thanks to every firmware author for \
@@ -848,6 +884,13 @@ pub extern "C" fn fm1core_get(abi_version: u32) -> *const Core {
         if d.is_none() {
             let commit = option_env!("FM1EMU_COMMIT").unwrap_or("unknown");
             let short: String = commit.chars().take(7).collect();
+            // the patches applied over the pinned commit (core-glue/fm1emu/patches, core.cmake): "0001 0002"
+            let patches = option_env!("FM1EMU_PATCHES").unwrap_or("").trim();
+            let version = if patches.is_empty() {
+                format!("fm1-emu {short}")
+            } else {
+                format!("fm1-emu {short} + {}", patches.replace(' ', "+"))
+            };
             let names = ["FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ", "PLAY", "REC", "OCT-", "OCT+"];
             let mut button_names = [std::ptr::null(); NB];
             for (o, n) in button_names.iter_mut().zip(names.iter()) {
@@ -857,7 +900,7 @@ pub extern "C" fn fm1core_get(abi_version: u32) -> *const Core {
                 abi_version: ABI,
                 id: leak("fm1emu"),
                 name: leak("FM-1 (emulated)"),
-                version: leak(&format!("fm1-emu {short}")),
+                version: leak(&version),
                 source_url: leak(&format!("https://github.com/joakimeriksson/fm1-emu@{commit}")),
                 family: leak("fm1emu"),
                 license: leak("MIT"),
@@ -904,9 +947,45 @@ pub extern "C" fn fm1core_latency_frames() -> u32 {
     guard(LATENCY, || st().fifo.lat)
 }
 
+/// An option for the next power-on (fm1core.h "optional module symbols"; not in the descriptor, no ABI change): found
+/// with dlsym, called before init on the clock's thread (or with the clock stopped). Keys:
+///   "mhz"   the emulated chip's clock in MHz, 60..1000 (default 360): fm1-soc's periph.hz and tick()'s cycles per ms
+/// Returns 1 taken, 0 an unknown key, -1 a bad value (the option unchanged).
+#[no_mangle]
+pub extern "C" fn fm1core_boot_option(key: *const c_char, value: *const c_char) -> c_int {
+    guard(-1, || {
+        if key.is_null() || value.is_null() {
+            return -1;
+        }
+        // SAFETY: NUL-terminated strings from the host
+        let (k, v) = unsafe { (CStr::from_ptr(key).to_string_lossy(), CStr::from_ptr(value).to_string_lossy()) };
+        match k.as_ref() {
+            "mhz" => match v.trim().parse::<u32>() {
+                Ok(m) if (MHZ_MIN..=MHZ_MAX).contains(&m) => {
+                    st().hz_next = m as u64 * 1_000_000;
+                    1
+                }
+                _ => -1,
+            },
+            _ => 0,
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn boot_option_mhz() {
+        let k = CString::new("mhz").unwrap();
+        for (v, want) in [("480", 1), ("59", -1), ("1001", -1), ("x", -1)] {
+            let v = CString::new(v).unwrap();
+            assert_eq!(fm1core_boot_option(k.as_ptr(), v.as_ptr()), want);
+        }
+        assert_eq!(st().hz_next, 480_000_000);
+        let other = CString::new("nope").unwrap();
+        assert_eq!(fm1core_boot_option(other.as_ptr(), k.as_ptr()), 0);
+    }
     #[test]
     fn keymap_is_fm1_socs() {
         // fm1-soc's periph.rs KEYMAP is private: check through its LED accounting instead would need a firmware;

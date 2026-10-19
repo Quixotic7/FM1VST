@@ -8,7 +8,8 @@
 //! early and its FIFO ran dry 40 ms later, for good). So the stream is kept on the device's own time axis:
 //!
 //! * every frame has its device frame index, its play time in frames of the device's I2S clock, 24 MHz / 544 =
-//!   44117.647 Hz (fm1-soc's FRAME_T4, Felucca's DAC_TICKS): index = cycles / 5440 at 240 MHz;
+//!   44117.647 Hz (fm1-soc's FRAME_T4, Felucca's DAC_TICKS): index = cycles * 24 MHz / (544 * the chip's clock),
+//!   e.g. cycles / 5440 at 240 MHz, cycles / 8160 at 360;
 //! * the first half's end is found exactly (tick() runs in short steps until it arrives), the halves after it
 //!   follow on contiguously; a burst whose end lies a half or more past where the stream ends (the DMA was
 //!   stopped) is placed at its own time, silence in the gap;
@@ -24,8 +25,9 @@ use std::collections::VecDeque;
 
 /// device frames per ABI frame: (24 MHz / 544) / 44100
 pub const STEP: f64 = 24_000_000.0 / 544.0 / 44_100.0;
-/// CPU cycles per device frame at 240 MHz (240e6 * 544 / 24e6)
-pub const CYCLES_PER_FRAME: u64 = 5440;
+/// the I2S clock: a device frame is 544 of its ticks (fm1-soc's FRAME_T4)
+const T4_HZ: u128 = 24_000_000;
+const FRAME_T4: u128 = 544;
 /// the most frames kept ahead of the read position (a machine far ahead): 3 s
 const MAX_AHEAD: usize = 3 * 44_118;
 
@@ -45,10 +47,12 @@ pub struct Fifo {
     /// the margin: frames there beyond the last one read, lowest and highest after a pull
     pub low: i64,
     pub high: i64,
+    /// the emulated chip's clock (Hz): cycles to device frames
+    hz: u128,
 }
 
 impl Fifo {
-    pub fn new(lat: u32) -> Fifo {
+    pub fn new(lat: u32, hz: u64) -> Fifo {
         Fifo {
             buf: VecDeque::new(),
             base: 0,
@@ -61,7 +65,13 @@ impl Fifo {
             gaps: 0,
             low: i64::MAX,
             high: i64::MIN,
+            hz: hz.max(1) as u128,
         }
+    }
+
+    /// the device frame index (the I2S clock's frames) at the chip's cycle count `cycles`
+    pub fn frame_at(&self, cycles: u64) -> i64 {
+        (cycles as u128 * T4_HZ / (FRAME_T4 * self.hz)) as i64
     }
 
     fn end(&self) -> i64 {
@@ -79,7 +89,7 @@ impl Fifo {
         if h > self.half {
             self.half = h;
         }
-        let at = (cycles / CYCLES_PER_FRAME) as i64; // (the burst's end is here or up to a half before)
+        let at = self.frame_at(cycles); // (the burst's end is here or up to a half before)
         if !self.started {
             self.started = true;
             // (a half larger than the prime: this instance's L grows to cover it, in whole blocks)
@@ -173,22 +183,25 @@ mod tests {
 
     /// halves of `h` frames from `t0_ms` at the device's rate, the ABI's blocks at 44100, `secs` long; the
     /// machine runs `ahead` ms past each millisecond (an idle skip) every `every` ms
-    fn run(h: u64, lat: u32, secs: u64, ahead: u64, every: u64) -> Fifo {
-        let mut f = Fifo::new(lat);
-        let half_cycles = h * CYCLES_PER_FRAME;
-        let t0 = 180 * 240_000u64;
+    fn run(h: u64, lat: u32, secs: u64, ahead: u64, every: u64, mhz: u64) -> Fifo {
+        let hz = mhz * 1_000_000;
+        let per_ms = hz / 1000;
+        let mut f = Fifo::new(lat, hz);
+        // a half's length in cycles, exactly (fractional at 320 MHz: 7253.33 cycles a frame)
+        let half_at = |k: u64| (k as u128 * h as u128 * FRAME_T4 * hz as u128).div_ceil(T4_HZ) as u64;
+        let t0 = 180 * per_ms;
         let (mut made, mut taken, mut cycles) = (0u64, 0u64, 0u64);
         let mut out = vec![0i16; 256];
         let mut n = 0i16;
         for ms in 0..secs * 1000 {
-            let mut target = (ms + 1) * 240_000;
+            let mut target = (ms + 1) * per_ms;
             if every > 0 && ms % every == 0 {
-                target += ahead * 240_000;
+                target += ahead * per_ms;
             }
             cycles = cycles.max(target);
             let mut burst = Vec::new();
             let mut halves = 0;
-            while cycles >= t0 && t0 + (made + 1) * half_cycles <= cycles {
+            while cycles >= t0 && t0 + half_at(made + 1) <= cycles {
                 for _ in 0..h {
                     burst.extend_from_slice(&[n, n]);
                     n = n.wrapping_add(1);
@@ -207,24 +220,35 @@ mod tests {
 
     #[test]
     fn steady_and_ahead() {
-        for (h, lat) in [(64, 256), (128, 256), (256, 256), (256, 512)] {
-            for (ahead, every) in [(0, 0), (40, 997), (3, 7)] {
-                let f = run(h, lat, 30, ahead, every);
-                assert_eq!((f.underflows, f.dropped, f.gaps), (0, 0, 0), "h {h} L {lat} ahead {ahead}/{every}");
-                assert!(f.low >= 0, "h {h} L {lat}: margin {}..{}", f.low, f.high);
+        for mhz in [240, 320, 360, 480, 640, 120] {
+            for (h, lat) in [(64, 256), (128, 256), (256, 256), (256, 512)] {
+                for (ahead, every) in [(0, 0), (40, 997), (3, 7)] {
+                    let f = run(h, lat, 30, ahead, every, mhz);
+                    assert_eq!((f.underflows, f.dropped, f.gaps), (0, 0, 0), "{mhz} MHz h {h} L {lat} ahead {ahead}/{every}");
+                    assert!(f.low >= 0, "{mhz} MHz h {h} L {lat}: margin {}..{}", f.low, f.high);
+                }
             }
+        }
+    }
+
+    #[test]
+    fn frames_follow_the_clock() {
+        // the same device time is the same device frame at any clock: 1 s = 44117 frames
+        for mhz in [120u64, 240, 320, 360, 480, 640] {
+            let f = Fifo::new(256, mhz * 1_000_000);
+            assert_eq!(f.frame_at(mhz * 1_000_000), 44117, "{mhz} MHz");
         }
     }
 
     #[test]
     fn a_ramp_comes_out_whole() {
         // a ramp through the interpolator at the device's rate: consecutive outputs step by STEP
-        let mut f = Fifo::new(256);
+        let mut f = Fifo::new(256, 240_000_000);
         let mut v: Vec<i16> = Vec::new();
         for i in 0..4096 {
             v.extend_from_slice(&[i as i16, i as i16]);
         }
-        f.push(&v, 16, 4096 * CYCLES_PER_FRAME);
+        f.push(&v, 16, 4096 * 5440);
         let mut out = vec![0i16; 2 * 2048];
         f.pull(&mut out);
         let a = out[2 * 1000] as f64;

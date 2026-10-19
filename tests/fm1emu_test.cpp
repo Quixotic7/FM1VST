@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The fm1emu core beyond the conformance test (core-glue/fm1emu/README.md):
 //
-//   fm1emu_test FM1EMU.fm1core FELUCCA.fwsc MVAVE.fwsc FELUCCA_NATIVE.fm1core [OUT_DIR] [--memory]
+//   fm1emu_test FM1EMU.fm1core FELUCCA.fwsc MVAVE.fwsc FELUCCA_NATIVE.fm1core [OUT_DIR] [--memory] [--melodee MELODEE.fwsc]
 //
 //   1. no firmware      nothing staged, no FM1EMU_FWSC: the LOAD .FWSC screen, silence, running (halted() 0)
 //   2. the image        a package staged as bytes (case 1) boots; flash() is the 0x210000 fm1emu image (the NOR, the
@@ -13,6 +13,11 @@
 //   5. memory           (--memory: only this, in a fresh process) phys_footprint after 1, 2 and 4 loaded and
 //                       booted instances (Felucca, run 2 s), after unloading them, and after loading 4 again
 //   6. JIT              ui_info's speed with the JIT on (two instances, above) and off (FM1EMU_JIT=0)
+//   7. the clock        the boot option "mhz" (fm1core_boot_option, dlsym): 360 by default, 240 and 480 given; the
+//                       cycles per device ms over ms 2000..3000 follow it (ui_info's cycles), the firmware draws and
+//                       sounds at each, and a bad value or key is refused
+//   8. Melodee          (--melodee) the Hub's Melodee 1.4.4 boots, draws and plays a key at 360 MHz: it needs patch
+//                       0001 (fm1-soc's P33 power block; core-glue/fm1emu/patches): without it the screen stays blank
 // Not a pass/fail on machine-dependent numbers (speed, memory): those are printed for the README.
 #include <dlfcn.h>
 #include <mach/mach.h>
@@ -136,8 +141,15 @@ int main(int argc, char **argv)
         std::printf("usage: fm1emu_test FM1EMU.fm1core FELUCCA.fwsc MVAVE.fwsc FELUCCA_NATIVE.fm1core [OUT_DIR]\n");
         return 2;
     }
-    const std::string module = argv[1], native = argv[4], out = argc > 5 ? argv[5] : ".";
-    const bool memory_only = argc > 6 && std::string(argv[6]) == "--memory";
+    const std::string module = argv[1], native = argv[4], out = argc > 5 && argv[5][0] != '-' ? argv[5] : ".";
+    bool memory_only = false;
+    std::string melodee;
+    for (int i = 5; i < argc; i++) {
+        if (std::string(argv[i]) == "--memory")
+            memory_only = true;
+        else if (std::string(argv[i]) == "--melodee" && i + 1 < argc)
+            melodee = argv[++i];
+    }
     std::vector<uint8_t> fel, stock;
     if (!read_bytes(argv[2], fel) || !read_bytes(argv[3], stock)) {
         std::printf("fm1emu_test: cannot read %s or %s\n", argv[2], argv[3]);
@@ -338,6 +350,83 @@ int main(int argc, char **argv)
         check(inf.find("JIT off") != std::string::npos && !lcd_blank(d) && !d.halted(),
               "JIT off (FM1EMU_JIT=0): runs on the interpreter (" + inf + ")");
         unsetenv("FM1EMU_JIT");
+    }
+
+    // ---- 7. the clock: the boot option, the cycles per device ms
+    for (int mhz : {0, 240, 480}) {
+        std::unique_ptr<LoadedCore> lc = CoreLoader::load(module, &err);
+        auto opt = reinterpret_cast<fm1core_boot_option_fn>(lc->symbol(FM1CORE_BOOT_OPTION_SYMBOL));
+        check(opt != nullptr, "fm1core_boot_option is exported (LoadedCore::symbol)");
+        if (!opt)
+            break;
+        if (mhz) {
+            check(opt("mhz", std::to_string(mhz).c_str()) == 1 && opt("mhz", "5000") == -1 && opt("mhz", "abc") == -1 &&
+                      opt("speed", "1") == 0,
+                  "boot option mhz=" + std::to_string(mhz) + " taken; 5000, abc and an unknown key refused");
+        }
+        Device d(lc->core());
+        d.boot_from(fel.data(), (uint32_t)fel.size());
+        while (d.ms() < 2000)
+            d.run_ms();
+        const std::string a = info(lc->core());
+        while (d.ms() < 3000)
+            d.run_ms();
+        const std::string b = info(lc->core());
+        auto num = [](const std::string &s, const std::string &k) {   // "cycles 123"; "ms": "3000 ms;"
+            if (k == "ms") {
+                const size_t e = s.find(" ms;");
+                const size_t a = e == std::string::npos ? e : s.rfind(' ', e - 1);
+                return a == std::string::npos ? -1.0 : std::atof(s.c_str() + a + 1);
+            }
+            const size_t i = s.find(k + " ");
+            return i == std::string::npos ? -1.0 : std::atof(s.c_str() + i + k.size() + 1);
+        };
+        const int want = mhz ? mhz : 360;
+        const double per = (num(b, "cycles") - num(a, "cycles")) / (num(b, "ms") - num(a, "ms"));
+        peak_of(d);
+        d.key_vel(9, 100);
+        d.keys(1u << 9);
+        int pk = 0;
+        for (int i = 0; i < 600; i++) {
+            d.run_ms();
+            pk = std::max(pk, peak_of(d));
+        }
+        d.keys(0);
+        check(b.find("clock " + std::to_string(want) + " MHz") != std::string::npos && std::abs(per / (want * 1000.0) - 1) < 0.02 &&
+                  !lcd_blank(d) && pk > 64 && !d.halted(),
+              std::string(mhz ? "" : "the default: ") + std::to_string(want) + " MHz: " + std::to_string((long long)per) +
+                  " cycles per device ms, draws, D4 peak " + std::to_string(pk));
+    }
+
+    // ---- 8. Melodee 1.4.4 (patch 0001)
+    if (!melodee.empty()) {
+        std::vector<uint8_t> mel;
+        check(read_bytes(melodee, mel), "Melodee's package: " + melodee);
+        std::unique_ptr<LoadedCore> lc = CoreLoader::load(module, &err);
+        Device d(lc->core());
+        d.boot_from(mel.data(), (uint32_t)mel.size());
+        const auto t0 = std::chrono::steady_clock::now();
+        while (d.ms() < 4000)
+            d.run_ms();
+        const double wall = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+        fm1g_write_lcd_ppm((out + "/fm1emu_melodee.ppm").c_str(), d.lcd());
+        peak_of(d);
+        d.key_vel(9, 100);
+        d.keys(1u << 9);
+        int pk = 0;
+        for (int i = 0; i < 1000; i++) {
+            d.run_ms();
+            pk = std::max(pk, peak_of(d));
+        }
+        d.keys(0);
+        const std::string inf = info(lc->core());
+        check(!lcd_blank(d) && !d.halted() && pk > 64,
+              "Melodee 1.4.4 boots, draws and sounds (D4 peak " + std::to_string(pk) + "; 4 s in " + std::to_string(wall).substr(0, 4) +
+                  " s wall; fm1emu_melodee.ppm; " + inf + ")");
+        check(std::string(lc->core()->version).find("0001") != std::string::npos, std::string("  ... on a core with patch 0001: ") +
+                                                                                     lc->core()->version);
+    } else {
+        std::printf("  (no --melodee: Melodee not run)\n");
     }
 
     std::printf("fm1emu_test: %s\n", fails ? "FAIL" : "PASS");
