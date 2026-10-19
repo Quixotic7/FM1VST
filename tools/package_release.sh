@@ -91,7 +91,9 @@ check_bundle() {
         [ -z "$deps" ] || bad "$n: ${f#$b/} links $(echo $deps)"
         minos="$(max_minos "$f")"
         { [ -n "$minos" ] && ver_le "$minos" "$target"; } || bad "$n: ${f#$b/} built for macOS ${minos:-?}, newer than $target"
-        if ! ver_le 12.0 "$target" && nm -u "$f" 2>/dev/null | grep -q '_kIOMainPortDefault$'; then
+        # (a WEAK reference is fine: JUCE's juce_AppleRemote_mac.mm uses it only on macOS 12+, and dyld resolves a
+        # missing weak import to NULL on macOS 11; only a strong one, as a newer libusb's, fails to load there)
+        if ! ver_le 12.0 "$target" && nm -m "$f" 2>/dev/null | grep -v ' weak ' | grep -q 'external _kIOMainPortDefault'; then
             warn_or_bad "$n: ${f#$b/} references kIOMainPortDefault (macOS 12+) but targets macOS $target: a libusb built for a newer macOS"
         fi
     done < <(find "$b" -type f -print0)
