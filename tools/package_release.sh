@@ -65,7 +65,7 @@ built="$(awk -F'\t' '$1 == "core" {print $2}' "$manifest" | sort)"
 gated="$(awk -F'\t' '$1 == "gated" {print $2}' "$manifest" | sort)"
 [ "$built" = "$expected" ] || die "the build's cores ($(echo $built)) are not the public set ($(echo $expected))"
 for g in $gated; do
-    if echo "$expected" | grep -qx "$g"; then die "$g is both gated and in tools/release/cores.tsv"; fi
+    if grep -qx "$g" <<< "$expected"; then die "$g is both gated and in tools/release/cores.tsv"; fi
 done
 ncores="$(echo "$expected" | wc -l | tr -d ' ')"
 ok "manifest: FM1VST $version, public, arm64, macOS $target+, $ncores cores ($(echo $built)); gated left out: $(echo $gated)"
@@ -92,7 +92,7 @@ check_bundle() {
     done
     local nmacho=0
     while IFS= read -r -d '' f; do
-        file -b "$f" | grep -q 'Mach-O' || continue
+        grep -q 'Mach-O' <<< "$(file -b "$f")" || continue
         nmacho=$((nmacho + 1))
         archs="$(lipo -archs "$f" 2>/dev/null || echo '?')"
         [ "$archs" = arm64 ] || bad "$n: ${f#$b/}: architectures '$archs', not arm64"
@@ -102,7 +102,7 @@ check_bundle() {
         { [ -n "$minos" ] && ver_le "$minos" "$target"; } || bad "$n: ${f#$b/} built for macOS ${minos:-?}, newer than $target"
         # (a WEAK reference is fine: JUCE's juce_AppleRemote_mac.mm uses it only on macOS 12+, and dyld resolves a
         # missing weak import to NULL on macOS 11; only a strong one, as a newer libusb's, fails to load there)
-        if ! ver_le 12.0 "$target" && nm -m "$f" 2>/dev/null | grep -v ' weak ' | grep -q 'external _kIOMainPortDefault'; then
+        if ! ver_le 12.0 "$target" && nm -m "$f" 2>/dev/null | grep -v ' weak ' | grep -c 'external _kIOMainPortDefault' | grep -qv '^0$'; then
             warn_or_bad "$n: ${f#$b/} references kIOMainPortDefault (macOS 12+) but targets macOS $target: a libusb built for a newer macOS"
         fi
     done < <(find "$b" -type f -print0)
@@ -265,17 +265,17 @@ for want in "$name/FM1VST.vst3/Contents/MacOS/FM1VST" "$name/FM1VST.component/Co
             "$name/FM1VST.app/Contents/MacOS/FM1VST" "$name/INSTALL.txt" "$name/README.txt" "$name/LICENSE" \
             "$name/licences/README.txt" "$name/licences/JUCE/LICENSE.md" "$name/licences/JUCE/AGPL-3.0.txt" \
             "$name/licences/InterTight-OFL.txt"; do
-    echo "$listing" | grep -qx "$want" || bad "zip: $want missing"
+    grep -qx "$want" <<< "$listing" || bad "zip: $want missing"
 done
 for fmt in vst3 component app; do
     n="$(echo "$listing" | grep -c "^$name/FM1VST\.$fmt/Contents/Resources/cores/[^/]*\.fm1core$" || true)"
     [ "$n" = "$ncores" ] || bad "zip: FM1VST.$fmt holds $n cores, not $ncores"
 done
 for g in $gated; do
-    if echo "$listing" | grep -q "/$g\.fm1core$\|/cores/$g/"; then bad "zip: the gated core $g is in it"; fi
+    if grep -q "/$g\.fm1core$\|/cores/$g/" <<< "$listing"; then bad "zip: the gated core $g is in it"; fi
 done
-if echo "$listing" | grep -q '\.DS_Store\|/\._'; then bad "zip: Finder litter (.DS_Store, ._ files) in it"; fi
-if echo "$listing" | grep -qi '\.syx$\|/cz1-factory/\|/prophet5-factory/'; then bad "zip: raw preset sources in it"; fi
+if grep -q '\.DS_Store\|/\._' <<< "$listing"; then bad "zip: Finder litter (.DS_Store, ._ files) in it"; fi
+if grep -qi '\.syx$\|/cz1-factory/\|/prophet5-factory/' <<< "$listing"; then bad "zip: raw preset sources in it"; fi
 [ "$fails" = 0 ] || die "$fails check(s) failed"
 size="$(du -h "$out/$name.zip" | cut -f1 | tr -d ' ')"
 ok "zip: $out/$name.zip ($size, $(echo "$listing" | wc -l | tr -d ' ') entries), 3 bundles x $ncores cores, no gated core"
@@ -326,7 +326,7 @@ fi
 # the package, checked: expanded, each component's bundle alone under its install location, with the cores
 x="$pw/expanded"
 pkgutil --expand-full "$pkg" "$x" || die "pkgutil --expand-full $pkg fails"
-xar -tf "$pkg" | grep -qx Distribution || bad "pkg: no Distribution in it (xar -tf)"
+grep -qx Distribution <<< "$(xar -tf "$pkg")" || bad "pkg: no Distribution in it (xar -tf)"
 dist="$x/Distribution"
 for k in app vst3 au; do
     grep -q "<pkg-ref id=\"com.quixotic7.fm1vst.$k\" version=\"$version\"" "$dist" || bad "pkg: Distribution: no $k $version"
@@ -357,17 +357,17 @@ while read -r k b loc; do
         [ "$(ls -A "$c/Scripts" 2>/dev/null)" = postinstall ] || bad "pkg: au: scripts other than postinstall"
     elif [ -e "$c/Scripts" ]; then bad "pkg: $k: has scripts"; fi
     pf="$(pkgutil --payload-files "$pw/comp/FM1VST-$k.pkg")"
-    echo "$pf" | grep -qx "./$b/Contents/MacOS/FM1VST" || bad "pkg: $k: pkgutil --payload-files: no ./$b/Contents/MacOS/FM1VST"
-    if echo "$pf" | grep -vx '\.' | grep -qv "^\./$b\(/\|$\)"; then bad "pkg: $k: payload files outside $b"; fi
+    grep -qx "./$b/Contents/MacOS/FM1VST" <<< "$pf" || bad "pkg: $k: pkgutil --payload-files: no ./$b/Contents/MacOS/FM1VST"
+    if grep -vx '\.' <<< "$pf" | grep -v "^\./$b\(/\|$\)" | grep -c . | grep -qv '^0$'; then bad "pkg: $k: payload files outside $b"; fi
 done <<< "$pkg_rows"
 pkg_files="$(cd "$x" && find . | sed 's|^\./||')"
 for g in $gated; do
-    if echo "$pkg_files" | grep -q "/$g\.fm1core$\|/cores/$g/"; then bad "pkg: the gated core $g is in it"; fi
+    if grep -q "/$g\.fm1core$\|/cores/$g/" <<< "$pkg_files"; then bad "pkg: the gated core $g is in it"; fi
     if grep -rqs -- "$g\.fm1core" "$x/Distribution" "$x/Resources" "$x"/*.pkg/PackageInfo "$x"/*.pkg/Scripts; then
         bad "pkg: the gated core $g is named in its metadata"
     fi
 done
-if echo "$pkg_files" | grep -q '\.DS_Store\|/\._'; then bad "pkg: Finder litter (.DS_Store, ._ files) in it"; fi
+if grep -q '\.DS_Store\|/\._' <<< "$pkg_files"; then bad "pkg: Finder litter (.DS_Store, ._ files) in it"; fi
 no_raw_presets "pkg (expanded)" "$x"
 installer -pkginfo -pkg "$pkg" > "$pw/pkginfo.txt" 2>&1 || bad "pkg: installer -pkginfo fails: $(cat "$pw/pkginfo.txt")"
 installer -dominfo -pkg "$pkg" > "$pw/dominfo.txt" 2>&1 || bad "pkg: installer -dominfo fails: $(cat "$pw/dominfo.txt")"
