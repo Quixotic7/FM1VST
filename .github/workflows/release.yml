@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# FM1VST's release: the public build (FM1_PUBLIC_BUILD=ON: the 10 un-gated cores, Felucca the default) for Apple
+# FM1VST's release: the public build (FM1_PUBLIC_BUILD=ON: the 10 un-gated cores and the fm1emu engine, a Rust module
+# built with cargo, Felucca the default) for Apple
 # silicon, tested, checked, zipped and packaged as an installer (.pkg) by the same scripts a local run uses
 # (tools/release_tests.sh, tools/package_release.sh).
 #   - a tag v<version> (git tag v0.3.1 && git push origin v0.3.1): builds and publishes the GitHub Release (the zip,
@@ -82,6 +83,22 @@ jobs:
           print('Pillow', PIL.__version__, 'raqm', features.version('raqm'), 'fribidi', features.version('fribidi'))
           assert features.check('raqm'), 'Pillow has no raqm'"
 
+      - name: Rust (stable) for the fm1emu core (core-glue/fm1emu, cargo)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: The fm1emu core's cargo cache
+        shell: bash
+        run: echo "FM1EMU_PIN=$(git rev-parse HEAD:cores/fm1-emu)" >> "$GITHUB_ENV"
+
+      - name: Restore the fm1emu core's cargo target dir (the patched fm1-emu crates compile in a few minutes)
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.BUILD_DIR }}/fm1emu-cargo
+          key: fm1emu-cargo-${{ runner.os }}-${{ env.FM1EMU_PIN }}-${{ hashFiles('core-glue/fm1emu/**') }}
+          restore-keys: fm1emu-cargo-${{ runner.os }}-${{ env.FM1EMU_PIN }}-
+
       - name: libusb, static, for macOS ${{ env.DEPLOYMENT_TARGET }}
         shell: bash
         run: .github/scripts/logged.sh libusb tools/libusb_static.sh "$RUNNER_TEMP/libusb" "$DEPLOYMENT_TARGET" "$GITHUB_ENV"
@@ -92,7 +109,7 @@ jobs:
           .github/scripts/logged.sh configure cmake -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release \
             -DFM1_PUBLIC_BUILD=ON -DFM1_COPY_PLUGIN=OFF \
             -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET" \
-            -DCR_PYTHON="$CR_PYTHON" -DFM1_LIBUSB_PREFIX="$FM1_LIBUSB_PREFIX"
+            -DCR_PYTHON="$CR_PYTHON" -DFM1_LIBUSB_PREFIX="$FM1_LIBUSB_PREFIX" -DFM1_CARGO="$(command -v cargo)"
           cat "$BUILD_DIR/release-manifest.tsv"
 
       - name: Build
@@ -125,10 +142,14 @@ jobs:
               codesign --force --timestamp --options runtime -s "$MACOS_SIGN_IDENTITY" "$c"
             done
             # (the Standalone loads cores a user drops into ~/Library/Application Support/fm1emu/cores: without
-            # library validation off, the hardened runtime would refuse those)
+            # library validation off, the hardened runtime would refuse those. allow-jit: the fm1emu core's JIT maps
+            # MAP_JIT memory, which the hardened runtime refuses without it (the core then falls back to its
+            # interpreter, ~1x real time). The plug-ins run under their host's entitlements.)
             ent=()
             if [ "${b##*.}" = app ]; then
               /usr/libexec/PlistBuddy -c 'Add :com.apple.security.cs.disable-library-validation bool true' \
+                "$RUNNER_TEMP/app.entitlements" > /dev/null
+              /usr/libexec/PlistBuddy -c 'Add :com.apple.security.cs.allow-jit bool true' \
                 "$RUNNER_TEMP/app.entitlements" > /dev/null
               ent=(--entitlements "$RUNNER_TEMP/app.entitlements")
             fi

@@ -1319,6 +1319,7 @@ void FM1Processor::setEmuClockChoice(int choice)
         clockNote_.clear();
     }
     governorReset_.store(true);
+    deferredStep_.store(0);
     if (isEmulated() && getEmuMhz() != before)
         powerCycle();                            // (the clock is fixed at power-on: a reboot, the flash kept)
 }
@@ -1349,10 +1350,29 @@ void FM1Processor::emuGovernorFeed(double load, double lateMs, double nowMs)
             clockNote_ = "This computer can't keep up with " + name + " at " + juce::String(was) + " MHz: try Auto or a lower clock";
     }
     if (v.step) {
-        emuAutoMhz_.store(v.step);
-        if (isEmulated())
-            powerCycle();                        // (a reboot at the new clock, the flash kept; the next governor starts then)
+        // in a DAW never while the transport plays: the reboot waits for the stop (emuTimer); the Standalone at once,
+        // as the site does
+        const bool standalone = juce::PluginHostType::getPluginLoadedAs() == wrapperType_Standalone;
+        if (!standalone && hostPlaying_.load()) {
+            deferredStep_.store(v.step);
+            const juce::ScopedLock l(devLock_);
+            clockNote_ = "Auto: will step down to " + juce::String(v.step) + " MHz when stopped";
+            return;
+        }
+        applyAutoStep(v.step, was);
     }
+}
+
+void FM1Processor::applyAutoStep(int step, int was)
+{
+    deferredStep_.store(0);
+    {
+        const juce::ScopedLock l(devLock_);
+        clockNote_ = "Auto: " + juce::String(step) + " MHz (this computer could not keep up at " + juce::String(was) + ")";
+    }
+    emuAutoMhz_.store(step);
+    if (isEmulated())
+        powerCycle();                            // (a reboot at the new clock, the flash kept; the next governor starts then)
 }
 
 void FM1Processor::emuTimer()
@@ -1363,6 +1383,15 @@ void FM1Processor::emuTimer()
         if (lat != getLatencySamples())
             setLatencySamples(lat);
     }
+    if (const int d = deferredStep_.load(); d && !hostPlaying_.load()) {   // (the transport stopped: Auto's step now)
+        if (emuChoice_.load() == emuclock::kAuto)
+            applyAutoStep(d, getEmuMhz());
+        else
+            deferredStep_.store(0);
+        return;
+    }
+    if (deferredStep_.load())
+        return;                                  // (a step waits for the stop: nothing more to judge meanwhile)
     if (governorReset_.load()) {                 // (a new boot: a new governor, and its grace from now)
         emuGovernorFeed(0, 0, now);
         lastReport_ = now;
@@ -2520,6 +2549,13 @@ void FM1Processor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuff
     const int n = buffer.getNumSamples();
     // (an emulated firmware: the time this block takes, for Auto's clock: EmuClock.h; never a bounce)
     const bool measure = emuMeasure_.load(std::memory_order_relaxed) && !isNonRealtime();
+    if (measure) {                               // (Auto never reboots the firmware while the host's transport plays)
+        bool playing = false;
+        if (juce::AudioPlayHead *ph = getPlayHead())
+            if (const auto pos = ph->getPosition())
+                playing = pos->getIsPlaying() || pos->getIsRecording();
+        hostPlaying_.store(playing, std::memory_order_relaxed);
+    }
     const juce::int64 t0 = measure ? juce::Time::getHighResolutionTicks() : 0;
     midiOut_.clear();
     const juce::ScopedTryLock l(devLock_);

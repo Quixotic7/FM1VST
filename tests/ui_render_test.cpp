@@ -16,7 +16,8 @@
 //   (e) emulated firmwares (the Hub unreachable: the bundled list): the browser's engine filter (ui-firmware-all.png,
 //       ui-firmware-emulated.png), a Hub firmware with a native core too picked on its emulated engine (its package
 //       put in the cache first: no network): the main page's Engine, clock and Source rows (ui-sheet-emulated.png),
-//       its About page (ui-about-emulated.png).
+//       its About page (ui-about-emulated.png), Auto's step down waiting for the transport to stop
+//       (ui-sheet-clock-deferred.png).
 // FM1EMU_HOME points at a scratch folder under the build.
 #include <cstdio>
 #include <cstdlib>
@@ -83,6 +84,15 @@ static void shot(FM1Editor &ed, const juce::String &name, float scale = 2.0f)
           "wrote " + f.getFullPathName().toStdString() + " (" + std::to_string(ed.getWidth()) + " x " + std::to_string(ed.getHeight()) +
               " at " + std::to_string((int)scale) + "x)");
 }
+
+struct PlayingHead : juce::AudioPlayHead {   // a host's transport, playing
+    juce::Optional<PositionInfo> getPosition() const override
+    {
+        PositionInfo pi;
+        pi.setIsPlaying(true);
+        return pi;
+    }
+};
 
 static juce::MouseEvent mouseAt(juce::Component &c, juce::Point<float> p, juce::ModifierKeys mods)
 {
@@ -232,6 +242,18 @@ int main()
                 ed.sheet().showPage(Sheet::kMain);
                 ed.sheet().refresh();
                 shot(ed, "sheet-emulated");
+                {
+                    PlayingHead ph;
+                    p.setPlayHead(&ph);
+                    h.run_ms(100);
+                    for (double t = 0; t <= 6000; t += 500)
+                        p.emuGovernorFeed(0.95, 0, t);
+                    ed.sheet().refresh();
+                    check(p.getEmuDeferredStep() == 320, "Auto's step down waits while the transport plays");
+                    shot(ed, "sheet-clock-deferred");
+                    p.setPlayHead(nullptr);
+                    p.setEmuClockChoice(emuclock::kAuto);
+                }
                 ed.sheet().showPage(Sheet::kAbout);
                 shot(ed, "about-emulated");
                 ed.sheet().showPage(Sheet::kMain);

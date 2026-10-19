@@ -376,6 +376,10 @@ public:
     // Auto's governor, one report (the timer calls it every half second; tests call it with fake timing)
     void emuGovernorFeed(double load, double lateMs, double nowMs);
     juce::String getEmuClockNote() const;            // what the governor last said ("" none)
+    // in a plugin, Auto's step down waits while the host's transport plays (the clock row says so); the Standalone
+    // steps at once. The step (MHz) waiting, 0 none; the timer's work, for tests
+    int getEmuDeferredStep() const { return deferredStep_.load(); }
+    void emuTimerForTest() { emuTimer(); }
     hub::Service &hubService() { return *hub_; }
 
     // ---- Remote FM-1 (message thread; stored in the state). On: the link takes the unit lock and runs; off: SESSION 0,
@@ -496,6 +500,9 @@ private:
     double lastReport_ = 0;
     std::atomic<bool> governorReset_{false};
     juce::String clockNote_;
+    std::atomic<bool> hostPlaying_{false};           // the host's transport plays (processBlock, an emulated firmware)
+    std::atomic<int> deferredStep_{0};               // Auto's step down waiting for the transport to stop (0 none)
+    void applyAutoStep(int step, int was);
     std::vector<uint8_t> composeEmuImage(const std::vector<uint8_t> &nor) const;
     int latencyLocked() const;                       // (devLock_ held) the samples the host is told
 

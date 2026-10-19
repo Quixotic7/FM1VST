@@ -1023,12 +1023,6 @@ void Sheet::MainPage::refresh(bool full)
             st = es.text + (es.progress >= 0 ? " " + String(juce::roundToInt(es.progress * 100)) + " %" : String());
         else if (es.text.isNotEmpty())
             st = es.text, sc = C(es.error ? Look::C::red : Look::C::amber);
-        const String note = p_.getEmuClockNote();
-        if (emu && note.isNotEmpty()) {
-            if (st.isEmpty())
-                sc = C(Look::C::amber);
-            st << (st.isEmpty() ? "" : "\n") << note;
-        }
         emuStatus_.setText(st, sc);
         emuStatus_.setLed(es.busy ? look_.accent() : juce::Colours::transparentBlack);
         emuStatus_.setVisible(st.isNotEmpty());
@@ -1043,7 +1037,11 @@ void Sheet::MainPage::refresh(bool full)
         const int c = p_.getEmuClockChoice(), mhz = p_.getEmuMhz();
         clockP_.setText(c == emuclock::kAuto ? "Auto" : String(c) + " MHz");
         clock_.setControlWidth(juce::jmax(96, clockP_.preferredWidth()));
-        clock_.setCaption(String(mhz) + " MHz now" +
+        const String note = p_.getEmuClockNote();   // (Auto's step, or one waiting for the transport to stop)
+        if (note.isNotEmpty())
+            clock_.setCaption(note, C(Look::C::amber));
+        else
+            clock_.setCaption(String(mhz) + " MHz now" +
                               (emuclock::isOverclock(mhz) ? String::fromUTF8(" \xc2\xb7 overclock")
                                : emuclock::inDeviceRange(mhz) ? String::fromUTF8(" \xc2\xb7 the FM-1's own range")
                                                               : String::fromUTF8(" \xc2\xb7 below the FM-1's")),

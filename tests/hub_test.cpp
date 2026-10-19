@@ -12,7 +12,8 @@
 //   (p) the processor: a Hub firmware picked boots on the fm1emu core and draws; firmwareCores() leaves the engine out;
 //       the working flash per package version
 //   (k) the clock: the choice reaches the core (ui_info's clock, and the cycles per device ms over 2 s at 240 and at
-//       480 MHz); Auto's governor on fake timing (EmuClock.h) and through the processor (a step down reboots at 320)
+//       480 MHz); Auto's governor on fake timing (EmuClock.h) and through the processor (a step down reboots at 320;
+//       while the host's transport plays it waits, says so, and steps when the transport stops)
 //   (s) the state: the package by id and SHA-256 and the NOR only (its size), the clock; a second instance restores
 //       it from the cache with the Hub unreachable; with the package not cached, the core waits (empty), the state
 //       keeps the NOR unchanged, the package is fetched and the firmware comes up with that NOR; with the Hub gone too,
@@ -58,6 +59,17 @@ struct Host {
             buf.clear();
             p.processBlock(buf, m);
         }
+    }
+};
+
+// a host's transport, playing or not
+struct FakePlayHead : juce::AudioPlayHead {
+    bool playing = false;
+    juce::Optional<PositionInfo> getPosition() const override
+    {
+        PositionInfo pi;
+        pi.setIsPlaying(playing);
+        return pi;
     }
 };
 
@@ -398,6 +410,30 @@ int main(int argc, char **argv)
         check(t.getProperty("emuClock").toString() == "auto" && (int)t.getProperty("emuAutoMhz") == 320, "  ... the state keeps Auto at 320");
         p.setEmuClockChoice(emuclock::kAuto);
         check(p.getEmuMhz() == 360, "  ... picking Auto again starts at 360");
+
+        // the transport plays: the step waits, the clock row says so, and comes when the transport stops
+        FakePlayHead ph;
+        ph.playing = true;
+        p.setPlayHead(&ph);
+        h.run_ms(500);
+        const std::string before = info(p);
+        for (double t = 0; t <= 6000; t += 500)
+            p.emuGovernorFeed(0.95, 0, t);
+        h.run_ms(1000);
+        p.emuTimerForTest();
+        const std::string during = info(p);
+        check(p.getEmuDeferredStep() == 320 && p.getEmuMhz() == 360 && during.find("clock 360 MHz") != std::string::npos &&
+                  field(during, "ms") > field(before, "ms") && p.getEmuClockNote() == "Auto: will step down to 320 MHz when stopped",
+              "the transport playing: no reboot (" + std::to_string(field(during, "ms")) + " device ms, still 360 MHz), \"" +
+                  s(p.getEmuClockNote()) + "\"");
+        ph.playing = false;
+        h.run_ms(100);
+        p.emuTimerForTest();
+        h.run_ms(500);
+        check(p.getEmuDeferredStep() == 0 && p.getEmuMhz() == 320 && info(p).find("clock 320 MHz") != std::string::npos &&
+                  field(info(p), "ms") < field(during, "ms"),
+              "  ... the transport stopped: rebooted at 320 (" + s(p.getEmuClockNote()) + ")");
+        p.setPlayHead(nullptr);
     }
 
     std::printf("hub_test: %s\n", fails ? "FAIL" : "PASS");
