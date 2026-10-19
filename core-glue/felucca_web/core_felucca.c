@@ -9,6 +9,9 @@
 #define FM1CORE_FW_P fe
 #define FM1CORE_FW_WEB_C "../../cores/Felucca/web/emu/felucca_web.c"
 #define FM1CORE_FW_ANIM_IDLE 1
+#define FM1CORE_FW_EDITOR_C "../../cores/Felucca/firmware/src/editor.c"   /* the web editor's SysEx */
+#define FM1CORE_FW_OTA_C "../../cores/Felucca/firmware/src/ota.c"         /* the M-UPGRADE identity */
+#define FELUCCA_ID "FM-1_900"                                             /* (felucca.c) */
 #include "fw_core.h"
 
 /* ---- the Tier 2 parameter map (in this unit: it reaches the firmware's statics) ---- */

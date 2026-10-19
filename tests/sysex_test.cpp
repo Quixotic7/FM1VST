@@ -444,6 +444,58 @@ ChangeFn panel_change(uint32_t obj, std::function<void(Device &)> act)
     };
 }
 
+// Felucca and its forks: a user preset stored as the web editor stores one (editor.html req.upStore: UP_STORE 19,
+// slot 0, the name "SYSEX", its NUL), found in the backup object it changed (a user preset bank: Felucca's upreset.c
+// up_bank_t, DUELL's 128-slot store), its name's first letter changed in the backup's copy, and restored over PUT
+const Obj *changed_obj(const std::vector<Obj> &was, const std::vector<Obj> &now)
+{
+    for (const Obj &o : now) {
+        const Obj *w = find(was, o.id);
+        if (o.size && (!w || w->size != o.size || w->crc != o.crc))
+            return &o;
+    }
+    return nullptr;
+}
+size_t find_text(const Bytes &b, const char *t)
+{
+    const size_t n = std::strlen(t);
+    for (size_t i = 0; i + n <= b.size(); i++)
+        if (!std::memcmp(&b[i], t, n))
+            return i;
+    return std::string::npos;
+}
+ChangeFn up_store_change(uint8_t store_cmd = 19)
+{
+    return [=](Link &k, Session &s, std::vector<Obj> &man, uint32_t &id, Bytes &before, Bytes &after) {
+        std::vector<Obj> was;
+        if (!s.list(was))
+            return false;
+        Bytes r;
+        const Bytes args = {0, 'S', 'Y', 'S', 'E', 'X', 0};
+        if (!k.request(fl(store_cmd, args), fl_reply(store_cmd), r, 5000) || fl_args(r).size() < 2 || fl_args(r)[1]) {
+            s.why = "UP_STORE: no reply or an error";
+            return false;
+        }
+        if (!s.list(man))
+            return false;
+        const Obj *o = changed_obj(was, man);
+        if (!o || !s.get(*o, before)) {
+            s.why = "no backup object changed after UP_STORE " + s.why;
+            return false;
+        }
+        const size_t at = find_text(before, "SYSEX");
+        if (at == std::string::npos) {
+            s.why = "object " + std::to_string(o->id) + " changed, but holds no preset named SYSEX";
+            return false;
+        }
+        std::printf("    UP_STORE: the preset is in object %u at byte %zu\n", o->id, at);
+        id = o->id;
+        after = before;
+        after[at] = 'Z';
+        return true;
+    };
+}
+
 const Profile kProfiles[] = {
     {"choralroot", "ChoralRoot ", true, "FM-1_920", true, fm6_bank_change},
     // CoralFlower: no DX7 receive service (its main loop has no fm6_service): the chord part's sound, PRESETS +2, in
@@ -451,6 +503,11 @@ const Profile kProfiles[] = {
     {"coralflower", "CoralFlower ", true, "FM-1_930", true,
      panel_change(30, [](Device &d) { d.enc(EMU_E_PRESETS, 2); })},
     {"purplemonkey", "PurpleMonkey ", false, "FM-1_927", false, nullptr},
+    {"felucca", "FELUCCA v1.6.1", true, "FM-1_900", false, up_store_change()},
+    {"jiant", "JIANT v0.9.9", true, "FM-1_900", false, up_store_change()},
+    {"ghoulbox", "FELUCCA v1.4.1 GB2.3.2", true, "FM-1_900", false, up_store_change()},
+    {"rainbow", "FELUCCA v1.1.5", true, "FM-1_900", false, up_store_change()},
+    {"duell", "FELUCCA DUELL 0.2.20", true, "FM-1_900", false, up_store_change()},
 };
 
 const Profile *profile_of(const std::string &id)

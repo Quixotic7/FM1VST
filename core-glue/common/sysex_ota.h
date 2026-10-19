@@ -18,6 +18,8 @@
  *   FM1SX_OTA_MS()       the device's ms (fm1_ms)
  *   FELUCCA_ID           the device unit's package identity (its felucca.c / choralroot.c define; the emulator units
  *                        leave it out)
+ * FM1SX_OTA_TRANSPORT_DONE: the glue has defined ota_wire_send / ota_frame_get / ota_frame_done already (for the
+ * firmware's editor.c, which uses the same three).
  * Names: ota.c's own (ota_*), static in the unit; a unit whose usb.c already defines ota_wire_send (FELUCCA_OTA 1)
  * does not use this file. */
 #pragma once
@@ -28,9 +30,11 @@
 #error "FELUCCA_ID: the firmware's package identity (its device unit's)"
 #endif
 
+#ifndef FM1SX_OTA_TRANSPORT_DONE           /* (a glue that also compiles the firmware's editor.c defines these first) */
 static int ota_wire_send(const uint8_t *p, uint32_t n) { return fm1sx_send(&(FM1SX_OTA_OUT), p, n); }
 static int ota_frame_get(const uint8_t **p, uint32_t *n) { return fm1sx_frame(&(FM1SX_OTA_IN), p, n); }
 static void ota_frame_done(void) { fm1sx_done(&(FM1SX_OTA_IN)); }
+#endif
 static uint32_t ota_now_ms(void) { return (uint32_t)(FM1SX_OTA_MS()); }
 static void ota_idle(void) {}
 static int ota_erase(uint32_t off) { (void)off; return -1; }

@@ -8,4 +8,7 @@
  * (BOARD_SMK37) is a separate build, not this core. */
 #define FM1CORE_FW_P rb
 #define FM1CORE_FW_WEB_C "../../cores/felucca-rainbow/web/emu/felucca_web.c"
+#define FM1CORE_FW_EDITOR_C "../../cores/felucca-rainbow/firmware/src/editor.c"   /* the web editor's SysEx */
+#define FM1CORE_FW_OTA_C "../../cores/felucca-rainbow/firmware/src/ota.c"         /* the M-UPGRADE identity */
+#define FELUCCA_ID "FM-1_900"                                             /* (felucca.c) */
 #include "fw_core.h"
