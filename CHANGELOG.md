@@ -3,6 +3,22 @@
 FM1VST's releases. The version is `project(FM1VST VERSION ..)` in CMakeLists.txt (the plugin shows it in its
 settings sheet); a release is the tag `v<version>` on it (.github/workflows/release.yml builds and publishes it).
 
+## 0.3.1 (2026-10-19): an installer package
+
+### An installer package
+
+The release now has `FM1VST-0.3.1-macOS-arm64.pkg` beside the zip: a macOS installer with a choice of the Desktop
+app (FM1VST.app into /Applications), the VST3 (into /Library/Audio/Plug-Ins/VST3) and the Audio Unit (into
+/Library/Audio/Plug-Ins/Components), all three on by default. It replaces an older FM1VST in those places (the
+bundles are not relocatable, so a copy elsewhere is left alone) and refreshes the Audio Unit cache after installing.
+It is unsigned, like the zip: right-click > Open, or System Settings > Privacy & Security > Open Anyway (INSTALL.txt).
+What it installs carries no quarantine flag, so there is no `xattr` step. A 0.3.0 copied by hand into
+~/Library/Audio/Plug-Ins is not touched: delete it, or a DAW lists FM1VST twice. The zip stays, for copying by hand.
+
+### Licences
+
+`licences/JUCE/AGPL-3.0.txt`: the full text of the AGPLv3, the licence JUCE 8 is used under (the FSF's text).
+
 ## 0.3.0 (2026-10-18): the first public release
 
 The first build published as a download: macOS 11 or later, Apple silicon, AU, VST3 and Standalone, ad-hoc signed
