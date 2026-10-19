@@ -210,7 +210,13 @@ struct Obj {
 struct Session {
     Link &k;
     std::string why;
+    // the backup's command numbers and LIST header: FL (cr_backup.c, Felucca) LIST / GET / PUT = 65 / 66 / 67, LIST
+    // answers 1, rc, n, items; SLOOP's editor.c v6 (Profile::bk_v6) BK_LIST / BK_GET / BK_PUT = 34 / 35 / 36, LIST
+    // answers rc, n, items (web/editor.html parse[CMD.BK_LIST]); GET and PUT are the same bytes
+    uint8_t bk = 65;
+    size_t list_hdr = 2;
     explicit Session(Link &l) : k(l) {}
+    void use_v6() { bk = 34, list_hdr = 1; }
 
     bool info(std::string &version, Bytes *raw = nullptr, double limit = 1500)
     {
@@ -233,17 +239,18 @@ struct Session {
     bool list(std::vector<Obj> &m)
     {
         Bytes r;
-        if (!k.request(fl(65), fl_reply(65), r, 3000))
+        if (!k.request(fl(bk), fl_reply(bk), r, 3000))
             return why = "LIST: no reply", false;
         Bytes a = fl_args(r);
-        if (a.size() < 3 || a[0] != 1 || a[1] != 0)
+        const size_t h = list_hdr;            // (the items start after it and the count)
+        if (a.size() < h + 1 || (h == 2 && a[0] != 1) || a[h - 1] != 0)
             return why = "LIST: rc", false;
-        const size_t n = a[2];
-        if (a.size() != 3 + n * 11)
+        const size_t n = a[h];
+        if (a.size() != h + 1 + n * 11)
             return why = "LIST: length", false;
         m.clear();
         for (size_t i = 0; i < n; i++)
-            m.push_back({a[3 + i * 11], r32(a, 3 + i * 11 + 1), r32(a, 3 + i * 11 + 6)});
+            m.push_back({a[h + 1 + i * 11], r32(a, h + 1 + i * 11 + 1), r32(a, h + 1 + i * 11 + 6)});
         return true;
     }
     bool get(const Obj &o, Bytes &bytes)        // captureBackup's loop for one object
@@ -256,7 +263,7 @@ struct Session {
             args.push_back(size & 127u);
             args.push_back((uint8_t)(size >> 7));
             Bytes r, chunk;
-            if (!k.request(fl(66, args), fl_reply(66), r, 1000))
+            if (!k.request(fl(bk + 1, args), fl_reply(bk + 1), r, 1000))
                 return why = "GET " + std::to_string(o.id) + " @" + std::to_string(off) + ": no reply", false;
             Bytes a = fl_args(r);
             if (a.size() < 9 || a[1])
@@ -272,7 +279,7 @@ struct Session {
     int put_op(const Bytes &args, double limit = 4000)   // -> rc, or -1 (no reply)
     {
         Bytes r;
-        if (!k.request(fl(67, args), fl_reply(67), r, limit))
+        if (!k.request(fl(bk + 2, args), fl_reply(bk + 2), r, limit))
             return -1;
         Bytes a = fl_args(r);
         return a.size() >= 3 ? a[2] : -1;
@@ -347,6 +354,9 @@ struct Profile {
     bool restart;                   // 72 RESTART (the core halts with exit 0 once the reply is out)
     // the preset to change: (the manifest, the object's bytes) -> the id to PUT and its new bytes; false: none
     std::function<bool(Link &, Session &, std::vector<Obj> &, uint32_t &, Bytes &, Bytes &)> change;
+    bool bk_v6 = false;             // SLOOP's editor.c v6 backup numbers and LIST header (Session::use_v6)
+    // a check on the core rebooted from the flash image (after the preset's), nullptr: none
+    std::function<bool(Link &, Session &)> after_reboot = nullptr;
 };
 
 // ChoralRoot / CoralFlower / Melodee: the FM6 patch bank (backup id 8, fm6_bank.c), filled as a DX7 librarian fills it
@@ -503,6 +513,103 @@ ChangeFn up_store_change(uint8_t store_cmd = 19)
         return true;
     };
 }
+// ---- the sloop family ----
+// SLOOP 2.7.1, sloopDX 4.0, ORBIT 0.7.1, No Man Sky FM 0.4: the firmware's own editor.c (web/EDITOR_PROTOCOL.md v12),
+// their web editors' requests (web/editor.html `req`): INFO 1, the backup BK_LIST / BK_GET / BK_PUT 34 / 35 / 36
+// (256-byte chunks, backupCapture / backupRestore), the user presets UP_STORE 19, sloopDX's DX7 bank BANK_BEGIN /
+// BANK_WRITE / BANK_END / BANK_INFO 37..40 (512-byte chunks, dxbank.upload). No restart command: the reboot is the
+// plugin's power cycle after a flash_sync.
+// a user preset stored from the selected track's sound (req.upStore(slot, name): slot, strEnc(name)), as the
+// editor's STORE: user preset bank 1 (backup object 6) holds it; then the backup's copy of that bank has the
+// preset's name changed (up_rec_t: bank header 8 bytes, a record's name at +4: slot 0's first letter at byte 12,
+// "SYSEX" -> "ZYSEX") and is restored over BK_PUT
+bool sl_upreset_change(Link &k, Session &s, std::vector<Obj> &man, uint32_t &id, Bytes &before, Bytes &after)
+{
+    Bytes r;
+    const Bytes store = fl(19, {0, 'S', 'Y', 'S', 'E', 'X', 0});
+    if (!k.request(store, fl_reply(19), r, 2500) || fl_args(r).size() < 2 || fl_args(r)[1] != 0) {
+        s.why = "UP_STORE 0 \"SYSEX\": rc " + std::to_string(fl_args(r).size() >= 2 ? fl_args(r)[1] : -1);
+        return false;
+    }
+    if (!s.list(man))
+        return false;
+    const Obj *o = find(man, 6);
+    if (!o || o->size < 8 + 16 * 192 || !s.get(*o, before)) {   // (up_bank_t: 8 + 16 records of 192, ORBIT 196)
+        s.why = "user preset bank 1 (6) missing or empty after UP_STORE";
+        return false;
+    }
+    if (std::memcmp(&before[12], "SYSEX", 6) != 0) {
+        s.why = "user preset bank 1: slot 0 is not the preset stored";
+        return false;
+    }
+    id = 6;
+    after = before;
+    after[12] = 'Z';
+    return true;
+}
+// sloopDX: a DX7 .syx bank uploaded as its editor does (dxbank.upload: BANK_BEGIN, BANK_WRITE off(2) + 512 7-bit
+// bytes x 8, BANK_END checksum: the bank plays and is stored in flash), BANK_INFO names its voices, the backup's
+// object 8 (the 32 x 128 VMEM bytes) is that bank; after the reboot it is still there (sl_dxbank_kept). The preset PUT
+// is the user preset bank's, as SLOOP's: object 8 cannot be restored over BK_PUT on this firmware (its begin answers
+// rc 1: editor.c stages a PUT in proj_tmp, 3628 bytes, and the bank is 4096; the device's layout is the same, so its
+// manager's backupRestore stops at "begin 8 rc 1" there too)
+const Bytes &sl_dx_data()
+{
+    static const Bytes syx = dx7_bulk();
+    static const Bytes data(syx.begin() + 6, syx.begin() + 6 + 4096);
+    return data;
+}
+bool sl_dxbank_change(Link &k, Session &s, std::vector<Obj> &man, uint32_t &id, Bytes &before, Bytes &after)
+{
+    const Bytes syx = dx7_bulk();
+    const Bytes &data = sl_dx_data();
+    Bytes r;
+    if (!k.request(fl(37), fl_reply(37), r, 1000) || fl_args(r).empty() || fl_args(r)[0]) {
+        s.why = "BANK_BEGIN: no reply or rc";
+        return false;
+    }
+    for (uint32_t off = 0; off < 4096; off += 512) {
+        Bytes a = {(uint8_t)(off & 127u), (uint8_t)(off >> 7 & 127u)};
+        a.insert(a.end(), data.begin() + off, data.begin() + off + 512);
+        if (!k.request(fl(38, a), fl_reply(38), r, 1000) || fl_args(r).size() < 3 || fl_args(r)[2]) {
+            s.why = "BANK_WRITE @" + std::to_string(off) + ": no reply or rc";
+            return false;
+        }
+    }
+    const uint32_t dirty = k.dev.flash_dirty();
+    if (!k.request(fl(39, {syx[6 + 4096]}), fl_reply(39), r, 2500) || fl_args(r).empty() || fl_args(r)[0]) {
+        s.why = "BANK_END: rc " + std::to_string(fl_args(r).empty() ? -1 : fl_args(r)[0]);
+        return false;
+    }
+    if (k.dev.flash_dirty() == dirty) {
+        s.why = "BANK_END: the bank was not written to flash";
+        return false;
+    }
+    if (!k.request(fl(40), fl_reply(40), r, 1000) || fl_args(r).size() < 2 || !fl_args(r)[0] ||
+        std::string((const char *)&fl_args(r)[1]).rfind("SYSEX V01", 0) != 0) {
+        s.why = "BANK_INFO: the bank's names are not the voices sent";
+        return false;
+    }
+    if (!s.list(man))
+        return false;
+    const Obj *o = find(man, 8);
+    if (!o || o->size != 4096 || !s.get(*o, before)) {
+        s.why = "the DX7 bank (8) missing or empty after BANK_END";
+        return false;
+    }
+    if (before != data) {
+        s.why = "the DX7 bank (8) is not the bank sent";
+        return false;
+    }
+    return sl_upreset_change(k, s, man, id, before, after);
+}
+bool sl_dxbank_kept(Link &, Session &s)
+{
+    std::vector<Obj> m;
+    Bytes b;
+    return s.list(m) && find(m, 8) && s.get(*find(m, 8), b) && b == sl_dx_data();
+}
+// ---- end of the sloop family ----
 
 const Profile kProfiles[] = {
     {"choralroot", "ChoralRoot ", true, "FM-1_920", true, fm6_bank_change},
@@ -517,6 +624,11 @@ const Profile kProfiles[] = {
     {"rainbow", "FELUCCA v1.1.5", true, "FM-1_900", false, up_store_change()},
     {"duell", "FELUCCA DUELL 0.2.20", true, "FM-1_900", false, up_store_change()},
     {"melodee", "MELODEE v1.4.4", true, "FM-1_900", false, up_store_change(80)},
+    // the sloop family: editor.c's v6 backup; the identity is build.py's development FM-1_900 (no --release)
+    {"sloop", "FELUCCA SLOOP 2.7.1", true, "FM-1_900", false, sl_upreset_change, true},
+    {"sloopdx", "FELUCCA sloopDX 4.0", true, "FM-1_900", false, sl_dxbank_change, true, sl_dxbank_kept},
+    {"orbit", "FELUCCA ORBIT 0.7.1", true, "FM-1_900", false, sl_upreset_change, true},
+    {"nomansky", "FELUCCA NMS FM 0.4", true, "FM-1_900", false, sl_upreset_change, true},
 };
 
 const Profile *profile_of(const std::string &id)
@@ -572,11 +684,13 @@ int main(int argc, char **argv)
     dev.boot_from(nullptr, 0);              // a fresh unit, as the plugin boots one
     Link k(dev);
     Session s(k);
+    if (p && p->bk_v6)
+        s.use_v6();
     k.run_ms(3000);                         // past the splash
     std::printf("sysex_test %s (%s %s)\n", id.c_str(), lc->core()->name, lc->core()->version);
     if (!p) {
         std::printf("  (no manager for this firmware: the update keys only)\n");
-        Profile none{id.c_str(), nullptr, false, nullptr, false, nullptr};
+        Profile none{id.c_str(), nullptr, false, nullptr, false, nullptr, false};
         update_keys(k, s, none);
         std::printf("sysex_test %s: %s\n", id.c_str(), fails ? "FAIL" : "PASS");
         return fails ? 1 : 0;
@@ -656,12 +770,16 @@ int main(int argc, char **argv)
         dev2.boot_from(image.data(), (uint32_t)image.size());
         Link k2(dev2);
         Session s2(k2);
+        if (p->bk_v6)
+            s2.use_v6();
         k2.run_ms(3000);
         std::vector<Obj> m3;
         Bytes back;
         const bool got = s2.list(m3) && find(m3, put_id) && s2.get(*find(m3, put_id), back);
         check(got && back == changed, "rebooted from the flash image: object " + std::to_string(put_id) +
                                           " is the changed preset " + s2.why);
+        if (p->after_reboot)
+            check(p->after_reboot(k2, s2), "rebooted from the flash image: the profile's own check " + s2.why);
         k.worst = std::max(k.worst, k2.worst);
     }
     std::printf("  worst reply: %u blocks of %u frames at %.0f Hz (%.1f ms; + one block for a request that just missed "
