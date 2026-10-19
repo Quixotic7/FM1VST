@@ -39,7 +39,7 @@ fm1_add_core(quadrille ${_qd}/core/glue SOURCE ${_qd}
              CREDITS "QUADRILLE (working name), a step sequencer for the FM-1: Phase 1 prototype.\nFM TONE, the effects and the output chain: ChoralRoot FM-1 v0.25.1 (GPL-3.0-only, ChoralRoot FM-1 contributors), a fork of Felucca (Leo Kuroshita, Hugelton Instruments).\nDrawn with plutovg (MIT). Portions of this software are copyright (c) 2006 The FreeType Project (www.freetype.org). All rights reserved.\nType: Inter Tight (SIL Open Font License 1.1)."
              CREDITS_FILES third_party/plutovg/LICENSE assets/fonts/OFL.txt
              NO_GEN
-             VERSION 0.0.7-p1.3d)
+             VERSION 0.0.8-p1.3e)
 if(TARGET core_quadrille_obj)
     # plutovg is vendored unmodified: its own warnings are not ours (ChoralRoot's copies keep theirs off themselves:
     # quad_voice.c and qd_fx.c push their diagnostics around them)
