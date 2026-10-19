@@ -3,7 +3,7 @@
 FM1VST's releases. The version is `project(FM1VST VERSION ..)` in CMakeLists.txt (the plugin shows it in its
 settings sheet); a release is the tag `v<version>` on it (.github/workflows/release.yml builds and publishes it).
 
-## Unreleased: the firmwares' own editors and managers
+## 0.5.0 (2026-10-19): the firmwares' own editors and managers
 
 ### Show to editors (macOS)
 
