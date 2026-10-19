@@ -4,7 +4,8 @@
 # tools/package_release.sh).
 #   - a tag v<version> (git tag v0.3.0 && git push origin v0.3.0): builds and publishes the GitHub Release (the zip,
 #     SHA256SUMS, the notes); the tag must equal CMakeLists.txt's project(FM1VST VERSION ..)
-#   - Run workflow (workflow_dispatch): the same build as a dry run, uploaded as an artifact, nothing published
+#   - Run workflow (workflow_dispatch), or a push to the release-ci branch: the same build as a dry run, uploaded as an
+#     artifact, nothing published
 # Unsigned (ad-hoc) for now. Developer ID signing and notarisation run once these secrets exist (until then those steps
 # are skipped): MACOS_CERT_P12 (base64 of the .p12), MACOS_CERT_PASSWORD, MACOS_SIGN_IDENTITY ("Developer ID
 # Application: .. (TEAMID)"), and for notarisation APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD.
@@ -14,6 +15,7 @@ name: release
 on:
   push:
     tags: ['v*']
+    branches: [release-ci]       # a dry run on every push to release-ci: built, tested, uploaded, nothing published
   workflow_dispatch:
 
 permissions:
