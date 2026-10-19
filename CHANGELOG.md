@@ -3,7 +3,27 @@
 FM1VST's releases. The version is `project(FM1VST VERSION ..)` in CMakeLists.txt (the plugin shows it in its
 settings sheet); a release is the tag `v<version>` on it (.github/workflows/release.yml builds and publishes it).
 
-## Unreleased
+## 0.4.0 (2026-10-19): every Hub firmware on an emulated FM-1; ChoralRoot and Melodee
+
+### Every Firmware Hub firmware, emulated
+
+A new core, `fm1emu` ("FM-1 (emulated)"), runs Joakim Eriksson's [fm1-emu](https://github.com/joakimeriksson/fm1-emu)
+(MIT): an emulation of the FM-1's chip that runs a firmware's own update package (`.fwsc`), so any firmware on
+[The Firmware Hub](https://thefirmwarehub.com/) plays in FM1VST, not just the ones built as native cores. The settings
+sheet has one firmware list for both kinds, with an All / Native / Emulated filter and engine badges; a firmware with
+both offers an Engine switch. Picking a Hub firmware downloads its package once, checks its SHA-256 and size against
+the Hub's catalog and keeps it in ~/Library/Application Support/FM1VST/hub/ (offline: the cached catalog, or a bundled
+list). "Your own .fwsc" loads a local package, the stock M-VAVE firmware included. FM1VST bundles no firmware for
+this: each package is downloaded at your request.
+
+- **Emulated clock:** Auto, 240, 320, 360, 480 or 640 MHz. The FM-1 runs at about 320-360 MHz; Auto starts at 360 and
+  steps down when this Mac can't keep up. In a DAW it waits for the transport to stop, since a step reboots the
+  firmware.
+- **Saves:** the emulated flash is kept in the project (about 0.5 MB, gzipped) with the package's id and SHA-256; a
+  project whose package isn't cached fetches it again.
+- **Source link** for each firmware, in the sheet.
+- fm1-emu carries RemoteFM1's patches: the P33 power block (Melodee boots), the TIMER4 count, and the JIT and pacing
+  work, so emulation renders steadily (100 ms LED averaging, as on the website).
 
 ### ChoralRoot and Melodee in the public build
 
