@@ -464,6 +464,9 @@ size_t find_text(const Bytes &b, const char *t)
             return i;
     return std::string::npos;
 }
+// store_cmd 19 (UP_STORE: slot, the name, NUL -> slot, rc); Melodee's shared library (its editor.html, INFO "shared":
+// sharedBank.action(rq, 3, slot, track, name): LIBRARY 80, op 3 store, slot as two 7-bit bytes, the track, the name
+// without its NUL -> op, slot, slot, rc)
 ChangeFn up_store_change(uint8_t store_cmd = 19)
 {
     return [=](Link &k, Session &s, std::vector<Obj> &man, uint32_t &id, Bytes &before, Bytes &after) {
@@ -471,16 +474,21 @@ ChangeFn up_store_change(uint8_t store_cmd = 19)
         if (!s.list(was))
             return false;
         Bytes r;
-        const Bytes args = {0, 'S', 'Y', 'S', 'E', 'X', 0};
-        if (!k.request(fl(store_cmd, args), fl_reply(store_cmd), r, 5000) || fl_args(r).size() < 2 || fl_args(r)[1]) {
-            s.why = "UP_STORE: no reply or an error";
+        const Bytes args = store_cmd == 80 ? Bytes{3, 0, 0, 0, 'S', 'Y', 'S', 'E', 'X'} : Bytes{0, 'S', 'Y', 'S', 'E', 'X', 0};
+        const size_t rc_at = store_cmd == 80 ? 3 : 1;
+        if (!k.request(fl(store_cmd, args), fl_reply(store_cmd), r, 5000)) {
+            s.why = "store: no reply";
+            return false;
+        }
+        if (fl_args(r).size() <= rc_at || fl_args(r)[rc_at]) {
+            s.why = "store: rc " + std::to_string(fl_args(r).size() > rc_at ? fl_args(r)[rc_at] : -1);
             return false;
         }
         if (!s.list(man))
             return false;
         const Obj *o = changed_obj(was, man);
         if (!o || !s.get(*o, before)) {
-            s.why = "no backup object changed after UP_STORE " + s.why;
+            s.why = "no backup object changed after the store " + s.why;
             return false;
         }
         const size_t at = find_text(before, "SYSEX");
@@ -488,7 +496,7 @@ ChangeFn up_store_change(uint8_t store_cmd = 19)
             s.why = "object " + std::to_string(o->id) + " changed, but holds no preset named SYSEX";
             return false;
         }
-        std::printf("    UP_STORE: the preset is in object %u at byte %zu\n", o->id, at);
+        std::printf("    store: the preset is in object %u at byte %zu\n", o->id, at);
         id = o->id;
         after = before;
         after[at] = 'Z';
@@ -508,6 +516,7 @@ const Profile kProfiles[] = {
     {"ghoulbox", "FELUCCA v1.4.1 GB2.3.2", true, "FM-1_900", false, up_store_change()},
     {"rainbow", "FELUCCA v1.1.5", true, "FM-1_900", false, up_store_change()},
     {"duell", "FELUCCA DUELL 0.2.20", true, "FM-1_900", false, up_store_change()},
+    {"melodee", "MELODEE v1.4.4", true, "FM-1_900", false, up_store_change(80)},
 };
 
 const Profile *profile_of(const std::string &id)
@@ -614,6 +623,8 @@ int main(int argc, char **argv)
         Bytes before, after;
         if (!p->change(k, s, man, put_id, before, after)) {
             check(false, "a preset to change: " + s.why);
+            if (lc->core()->dump)
+                lc->core()->dump();           // (the firmware's state, for the failure)
         } else {
             const int rc = s.put(put_id, after);
             check(rc == 0, "PUT " + std::to_string(put_id) + " (a preset changed): rc " + std::to_string(rc));

@@ -26,8 +26,8 @@
 #ifndef FM1SX_OTA_C
 #error "FM1SX_OTA_C: the firmware's ota.c"
 #endif
-#ifndef FELUCCA_ID
-#error "FELUCCA_ID: the firmware's package identity (its device unit's)"
+#if !defined(FELUCCA_ID) && !defined(MELODEE_ID)
+#error "FELUCCA_ID (Melodee: MELODEE_ID): the firmware's package identity (its device unit's)"
 #endif
 
 #ifndef FM1SX_OTA_TRANSPORT_DONE           /* (a glue that also compiles the firmware's editor.c defines these first) */
