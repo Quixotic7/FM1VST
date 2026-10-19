@@ -8,8 +8,9 @@
 //                               answers while processBlock is not called, and stops when blocks come again
 //   editor_port_test coremidi   a CoreMIDI client (JUCE's devices, in this process) finds the virtual port by name and
 //                               does an INFO round trip against FM-106 (its Librarian's dump request, F0 41 34 ..) and
-//                               against the echo core, idle and while playing; two instances get distinct names; no
-//                               SysEx in the host's MIDI out. Exit 77 (skipped) without CoreMIDI or without FM-106.
+//                               against the echo core, idle and while playing; ChoralRoot's INFO, LIST and RESTART (its
+//                               SysEx glue; the reboot powered on again with the host idle); two instances get distinct
+//                               names; no SysEx in the host's MIDI out. Exit 77 (skipped) without CoreMIDI or FM-106.
 #include <CoreFoundation/CoreFoundation.h>
 
 #include <chrono>
@@ -399,6 +400,46 @@ static int runCoreMidi()
         check(t >= 0 && t < 300, "the second instance answers on its own port: " + std::to_string((int)t) + " ms");
     } else {
         check(false, "a client opens the second port");
+    }
+
+    // ChoralRoot (its SysEx glue: the managers' FL protocol): INFO, LIST and RESTART as its device manager sends them
+    if (built_cores().count("choralroot")) {
+        std::printf("[CoreMIDI: ChoralRoot]\n");
+        FM1Processor cr;
+        check(cr.switchCore("choralroot"), "ChoralRoot loads");
+        Host hc(cr);
+        hc.blocks(400);                          // (booted)
+        cr.setEditorPortEnabled(true);
+        const auto sc = cr.editorPortStatus();
+        Client cc;
+        check(sc.name == "ChoralRoot FM-1 (FM1VST)" && waitListed(sc.name, true) && cc.connect(sc.name),
+              "\"" + sc.name.toStdString() + "\" found (its manager: name.includes(\"ChoralRoot FM-1\"), in and out alike)");
+        if (cc.out) {
+            const Bytes info = sx({0xF0, 0x7D, 0x46, 0x4C, 0x01, 0xF7});
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            t = cc.roundTrip(info, sx({0xF0, 0x7D, 0x46, 0x4C, 0x01}), nullptr, &reply);
+            const std::string text(reply.begin(), reply.end());
+            check(t >= 0 && t < 300 && text.find("ChoralRoot") != std::string::npos,
+                  "INFO answered, host idle: " + std::to_string((int)t) + " ms (the version text names ChoralRoot)");
+            hc.sysexToHost = 0;
+            t = cc.roundTrip(info, sx({0xF0, 0x7D, 0x46, 0x4C, 0x01}), &hc);
+            check(t >= 0 && t < 300, "INFO answered, host playing: " + std::to_string((int)t) + " ms");
+            t = cc.roundTrip(sx({0xF0, 0x7D, 0x46, 0x4C, 0x41, 0xF7}), sx({0xF0, 0x7D, 0x46, 0x4C, 0x41}), nullptr, &reply);
+            check(t >= 0 && t < 1500 && reply.size() > 8, "LIST (65) answered: " + std::to_string(reply.size()) + " bytes");
+            hc.play(30);
+            check(hc.sysexToHost == 0, "none of it in the host's MIDI out");
+            // RESTART (72): the reply, then the firmware's reboot (a halt the plugin powers on again, idle too)
+            t = cc.roundTrip(sx({0xF0, 0x7D, 0x46, 0x4C, 0x48, 0xF7}), sx({0xF0, 0x7D, 0x46, 0x4C, 0x48}), nullptr);
+            check(t >= 0 && t < 1500, "RESTART (72) answered: " + std::to_string((int)t) + " ms");
+            const double end = nowMs() + 3000;
+            double back = -1;
+            while (nowMs() < end && back < 0) {
+                pump(20);                        // (the halt's async power cycle runs on the message thread)
+                back = cc.roundTrip(info, sx({0xF0, 0x7D, 0x46, 0x4C, 0x01}), nullptr);
+            }
+            check(back >= 0, "after the reboot INFO is answered again (host idle)");
+        }
+        cr.setEditorPortEnabled(false);
     }
 
     std::printf("[CoreMIDI: the echo core]\n");
