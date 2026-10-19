@@ -1,0 +1,20 @@
+FM1VST @VERSION@
+
+The M-VAVE FM-1 as a plug-in: FM-1 firmwares, each compiled from its own unmodified source, run as loadable cores,
+with the FM-1's panel as the editor. macOS 11 or later, Apple silicon.
+
+This installer puts, for every user of this Mac (pick them on the next pages; all three are on by default):
+
+  Desktop app   FM1VST.app          -> /Applications
+  VST3          FM1VST.vst3         -> /Library/Audio/Plug-Ins/VST3
+  Audio Unit    FM1VST.component    -> /Library/Audio/Plug-Ins/Components
+
+An older FM1VST in those places is replaced. If you copied FM1VST 0.3.0 out of its zip into your own
+~/Library/Audio/Plug-Ins (the VST3 or Components folder), delete those copies: a DAW would list FM1VST twice.
+
+Then rescan plug-ins in your DAW (Ableton Live: Settings > Plug-Ins > Rescan; Logic Pro: restart it). FM1VST is
+under Quixotic7.
+
+FM1VST is GPL-3.0-only (the next page). The licences and credits of everything it is made of (the firmware cores,
+JUCE, libusb, the fonts) are in licences/ in the zip on the release page, and the source is
+https://github.com/Quixotic7/FM1VST (tag v@VERSION@). FM1VST is independent of and unaffiliated with M-VAVE.

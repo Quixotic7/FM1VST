@@ -15,9 +15,15 @@
 #     references kIOMainPortDefault below macOS 12 (a newer libusb's; it fails to load on macOS 11). A warning only
 #     unless FM1_RELEASE_STRICT=1 (CI): a local build may link Homebrew's newer bottle
 #   - the zip: the three bundles, 10 cores in each, no gated core's name anywhere in it
+#   - the installer package: expanded (pkgutil --expand-full), each component's bundle under its install location
+#     with the cores, not relocatable, the AU's postinstall, the Distribution's choices; no gated core's name in it;
+#     installer -pkginfo / -dominfo read it; its signature (pkgutil --check-signature) when it is signed
 # Writes to OUT_DIR: FM1VST-<version>-macOS-arm64.zip (FM1VST.vst3, FM1VST.component, FM1VST.app, INSTALL.txt,
-# README.txt, LICENSE, licences/), SHA256SUMS and RELEASE-NOTES.md (the release's body: the cores, what's new from
-# CHANGELOG.md).
+# README.txt, LICENSE, licences/), FM1VST-<version>-macOS-arm64.pkg (the installer: the app into /Applications, the
+# VST3 and the AU into /Library/Audio/Plug-Ins; tools/release/pkg/), SHA256SUMS (both) and RELEASE-NOTES.md (the
+# release's body: the cores, what's new from CHANGELOG.md).
+# The package is unsigned unless FM1_INSTALLER_IDENTITY names a "Developer ID Installer: .." identity in the keychain
+# (productsign; .github/workflows/release.yml passes the MACOS_INSTALLER_IDENTITY secret).
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 root="$(cd "$here/.." && pwd)"
@@ -119,7 +125,7 @@ name="FM1VST-$version-macOS-arm64"
 mkdir -p "$out"
 stage="$out/$name"
 if [ -e "$stage" ]; then rm -rf "$stage"; fi
-rm -f "$out/$name.zip" "$out/SHA256SUMS" "$out/RELEASE-NOTES.md"
+rm -f "$out/$name.zip" "$out/$name.pkg" "$out/SHA256SUMS" "$out/RELEASE-NOTES.md"
 mkdir -p "$stage/licences/cores"
 ditto "$vst3" "$stage/FM1VST.vst3"
 ditto "$au" "$stage/FM1VST.component"
@@ -163,6 +169,8 @@ cp "$root/plugin/fonts/OFL.txt" "$lic/InterTight-OFL.txt"
 juce="$(info juce_source)"
 [ -f "$juce/LICENSE.md" ] || die "JUCE's LICENSE.md not found in '$juce'"
 cp "$juce/LICENSE.md" "$lic/JUCE/LICENSE.md"
+# (the AGPLv3 JUCE is used under: the FSF's text, https://www.gnu.org/licenses/agpl-3.0.txt, kept in tools/release/)
+cp "$here/release/AGPL-3.0.txt" "$lic/JUCE/AGPL-3.0.txt"
 for f in modules/juce_audio_processors_headless/format_types/VST3_SDK/LICENSE.txt:VST3_SDK-LICENSE.txt \
          modules/juce_audio_plugin_client/AU/AudioUnitSDK/LICENSE.txt:AudioUnitSDK-LICENSE.txt \
          modules/juce_graphics/image_formats/pnglib/LICENSE:libpng-LICENSE.txt \
@@ -189,9 +197,10 @@ cores/<id>/      each bundled firmware core: its licence, its LICENSING.md / CRE
 RemoteFM1/       libremotefm1 (Remote FM-1's host library), GPL-3.0.
 libusb/          libusb $( [ -f "$lic/libusb/COPYING" ] && echo "(linked statically)" ), LGPL-2.1-or-later: COPYING.
                  Its source: https://github.com/libusb/libusb
-JUCE/            the JUCE framework $juce_v, used under its open-source licence, the AGPLv3
-                 (https://www.gnu.org/licenses/agpl-3.0.html; GPL-3.0 section 13 allows the combination), and the
-                 SDKs it compiles in: the VST3 SDK (MIT), the AudioUnitSDK (Apache-2.0), libpng, SheenBidi.
+JUCE/            the JUCE framework $juce_v (LICENSE.md), used under its open-source licence, the AGPLv3: its
+                 full text is AGPL-3.0.txt (https://www.gnu.org/licenses/agpl-3.0.html; GPL-3.0 section 13 allows
+                 the combination), and the SDKs it compiles in: the VST3 SDK (MIT), the AudioUnitSDK
+                 (Apache-2.0), libpng, SheenBidi.
 InterTight-OFL.txt  the editor's type, Inter Tight (The Inter Project Authors), SIL Open Font License 1.1.
 EOF
 
@@ -202,7 +211,8 @@ EOF
     echo
     echo "The M-VAVE FM-1 as a plug-in: FM1VST runs FM-1 firmwares, each compiled from its own unmodified source, as"
     echo "loadable cores, with the FM-1's panel as the editor. AU, VST3 and Standalone; macOS $target or later, Apple"
-    echo "silicon. Installing: INSTALL.txt (this build is not notarised: it says how to allow it)."
+    echo "silicon. Installing: INSTALL.txt (the installer package FM1VST-$version-macOS-arm64.pkg, or the bundles in"
+    echo "this zip copied by hand; this build is not notarised: it says how to allow it)."
     echo
     echo "The cores in this build (the default firmware: ${default_name:-$default_core}):"
     echo
@@ -227,7 +237,8 @@ EOF
 listing="$(unzip -Z1 "$out/$name.zip")"
 for want in "$name/FM1VST.vst3/Contents/MacOS/FM1VST" "$name/FM1VST.component/Contents/MacOS/FM1VST" \
             "$name/FM1VST.app/Contents/MacOS/FM1VST" "$name/INSTALL.txt" "$name/README.txt" "$name/LICENSE" \
-            "$name/licences/README.txt" "$name/licences/JUCE/LICENSE.md" "$name/licences/InterTight-OFL.txt"; do
+            "$name/licences/README.txt" "$name/licences/JUCE/LICENSE.md" "$name/licences/JUCE/AGPL-3.0.txt" \
+            "$name/licences/InterTight-OFL.txt"; do
     echo "$listing" | grep -qx "$want" || bad "zip: $want missing"
 done
 for fmt in vst3 component app; do
@@ -239,15 +250,118 @@ for g in $gated; do
 done
 if echo "$listing" | grep -q '\.DS_Store\|/\._'; then bad "zip: Finder litter (.DS_Store, ._ files) in it"; fi
 [ "$fails" = 0 ] || die "$fails check(s) failed"
-(cd "$out" && shasum -a 256 "$name.zip" > SHA256SUMS)
 size="$(du -h "$out/$name.zip" | cut -f1 | tr -d ' ')"
 ok "zip: $out/$name.zip ($size, $(echo "$listing" | wc -l | tr -d ' ') entries), 3 bundles x $ncores cores, no gated core"
 
+# ---- the installer package: a component package per bundle (pkgbuild; not relocatable, so an upgrade replaces the
+# bundle at its install location even when a copy of it exists elsewhere), then the product (productbuild with
+# tools/release/pkg/distribution.xml: the welcome page, the GPL, the three choices, arm64, macOS 11+)
+pkg="$out/$name.pkg"
+pw="$(mktemp -d "${TMPDIR:-/tmp}/fm1vst-pkg.XXXXXX")"
+trap 'rm -rf "$pw"' EXIT
+mkdir -p "$pw/res" "$pw/comp" "$pw/scripts-au"
+sed "s/@VERSION@/$version/g" "$here/release/pkg/distribution.xml" > "$pw/distribution.xml"
+sed "s/@VERSION@/$version/g" "$here/release/pkg/welcome.txt" > "$pw/res/welcome.txt"
+cp "$root/LICENSE" "$pw/res/LICENSE.txt"
+cp "$here/release/pkg/scripts-au/postinstall" "$pw/scripts-au/postinstall"
+chmod 755 "$pw/scripts-au/postinstall"
+# (component: its bundle, its install location; the identifiers are com.quixotic7.fm1vst.<component>)
+pkg_rows="app FM1VST.app /Applications
+vst3 FM1VST.vst3 /Library/Audio/Plug-Ins/VST3
+au FM1VST.component /Library/Audio/Plug-Ins/Components"
+while read -r k b loc; do
+    r="$pw/root-$k"
+    mkdir -p "$r"
+    ditto "$stage/$b" "$r/$b"
+    pkgbuild --analyze --root "$r" "$pw/$k.plist" > /dev/null
+    i=0
+    while /usr/libexec/PlistBuddy -c "Print :$i:RootRelativeBundlePath" "$pw/$k.plist" > /dev/null 2>&1; do
+        /usr/libexec/PlistBuddy -c "Delete :$i:BundleIsRelocatable" "$pw/$k.plist" > /dev/null 2>&1 || true
+        /usr/libexec/PlistBuddy -c "Add :$i:BundleIsRelocatable bool false" "$pw/$k.plist"
+        i=$((i + 1))
+    done
+    [ "$i" -ge 1 ] || die "pkgbuild --analyze found no bundle in $r"
+    scripts=()
+    if [ "$k" = au ]; then scripts=(--scripts "$pw/scripts-au"); fi
+    pkgbuild --quiet --root "$r" --component-plist "$pw/$k.plist" --identifier "com.quixotic7.fm1vst.$k" \
+        --version "$version" --install-location "$loc" --min-os-version "$target" ${scripts[@]+"${scripts[@]}"} \
+        "$pw/comp/FM1VST-$k.pkg"
+done <<< "$pkg_rows"
+productbuild --quiet --distribution "$pw/distribution.xml" --resources "$pw/res" --package-path "$pw/comp" \
+    "$pw/$name.pkg"
+if [ -n "${FM1_INSTALLER_IDENTITY:-}" ]; then
+    productsign --timestamp --sign "$FM1_INSTALLER_IDENTITY" "$pw/$name.pkg" "$pkg"
+    pkgutil --check-signature "$pkg" || bad "pkg: pkgutil --check-signature fails"
+else
+    cp "$pw/$name.pkg" "$pkg"
+fi
+
+# the package, checked: expanded, each component's bundle alone under its install location, with the cores
+x="$pw/expanded"
+pkgutil --expand-full "$pkg" "$x" || die "pkgutil --expand-full $pkg fails"
+xar -tf "$pkg" | grep -qx Distribution || bad "pkg: no Distribution in it (xar -tf)"
+dist="$x/Distribution"
+for k in app vst3 au; do
+    grep -q "<pkg-ref id=\"com.quixotic7.fm1vst.$k\" version=\"$version\"" "$dist" || bad "pkg: Distribution: no $k $version"
+    grep -q "<line choice=\"$k\"/>" "$dist" || bad "pkg: Distribution: no $k choice"
+done
+grep -q 'hostArchitectures="arm64"' "$dist" || bad "pkg: Distribution: not arm64 only"
+grep -q '<os-version min="11.0"/>' "$dist" || bad "pkg: Distribution: no macOS 11 minimum"
+[ "$(grep -c 'start_selected="true"' "$dist")" = 3 ] || bad "pkg: Distribution: the three choices are not all on"
+{ grep -q '<license file="LICENSE.txt"' "$dist" && [ -f "$x/Resources/LICENSE.txt" ]; } || bad "pkg: no licence page"
+{ grep -q '<welcome file="welcome.txt"' "$dist" && [ -f "$x/Resources/welcome.txt" ]; } || bad "pkg: no welcome page"
+while read -r k b loc; do
+    c="$x/FM1VST-$k.pkg"
+    pi="$c/PackageInfo"
+    [ -f "$pi" ] || { bad "pkg: FM1VST-$k.pkg missing"; continue; }
+    grep -q "identifier=\"com.quixotic7.fm1vst.$k\"" "$pi" || bad "pkg: $k: not com.quixotic7.fm1vst.$k"
+    grep -q " version=\"$version\"" "$pi" || bad "pkg: $k: not version $version"
+    grep -q "install-location=\"$loc\"" "$pi" || bad "pkg: $k: install location not $loc"
+    if grep -q '<relocate>' "$pi"; then bad "pkg: $k: relocatable (a <relocate> bundle in PackageInfo)"; fi
+    [ "$(ls -A "$c/Payload")" = "$b" ] || bad "pkg: $k: the payload's top level is ($(ls -A "$c/Payload" | tr '\n' ' ')), not $b"
+    [ -f "$c/Payload/$b/Contents/MacOS/FM1VST" ] || bad "pkg: $k: no $b/Contents/MacOS/FM1VST in the payload"
+    v="$(plutil -extract CFBundleShortVersionString raw -o - "$c/Payload/$b/Contents/Info.plist" 2>/dev/null || true)"
+    [ "$v" = "$version" ] || bad "pkg: $k: $b's version '$v', not $version"
+    n="$(ls "$c/Payload/$b/Contents/Resources/cores" 2>/dev/null | grep -c '\.fm1core$' || true)"
+    [ "$n" = "$ncores" ] || bad "pkg: $k: $b holds $n cores, not $ncores"
+    codesign --verify --deep --strict "$c/Payload/$b" 2>/dev/null || bad "pkg: $k: $b's signature fails"
+    if [ "$k" = au ]; then
+        [ -x "$c/Scripts/postinstall" ] || bad "pkg: au: no executable postinstall"
+        [ "$(ls -A "$c/Scripts" 2>/dev/null)" = postinstall ] || bad "pkg: au: scripts other than postinstall"
+    elif [ -e "$c/Scripts" ]; then bad "pkg: $k: has scripts"; fi
+    pf="$(pkgutil --payload-files "$pw/comp/FM1VST-$k.pkg")"
+    echo "$pf" | grep -qx "./$b/Contents/MacOS/FM1VST" || bad "pkg: $k: pkgutil --payload-files: no ./$b/Contents/MacOS/FM1VST"
+    if echo "$pf" | grep -vx '\.' | grep -qv "^\./$b\(/\|$\)"; then bad "pkg: $k: payload files outside $b"; fi
+done <<< "$pkg_rows"
+pkg_files="$(cd "$x" && find . | sed 's|^\./||')"
+for g in $gated; do
+    if echo "$pkg_files" | grep -q "/$g\.fm1core$\|/cores/$g/"; then bad "pkg: the gated core $g is in it"; fi
+    if grep -rqs -- "$g\.fm1core" "$x/Distribution" "$x/Resources" "$x"/*.pkg/PackageInfo "$x"/*.pkg/Scripts; then
+        bad "pkg: the gated core $g is named in its metadata"
+    fi
+done
+if echo "$pkg_files" | grep -q '\.DS_Store\|/\._'; then bad "pkg: Finder litter (.DS_Store, ._ files) in it"; fi
+installer -pkginfo -pkg "$pkg" > "$pw/pkginfo.txt" 2>&1 || bad "pkg: installer -pkginfo fails: $(cat "$pw/pkginfo.txt")"
+installer -dominfo -pkg "$pkg" > "$pw/dominfo.txt" 2>&1 || bad "pkg: installer -dominfo fails: $(cat "$pw/dominfo.txt")"
+grep -qx LocalSystem "$pw/dominfo.txt" || bad "pkg: installer -dominfo: not LocalSystem alone ($(cat "$pw/dominfo.txt"))"
+[ "$fails" = 0 ] || die "$fails check(s) failed"
+psize="$(du -h "$pkg" | cut -f1 | tr -d ' ')"
+signed=unsigned
+if [ -n "${FM1_INSTALLER_IDENTITY:-}" ]; then signed=signed; fi
+ok "pkg: $pkg ($psize, $signed; installer -pkginfo: $(tr '\n' '/' < "$pw/pkginfo.txt"); -dominfo: $(tr '\n' ' ' < "$pw/dominfo.txt"))"
+ok "pkg: FM1VST.app -> /Applications, FM1VST.vst3 -> /Library/Audio/Plug-Ins/VST3, FM1VST.component -> /Library/Audio/Plug-Ins/Components, $ncores cores each, not relocatable, the AU's postinstall, no gated core"
+(cd "$out" && shasum -a 256 "$name.zip" "$name.pkg" > SHA256SUMS)
+
 # ---- the release notes: the cores, then CHANGELOG.md's section for this version
 {
-    echo "FM1VST $version for macOS $target or later on Apple silicon: AU, VST3 and Standalone in one zip."
-    echo "Not notarised: see INSTALL.txt in the zip for allowing it (\`xattr -dr com.apple.quarantine\` or System"
-    echo "Settings > Privacy & Security), and for rescanning in Live and Logic."
+    echo "FM1VST $version for macOS $target or later on Apple silicon: AU, VST3 and Standalone, as an installer"
+    echo "package (\`$name.pkg\`: the app into /Applications, the plug-ins into /Library/Audio/Plug-Ins) or a zip to"
+    echo "copy by hand (\`$name.zip\`, with the licences)."
+    echo
+    echo "Not signed with a Developer ID nor notarised. The installer: right-click it > Open (macOS 14 or earlier), or"
+    echo "open it once, then System Settings > Privacy & Security > Open Anyway (macOS 15 or later); what it installs"
+    echo "carries no quarantine flag. The zip's bundles: \`xattr -dr com.apple.quarantine\` after copying, or Open"
+    echo "Anyway. INSTALL.txt in the zip has the details, and rescanning in Live and Logic."
     echo
     echo "### The cores in this build"
     echo
@@ -264,7 +378,9 @@ ok "zip: $out/$name.zip ($size, $(echo "$listing" | wc -l | tr -d ' ') entries),
         /^## / { if (on) exit; if (index($0, "## " v " ") == 1 || $0 == "## " v) { on = 1; print "### What'"'"'s new"; next } }
         on { sub(/^### /, "#### "); print }' "$root/CHANGELOG.md"
     echo
-    echo "SHA-256: \`$(cut -d' ' -f1 "$out/SHA256SUMS")\` (SHA256SUMS)"
+    echo "SHA-256 (SHA256SUMS):"
+    echo
+    sed 's/^\([0-9a-f]*\)  \(.*\)$/- `\2`: `\1`/' "$out/SHA256SUMS"
 } > "$out/RELEASE-NOTES.md"
 grep -q "What's new" "$out/RELEASE-NOTES.md" || warn_or_bad "CHANGELOG.md has no '## $version' section"
 ok "release notes: $out/RELEASE-NOTES.md"
