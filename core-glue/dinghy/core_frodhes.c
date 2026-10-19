@@ -95,4 +95,9 @@ static int fm1core_dg_sync(void)
 }
 static void fm1core_dg_info(char *buf, uint32_t n) { snprintf(buf, n, "page %s", web_page()); }
 
+/* the installer's M-UPGRADE identity: the device's platform_poll runs ota_service every pass (dinghy_glue.h) */
+#define FELUCCA_ID "FM-1_958"             /* the hub's 0.9.2 package (tools/build.py) */
+#define FM1CORE_DG_OTA_C "../../cores/frodhes/firmware/src/ota.c"
+#define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
+
 #include "dinghy_glue.h"

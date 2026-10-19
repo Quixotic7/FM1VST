@@ -142,4 +142,9 @@ static int fm1core_dg_sync(void)
 }
 static void fm1core_dg_info(char *buf, uint32_t n) { snprintf(buf, n, "page %u, program %u", (unsigned)page, (unsigned)prog + 1u); }
 
+/* the installer's M-UPGRADE identity: the device's platform_poll runs ota_service every pass (dinghy_glue.h) */
+#define FELUCCA_ID "FM-1_955"             /* the hub's 1.5.1 package (95N: OberVave build N) */
+#define FM1CORE_DG_OTA_C "../../cores/obervave/firmware/src/ota.c"
+#define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
+
 #include "dinghy_glue.h"

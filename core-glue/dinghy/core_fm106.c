@@ -8,8 +8,11 @@
  *                    here audio_worker_online is 0 and fm106_engine.h renders every voice inline
  *   the flash        fm106_host.c keeps the device's formats on the NOR image itself: the settings record (DNGY
  *                    sector, 0xFC000) and the user presets (8 KiB at 0x98000)
- *   SysEx            in: the librarian's messages (41 ..) reach fm106_sysex_handle before the next pass, as the
- *                    device's platform_poll hands them over; out: its replies as USB-MIDI SysEx packets
+ *   SysEx            in: the librarian's messages (41 ..) reach fm106_sysex_handle before the next pass, the others
+ *                    ota.c's ota_service (the M-UPGRADE identity), as the device's platform_poll hands them over; out:
+ *                    the replies as USB-MIDI SysEx packets. A store (30) changes the RAM bank, the commit (35) writes
+ *                    it to the NOR image (presets_flash_save: 0x98000, two sectors), as the device. The update key
+ *                    and UBOOT's are not acted on (dinghy_glue.h)
  *   the backlight    fm1_led_bg (the buttons' dim plane) as FM1P_LED_FAINT */
 #define DINGHY_HOST 1
 #include "dinghy_pre.h"
@@ -31,7 +34,10 @@ static void fm1core_dg_hal_in(uint32_t notes, uint32_t held, uint32_t down, uint
 }
 static uint8_t fm1core_dg_led_level(uint32_t id) { return host_led[id] ? FM1P_LED_LIT : FM1P_LED_OFF; }
 #define FM1CORE_DG_LED_BG(col) (fm1_led_bg_ns ? fm1_led_bg[col] : 0u)
-#define FM1CORE_DG_SYSEX_IN(p, n) fm106_sysex_handle((p), (n))
+#define FELUCCA_ID "FM-1_907"             /* platform.c: the package identity (907 = FM-106) */
+#define FM1CORE_DG_OTA_C "../../cores/fm-106/firmware/src/ota.c"
+#define FM1CORE_DG_SYSEX_IN(p, n)                                                                              \
+    ((n) >= 2u && (p)[0] == 0x41u ? fm106_sysex_handle((p), (n)) : fm1core_dg_ota_frame((p), (n)))
 static int fm1core_dg_midi_put(uint8_t st, uint8_t d1, uint8_t d2)
 {
     if (mq_w - mq_r >= 64u)
