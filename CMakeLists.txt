@@ -354,6 +354,18 @@ endforeach()
 add_custom_target(core_bench_run COMMAND core_bench 10 ${_bench_args} DEPENDS core_bench VERBATIM
                   COMMENT "the cores' real-time factors (10 s each)")
 
+# the managers' SysEx on every core (tests/sysex_test.cpp: INFO, the M-UPGRADE identity, the backup's LIST / GET / PUT
+# and the reboot from the flash image, the update keys; core-glue/common/sysex.h), on the plugin's path at 48 kHz
+add_executable(sysex_test tests/sysex_test.cpp)
+target_link_libraries(sysex_test PRIVATE fm1testlib)
+target_compile_options(sysex_test PRIVATE -Wall -Wextra)
+add_dependencies(sysex_test ${FM1_CORE_TARGETS})
+foreach(_id IN LISTS FM1_CORE_IDS)
+    add_test(NAME sysex_test_${_id} COMMAND sysex_test $<TARGET_FILE:${_id}_core> ${_id})
+    set_tests_properties(sysex_test_${_id} PROPERTIES TIMEOUT 600
+                         ENVIRONMENT "FM1EMU_HOME=${CMAKE_BINARY_DIR}/conformance/home")
+endforeach()
+
 add_executable(double_load_test tests/double_load_test.cpp)
 target_link_libraries(double_load_test PRIVATE fm1testlib)
 add_dependencies(double_load_test ${FM1_CORE_TARGETS})
