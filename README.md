@@ -402,6 +402,13 @@ leaves them in the build folder (a second build tree next to a working install; 
 bundles). Remote FM-1's vendor bulk transport links Homebrew's static `libusb-1.0.a` (`brew install libusb`); without
 it the plugin builds with SysEx frames only.
 
+**A build of some cores only**: `-DFM1_ONLY_CORES="choralroot;melodee"` (a cache variable) includes only the
+`core-glue/<folder>` glue of the folders named, so a work tree needs just those cores' submodules checked out (and
+`remote/RemoteFM1`). A folder is a family: `choralroot` also builds PurpleMonkey and CoralFlower, `felucca_web` the
+Felucca-based cores, and each of them needs its submodule. Empty, the default, builds every core; set it back with
+`-DFM1_ONLY_CORES=""`. A core left out has no tests (its `core_smoke`, `core_conformance`, ..), and `hub_test` and
+`fm1emu_test` are not registered without `fm1emu`.
+
 **A release build** is the public build (`-DFM1_PUBLIC_BUILD=ON`: the 12 un-gated cores, CORES-PLAN.md 6) for Apple
 silicon, made by `.github/workflows/release.yml` when a tag `v<version>` is pushed (the version is `project()`'s
 here; CHANGELOG.md has the notes) and by hand the same way:
