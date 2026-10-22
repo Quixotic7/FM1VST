@@ -1,4 +1,4 @@
-# LOOM-8 0.6-beta: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# LOOM-8 0.6.1: tests/core_conformance.cpp's script for this core (see its header for the directives)
 # the sound: power-on opens T1, a drum kit, on its Steps page (white keys: the pattern's steps, black keys: the kit's
 # sounds), so, as X0X's, four kicks are written and PLAY starts them; the key (D4, step 6) then toggles a step while
 # it plays. (Not a black key: RemoteFM1's copy of this reader takes "#" for a comment)

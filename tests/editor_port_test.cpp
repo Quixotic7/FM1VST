@@ -710,6 +710,11 @@ struct Manager {
     std::string why;
     uint8_t bk = 65;                             // FL 65 / 66 / 67; SLOOP's editor.c v6: 34 / 35 / 36
     size_t listHdr = 2;
+    // DUELL 1.0's patch records (EDITOR_PROTOCOL.md "Patch records in the archive"): LIST page 1..recPages after the
+    // plain LIST; GET / PUT of the wire id 40 with the slot as one more byte. A record is the object kRec + slot
+    static constexpr uint32_t kRec = 1000;
+    uint8_t recPages = 0;
+    static uint8_t wire(uint32_t id) { return (uint8_t)(id >= kRec ? 40u : id); }
     double worst = 0;                            // the longest single request
     void step()
     {
@@ -769,6 +774,15 @@ struct Manager {
         m.clear();
         for (size_t i = 0; i < n; i++)
             m.push_back({a[hd + 1 + i * 11], r32(a, hd + 1 + i * 11 + 1), r32(a, hd + 1 + i * 11 + 6)});
+        for (uint8_t pg = 1; pg <= recPages; pg++) {   // (the saved patches' records: slot, size, crc each)
+            if (request(fl(bk, {pg}), flReply(bk), r, 3000) < 0)
+                return why = "LIST page " + std::to_string(pg) + ": no reply", -1;
+            const Bytes p = flArgs(r);
+            if (p.size() < 3 || p[0] != 1 || p[1] != 0 || p.size() != 3 + (size_t)p[2] * 11)
+                return why = "LIST page " + std::to_string(pg) + ": rc or length", -1;
+            for (size_t i = 0; i < p[2]; i++)
+                m.push_back({kRec + p[3 + i * 11], r32(p, 3 + i * 11 + 1), r32(p, 3 + i * 11 + 6)});
+        }
         return t;
     }
     double get(const MObj &o, Bytes &bytes)      // captureBackup for one object: 256-byte chunks
@@ -777,15 +791,17 @@ struct Manager {
         bytes.assign(o.size, 0);
         for (uint32_t off = 0; off < o.size; off += 256) {
             const uint32_t size = std::min<uint32_t>(256, o.size - off);
-            Bytes args = {(uint8_t)o.id};
+            Bytes args = {wire(o.id)};
             u32(args, off);
             args.push_back(size & 127u);
             args.push_back((uint8_t)(size >> 7));
+            if (o.id >= kRec)
+                args.push_back((uint8_t)(o.id - kRec));
             Bytes r, chunk;
             if (request(fl(bk + 1, args), flReply(bk + 1), r, 1000) < 0)
                 return why = "GET " + std::to_string(o.id) + " @" + std::to_string(off) + ": no reply", -1;
             const Bytes a = flArgs(r);
-            if (a.size() < 9 || a[1] || a[0] != o.id || r32(a, 2) != off || (a[7] | a[8] << 7) != (int)size ||
+            if (a.size() < 9 || a[1] || a[0] != wire(o.id) || r32(a, 2) != off || (a[7] | a[8] << 7) != (int)size ||
                 !unpack7(a, 9, size, chunk))
                 return why = "GET " + std::to_string(o.id) + ": unexpected reply", -1;
             std::copy(chunk.begin(), chunk.end(), bytes.begin() + off);
@@ -805,21 +821,24 @@ struct Manager {
     double put(uint32_t id, const Bytes &b)      // restoreBackup: begin / data / commit
     {
         const double t0 = nowMs();
-        Bytes begin = {0, (uint8_t)id};
+        const uint8_t w = wire(id);
+        Bytes begin = {0, w};
         u32(begin, (uint32_t)b.size());
         u32(begin, crc32Of(b.data(), b.size()));
+        if (id >= kRec)
+            begin.push_back((uint8_t)(id - kRec));
         int rc = putOp(begin);
         for (uint32_t off = 0; !rc && off < b.size(); off += 256) {
-            Bytes d = {1, (uint8_t)id};
+            Bytes d = {1, w};
             u32(d, off);
             const size_t n = std::min<size_t>(256, b.size() - off);
             const Bytes pk = pack7(b.data() + off, n);
             d.insert(d.end(), pk.begin(), pk.end());
             if ((rc = putOp(d)))
-                putOp({3, (uint8_t)id});
+                putOp({3, w});
         }
         if (!rc)
-            rc = putOp({2, (uint8_t)id}, 5000);
+            rc = putOp({2, w}, 5000);
         if (rc)
             return why = "PUT " + std::to_string(id) + ": rc " + std::to_string(rc), -1;
         return nowMs() - t0;
@@ -915,11 +934,12 @@ struct MProfile {
     const char *id;
     const char *info;                            // INFO's version starts with this
     enum { DX7, STORE19, LIB80, SLOOP, X0X } kind;
+    uint8_t recPages = 0;                        // DUELL 1.0: the patch records' LIST pages (Manager::recPages)
 };
 static const MProfile kManagers[] = {
     {"choralroot", "ChoralRoot ", MProfile::DX7}, {"felucca", "FELUCCA v", MProfile::STORE19},
     {"jiant", "JIANT ", MProfile::STORE19},       {"ghoulbox", "FELUCCA ", MProfile::STORE19},
-    {"rainbow", "FELUCCA ", MProfile::STORE19},   {"duell", "FELUCCA DUELL", MProfile::STORE19},
+    {"rainbow", "FELUCCA ", MProfile::STORE19},   {"duell", "FELUCCA DUELL", MProfile::STORE19, 4},
     {"melodee", "MELODEE ", MProfile::LIB80},     {"sloop", "FELUCCA SLOOP", MProfile::SLOOP},
     {"sloopdx", "FELUCCA sloopDX", MProfile::SLOOP}, {"orbit", "FELUCCA ORBIT", MProfile::SLOOP},
     {"nomansky", "FELUCCA NMS", MProfile::SLOOP}, {"x0x", "X0X ", MProfile::X0X},
@@ -961,6 +981,7 @@ static void runManager(const MProfile &pr, MRow &row)
     Manager m{c, h, true, {}};
     if (pr.kind == MProfile::SLOOP)
         m.bk = 34, m.listHdr = 1;
+    m.recPages = pr.recPages;
     m.settle(100);
     // the editors' connect: INFO, 500 ms for the answer, three tries (Felucca's, JIANT's, Melodee's editor.html; SLOOP's
     // two of 1000 ms), and a person pressing Connect again until it answers (20 s at most). A firmware answers only from

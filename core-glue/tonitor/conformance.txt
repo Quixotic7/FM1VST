@@ -1,4 +1,4 @@
-# Tonitor 0.53: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# Tonitor 0.55: tests/core_conformance.cpp's script for this core (see its header for the directives)
 # the flash round trip: a session saved by hand (README: SAVE held 0.8 s just after switching on offers the first
 # empty slot; PRESETS turns NO to YES, SAVE answers). After the reboot the SESSIONS page (SAVE) shows slot 1 holding
 # a session (its number in red), where a fresh unit's shows it EMPTY

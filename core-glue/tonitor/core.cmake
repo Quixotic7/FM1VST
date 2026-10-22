@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Tonitor 0.53 (https://github.com/nzimas/tonitor): its own hand-written glue (core-glue/tonitor: tonitor_hal.h,
+# Tonitor 0.55 (https://github.com/nzimas/tonitor): its own hand-written glue (core-glue/tonitor: tonitor_hal.h,
 # hal/fm1_flash.h, tonitor_firmware.h, tonitor_fw.c, core_tonitor.c) over the unmodified submodule cores/tonitor.
-# THE PIN: Tonitor has no tags or releases and its author publishes several times a day (0.50 .. 0.53 on 2026-10-21).
-# The submodule is at c39d18f ("Website: Tonitor 0.53"), the commit that holds docs/firmware/tonitor.fwsc, the
-# package the Firmware Hub serves as "2026.10.21" (its firmware commit is 9633aa3, TONITOR_VERSION "0.53"). A bump:
-# the commit of the Hub's next package, and VERSION from its firmware/src/tonitor.c.
+# THE PIN: Tonitor has no tags or releases and its author publishes several times a day (0.50 .. 0.53 on 2026-10-21,
+# 0.54 and 0.55 on 2026-10-22). The submodule is at a240bc1 ("Website: Tonitor 0.55"), the commit that holds
+# docs/firmware/tonitor.fwsc, the package the Firmware Hub serves as "2026.10.22" (sha256 8b8b928f.., the same file;
+# its firmware commit is 96e2b91, TONITOR_VERSION "0.55"). A bump: the commit of the Hub's next package, and VERSION
+# from its firmware/src/tonitor.c. 0.54 / 0.55 changed only usb.c's USB audio (48 kHz rates, then the AC header's
+# collection order and bcdDevice for macOS 12..15), all under FELUCCA_UAC, which tonitor_firmware.h builds out (0).
 # Generate: tools/build.py generate() runs gen_tables.py and gen_font.py (Pillow; the font from the TTF in the tree).
 # -Dsection(x)=aligned(4): dsp.h's POOL / FAST / DLYMEM section attributes, which Mach-O rejects.
 fm1_add_core(tonitor ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/tonitor UNIT core_tonitor.c
@@ -14,7 +16,7 @@ fm1_add_core(tonitor ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/
              CREDITS "Tonitor by Nuno Zimas (github.com/nzimas/tonitor), built on Felucca (Leo Kuroshita, Hugelton Instruments) and SLOOP (isod89), with the dual-core mailbox from Melodee (Kerem Kilic, Ellic Studio). FM is msfa (Google Inc., Pascal Gauthier, Apache-2.0) in Felucca's integer port. The screen's type is Atkinson Hyperlegible (the Braille Institute), pre-rendered into glyph tables compiled into the firmware."
              CREDITS_FILES LICENSING.md LICENSES/BSD-LIRA-8.txt LICENSES/MIT-rings.txt
                            assets/fonts/AtkinsonHyperlegible-OFL.txt
-             VERSION 0.53
+             VERSION 0.55
              FLAGS "-Dsection(x)=aligned(4)")
 
 # The golden check (where the firmware has its own host sim, drive both to the same state and compare the screen):

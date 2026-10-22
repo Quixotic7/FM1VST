@@ -224,8 +224,15 @@ struct Session {
     // answers rc, n, items (web/editor.html parse[CMD.BK_LIST]); GET and PUT are the same bytes
     uint8_t bk = 65;
     size_t list_hdr = 2;
+    // DUELL 1.0 (INFO 42 01 caps bit 5, EDITOR_PROTOCOL.md "Patch records in the archive"): the saved patches are
+    // not objects of the plain LIST but records, LIST page 1..rec_pages (32 slots each) after it; GET / PUT name one
+    // as the wire id 40 with its slot as one more byte. Here a record is the object kRec + slot (the web editor's key
+    // 1000 + slot, duellbackup.js)
+    static constexpr uint32_t kRec = 1000;
+    uint8_t rec_pages = 0;
     explicit Session(Link &l) : k(l) {}
     void use_v6() { bk = 34, list_hdr = 1; }
+    static uint8_t wire(uint32_t id) { return (uint8_t)(id >= kRec ? 40u : id); }
 
     bool info(std::string &version, Bytes *raw = nullptr, double limit = 1500)
     {
@@ -260,6 +267,15 @@ struct Session {
         m.clear();
         for (size_t i = 0; i < n; i++)
             m.push_back({a[h + 1 + i * 11], r32(a, h + 1 + i * 11 + 1), r32(a, h + 1 + i * 11 + 6)});
+        for (uint8_t pg = 1; pg <= rec_pages; pg++) {   // (the saved patches' records: slot, size, crc each)
+            if (!k.request(fl(bk, {pg}), fl_reply(bk), r, 3000))
+                return why = "LIST page " + std::to_string(pg) + ": no reply", false;
+            a = fl_args(r);
+            if (a.size() < 3 || a[0] != 1 || a[1] != 0 || a.size() != 3 + (size_t)a[2] * 11)
+                return why = "LIST page " + std::to_string(pg) + ": rc or length", false;
+            for (size_t i = 0; i < a[2]; i++)
+                m.push_back({kRec + a[3 + i * 11], r32(a, 3 + i * 11 + 1), r32(a, 3 + i * 11 + 6)});
+        }
         return true;
     }
     bool get(const Obj &o, Bytes &bytes)        // captureBackup's loop for one object
@@ -267,17 +283,19 @@ struct Session {
         bytes.assign(o.size, 0);
         for (uint32_t off = 0; off < o.size; off += 256) {
             const uint32_t size = std::min<uint32_t>(256, o.size - off);
-            Bytes args = {(uint8_t)o.id};
+            Bytes args = {wire(o.id)};
             u32(args, off);
             args.push_back(size & 127u);
             args.push_back((uint8_t)(size >> 7));
+            if (o.id >= kRec)
+                args.push_back((uint8_t)(o.id - kRec));
             Bytes r, chunk;
             if (!k.request(fl(bk + 1, args), fl_reply(bk + 1), r, 1000))
                 return why = "GET " + std::to_string(o.id) + " @" + std::to_string(off) + ": no reply", false;
             Bytes a = fl_args(r);
             if (a.size() < 9 || a[1])
                 return why = "GET " + std::to_string(o.id) + ": rc " + std::to_string(a.size() > 1 ? a[1] : -1), false;
-            if (a[0] != o.id || r32(a, 2) != off || (a[7] | a[8] << 7) != (int)size || !unpack(a, 9, size, chunk))
+            if (a[0] != wire(o.id) || r32(a, 2) != off || (a[7] | a[8] << 7) != (int)size || !unpack(a, 9, size, chunk))
                 return why = "GET " + std::to_string(o.id) + ": unexpected reply", false;
             std::copy(chunk.begin(), chunk.end(), bytes.begin() + off);
         }
@@ -295,22 +313,25 @@ struct Session {
     }
     int put(uint32_t id, const Bytes &b)        // restoreBackup's begin / data / commit; -> the first nonzero rc
     {
-        Bytes begin = {0, (uint8_t)id};
+        const uint8_t w = wire(id);
+        Bytes begin = {0, w};
         u32(begin, (uint32_t)b.size());
         u32(begin, crc32(b.data(), b.size()));
+        if (id >= kRec)
+            begin.push_back((uint8_t)(id - kRec));
         int rc = put_op(begin);
         if (rc)
             return rc;
         for (uint32_t off = 0; off < b.size(); off += 256) {
-            Bytes d = {1, (uint8_t)id};
+            Bytes d = {1, w};
             u32(d, off);
             const size_t n = std::min<size_t>(256, b.size() - off);
             Bytes pk = pack(b.data() + off, n);
             d.insert(d.end(), pk.begin(), pk.end());
             if ((rc = put_op(d)))
-                return put_op({3, (uint8_t)id}), rc;
+                return put_op({3, w}), rc;
         }
-        return put_op({2, (uint8_t)id}, 5000);
+        return put_op({2, w}, 5000);
     }
 };
 
@@ -468,7 +489,8 @@ ChangeFn panel_change(uint32_t obj, std::function<void(Device &)> act)
 
 // Felucca and its forks: a user preset stored as the web editor stores one (editor.html req.upStore: UP_STORE 19,
 // slot 0, the name "SYSEX", its NUL), found in the backup object it changed (a user preset bank: Felucca's upreset.c
-// up_bank_t, DUELL's 128-slot store), its name's first letter changed in the backup's copy, and restored over PUT
+// up_bank_t; DUELL 1.0: slot 0's patch record, Session::rec_pages), its name's first letter changed in the backup's
+// copy, and restored over PUT
 size_t find_text(const Bytes &b, const char *t)
 {
     const size_t n = std::strlen(t);
@@ -1704,7 +1726,8 @@ const Profile kProfiles[] = {
     {"jiant", "JIANT v0.9.9", true, "FM-1_900", false, up_store_change()},
     {"ghoulbox", "FELUCCA v1.4.1 GB2.3.2", true, "FM-1_900", false, up_store_change()},
     {"rainbow", "FELUCCA v1.1.5", true, "FM-1_900", false, up_store_change()},
-    {"duell", "FELUCCA DUELL 0.2.20", true, "FM-1_900", false, up_store_change()},
+    // DUELL 1.0: the stored preset is a patch record (Session::rec_pages; the profile's id is how main() knows)
+    {"duell", "FELUCCA DUELL 1.0", true, "FM-1_900", false, up_store_change()},
     {"pigeon", "PIGEON v0.4.1", true, "FM-1_900", false, nullptr, false, nullptr, pigeon_run},
     {"melodee", "MELODEE v1.4.5", true, "FM-1_900", false, up_store_change(80)},
     // Mini-Tone, FMini-1, Skiff: Felucca's editor.c (their web editors' INFO, BACKUP_LIST / GET / PUT, UP_STORE);
@@ -1720,7 +1743,7 @@ const Profile kProfiles[] = {
     // plat, fm1base, dinghy
     {"x0x", "X0X ", false, "FM-1_9010100", false, nullptr, false, nullptr, x0x_run},
     {"amb", nullptr, false, "FM-1_7010300", false, nullptr, false, nullptr, installer_run("AMB-1 ", true)},
-    {"loom", "LOOM-8 0.6-BETA", false, "FM-1_10000600", false, nullptr, false, nullptr, loom_run},
+    {"loom", "LOOM-8 0.6.1", false, "FM-1_10000601", false, nullptr, false, nullptr, loom_run},
     {"fomni", nullptr, false, "FM-1_8000400", false, nullptr, false, nullptr, installer_run("FoMni-1 ", false)},
     {"fimba", nullptr, false, "FM-1_8000601", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"fartmachine", nullptr, false, "FM-1_701", false, nullptr, false, nullptr, installer_run(nullptr, false)},
@@ -1789,6 +1812,8 @@ int main(int argc, char **argv)
     Session s(k);
     if (p && p->bk_v6)
         s.use_v6();
+    if (id == "duell")
+        s.rec_pages = 4;
     k.run_ms(3000);                         // past the splash
     std::printf("sysex_test %s (%s %s)\n", id.c_str(), lc->core()->name, lc->core()->version);
     if (!p) {
@@ -1883,6 +1908,7 @@ int main(int argc, char **argv)
         Session s2(k2);
         if (p->bk_v6)
             s2.use_v6();
+        s2.rec_pages = s.rec_pages;
         k2.run_ms(3000);
         std::vector<Obj> m3;
         Bytes back;

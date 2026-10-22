@@ -3,7 +3,7 @@
 | core | firmware | submodule | licence |
 |---|---|---|---|
 | `amb` | AMB-1 1.3 | `cores/fm1-amb` @ v1.3, with `base` = fm1-base @ 15dff6d, `base/bsp` = felucca-bsp @ 6b087c2 | MPL-2.0 |
-| `loom` | LOOM-8 0.6-beta | `cores/fm1-loom` @ v0.6-beta (e88f2e0), with `base` = fm1-base @ 71128a3, `base/bsp` = felucca-bsp @ 33cac69 | GPL-3.0-only (fm1-base MPL-2.0); un-gated 2026-10-21 (the owner's call: the 909 hi-hat) |
+| `loom` | LOOM-8 0.6.1 | `cores/fm1-loom` @ v0.6.1 (3f41391), with `base` = fm1-base @ 71128a3, `base/bsp` = felucca-bsp @ 33cac69 | GPL-3.0-only (fm1-base MPL-2.0); un-gated 2026-10-21 (the owner's call: the 909 hi-hat) |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
@@ -45,8 +45,8 @@ GPL-3.0 glue under MPL-2.0 section 3.3 and stay MPL-2.0. Not gated.
 ## LOOM-8
 
 LOOM-8 (Charles Vestal's pocket groovebox: eight tracks on nine engines, a 64-step sequencer, the user sample bank) is
-pinned at v0.6-beta although the pins are otherwise stable releases: the owner asked for it, and every upstream
-release so far is a "-beta" tag. Its fm1-base is newer than AMB-1's, so `fm1base_hal.h` has a second part (the mid
+pinned at v0.6.1 (2026-10-22), its first release without "-beta" (the owner asked for LOOM-8 while every upstream
+release was still a "-beta" tag; v0.6-beta was the pin before). Its fm1-base is newer than AMB-1's, so `fm1base_hal.h` has a second part (the mid
 LED plane `fm1_led_mid`, usb.c's out-ring room, the data area's extra windows, felucca-bsp's erase and write on the
 NOR image, unity.c's stand-ins for the screen mirror); AMB-1 compiles it unused.
 
@@ -60,8 +60,8 @@ NOR image, unity.c's stand-ins for the screen mirror); AMB-1 compiles it unused.
   half of the voices and the drum lines, then the lower half "on core 1", summed in the one-core order) gives the
   same samples as on a two-core unit. A release build (APP_VERSION not "DEV") starts with two cores; nothing gives
   them up here. The render's load is 0 % (simulated time, as the browser emulator gives it).
-- **Version and identity:** build.py --release's: APP_VERSION "0.6-BETA", FELUCCA_ID `FM-1_10000600` (fm1.toml's
-  `id_prefix` FM-1_10 + 00 06 00), derived from the cmake's version. USB product (fm1.toml `usb_product`):
+- **Version and identity:** build.py --release's: APP_VERSION "0.6.1", FELUCCA_ID `FM-1_10000601` (fm1.toml's
+  `id_prefix` FM-1_10 + 00 06 01), derived from the cmake's version. USB product (fm1.toml `usb_product`):
   "LOOM-8 FM-1" (plugin/EditorPort's table).
 - **The managers' SysEx** (core_loom.c's header): the screen reader, the log readout, the app's own frames
   (`app_sysex`: samples.c's 7D 46 4C INFO, PING and the user sample bank, tools/loom_samples.py and its samples

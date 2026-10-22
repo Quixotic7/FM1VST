@@ -17,6 +17,8 @@ DUELL un-gated (section 6). 2026-10-22 (branch cores-pigeon): PIGEON 0.4.1 (The 
 6's table). 2026-10-22 (branch cores-tonitor): Tonitor 0.53 joined on a glue of its own (core-glue/tonitor), public
 (`research/cores-2026-10-22/SURVEY.md`). 2026-10-22 (branch cores-speak37): Speak37's FM-1 build
 joined on a glue of its own (core-glue/speak37), public (research/cores-2026-10-22/SURVEY.md section 10).
+2026-10-22 (branch bump-oct23): LOOM-8 0.6.1, DUELL 1.0, CoralFlower 0.5 and Tonitor 0.55 (a240bc1, the Hub's
+2026.10.22 package), each its latest release.
 That makes 29 cores, 21 of them public (section 6). The per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
 
 ## 1. What the survey found
@@ -31,20 +33,20 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | Rainbow Mode 1.1.5-rb | GPL-3.0 | Felucca 1.1.5 | native + wasm (felucca_web) | A |
 | GHOULBOX 2.3.2 | GPL-3.0 (+ OFL fonts) | Felucca 1.4.1 | native + wasm (felucca_web) | A |
 | JIANT FM 0.9.9 (0912abb) | GPL-3.0 (+ CMUdict BSD-2) | Felucca 1.1.5.1 + SLOOP songs | native + wasm (felucca_web) | A |
-| DUELL 0.2.20-beta | GPL-3.0 + naming terms | Felucca main | felucca_web (native via its check) | A |
+| DUELL 1.0 | GPL-3.0 + naming terms | Felucca main | felucca_web (native via its check) | A |
 | Mini-Tone 1.0.1 (added 2026-10-22) | GPL-3.0-only (Braids / DaisySP / Rings MIT, msfa Apache-2.0, reSID GPL-2.0+) | Felucca 1.5 | native + wasm (felucca_web) | A |
 | FMini-1 1.8.0 (added 2026-10-22) | GPL-3.0-only (Felucca-Engines MIT) | Felucca 1.6.1 | native + wasm (felucca_web) | A |
 | Skiff 1.4 (added 2026-10-22) | GPL-3.0-only | Felucca 1.1.5 + most of 1.6.1 | native + wasm (felucca_web) | A |
 | ChoralRoot 0.26.1 | GPL-3.0 | Felucca 1.0 + Melodee ports | native emulator + wasm | B |
 | PurpleMonkey 0.11 | GPL-3.0 | ChoralRoot 44453d0 + SLOOP drums | native emulator + wasm | B |
-| CoralFlower 0.4.2 | GPL-3.0 | ChoralRoot 0.22 | native emulator + wasm | B |
+| CoralFlower 0.5 | GPL-3.0 | ChoralRoot 0.22 | native emulator + wasm | B |
 | X0X 1.1.0 | GPL-3.0 | Felucca fork + Charles Vestal's `plat.h` | native (`host/x0x_host.c`) + wasm | C |
 | FoMni 0.4 | GPL-3.0 | X0X's `plat.h` | native + wasm | C |
 | FiMba-1 0.6.1 | GPL-3.0 | FoMni | native + wasm | C |
 | Fart Machine One 1.0.0 | GPL-3.0 (code) | FoMni | native + wasm | C |
 | AMB-1 1.3 | **MPL-2.0** | fm1-base (Vestal) on felucca-bsp | native + wasm | C' |
-| LOOM-8 0.6-beta (added 2026-10-21) | GPL-3.0-only (fm1-base MPL-2.0) | fm1-base 71128a3 on felucca-bsp | native (`app/host.c`) + wasm | C' |
-| Tonitor 0.53 (c39d18f, no tags: the Hub package's commit; added 2026-10-22) | GPL-3.0-only (msfa Apache-2.0, Rings MIT, LIRA-8 BSD-3) | Felucca / SLOOP's HAL, its own unity build | a render / screen harness (`tests/host/host.c`), no main loop; no wasm | G (its own: tonitor) |
+| LOOM-8 0.6.1 (added 2026-10-21) | GPL-3.0-only (fm1-base MPL-2.0) | fm1-base 71128a3 on felucca-bsp | native (`app/host.c`) + wasm | C' |
+| Tonitor 0.55 (a240bc1, no tags: the Hub package's commit; added 2026-10-22) | GPL-3.0-only (msfa Apache-2.0, Rings MIT, LIRA-8 BSD-3) | Felucca / SLOOP's HAL, its own unity build | a render / screen harness (`tests/host/host.c`), no main loop; no wasm | G (its own: tonitor) |
 | Speak37 1.0, the FM-1 build (added 2026-10-22) | GPL-3.0-only (+ MAME's TMS5220 tables BSD-3, FM1 Open's 808 MIT) | the Felucca platform (`speak.c`, not Felucca's UI) | native test (`tests/sp_screen.c -DT_FM1=1`); its web emu is plain Felucca | own glue (speak37) |
 | SLOOP 2.8 | GPL-3.0 + Hügelton icons (§7) | early Felucca | native tests (`hostsim`, `ui_pages_test`) | D |
 | sloopDX 4.0 (tag v4.0) | GPL-3.0 | SLOOP 2.7 | native tests | D |
@@ -150,7 +152,7 @@ so these need an answer first:
 | Fart Machine One | 11 bundled recordings, said to be from Pixabay; redistribution rights unverified | check, or ship without the recordings |
 | SLOOP (and forks with its icons) | Hügelton icon atlas, all rights reserved under a GPL §7 permission | check the permission covers a plugin, or use replacement icons |
 | AMB-1 | MPL-2.0 | combinable with GPL unless marked "Incompatible With Secondary Licenses": check the headers |
-| DUELL | naming terms for unofficial builds (NOTICE.md: a build that is not the official release must not present itself as one) | un-gated (the owner's call, 2026-10-22): the core is the unmodified v0.2.20-beta tree named "DUELL (unofficial build)" with its commit in its source link, which satisfies the naming terms; the credits say it is unofficial and carry NOTICE.md. Keep the label wherever the plugin and the site show it |
+| DUELL | naming terms for unofficial builds (NOTICE.md: a build that is not the official release must not present itself as one) | un-gated (the owner's call, 2026-10-22): the core is the unmodified tree (v1.0 since 2026-10-22) named "DUELL (unofficial build)" with its commit in its source link, which satisfies the naming terms; the credits say it is unofficial and carry NOTICE.md (its naming paragraph unchanged in 1.0) and CREDITS.md (new in 1.0: it says the logo and artwork are not part of the GPL licence, where NOTICE.md says the splash graphic as shipped is GPL-3.0-only). Keep the label wherever the plugin and the site show it |
 | Mini-Tone | its LICENSING.md names MIT / Apache-2.0 / OFL texts its tree lacks (only GPL-2.0-reSID.txt is there) | public (the owner's call, 2026-10-22): FM1VST supplies the texts (core-glue/felucca_web/licences/minitone/, in its credits; tools/package_release.sh copies them and checks every named file is there) |
 | FMini-1 | a few factory patch names name artists or marks (EMERSON, NUMAN, MOOG BASS ..): names only, the author's own patches | public (the owner's call, 2026-10-22) |
 | Skiff | SLICE's BREAK and FUNK loops are AI-generated (the YuE2 model, published under YuE2's permission for creators) | public (the owner's call, 2026-10-22); the credits say they are AI-generated |

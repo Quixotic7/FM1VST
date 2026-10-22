@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# LOOM-8 (https://github.com/charlesvestal/fm1-loom, tag v0.6-beta; GPL-3.0-only, on fm1-base and felucca-bsp, MPL-2.0):
+# LOOM-8 (https://github.com/charlesvestal/fm1-loom, tag v0.6.1; GPL-3.0-only, on fm1-base and felucca-bsp, MPL-2.0):
 # the fm1-base glue (core-glue/fm1base/README.md) over the unmodified submodule and its own submodules (base =
-# fm1-base, base/bsp = felucca-bsp). The pin is a beta on purpose: the owner asked for LOOM-8, and every upstream
-# release so far is a "-beta" tag; v0.6-beta (2026-10-21) is the newest (CHANGELOG.md).
+# fm1-base, base/bsp = felucca-bsp). v0.6.1 (2026-10-22) is LOOM-8's first release without "-beta" (the ones before
+# it, to v0.6-beta, were all betas); fm1-base and felucca-bsp stay where v0.6-beta had them, app/samples unchanged.
 # The DSP and the sequencer (fm1.toml "o2") are their own units (loom_*.c). The generate step is fm1-base's build.py
 # generate() with the globals its main() sets from the app's directory (APP, CONF from app/fm1.toml, GEN =
 # app/build/gen): the fonts, the wavetables, the factory samples, the build's hash, the presets, the screen reader's
@@ -11,7 +11,7 @@
 # into the build folder) has the compiler read loom_plat.c in its place, the host's version of the same names; every
 # file of the submodule is compiled unmodified.
 set(_loom ${CMAKE_SOURCE_DIR}/cores/fm1-loom)
-set(_loom_ver 0.6-beta)
+set(_loom_ver 0.6.1)
 # build.py --release: APP_VERSION the release in capitals; the package identity fm1.toml's id_prefix (FM-1_10) + the
 # major, minor and patch as two digits each
 string(TOUPPER "${_loom_ver}" _loom_app_ver)

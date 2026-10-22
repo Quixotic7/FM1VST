@@ -1,4 +1,4 @@
-# DUELL 0.2.20-beta: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# DUELL 1.0: tests/core_conformance.cpp's script for this core (see its header for the directives)
 # the flash round trip: a fresh unit shows the first-start GUIDE after its splash (~2 s); HOME closes it and the
 # settings record keeps "seen"; KNOB 4 turns MORPH's AMOUNT. After the reboot no GUIDE: MORPH at once
 save wait 2500

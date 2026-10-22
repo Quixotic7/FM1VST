@@ -16,7 +16,7 @@
  * and browser emulator run it (the split render, the same sums).
  *
  * LOOM-8's version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release's for the pinned tag:
- * "0.6-BETA" (the release in capitals) and FM-1_10000600 (fm1.toml id_prefix FM-1_10 + 00 06 00); core_loom.cmake
+ * "0.6.1" (the release in capitals) and FM-1_10000601 (fm1.toml id_prefix FM-1_10 + 00 06 01); core_loom.cmake
  * derives both from its VERSION.
  *
  * THE MANAGERS (core-glue/plat/plat_sx.h): fm1-base's main loop (base/device/main_fm1.c fm1_main) gives each SysEx

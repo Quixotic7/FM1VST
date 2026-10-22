@@ -1,4 +1,4 @@
-# LOOM-8 0.6-beta's golden check (plat_golden_test: fm1-base plat_host's grammar): power-on (T1, a drum kit, on its
+# LOOM-8 0.6.1's golden check (plat_golden_test: fm1-base plat_host's grammar): power-on (T1, a drum kit, on its
 # Steps page), four steps written, PLAY (the playhead, the kit's hits through the split render), a knob, a kit sound
 # on a black key, SELECT's pages, stopped
 wait 600
