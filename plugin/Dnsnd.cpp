@@ -234,6 +234,23 @@ bool octaveInto(std::array<int, kNp> &p, int oct)
     return true;
 }
 
+// E1: FIZZ's values 74..109 (FMToneSeq core/voice/quad/quad_voice.c qe_val; tools/dn2pst.mjs QUAD_EXT_RANGES)
+const int EXT_RANGES[kExt][3] = {{0,1,0},{0,127,127},{0,2,0},{0,127,32},{0,1,0},{0,1,0},{0,127,0},{-64,63,0},{0,1,0},
+    {0,127,0},{0,127,0},{0,1,1},
+    {0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},
+    {0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0}};
+enum { X_AMOD = 74, X_HOLD = 75, X_PORT = 76, X_PTIM = 77, X_DRPRE = 79 };
+void extDefaults(std::array<int, kExt> &x)
+{
+    for (int k = 0; k < kExt; k++)
+        x[(size_t)k] = EXT_RANGES[k][2];
+}
+void extSet(std::array<int, kExt> &x, int id, int v)
+{
+    const int *r = EXT_RANGES[id - kExt0];
+    x[(size_t)(id - kExt0)] = std::max(r[0], std::min(r[1], v));
+}
+
 void pack(const std::array<int, kNp> &p, std::array<uint8_t, kBlob> &blob)
 {
     blob.fill(0);
@@ -245,6 +262,17 @@ void pack(const std::array<int, kNp> &p, std::array<uint8_t, kBlob> &blob)
         if (hires(i))
             blob[o++] = (uint8_t)(u >> 8);
     }
+}
+
+// E1: version 6 (dn2pst.mjs quadPack6): version 5's bytes, 'Q' 6, DRIVE at 87, ext a byte each (value - min) at 88..
+void pack6(const std::array<uint8_t, kBlob> &b5, int drive, const std::array<int, kExt> &x, std::array<uint8_t, kBlob6> &b6)
+{
+    b6.fill(0);
+    std::copy(b5.begin(), b5.begin() + 87, b6.begin());
+    b6[1] = 6;
+    b6[87] = (uint8_t)std::max(0, std::min(127, drive));
+    for (int k = 0; k < kExt; k++)
+        b6[(size_t)(88 + k)] = (uint8_t)((x[(size_t)k] - EXT_RANGES[k][0]) & 255);
 }
 
 uint32_t u16(const uint8_t *b) { return (uint32_t)b[0] | (uint32_t)b[1] << 8; }
@@ -371,6 +399,9 @@ bool parse(const void *data, size_t n, Sound &s, juce::String &err)
     s.drive = o.drive;
     s.pan = o.pan;
     s.notes = o.notes;
+    extDefaults(s.ext);                          // (E1: a .dnsnd: FIZZ's values 74.. at their defaults, STORE)
+    s.six = false;
+    pack6(s.blob, s.drive, s.ext, s.blob6);
     return true;
 }
 
@@ -800,17 +831,15 @@ bool parseDn2(const void *data, size_t n, Sound &s, juce::String &err)
     }
     if (r.lo(198) == 0)
         o.notes.add("FILTER ENV RESET off not imported");
-    {   // the amp: ADSR as it is; AHD (MODE 0) has a HOLD (127 = while the note is held) and no SUS / REL
+    std::array<int, kExt> ext;
+    extDefaults(ext);
+    {   // the amp: ADSR as it is; AHD (MODE 0): FIZZ's AHD (E1: AMOD, HOLD 1:1, 127 NOTE; DEC 127 INF, as FIZZ's)
         const int adec = r.lo(206);
         const double rel = r.hi(210);
         if (r.lo(222) == 0) {
-            const bool held = r.lo(204) >= 127;
-            o.p[EDEC] = held ? 127 : std::min(126, adec);
-            o.p[ESUS] = held ? 127 : 0;
-            o.p[EREL] = adec >= 127 ? 127 : std::min(126, adec);
-            o.notes.add(held ? juce::String("amp AHD, HOLD while the note is held: read as SUS 127 and REL = DEC")
-                             : "amp AHD, HOLD " + juce::String(r.lo(204)) +
-                                   ": FM TONE has no hold; read as DEC, SUS 0, REL = DEC");
+            extSet(ext, X_AMOD, 1);
+            extSet(ext, X_HOLD, r.lo(204));
+            o.p[EDEC] = std::min(127, adec);
         } else {
             o.p[EDEC] = adec >= 127 ? 127 : std::min(126, adec);
             o.p[ESUS] = r.lo(208);
@@ -823,8 +852,13 @@ bool parseDn2(const void *data, size_t n, Sound &s, juce::String &err)
         o.notes.add("BIT REDUCTION " + juce::String(r.lo(230)) + " not imported");
     if (r.lo(232))
         o.notes.add("SAMPLE RATE REDUCTION " + juce::String(r.lo(232)) + " not imported");
-    if (r.lo(226) == 64)
-        o.notes.add("PORTAMENTO on: not imported");
+    if (r.lo(226) == 64)                                         // (E1: PORT ON, TIME 1:1)
+        extSet(ext, X_PORT, 1), extSet(ext, X_PTIM, r.lo(228));
+    if (r.lo(240) == 0) {                                        // E1: OD ROUTING 0 read as before the filter (a guess)
+        extSet(ext, X_DRPRE, 1);
+        if (o.drive)
+            o.notes.add("OVERDRIVE before the filter (OD ROUTING 0 read as PRE: the encoding is not verified)");
+    }
     {
         const int oct = (int)(int8_t)d[251];                       // the sound's OCTAVE (inferred: +251)
         if (oct) {
@@ -844,6 +878,11 @@ bool parseDn2(const void *data, size_t n, Sound &s, juce::String &err)
     s.pan = o.pan;
     s.chorus = send(212), s.delay = send(214), s.reverb = send(216);
     s.notes = o.notes;
+    s.ext = ext;
+    s.six = false;
+    for (int k = 0; k < kExt; k++)
+        s.six = s.six || ext[(size_t)k] != EXT_RANGES[k][2];
+    pack6(s.blob, s.drive, ext, s.blob6);
     return true;
 }
 
@@ -859,7 +898,9 @@ bool read(const juce::File &f, Sound &s, juce::String &err)
 
 std::vector<uint8_t> storeFrame(const Sound &s, bool batch)
 {
-    std::vector<uint8_t> f = {0xF0, 0x7D, 0x46, 0x5A, 0x01, 0x10};
+    std::vector<uint8_t> f = {0xF0, 0x7D, 0x46, 0x5A, 0x01, (uint8_t)(s.six ? 0x11 : 0x10)};   // (E1: STORE6)
+    const uint8_t *blob = s.six ? s.blob6.data() : s.blob.data();
+    const int nb = s.six ? kBlob6 : kBlob;
     const size_t from = 5;
     f.push_back((uint8_t)((kImportIntoPool ? 0x01 : 0x00) | (batch ? 0x02 : 0x00)));   // flags: POOL / LIBRARY, BATCH
     f.push_back(0), f.push_back(0);              // slot 0: the first free
@@ -874,14 +915,14 @@ std::vector<uint8_t> storeFrame(const Sound &s, bool batch)
     f.push_back((uint8_t)std::max(0, std::min(127, s.delay)));
     f.push_back((uint8_t)std::max(0, std::min(127, s.reverb)));
     f.push_back(0x0F);                           // mixmask: pan, chorus, delay, reverb
-    for (int i = 0; i < kBlob; i += 7) {         // 7-bit: groups of 7 as 8, the first their top bits
-        const int k = std::min(7, kBlob - i);
+    for (int i = 0; i < nb; i += 7) {            // 7-bit: groups of 7 as 8, the first their top bits
+        const int k = std::min(7, nb - i);
         uint8_t hi = 0;
         for (int j = 0; j < k; j++)
-            hi |= (uint8_t)(((s.blob[(size_t)(i + j)] >> 7) & 1) << j);
+            hi |= (uint8_t)(((blob[i + j] >> 7) & 1) << j);
         f.push_back(hi);
         for (int j = 0; j < k; j++)
-            f.push_back(s.blob[(size_t)(i + j)] & 0x7F);
+            f.push_back(blob[i + j] & 0x7F);
     }
     if (s.tags & 0x7F)
         f.push_back((uint8_t)(s.tags & 0x7F));   // P1.5x: the tags byte (FIZZ's kinds; none: FIZZ's classifier decides)

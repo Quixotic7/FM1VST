@@ -54,6 +54,9 @@ pst("syn-raw.dn2pst", rec0(), { name: "SYNTH BASS", compress: false });
 pst("ahd-note.dn2pst", rec0({ ...want, "amp.mode": 0, "amp.hold": 127, "amp.dec": 70 }));
 pst("ahd-timed.dn2pst", rec0({ ...want, "amp.mode": 0, "amp.hold": 32, "amp.dec": 50 }));
 pst("ahd-inf.dn2pst", rec0({ ...want, "amp.mode": 0, "amp.hold": 10, "amp.dec": 127 }));
+pst("port-on.dn2pst", rec0({ ...want, portamento: 64, "portamento.time": 77 }));          // (E1: PORT ON, TIME 77)
+pst("port-off.dn2pst", rec0({ ...want, portamento: 63, "portamento.time": 77 }));
+{ const r = rec0(); r[240] = 1; pst("od-post.dn2pst", r); }                                // (E1: OD ROUTING 1: after)
 for (const o of [-24, -12, -7, 5, 12, 24]) pst(`octave${o}.dn2pst`, rec0({ ...want, octave: o }));
 for (const [fm, types] of [[0, [0, 20, 33, 64, 95, 96, 127]], [1, [0]], [2, [0]], [3, [0]], [4, [0, 1, 2, 3, 7]], [5, [0]], [9, [0]]])
   for (const ty of types) { const r = rec0({ ...want, "filter.type": ty }); r[245] = fm; pst(`filter-${fm}-${ty}.dn2pst`, r); }
@@ -122,7 +125,7 @@ for (const path of files.sort()) {
     const q = J.dn2pstToQuad(p);
     const tags = J.FIZZ_KINDS.reduce((m, k, i) => m | (p.fizzTags.includes(k) ? 1 << i : 0), 0);
     js = [f, q.name, String(q.drive), String(q.pan), String(q.sends.reverb), String(q.sends.delay), String(q.sends.chorus),
-          hex(q.blob), String(tags)];
+          hex(q.blob), String(tags), hex(q.blob6), q.six ? "1" : "0"];   // (E1: the version-6 blob, STORE6 or not)
   } catch (e) {
     js = [f, "ERROR", e.message];
   }

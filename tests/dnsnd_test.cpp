@@ -4,7 +4,8 @@
 //   dnsnd_test DIR              every DIR/*.dnsnd: one line each, "file<TAB>name<TAB>drive<TAB>pan<TAB>reverb<TAB>delay
 //                               <TAB>chorus<TAB>the blob in hex" (or "file<TAB>ERROR<TAB>why"), for tools/dnsnd_compare.mjs,
 //                               which checks them against ChoralRoot's JS reader byte for byte
-//   dnsnd_test --dn2 DIR...     P1.5x: every DIR/*.dn2pst the same way, with FIZZ's tags (a number) after the blob,
+//   dnsnd_test --dn2 DIR...     P1.5x: every DIR/*.dn2pst the same way, with FIZZ's tags (a number) after the blob
+//                               (E1: then the version-6 blob in hex and 1 if the sound needs it),
 //                               for tools/dn2pst_compare.mjs (against FMToneSeq tools/dn2pst.mjs)
 //   dnsnd_test --frame FILE     P1.5x: FILE's STORE frame in hex (its pan, sends, mixmask, tags byte)
 //   dnsnd_test --import DIR     the processor on the FIZZ core (headless, as plugin_test): the folder's first presets
@@ -64,8 +65,11 @@ static int dumpDn2(int argc, char **argv)
             juce::String hex;
             for (uint8_t b : s.blob)
                 hex += juce::String::toHexString((int)b).paddedLeft('0', 2);
-            std::printf("%s\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%d\n", f.getFileName().toRawUTF8(), s.name.toRawUTF8(), s.drive,
-                        s.pan, s.reverb, s.delay, s.chorus, hex.toRawUTF8(), s.tags);
+            juce::String hex6;                  // (E1: the version-6 blob, and whether it is needed)
+            for (uint8_t b : s.blob6)
+                hex6 += juce::String::toHexString((int)b).paddedLeft('0', 2);
+            std::printf("%s\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%s\t%d\n", f.getFileName().toRawUTF8(), s.name.toRawUTF8(),
+                        s.drive, s.pan, s.reverb, s.delay, s.chorus, hex.toRawUTF8(), s.tags, hex6.toRawUTF8(), (int)s.six);
         }
     }
     return 0;

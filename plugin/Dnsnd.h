@@ -16,6 +16,10 @@
 // SWARMER, MIDI) are refused with the reader's message. Its Digitone tags give FIZZ's tags (BASS, CHORD -> KEYS, PAD,
 // LEAD, the drums -> DRUMS, SOUND FX -> FX).
 //
+// FIZZ E1 (0.8.0): FIZZ's values 74..109 (AHD, portamento, DRIVE before the filter, ..): a .dn2pst that uses them gives
+// ext, six and the 128-byte version-6 blob6 (FMToneSeq tools/dn2pst.mjs dn2pstToQuad's), and storeFrame sends it as
+// STORE6 (0x11). A .dnsnd keeps the 96-byte blob (the owner's DN1 records carry no portamento bytes).
+//
 // storeFrame() makes FIZZ's STORE SOUND SysEx for it (FMToneSeq docs/SYSEX.md, protocol 1): into the LIBRARY's first
 // free slot, its name, its DRIVE, P1.5x its pan and sends (mixmask 0F: FIZZ keeps them with the preset) and its tags
 // byte (when it has tags), the blob 7-bit packed; BATCH after the first of a batch (one undo on the unit).
@@ -29,6 +33,7 @@
 namespace fm1dnsnd {
 
 constexpr int kNp = 73, kBlob = 96;
+constexpr int kExt0 = 74, kExt = 36, kBlob6 = 128;     // E1: FIZZ's values 74..109, the version-6 blob
 // where an imported sound goes in FIZZ: its LIBRARY (false) or the project's POOL (true), the first free slot either
 // way. One place to change (FIZZ's presets and sounds are being redesigned; FMToneSeq docs/SYSEX.md has both)
 constexpr bool kImportIntoPool = false;
@@ -42,6 +47,9 @@ struct Sound {
     int reverb = 0, delay = 0, chorus = 0;      // the sends, 0..127 (P1.5x: FIZZ keeps them with the preset)
     int tags = 0;                               // P1.5x: FIZZ's tags (bit k: BASS KEYS PLUCK PAD LEAD DRUMS FX); 0 none
     juce::StringArray notes;                    // what was lost or approximated
+    std::array<int, kExt> ext{};                // E1: FIZZ's values 74..109 (their defaults unless a .dn2pst sets them)
+    bool six = false;                           // .. one away from its default: blob6 and STORE6
+    std::array<uint8_t, kBlob6> blob6{};        // .. 'Q' 6: the values, DRIVE at 87, ext at 88..
 };
 
 // the file's bytes -> the sound; false and err (one line) if it is not a Digitone sound this reader knows
@@ -51,7 +59,7 @@ bool read(const juce::File &f, Sound &out, juce::String &err);   // (.dn2pst: pa
 bool parseDn2(const void *data, size_t n, Sound &out, juce::String &err);
 
 // FIZZ's STORE SOUND frame (F0 .. F7): kImportIntoPool's place, slot 0 (the first free); batch: joins the previous
-// one's undo
+// one's undo. E1: six: STORE6 with blob6
 std::vector<uint8_t> storeFrame(const Sound &s, bool batch);
 
 }   // namespace fm1dnsnd
