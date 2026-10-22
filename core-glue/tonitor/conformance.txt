@@ -1,0 +1,27 @@
+# Tonitor 0.53: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: a session saved by hand (README: SAVE held 0.8 s just after switching on offers the first
+# empty slot; PRESETS turns NO to YES, SAVE answers). After the reboot the SESSIONS page (SAVE) shows slot 1 holding
+# a session (its number in red), where a fresh unit's shows it EMPTY
+save wait 1500
+save btn SAVE down
+save wait 1000
+save btn SAVE up
+save wait 300
+save knob PRESETS +1
+save wait 300
+save btn SAVE 100
+save wait 1500
+save quit
+saved wait 1500
+saved btn SAVE 100
+saved wait 600
+saved quit
+saved-lcd-differs
+# the boot guard: a boot after a failed one is the second in a row: the rescue mode (no USB updater in a core: exit 3)
+reboot-guard 1
+# OCT- + OCT+ held 5 s: UBOOT (main.c fm1_main, tonitor_fw.c)
+reboot wait 1500
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

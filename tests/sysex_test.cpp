@@ -1125,6 +1125,161 @@ void loom_run(const std::string &module, Device &dev, Link &k, Session &s, const
     k.worst = std::max(k.worst, k2.worst);
 }
 
+// ---- Tonitor: the backup page (docs/backup.html, js/fm1backup.js; firmware/src/backup.c): the installer's framing
+// F0 pack7(00 59 cmd len24 body ~sum) F7 with commands of its own: 0x50 LIST (count, then number u16 and length u32
+// each), 0x51 READ number off n (<= 256), 0x52 WRITE number len, 0x53 DATA off bytes, 0x54 COMMIT (a status each:
+// 0 done .. 4 not a whole record). A record goes back whole, only its head's sequence new (bytes 32.. compared, as
+// tests/web/test_backup.mjs). Sessions are saved by hand: SAVE held 0.8 s on a fresh unit offers slot 1, PRESETS YES,
+// SAVE. Then the page's own round trip: session 1 read, a damaged copy refused (4), the copy restored (a record keeps
+// its number in its head), and the reboot from the flash image lists it as restored.
+Bytes tn_frame(uint8_t cmd, const Bytes &body)
+{
+    Bytes m = {0x00, 0x59, cmd, (uint8_t)body.size(), (uint8_t)(body.size() >> 8), (uint8_t)(body.size() >> 16)};
+    uint32_t sum = 0, acc = 0, nb = 0;
+    for (uint8_t b : body)
+        m.push_back(b), sum += b;
+    m.push_back((uint8_t)~sum);
+    Bytes f = {0xF0};
+    for (uint8_t b : m) {                         // fm1ota.js pack7
+        acc |= (uint32_t)b << nb;
+        nb += 8;
+        while (nb >= 7) {
+            f.push_back((uint8_t)(acc & 0x7Fu));
+            acc >>= 7;
+            nb -= 7;
+        }
+    }
+    if (nb)
+        f.push_back((uint8_t)(acc & 0x7Fu));
+    f.push_back(0xF7);
+    return f;
+}
+bool tn_ask(Link &k, uint8_t cmd, const Bytes &body, Bytes &out, double ms = 3000)   // fm1backup.js ask
+{
+    const auto match = [cmd](const Bytes &f) {
+        const Bytes d = mupg_unpack(f);
+        if (f.size() < 4 || f[1] != 0x00 || d.size() < 7 || d[0] || d[1] != 0x59 || d[2] != cmd)
+            return false;
+        const uint32_t n = d[3] | d[4] << 8 | d[5] << 16;
+        if (d.size() < 7 + n)
+            return false;
+        uint32_t s = 0;
+        for (uint32_t i = 0; i < n; i++)
+            s += d[6 + i];
+        return (uint8_t)~s == d[6 + n];
+    };
+    Bytes r;
+    if (!k.request(tn_frame(cmd, body), match, r, ms))
+        return false;
+    const Bytes d = mupg_unpack(r);
+    out.assign(d.begin() + 6, d.begin() + 6 + (d[3] | d[4] << 8 | d[5] << 16));
+    return true;
+}
+void tn_w32(Bytes &a, uint32_t v)
+{
+    for (int i = 0; i < 4; i++)
+        a.push_back((uint8_t)(v >> (8 * i)));
+}
+bool tn_list(Link &k, std::vector<std::pair<uint32_t, uint32_t>> &recs)
+{
+    Bytes b;
+    recs.clear();
+    if (!tn_ask(k, 0x50, {}, b, 1500) || b.empty())
+        return false;
+    for (uint32_t i = 0; i < b[0] && 7 + i * 6 <= b.size(); i++)
+        recs.push_back({b[1 + i * 6] | b[2 + i * 6] << 8,
+                        (uint32_t)(b[3 + i * 6] | b[4 + i * 6] << 8 | b[5 + i * 6] << 16 | (uint32_t)b[6 + i * 6] << 24)});
+    return true;
+}
+bool tn_read(Link &k, uint32_t num, uint32_t len, Bytes &out)
+{
+    out.assign(len, 0);
+    for (uint32_t off = 0; off < len;) {
+        Bytes q = {(uint8_t)num, (uint8_t)(num >> 8)}, b;
+        tn_w32(q, off);
+        q.push_back(0);
+        q.push_back(1);                           // 256
+        if (!tn_ask(k, 0x51, q, b) || b.size() < 8)
+            return false;
+        const uint32_t n = b[6] | b[7] << 8;
+        if (!n || (uint32_t)(b[2] | b[3] << 8 | b[4] << 16 | (uint32_t)b[5] << 24) != off || b.size() < 8 + n)
+            return false;
+        std::copy(b.begin() + 8, b.begin() + 8 + n, out.begin() + off);
+        off += n;
+    }
+    return true;
+}
+int tn_write(Link &k, uint32_t num, const Bytes &bytes)                         // the status, -1 no answer
+{
+    Bytes q = {(uint8_t)num, (uint8_t)(num >> 8)}, b;
+    tn_w32(q, (uint32_t)bytes.size());
+    if (!tn_ask(k, 0x52, q, b, 8000) || b.empty())
+        return -1;
+    if (b[0])
+        return b[0];
+    for (uint32_t off = 0; off < bytes.size(); off += 256) {
+        Bytes d;
+        tn_w32(d, off);
+        d.insert(d.end(), bytes.begin() + off, bytes.begin() + std::min<size_t>(bytes.size(), off + 256));
+        if (!tn_ask(k, 0x53, d, b, 5000) || b.empty())
+            return -1;
+        if (b[0])
+            return b[0];
+    }
+    if (!tn_ask(k, 0x54, {}, b, 5000) || b.empty())
+        return -1;
+    return b[0];
+}
+void tonitor_run(const std::string &module, Device &dev, Link &k, Session &s, const Profile &p)
+{
+    std::string id;
+    check(mupg_identity_exact(k, id) && id == p.mupg, "M-UPGRADE identity: \"" + id + "\" (the package's " + p.mupg + ")");
+    std::vector<std::pair<uint32_t, uint32_t>> recs;
+    check(tn_list(k, recs) && recs.empty(), "backup LIST (0x50) on a fresh unit: " + std::to_string(recs.size()) +
+                                                " records");
+    dev.buttons(1u << EMU_B_SAVE);                // SAVE held 0.8 s: "SAVE NEW?" on slot 1; PRESETS: YES; SAVE
+    k.run_ms(1000);
+    dev.buttons(0);
+    k.run_ms(300);
+    dev.enc(EMU_E_PRESETS, 1);
+    k.run_ms(300);
+    dev.buttons_tap(1u << EMU_B_SAVE);
+    k.run_ms(1500);
+    check(tn_list(k, recs) && recs.size() == 1 && recs[0].first == 1,
+          "a session saved on the panel: LIST " + std::to_string(recs.size()) + " record(s)" +
+              (recs.empty() ? "" : ", number " + std::to_string(recs[0].first) + ", " + std::to_string(recs[0].second) +
+                                       " bytes"));
+    Bytes s1, s2;
+    const bool r1 = !recs.empty() && tn_read(k, recs[0].first, recs[0].second, s1);
+    check(r1, "READ (0x51) session 1 whole, 256 bytes a request: " + std::to_string(s1.size()) + " bytes");
+    if (r1) {
+        Bytes bad = s1;
+        bad.back() ^= 0x55;
+        int rc = tn_write(k, 1, bad);
+        check(rc == 4, "a damaged record written back (WRITE / DATA / COMMIT): refused, status " + std::to_string(rc) +
+                           " (4: not a whole record)");
+        const uint32_t dirty = dev.flash_dirty();
+        rc = tn_write(k, 1, s1);
+        check(rc == 0 && dev.flash_dirty() != dirty, "session 1's record restored (WRITE / DATA / COMMIT): status " +
+                                                          std::to_string(rc) + ", the NOR image written");
+        const bool r2 = tn_list(k, recs) && recs.size() == 1 && tn_read(k, 1, recs[0].second, s2);
+        check(r2 && s2.size() == s1.size() && s2 != s1 && std::equal(s1.begin() + 32, s1.end(), s2.begin() + 32),
+              "LIST / READ after it: one record, session 1 as it was, its head's sequence new");
+    }
+    update_keys(k, s, p);
+    dev.flash_sync();
+    const Bytes image(dev.flash(), dev.flash() + dev.flash_size());
+    std::unique_ptr<LoadedCore> lc2 = load(module);
+    Device dev2(lc2->core());
+    dev2.boot_from(image.data(), (uint32_t)image.size());
+    Link k2(dev2);
+    k2.run_ms(3000);
+    Bytes s3;
+    check(!s2.empty() && tn_list(k2, recs) && recs.size() == 1 && tn_read(k2, 1, recs[0].second, s3) && s3 == s2,
+          "rebooted from the flash image: session 1 listed, as restored");
+    k.worst = std::max(k.worst, k2.worst);
+}
+
 // ---- the installers' firmwares (FiMba, FoMni, Fart Machine One, AMB-1): the hub's installer (fm1ota.js) finds the
 // unit by the M-UPGRADE identity and offers the update (refused: the update key is not taken); AMB-1's installer also
 // reads the log (F0 7D 4C 47 F7: a frame a line, "end" last: its crash report). A screen reader where the firmware has
@@ -1279,6 +1434,7 @@ const Profile kProfiles[] = {
     {"fm106", nullptr, false, "FM-1_907", false, nullptr, false, nullptr, fm106_run},
     {"obervave", nullptr, false, "FM-1_955", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"frodhes", nullptr, false, "FM-1_958", false, nullptr, false, nullptr, installer_run(nullptr, false)},
+    {"tonitor", nullptr, false, "FM-1_700", false, nullptr, false, nullptr, tonitor_run},
 };
 
 const Profile *profile_of(const std::string &id)

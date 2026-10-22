@@ -350,7 +350,7 @@ int main()
     }
 
     // ---- (e) the other cores: their screen and labels on the panel
-    for (const char *id : {"felucca", "melodee", "loom"}) {
+    for (const char *id : {"felucca", "melodee", "loom", "tonitor"}) {
         if (!built_cores().count(id))
             continue;                                    // (a build of some cores only)
         FM1Processor p;

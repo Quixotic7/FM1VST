@@ -161,7 +161,7 @@ static int runFake()
                  {"duell", "DUELL"},                {"x0x", "X0X FM-1"},                 {"fm106", "FM-106"},
                  {"coralflower", "CoralFlower FM-1"}, {"fart", "FoMni FM-1"},           {"amb", "AMB-1 FM-1"},
                  {"fimba", "FiMba FM-1"},           {"fomni", "FoMni FM-1"},             {"obervave", "Felucca"},
-                 {"loom", "LOOM-8 FM-1"},           {"unknown-fw", "FM-1"}};
+                 {"loom", "LOOM-8 FM-1"},           {"tonitor", "FM-1 Tonitor"},         {"unknown-fw", "FM-1"}};
     bool all = true;
     for (auto &t : table)
         all = all && EditorPort::usbProductName(t.id) == t.usb;

@@ -47,6 +47,7 @@ FirmwareMeta FirmwareMeta::of(const String &id, const String &sourceUrl)
         {"x0x", "Drums", "909, 808 and 303s", "C. Vestal"},
         {"fartmachine", "Other", "Sampler toy", "A. C. Wilson"},
         {"amb", "Other", "Generative ambient", "C. Vestal"},
+        {"tonitor", "Other", "Acousmatic, live ambient", "N. Zimas"},
         {"purplemonkey", "Other", "For a small child", "Quixotic7"},
         {"rainbow", "Other", "Music toy", "J. Bartlett"},
         {"nomansky", "Other", "Space adventure", "Hericdk"},

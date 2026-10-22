@@ -10,7 +10,8 @@ three cores at their pinned versions pass everything). Phase 1 is done (branch c
 all 21 cores built and bundled, ABI 6 for the credits, the suite passing in the default, Release and public builds).
 Phase 2 is a plan. 2026-10-21 (branch cores-oct21): the pins moved to each firmware's latest stable release (the
 table's versions), and a 22nd core, LOOM-8 (Charles Vestal's groovebox on fm1-base), joined the fm1base glue, gated
-(section 6); the owner un-gated it the same day. The per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
+(section 6); the owner un-gated it the same day. 2026-10-22 (branch cores-tonitor): Tonitor joined on a glue of its own
+(core-glue/tonitor), public (`research/cores-2026-10-22/SURVEY.md`). The per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
 
 ## 1. What the survey found
 
@@ -34,6 +35,7 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | Fart Machine One 1.0.0 | GPL-3.0 (code) | FoMni | native + wasm | C |
 | AMB-1 1.3 | **MPL-2.0** | fm1-base (Vestal) on felucca-bsp | native + wasm | C' |
 | LOOM-8 0.6-beta (added 2026-10-21) | GPL-3.0-only (fm1-base MPL-2.0) | fm1-base 71128a3 on felucca-bsp | native (`app/host.c`) + wasm | C' |
+| Tonitor 0.53 (c39d18f, no tags: the Hub package's commit; added 2026-10-22) | GPL-3.0-only (msfa Apache-2.0, Rings MIT, LIRA-8 BSD-3) | Felucca / SLOOP's HAL, its own unity build | a render / screen harness (`tests/host/host.c`), no main loop; no wasm | G (its own: tonitor) |
 | SLOOP 2.8 | GPL-3.0 + Hügelton icons (§7) | early Felucca | native tests (`hostsim`, `ui_pages_test`) | D |
 | sloopDX 4.0 (tag v4.0) | GPL-3.0 | SLOOP 2.7 | native tests | D |
 | ORBIT 0.7.1 | GPL-3.0 + **OP-1 material** | SLOOP / Felucca | native preview + hostsim | D |
@@ -144,9 +146,9 @@ so these need an answer first:
 
 Gated today (left out of FM1_PUBLIC_BUILD): fm106 (Juno-106 patch data), duell (naming terms), rainbow (character
 look-alikes), fartmachine (recordings), orbit (OP-1 material, the Hugelton atlas), sloop and sloopdx (the Hugelton
-atlas), nomansky (game art), x0x (the cymbal samples). A public build bundles the other thirteen: choralroot (the
+atlas), nomansky (game art), x0x (the cymbal samples). A public build bundles the other fourteen: choralroot (the
 default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee, fomni, fimba, amb, obervave, frodhes, loom
-(un-gated 2026-10-21), and the fm1emu engine.
+(un-gated 2026-10-21), tonitor (2026-10-22), and the fm1emu engine.
 
 ## 7. Rules
 

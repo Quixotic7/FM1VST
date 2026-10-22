@@ -257,6 +257,8 @@ juce::String EditorPort::usbProductName(const juce::String &idIn)
         {"zp12", "Felucca"},
         // fm1-base apps: their fm1.toml usb_product
         {"loom", "LOOM-8 FM-1"},
+        // Tonitor's usb.c STR2 (Felucca's, renamed)
+        {"tonitor", "FM-1 Tonitor"},
     };
     for (const auto &e : kTable)
         if (id == e[0])
@@ -279,6 +281,7 @@ juce::String EditorPort::managerUrl(const juce::String &idIn, const juce::String
         {"choralroot", "https://quixotic7.github.io/ChoralRootFM1/"},
         {"fm106", "https://patttf.github.io/fm-106/Librarian.html"},
         {"loom", "https://charlesvestal.github.io/fm1-loom/samples/"},
+        {"tonitor", "https://nzimas.github.io/tonitor/backup.html"},   // (no editor: the sessions' backup page)
     };
     for (const auto &e : kTable)
         if (id == e[0])

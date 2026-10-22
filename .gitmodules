@@ -73,3 +73,6 @@
 [submodule "cores/fm1-loom"]
 	path = cores/fm1-loom
 	url = https://github.com/charlesvestal/fm1-loom
+[submodule "cores/tonitor"]
+	path = cores/tonitor
+	url = https://github.com/nzimas/tonitor.git

@@ -22,6 +22,25 @@ LOOM-8 release so far is a "-beta" tag, and this is the newest (the other pins s
   call ("ship the original, it is from the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal
   made"); the About page's credits name that origin. X0X stays gated (CORES-PLAN.md 6).
 
+### Tonitor, a new core
+
+`tonitor`: Nuno Zimas's [Tonitor](https://github.com/nzimas/tonitor) (GPL-3.0-only, on Felucca and SLOOP), firmware
+for acousmatic and live-ambient music, built for low vision: six tracks of generated "sound objects" on seven engines
+(FM, ANIMA, CALIGULA, RUSSOLO, DRUID, BAYAREA, HIVE), free loops with overdubs, a granulator, a reverb, a delay, a
+modulation matrix per track, sessions and presets. **Pinned at c39d18f (0.53):** Tonitor has no tags or releases and
+publishes several times a day; the pin is the commit holding the Firmware Hub's current package (its "2026.10.21",
+firmware 0.53). Expect frequent bumps.
+
+- Its own glue (`core-glue/tonitor`): the device's unity build with a host HAL in place of the hardware headers, and
+  `main.c`'s power-on and main loop re-done on the plugin's clock. The loop runs on a coroutine: where the device
+  waits for its interrupts (a new sound waiting for the audio to take it, a reply waiting for room) it yields, and
+  the audio, MIDI and time move on as on the device. The second core's jobs run inline, where the device waits for
+  them (the same sound as Tonitor's own two-core / one-core check).
+- The managers answer: the installer's identity (FM-1_700) and the backup page's sessions and presets (LIST, READ,
+  WRITE, refused when damaged). "Show to editors" names the port "FM-1 Tonitor (FM1VST)" and links the backup page.
+  The update keys are ignored, as on every core.
+- **In the public release.**
+
 ### Firmware updates
 
 Each pin moved to its firmware's latest stable release:
