@@ -22,6 +22,25 @@ LOOM-8 release so far is a "-beta" tag, and this is the newest (the other pins s
   call ("ship the original, it is from the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal
   made"); the About page's credits name that origin. X0X stays gated (CORES-PLAN.md 6).
 
+### PIGEON, a new core
+
+`pigeon`: The Shrimp Blimp's [PIGEON](https://github.com/TheShrimpBlimp/pigeon) (GPL-3.0-only, on Felucca 1.5.1), a
+performance sampler after the SP-404 and the PO-33: two chopped songs (MP3 or IMA ADPCM, up to 32 chops each) and a
+16-pad kit, a 64-step sequencer with four notes a step, patterns A-D and an arrangement. Pinned at **v0.4.1**
+(8f34e81), its latest stable release (the Hub offers 0.5.0-beta.1).
+
+- The firmware's own browser unit on the felucca_web glue, unmodified, with its MP3 decoder (`ko_mp3.c` and libmad
+  0.15.1b) built from its tree.
+- **The sample bank**: as on the FM-1, the 500 KiB bank lives in the 1 MiB NOR (the extents PIGEON's package frees
+  for it), so it is part of the core's flash image: saved with the plugin state and presets, kept across a power
+  cycle. No bank ships with the release, so a fresh PIGEON is silent until one is loaded the device's way: PIGEON's
+  sample loader or `tools/ko_bank.py upload` (the editor protocol's bank commands). "Show to editors" names the port
+  "PIGEON (FM1VST)" and links the sample loader.
+- The managers answer: the bank (negotiate, upload, export, erase, diagnostics), the editor's backup, the installer's
+  identity (FM-1_900).
+- **In the public release** (15 cores with the fm1emu engine). Its credits name the splash logo's artist
+  (Dendy0097), libmad and the ported DSP's notices.
+
 ### Firmware updates
 
 Each pin moved to its firmware's latest stable release:

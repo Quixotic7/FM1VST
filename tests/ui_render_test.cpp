@@ -23,7 +23,9 @@
 //       Option + right-click copies at once, the toast over the LCD (ui-screen-toast.png; a private pasteboard, never
 //       the general one); the sheet's Screen row (ui-sheet-screen.png); in the screen view, the menu on the LCD
 //       (ui-screen-view-menu.png) and the sheet from the body around the bezel
+//   (n) PIGEON (when built): its test bank uploaded as host SysEx, a chop held, the device view (ui-core-pigeon.png)
 // FM1EMU_HOME points at a scratch folder under the build.
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <set>
@@ -314,6 +316,48 @@ int main()
             } else {
                 std::printf("  (no Felucca package at %s: the emulated pages are not drawn)\n", FM1_FELUCCA_FWSC);
             }
+        }
+        // ---- (n) PIGEON at its device view with its test bank (ui-core-pigeon.png): a sampler is silent and its
+        // waveform empty without one; tests/fixtures/pigeon/bank.syx (PIGEON's ko_bank.py upload frames) sent as host
+        // SysEx through processBlock, a frame a block, as a manager on the editor port would; then a chop held
+        if (core_built("pigeon")) {
+            juce::MemoryBlock syx;
+            juce::File(FM1_SOURCE_DIR "/tests/fixtures/pigeon/bank.syx").loadFileAsData(syx);
+            check(p.switchCore("pigeon"), "PIGEON: switched to");
+            h.run_ms(3300);                       // (its three-second splash)
+            ed.coreChanged();
+            const auto *b = static_cast<const uint8_t *>(syx.getData());
+            int frames = 0;
+            for (size_t i = 0; i < syx.getSize(); i++) {
+                if (b[i] != 0xF0)
+                    continue;
+                size_t j = i;
+                while (j < syx.getSize() && b[j] != 0xF7)
+                    j++;
+                juce::MidiBuffer m;
+                m.addEvent(juce::MidiMessage::createSysExMessage(b + i + 1, (int)(j - i - 1)), 0);
+                h.buf.clear();
+                p.processBlock(h.buf, m);
+                frames++;
+                i = j;
+            }
+            h.run_ms(400);
+            p.panelKey(9, true);                  // D4: chop 6 of Song 1
+            h.run_ms(250);
+            float peak = 0;
+            for (int i = 0; i < 20; i++) {
+                juce::MidiBuffer m;
+                h.buf.clear();
+                p.processBlock(h.buf, m);
+                peak = std::max(peak, h.buf.getMagnitude(0, h.bs));
+            }
+            check(frames > 100 && peak > 0.002f, "PIGEON: " + std::to_string(frames) + " bank frames, D4 sounds (peak " +
+                                                     std::to_string(peak) + ")");
+            ed.hideChromeNow();
+            shot(ed, "core-pigeon");
+            ed.showChromeNow();
+            p.panelKey(9, false);
+            h.run_ms(100);
         }
         p.switchCore("choralroot");               // (the rest of the test is ChoralRoot's, at its size)
         h.run_ms(1200);

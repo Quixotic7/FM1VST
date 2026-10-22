@@ -478,7 +478,7 @@ target_link_libraries(ui_render_test PRIVATE FM1VST fm1engine)
 target_include_directories(ui_render_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
 target_compile_definitions(ui_render_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS> FM1_BUILT_CORES="${FM1_BUILT_CORES}"
     FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/ui_test_home" FM1_PANEL_OUT="${CMAKE_BINARY_DIR}/panel"
-    FM1_FELUCCA_FWSC="${FM1EMU_FELUCCA_FWSC}")
+    FM1_FELUCCA_FWSC="${FM1EMU_FELUCCA_FWSC}" FM1_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 add_dependencies(ui_render_test ${FM1_CORE_TARGETS} ${FM1_EXTRA_CORE_TARGETS})
 add_test(NAME ui_render_test COMMAND ui_render_test)
 set_tests_properties(ui_render_test PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)   # (a public build: no choralroot)

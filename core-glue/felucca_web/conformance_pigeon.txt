@@ -9,18 +9,15 @@ sound wait 300
 sound quit
 settle_ms 4000
 # the flash round trip: the bank itself (500 KiB of the NOR at the device's extents, hal/ko_layout.h): uploaded on the
-# first unit; the second, booted from that image, plays it
+# first unit; the second, booted from that image, shows Song 1's waveform where a fresh unit's is empty (that it also
+# plays it after the reboot: sysex_test_pigeon)
 save wait 3200
 save sysex tests/fixtures/pigeon/bank.syx
 save wait 300
 save quit
 saved wait 3500
-saved key D4 down
-saved wait 300
-saved expect sound
-saved key D4 up
-saved wait 100
 saved quit
+saved-lcd-differs
 # the boot guard: a second failed boot in a row enters UBOOT (exit(3), fw_core.h as main.c fm1_cstart)
 reboot-guard 2
 # OCT- + OCT+ held 5 s: UBOOT (fw_core.h, main.c's countdown)

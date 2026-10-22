@@ -161,12 +161,14 @@ static int runFake()
                  {"duell", "DUELL"},                {"x0x", "X0X FM-1"},                 {"fm106", "FM-106"},
                  {"coralflower", "CoralFlower FM-1"}, {"fart", "FoMni FM-1"},           {"amb", "AMB-1 FM-1"},
                  {"fimba", "FiMba FM-1"},           {"fomni", "FoMni FM-1"},             {"obervave", "Felucca"},
-                 {"loom", "LOOM-8 FM-1"},           {"unknown-fw", "FM-1"}};
+                 {"loom", "LOOM-8 FM-1"},           {"pigeon", "PIGEON"},                {"unknown-fw", "FM-1"}};
     bool all = true;
     for (auto &t : table)
         all = all && EditorPort::usbProductName(t.id) == t.usb;
     check(all, "USB names by core / Hub id (usb.c STR2 / USB_STRS), unknown: \"FM-1\"");
     check(EditorPort::managerUrl("felucca").startsWith("https://hugelton.github.io/Felucca/"), "Felucca's editor URL");
+    check(EditorPort::managerUrl("pigeon").startsWith("https://theshrimpblimp.com/pigeon/webapp/pigeon/"),
+          "PIGEON's sample loader URL");
     check(EditorPort::managerUrl("x", "https://example.org/ed/") == "https://example.org/ed/", "the catalog's editor wins");
     check(EditorPort::isUpdateKey(sx({0xF0, 0x22, 0x24, 0x35, 0x7D, 0xF7}).data(), 6) &&
               EditorPort::isUpdateKey(sx({0xF0, 0x22, 0x24, 0x35, 0x7F, 0xF7}).data(), 6),

@@ -245,7 +245,7 @@ juce::String EditorPort::usbProductName(const juce::String &idIn)
         {"melodee", "Melodee FM-1"},       {"jiant", "JIANT FM"},               {"duell", "DUELL"},
         {"x0x", "X0X FM-1"},               {"fomni", "FoMni FM-1"},             {"fartmachine", "FoMni FM-1"},
         {"fart", "FoMni FM-1"},            {"fimba", "FiMba FM-1"},             {"fm106", "FM-106"},
-        {"fm-106", "FM-106"},
+        {"fm-106", "FM-106"},              {"pigeon", "PIGEON"},
         // the Felucca family and its forks keep Felucca's string
         {"felucca", "Felucca"},            {"felucca8", "Felucca"},             {"sloop", "Felucca"},
         {"sloopdx", "Felucca"},            {"floyd", "Felucca"},                {"sloopbanks", "Felucca"},
@@ -279,6 +279,7 @@ juce::String EditorPort::managerUrl(const juce::String &idIn, const juce::String
         {"choralroot", "https://quixotic7.github.io/ChoralRootFM1/"},
         {"fm106", "https://patttf.github.io/fm-106/Librarian.html"},
         {"loom", "https://charlesvestal.github.io/fm1-loom/samples/"},
+        {"pigeon", "https://theshrimpblimp.com/pigeon/webapp/pigeon/"},   // (its sample loader: the bank, web/pigeon)
     };
     for (const auto &e : kTable)
         if (id == e[0])
