@@ -73,3 +73,6 @@
 [submodule "cores/fm1-loom"]
 	path = cores/fm1-loom
 	url = https://github.com/charlesvestal/fm1-loom
+[submodule "cores/pigeon"]
+	path = cores/pigeon
+	url = https://github.com/TheShrimpBlimp/pigeon

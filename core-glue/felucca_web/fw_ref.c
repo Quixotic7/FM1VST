@@ -14,6 +14,14 @@ void fw_ref_boot(void)
     usb.up = 1;
     usb.config = 1;
 }
+void fw_ref_boot_from(const uint8_t *bytes, uint32_t n)   /* (fw_golden's FW_GOLDEN_SYSEX: a staged image) */
+{
+    web_nor_erase();
+    memcpy(nor, bytes, n < sizeof nor ? n : sizeof nor);
+    web_boot();
+    usb.up = 1;
+    usb.config = 1;
+}
 void fw_ref_ms(void) { web_ms(); }
 void fw_ref_buttons(uint32_t labels) { web_buttons(labels); }
 void fw_ref_keys(uint32_t mask) { web_keys(mask); }

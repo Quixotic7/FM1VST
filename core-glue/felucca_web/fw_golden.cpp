@@ -10,6 +10,11 @@
 // compared sample for sample. Both must be identical (the core runs the firmware's own unit, one web_ms per device ms,
 // with the input applied where web_buttons / web_keys / web_enc would apply it). The screens at the checkpoints are
 // written to OUT_DIR/<id>_golden_<ms>.ppm.
+// FW_GOLDEN_SYSEX=<file> (a sampler with no factory bank: PIGEON): a file of SysEx frames (tests/script_runner.h's
+// `sysex`, e.g. a sample bank's upload) sent to a fresh copy of the core after its splash; both runs then power on
+// from that copy's flash image (the reference: fw_ref_boot_from, the bytes in its nor[] before web_boot).
+// FW_GOLDEN_DELAY_MS=<n>: the script n ms later (a splash longer than the script's first 1.5 s: PIGEON's 3 s, whose
+// held-off panel would take the taps and turns all at once at the splash's end).
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -21,9 +26,11 @@
 #include "cores.h"
 #include "device.h"
 #include "ppm.h"
+#include "script_runner.h"
 
 extern "C" {
 void fw_ref_boot(void);
+void fw_ref_boot_from(const uint8_t *bytes, uint32_t n);
 void fw_ref_ms(void);
 void fw_ref_buttons(uint32_t labels);
 void fw_ref_keys(uint32_t mask);
@@ -96,18 +103,43 @@ int main(int argc, char **argv)
     check(lc != nullptr, "the core loads" + (lc ? std::string() : ": " + err));
     if (!lc)
         return 1;
+    std::vector<uint8_t> image;
+    if (const char *sx = std::getenv("FW_GOLDEN_SYSEX")) {
+        std::unique_ptr<LoadedCore> pre = CoreLoader::load(module, &err);
+        Script s;
+        bool ok = pre && parse_script_text("wait 3200\nsysex " + std::string(sx) + "\nwait 300\nquit\n", sx, s, err);
+        if (ok) {
+            Device p(pre->core());
+            p.boot_from(nullptr, 0);
+            ScriptRunner r(p, s);
+            r.keep_pcm = false;
+            r.run();
+            for (const std::string &l : r.log())
+                std::printf("    %s\n", l.c_str());
+            ok = r.expect_fail() == 0 && r.expect_ok() > 0;
+            p.flash_sync();
+            image.assign(p.flash(), p.flash() + p.flash_size());
+        }
+        check(ok, std::string("FW_GOLDEN_SYSEX ") + sx + ": uploaded into a fresh copy; both power on from its image");
+    }
     Device d(lc->core());
-    d.boot_from(nullptr, 0);
-    fw_ref_boot();
+    if (image.empty()) {
+        d.boot_from(nullptr, 0);
+        fw_ref_boot();
+    } else {
+        d.boot_from(image.data(), (uint32_t)image.size());
+        fw_ref_boot_from(image.data(), (uint32_t)image.size());
+    }
 
     std::vector<int16_t> pc, pr;                      // the two audio streams
     int16_t buf[2 * 1024];
-    const uint32_t end = SCRIPT[sizeof SCRIPT / sizeof SCRIPT[0] - 1].ms;
+    const uint32_t delay = std::getenv("FW_GOLDEN_DELAY_MS") ? (uint32_t)std::atoi(std::getenv("FW_GOLDEN_DELAY_MS")) : 0;
+    const uint32_t end = SCRIPT[sizeof SCRIPT / sizeof SCRIPT[0] - 1].ms + delay;
     size_t ev = 0;
     int checks = 0, same = 0;
     for (uint32_t ms = 0; ms <= end; ms++) {
         std::vector<const Ev *> chk;
-        for (; ev < sizeof SCRIPT / sizeof SCRIPT[0] && SCRIPT[ev].ms == ms; ev++) {
+        for (; ev < sizeof SCRIPT / sizeof SCRIPT[0] && SCRIPT[ev].ms + delay == ms; ev++) {
             const Ev &e = SCRIPT[ev];
             switch (e.kind) {
             case EV_KEYS: d.keys(e.a); fw_ref_keys(e.a); break;

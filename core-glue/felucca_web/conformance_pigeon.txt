@@ -1,0 +1,31 @@
+# PIGEON 0.4.1: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# A sampler with no factory bank: a fresh unit is silent. The sound check first uploads the test bank as PIGEON's own
+# tools/ko_bank.py upload sends it (tests/fixtures/pigeon/bank.syx: the FL editor protocol's bank commands 90 negotiate,
+# 91 begin, 92 data and header, 93 commit; make_bank.py), after the three-second splash. Song 1 is selected at boot:
+# its white keys play chops 1..16 (D4: chop 6 of the bank's 24).
+sound wait 3200
+sound sysex tests/fixtures/pigeon/bank.syx
+sound wait 300
+sound quit
+settle_ms 4000
+# the flash round trip: the bank itself (500 KiB of the NOR at the device's extents, hal/ko_layout.h): uploaded on the
+# first unit; the second, booted from that image, plays it
+save wait 3200
+save sysex tests/fixtures/pigeon/bank.syx
+save wait 300
+save quit
+saved wait 3500
+saved key D4 down
+saved wait 300
+saved expect sound
+saved key D4 up
+saved wait 100
+saved quit
+# the boot guard: a second failed boot in a row enters UBOOT (exit(3), fw_core.h as main.c fm1_cstart)
+reboot-guard 2
+# OCT- + OCT+ held 5 s: UBOOT (fw_core.h, main.c's countdown)
+reboot wait 3500
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

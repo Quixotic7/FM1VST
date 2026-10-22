@@ -331,7 +331,7 @@ target_compile_options(fm1testlib PRIVATE -Wall -Wextra)
 target_compile_definitions(fm1testlib PUBLIC
     FM1_CR_DIR="${CR}" FM1_CORE_MODULE="$<$<BOOL:${FM1_HAVE_CR}>:$<TARGET_FILE:choralroot_core>>"
     FM1_REF_EMU="${CR_EMU}" FM1_CORES_BUILD_DIR="${CMAKE_BINARY_DIR}/cores" FM1_BUILT_CORES="${FM1_BUILT_CORES}"
-    FM1_REF_OUT="${CMAKE_BINARY_DIR}/reference")
+    FM1_REF_OUT="${CMAKE_BINARY_DIR}/reference" FM1_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_executable(core_smoke tests/core_smoke.cpp)
 target_link_libraries(core_smoke PRIVATE fm1testlib ${CMAKE_DL_LIBS})
