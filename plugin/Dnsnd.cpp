@@ -17,8 +17,8 @@ const int RANGES[kNp][3] = {{1,8,1},{0,18,3},{0,63,3},{0,18,3},{-2600,2600,0},{0
     {0,127,127},{0,127,0},{0,127,0},{0,1,1},{0,1,1},{0,4,1},{0,127,0},{0,1,1},{0,1,1},{0,127,64},{0,127,0},{0,127,0},
     {0,127,0},{0,127,64},{0,127,0},{0,127,64},{0,12700,12700},{0,12700,0},{0,7,1},{-6400,6399,0},{0,127,0},{0,127,0},
     {0,12700,0},{0,127,127},{0,127,8},{0,127,32},{0,127,96},{0,127,24},{0,127,110},{-6400,6399,3200},{0,23,5},
-    {-64,63,0},{0,57,0},{0,6,0},{0,127,0},{0,4,0},{-6400,6399,0},{-6400,6399,3200},{0,23,5},{-64,63,0},{0,57,0},
-    {0,6,0},{0,127,0},{0,4,0},{-6400,6399,0},{-6400,6399,3200},{0,23,5},{-64,63,0},{0,57,0},{0,6,0},{0,127,0},{0,4,0},
+    {-64,63,0},{0,63,0},{0,6,0},{0,127,0},{0,4,0},{-6400,6399,0},{-6400,6399,3200},{0,23,5},{-64,63,0},{0,63,0},
+    {0,6,0},{0,127,0},{0,4,0},{-6400,6399,0},{-6400,6399,3200},{0,23,5},{-64,63,0},{0,63,0},{0,6,0},{0,127,0},{0,4,0},
     {-6400,6399,0},{0,18,3},{0,127,0}};
 enum { ALGO = 0, RC = 1, RA = 2, RB1 = 3, HARM = 4, DTUN = 5, FDBK = 6, MIX = 7, OFSC = 8, OFSA = 9, OFSB1 = 10,
        OFSB2 = 11, AATK = 12, ADEC = 13, AEND = 14, ALEV = 15, BATK = 16, BDEC = 17, BEND = 18, BLEV = 19, ADLY = 20,
@@ -237,10 +237,10 @@ bool octaveInto(std::array<int, kNp> &p, int oct)
 // E1: FIZZ's values 74..109 (FMToneSeq core/voice/quad/quad_voice.c qe_val; tools/dn2pst.mjs QUAD_EXT_RANGES)
 const int EXT_RANGES[kExt][3] = {{0,1,0},{0,127,127},{0,2,0},{0,127,32},{0,1,0},{0,1,0},{0,127,0},{-64,63,0},{0,1,0},
     {0,127,0},{0,127,0},{0,1,1},
-    {0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},
-    {0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0}};
+    {0,8,0},{0,63,0},{-127,127,0},{0,8,0},{0,63,0},{-127,127,0},{0,8,0},{0,63,0},{-127,127,0},{0,8,0},{0,63,0},{-127,127,0},
+    {0,8,0},{0,63,0},{-127,127,0},{0,8,0},{0,63,0},{-127,127,0},{0,8,0},{0,63,0},{-127,127,0},{0,8,0},{0,63,0},{-127,127,0}};
 enum { X_AMOD = 74, X_HOLD = 75, X_PORT = 76, X_PTIM = 77, X_DRPRE = 79, X_FSHAPE = 80, X_FGAIN = 81, X_BWPOST = 82,
-       X_BITS = 83, X_SRR = 84, X_CRPOST = 85 };
+       X_BITS = 83, X_SRR = 84, X_CRPOST = 85, X_MOD0 = 86 };
 void extDefaults(std::array<int, kExt> &x)
 {
     for (int k = 0; k < kExt; k++)
@@ -446,7 +446,8 @@ int dn2LfoDest(int id)
         {50, 16}, {51, 23}, {54, 24}, {58, 1}, {59, 2}, {60, 47}, {61, 48}, {62, 49}, {63, 50}, {64, 51}, {65, 52},
         {66, 7}, {67, 8}, {68, 9}, {69, 10}, {74, 25}, {75, 26}, {76, 27}, {77, 57}, {78, 30}, {79, 31}, {80, 32},
         {81, 33}, {83, 28}, {84, 29}, {87, 34}, {89, 35}, {90, 36}, {91, 37}, {92, 56}, {93, 55}, {94, 54}, {95, 39},
-        {96, 38}, {104, 53}};
+        {96, 38}, {104, 53},
+        {73, 60}, {88, 58}, {100, 59}, {101, 62}, {102, 63}};   // (E4: FIZZ's destinations for the DN2's own)
     const auto it = m.find(id);
     return it == m.end() ? -1 : it->second;
 }
@@ -876,6 +877,36 @@ bool parseDn2(const void *data, size_t n, Sound &s, juce::String &err)
             o.notes.add("the sound's OCTAVE " + juce::String(oct / 12.0) + (ok ? ": every ratio scaled"
                                                                                  : " not imported (a ratio has no such value)"));
         }
+    }
+    {   // E4: the modulation records (+252 + 3k, k < 24: six sources x four, PB VEL MW BR AT KEY; the third byte the
+        // destination's id, the first two the depth, bipolar about 64: inferred, not verified) into the eight slots
+        static const int SRC[6] = {5, 1, 3, 6, 4, 2};
+        static const char *const SRCN[6] = {"PB", "VEL", "MW", "BR", "AT", "KEY"};
+        int slot = 0, lost = 0;
+        if (rec.size() >= 252 + 72)
+            for (int k = 0; k < 24; k++) {
+                const int o3 = 252 + 3 * k, id = d[o3 + 2];
+                if (!id)
+                    continue;
+                const int q = dn2LfoDest(id);
+                if (q <= 0) {
+                    o.notes.add(juce::String("MOD ") + SRCN[k >> 2] + " -> " + dn2IdName(id) + ": FIZZ has no such destination");
+                    continue;
+                }
+                if (slot >= 8) {
+                    lost++;
+                    continue;
+                }
+                extSet(ext, X_MOD0 + 3 * slot, SRC[k >> 2]);
+                extSet(ext, X_MOD0 + 3 * slot + 1, q);
+                extSet(ext, X_MOD0 + 3 * slot + 2, (int)jsRound((d[o3] + d[o3 + 1] / 256.0 - 64) * 2));
+                slot++;
+            }
+        if (slot)
+            o.notes.add("MOD: " + juce::String(slot) +
+                        " slot(s) from the Digitone's modulation records (their layout and depth law are inferred, not verified)");
+        if (lost)
+            o.notes.add("MOD: " + juce::String(lost) + " more record(s) not imported (FIZZ has eight slots)");
     }
     for (const juce::String &w : warnings)
         o.notes.add("file: " + w);

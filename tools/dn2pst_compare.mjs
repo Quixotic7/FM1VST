@@ -7,8 +7,9 @@
 //
 // The files: synthetic ones written into SCRATCH_DIR/dn2 by the JS's own writer (dn2RecordFromParams, wrapDn2Record,
 // dn2pstZip): the JS self-test's sound (LZ4 and raw), AHD, octaves, every filter machine, machines refused, tags, a
-// Windows-1252 name, a bare payload / body / record, a bad CRC, and 60 records with every parameter byte random (a
-// fixed seed); and REAL_DIR's .dn2pst (the owner's, read where they are, never copied).
+// Windows-1252 name, a bare payload / body / record, a bad CRC, E4's modulation records, and 60 records with every
+// parameter byte random (a fixed seed; a quarter of them the modulation records too); and REAL_DIR's .dn2pst (the
+// owner's, read where they are, never copied).
 import { mkdirSync, writeFileSync, readdirSync, readFileSync, rmSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -59,6 +60,14 @@ pst("port-off.dn2pst", rec0({ ...want, portamento: 63, "portamento.time": 77 }))
 { const r = rec0(); r[240] = 1; pst("od-post.dn2pst", r); }                                // (E1: OD ROUTING 1: after)
 for (const [m, nm] of [[0, "multi"], [1, "lp4"], [2, "eq"], [3, "comb-"], [4, "legacy"], [5, "comb+"]])   // (E2: the machines)
   for (const ty of [0, 40, 127]) { const r = rec0({ ...want, "filter.type": ty, "filter.reso": 70.5 }); r[245] = m; r[238] = ty & 1; pst(`mach-${nm}-${ty}.dn2pst`, r); }
+{   // E4: the modulation records: PB -> HARM, VEL -> FREQ, AT -> HOLD (E4's own), KEY -> PHRT (none); then eleven: three lost
+  const r = rec0();
+  r[252] = 54, r[254] = 37; r[264] = 80, r[265] = 128, r[266] = 74; r[288] = 0, r[290] = 88; r[300] = 127, r[302] = 41;
+  pst("mod-four.dn2pst", r);
+  const r2 = rec0();
+  for (let k = 0; k < 11; k++) r2[252 + 3 * k * 2] = 40 + k, r2[252 + 3 * k * 2 + 2] = [74, 100, 101, 102, 73][k % 5];
+  pst("mod-eleven.dn2pst", r2);
+}
 for (const o of [-24, -12, -7, 5, 12, 24]) pst(`octave${o}.dn2pst`, rec0({ ...want, octave: o }));
 for (const [fm, types] of [[0, [0, 20, 33, 64, 95, 96, 127]], [1, [0]], [2, [0]], [3, [0]], [4, [0, 1, 2, 3, 7]], [5, [0]], [9, [0]]])
   for (const ty of types) { const r = rec0({ ...want, "filter.type": ty }); r[245] = fm; pst(`filter-${fm}-${ty}.dn2pst`, r); }
@@ -103,6 +112,7 @@ put("bare-record.dn2pst", rec0());
     r[244] = 0;
     r[245] = rnd() % 7;
     r[251] = k % 3 ? 0 : (rnd() % 49) - 24;
+    if (k % 4 === 1) for (let o = 252; o < 324; o++) r[o] = rnd();   // (E4: the modulation records too)
     pst(`random-${String(k).padStart(2, "0")}.dn2pst`, r, { compress: k % 2 === 0 });
   }
 }
