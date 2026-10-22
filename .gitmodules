@@ -73,3 +73,15 @@
 [submodule "cores/fm1-loom"]
 	path = cores/fm1-loom
 	url = https://github.com/charlesvestal/fm1-loom
+[submodule "cores/Mini-Tone"]
+	path = cores/Mini-Tone
+	url = https://github.com/eldontyrellcorp/Mini-Tone
+[submodule "cores/fmini-1"]
+	path = cores/fmini-1
+	url = https://github.com/ruppert/fmini-1
+[submodule "cores/skiff"]
+	path = cores/skiff
+	url = https://github.com/illuminus5/skiff
+[submodule "cores/grimm"]
+	path = cores/grimm
+	url = https://github.com/GRiMMBIENT/grimm

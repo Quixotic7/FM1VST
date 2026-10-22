@@ -254,7 +254,8 @@ juce::String EditorPort::usbProductName(const juce::String &idIn)
         {"frodhes", "Felucca"},            {"dinghy", "Felucca"},               {"amb", "AMB-1 FM-1"},
         {"salt", "Felucca"},               {"jangada", "Felucca"},              {"waveloop", "Felucca"},
         {"gammawave", "Felucca"},          {"fm1quest", "Felucca"},             {"grimm", "Felucca"},
-        {"zp12", "Felucca"},
+        {"zp12", "Felucca"},               {"minitone", "Felucca"},             {"skiff", "Felucca"},
+        {"fmini", "FM-1 Midi"},            // (FMini-1's usb.c STR2: the MIDI / audio device's name)
         // fm1-base apps: their fm1.toml usb_product
         {"loom", "LOOM-8 FM-1"},
     };
@@ -279,6 +280,9 @@ juce::String EditorPort::managerUrl(const juce::String &idIn, const juce::String
         {"choralroot", "https://quixotic7.github.io/ChoralRootFM1/"},
         {"fm106", "https://patttf.github.io/fm-106/Librarian.html"},
         {"loom", "https://charlesvestal.github.io/fm1-loom/samples/"},
+        {"fmini", "https://ruppert.github.io/fmini-1/editor/"},
+        {"skiff", "https://illuminus5.github.io/skiff/webapp/editor/"},
+        {"grimm", "https://grimmbient.github.io/grimm/editor.html"},
     };
     for (const auto &e : kTable)
         if (id == e[0])

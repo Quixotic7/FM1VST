@@ -32,8 +32,9 @@
  *   static void fm1core_dg_info(char *buf, uint32_t n);        ui_info: the page, the program
  * and may define FM1CORE_DG_LED_BG(col) (a packed row-bit backlight plane, FM1P_LED_FAINT) and
  * FM1CORE_DG_SYSEX_IN(p, n) (a received SysEx message, the 7-bit bytes between F0 and F7, handled before the next
- * pass as the device's platform_poll does), and FM1CORE_DG_OTA_C with FELUCCA_ID (the firmware's ota.c and its
- * package identity: the M-UPGRADE handshake, see "the managers' SysEx" below).
+ * pass as the device's platform_poll does) with FM1CORE_DG_SYSEX_READY() (optional: 0 while the app still holds the
+ * last frame, as GR!MM's mailbox does; the next waits for a later tick), and FM1CORE_DG_OTA_C with FELUCCA_ID (the
+ * firmware's ota.c and its package identity: the M-UPGRADE handshake, see "the managers' SysEx" below).
  *
  * THE MANAGERS' SYSEX (research/managers-2026-10-19/MANAGERS.md). The device's usb.c keeps every SysEx frame for
  * platform_poll, which hands FM-106's Roland frames (41 ..) to its librarian handler and the rest to ota.c's
@@ -58,6 +59,9 @@ static uint16_t fm1core_dg_fb_seen[FM1P_LCD_W * FM1P_LCD_H];
 static uint8_t fm1core_dg_booted;
 
 #ifdef FM1CORE_DG_SYSEX_IN
+#ifndef FM1CORE_DG_SYSEX_READY
+#define FM1CORE_DG_SYSEX_READY() 1
+#endif
 /* SysEx in: USB-MIDI packets (CIN 4..7) collected into whole messages, handled at the next tick (a frame's F0 while
  * FM1CORE_DG_SX_N wait: refused, midi_in 0, the host offers it again) */
 #define FM1CORE_DG_SX_MAX 640u
@@ -263,7 +267,7 @@ void fm1core_dg_tick(uint32_t ms)
     fm1_ms = ms;
     fm1core_dg_in();
 #ifdef FM1CORE_DG_SYSEX_IN
-    while (fm1core_dg_sx_r != fm1core_dg_sx_w) {
+    while (fm1core_dg_sx_r != fm1core_dg_sx_w && FM1CORE_DG_SYSEX_READY()) {
         const uint32_t i = fm1core_dg_sx_r++ % FM1CORE_DG_SX_N;
         FM1CORE_DG_SYSEX_IN(fm1core_dg_sx[i], fm1core_dg_sx_len[i]);
     }

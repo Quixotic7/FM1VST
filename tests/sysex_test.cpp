@@ -468,15 +468,6 @@ ChangeFn panel_change(uint32_t obj, std::function<void(Device &)> act)
 // Felucca and its forks: a user preset stored as the web editor stores one (editor.html req.upStore: UP_STORE 19,
 // slot 0, the name "SYSEX", its NUL), found in the backup object it changed (a user preset bank: Felucca's upreset.c
 // up_bank_t, DUELL's 128-slot store), its name's first letter changed in the backup's copy, and restored over PUT
-const Obj *changed_obj(const std::vector<Obj> &was, const std::vector<Obj> &now)
-{
-    for (const Obj &o : now) {
-        const Obj *w = find(was, o.id);
-        if (o.size && (!w || w->size != o.size || w->crc != o.crc))
-            return &o;
-    }
-    return nullptr;
-}
 size_t find_text(const Bytes &b, const char *t)
 {
     const size_t n = std::strlen(t);
@@ -507,14 +498,27 @@ ChangeFn up_store_change(uint8_t store_cmd = 19)
         }
         if (!s.list(man))
             return false;
-        const Obj *o = changed_obj(was, man);
-        if (!o || !s.get(*o, before)) {
+        // the changed object that holds the preset (Mini-Tone: the project's object 0 changes with the store too)
+        const Obj *o = nullptr;
+        size_t at = std::string::npos;
+        for (const Obj &c : man) {
+            const Obj *w = find(was, c.id);
+            if (!c.size || (w && w->size == c.size && w->crc == c.crc))
+                continue;
+            if (!s.get(c, before)) {
+                s.why = "GET after the store " + s.why;
+                return false;
+            }
+            o = &c;
+            if ((at = find_text(before, "SYSEX")) != std::string::npos)
+                break;
+        }
+        if (!o) {
             s.why = "no backup object changed after the store " + s.why;
             return false;
         }
-        const size_t at = find_text(before, "SYSEX");
         if (at == std::string::npos) {
-            s.why = "object " + std::to_string(o->id) + " changed, but holds no preset named SYSEX";
+            s.why = "object " + std::to_string(o->id) + " changed, but no changed object holds a preset named SYSEX";
             return false;
         }
         std::printf("    store: the preset is in object %u at byte %zu\n", o->id, at);
@@ -1249,6 +1253,125 @@ void fm106_run(const std::string &module, Device &dev, Link &k, Session &s, cons
         check(got2 && u2.size() == 24, "rebooted from the flash image: user A 6 blank again (nothing was written)");
     k.worst = std::max(k.worst, k2.worst);
 }
+
+// GR!MM (Dinghy): its own editor mailbox, F0 7D 47 52 <cmd> .. F7 (editor.c, docs/EDITOR_PROTOCOL.md; web/editor.html
+// and tools/fm1_editor_test.py use it): 20 INFO, 21 GET obj off(u35) count(u14) -> obj rc off count pack7, 22 PUT
+// BEGIN (op 0, fmt, len, crc) / DATA (op 1, off, pack7 <= 256 B) / COMMIT (op 2) -> op obj rc. The editor's backup of a
+// user sound: factory sound 1 (object 80, GET only) written into user sound 1 (object 16) as the page writes one, read
+// back, and still there after a reboot from the flash image; INFO's sample slots in use (the four factory samples
+// samples.c writes into an erased area at boot) on both units. The installer finds it by its M-UPGRADE identity.
+Bytes gr(uint8_t cmd, const Bytes &args = {})
+{
+    Bytes f = {0xF0, 0x7D, 0x47, 0x52, cmd};
+    f.insert(f.end(), args.begin(), args.end());
+    f.push_back(0xF7);
+    return f;
+}
+std::function<bool(const Bytes &)> gr_reply(uint8_t cmd)
+{
+    return [cmd](const Bytes &f) { return f.size() >= 6 && f[1] == 0x7D && f[2] == 0x47 && f[3] == 0x52 && f[4] == cmd; };
+}
+// INFO: the version and the sample slots in use
+bool gr_info(Link &k, std::string &ver, uint32_t &smp_used)
+{
+    Bytes r;
+    if (!k.request(gr(20), gr_reply(20), r, 2000))
+        return false;
+    const Bytes a = fl_args(r);
+    size_t i = 2;
+    ver.clear();
+    while (i < a.size() && a[i])
+        ver += (char)a[i++];
+    i++;                                  // (its 0)
+    if (a.size() < 2 || a[0] != 2 || a[1] != 1 || i + 3 + 5 + 5 + 2 != a.size())
+        return false;
+    smp_used = a[i + 3 + 5 + 5 + 1];
+    return true;
+}
+bool gr_get(Link &k, uint32_t obj, uint32_t size, Bytes &out, std::string &why)
+{
+    out.clear();
+    for (uint32_t off = 0; off < size; off += 256) {
+        const uint32_t n = std::min<uint32_t>(256, size - off);
+        Bytes q = {(uint8_t)obj}, r, chunk;
+        u32(q, off);
+        q.push_back((uint8_t)(n & 127u));
+        q.push_back((uint8_t)(n >> 7));
+        if (!k.request(gr(21, q), gr_reply(21), r, 2000)) {
+            why = "(GET " + std::to_string(obj) + ": no reply)";
+            return false;
+        }
+        const Bytes a = fl_args(r);
+        if (a.size() < 9 || a[0] != obj || a[1] != 0 || r32(a, 2) != off || !unpack(a, 9, n, chunk)) {
+            why = "(GET " + std::to_string(obj) + ": rc " + std::to_string(a.size() > 1 ? a[1] : -1) + ")";
+            return false;
+        }
+        out.insert(out.end(), chunk.begin(), chunk.end());
+    }
+    return true;
+}
+int gr_put(Link &k, uint32_t obj, const Bytes &b, std::string &why)   // the last rc (0 ok), -1 no reply
+{
+    auto step = [&](Bytes q) -> int {
+        Bytes r;
+        if (!k.request(gr(22, q), gr_reply(22), r, 3000)) {
+            why = "(PUT op " + std::to_string(q[0]) + ": no reply)";
+            return -1;
+        }
+        const Bytes a = fl_args(r);
+        return a.size() >= 3 && a[0] == q[0] && a[1] == obj ? a[2] : -1;
+    };
+    Bytes begin = {0, (uint8_t)obj, 1};
+    u32(begin, (uint32_t)b.size());
+    u32(begin, crc32(b.data(), b.size()));
+    int rc = step(begin);
+    for (uint32_t off = 0; !rc && off < b.size(); off += 256) {
+        Bytes d = {1, (uint8_t)obj};
+        u32(d, off);
+        const Bytes p = pack(&b[off], std::min<size_t>(256, b.size() - off));
+        d.insert(d.end(), p.begin(), p.end());
+        rc = step(d);
+    }
+    return rc ? rc : step({2, (uint8_t)obj});
+}
+void grimm_run(const std::string &module, Device &dev, Link &k, Session &s, const Profile &p)
+{
+    std::string id, ver, why;
+    uint32_t used = 0;
+    check(mupg_identity_exact(k, id) && id == p.mupg, "M-UPGRADE identity: \"" + id + "\" (the package's " + p.mupg +
+                                                          ", 34 bytes as the installer reads it)");
+    check(gr_info(k, ver, used) && ver == "1.0" && used == 4,
+          "INFO (20): protocol 2, format 1, version \"" + ver + "\", " + std::to_string(used) +
+              " sample slots in use (the four factory samples)");
+    Bytes fac, empty, back;
+    check(gr_get(k, 80, 64, fac, why) && fac.size() == 64 && fac[0] == 0x54,
+          "GET 80 (factory sound 1): 64 bytes, a sound " + why);
+    check(gr_get(k, 16, 64, empty, why) && empty == Bytes(64, 0xFF), "GET 16 (user sound 1): empty on a fresh unit " + why);
+    k.run_ms(2000);                       // (BEGIN and COMMIT want silence: TAPE is not idle until ~4 s after power-on)
+    const uint32_t dirty = dev.flash_dirty();
+    const int rc = gr_put(k, 16, fac, why);
+    check(rc == 0, "PUT 16 (BEGIN, DATA, COMMIT): factory sound 1 into user sound 1: rc " + std::to_string(rc) + " " + why);
+    check(dev.flash_dirty() != dirty, "  the NOR image written (flash_dirty " + std::to_string(dirty) + " -> " +
+                                          std::to_string(dev.flash_dirty()) + ")");
+    check(gr_get(k, 16, 64, back, why) && back == fac, "GET 16 after the PUT: the factory sound's bytes " + why);
+    update_keys(k, s, p);
+    dev.flash_sync();
+    const Bytes image(dev.flash(), dev.flash() + dev.flash_size());
+    std::unique_ptr<LoadedCore> lc2 = load(module);
+    Device dev2(lc2->core());
+    dev2.boot_from(image.data(), (uint32_t)image.size());
+    Link k2(dev2);
+    k2.run_ms(3000);
+    Bytes b2;
+    check(gr_get(k2, 16, 64, b2, why) && b2 == fac, "rebooted from the flash image: user sound 1 is the stored one " + why);
+    used = 0;
+    const size_t smp = image.size() >= 0xDF000u ? (size_t)std::count_if(image.begin() + 0x97000, image.begin() + 0xDF000,
+                                                                       [](uint8_t b) { return b != 0xFF; }) : 0;
+    check(smp > 0 && gr_info(k2, ver, used) && used == 4,
+          "rebooted from the flash image: " + std::to_string(used) + " sample slots in use, read from the image's sample "
+          "area (0x97000: " + std::to_string(smp) + " bytes written)");
+    k.worst = std::max(k.worst, k2.worst);
+}
 // ---- end of plat, fm1base, dinghy ----
 
 const Profile kProfiles[] = {
@@ -1264,6 +1387,11 @@ const Profile kProfiles[] = {
     {"rainbow", "FELUCCA v1.1.5", true, "FM-1_900", false, up_store_change()},
     {"duell", "FELUCCA DUELL 0.2.20", true, "FM-1_900", false, up_store_change()},
     {"melodee", "MELODEE v1.4.5", true, "FM-1_900", false, up_store_change(80)},
+    // Mini-Tone, FMini-1, Skiff: Felucca's editor.c (their web editors' INFO, BACKUP_LIST / GET / PUT, UP_STORE);
+    // the identity is each build.py --release's (FM-1_9XY; Skiff's FM-1_7XY)
+    {"minitone", "FELUCCA v1.0.1", true, "FM-1_910", false, up_store_change()},
+    {"fmini", "FELUCCA v1.8.0", true, "FM-1_918", false, up_store_change()},
+    {"skiff", "FELUCCA v1.4", true, "FM-1_714", false, up_store_change()},
     // the sloop family: editor.c's v6 backup; the identity is build.py's development FM-1_900 (no --release)
     {"sloop", "FELUCCA SLOOP 2.8", true, "FM-1_900", false, sl_upreset_change, true},
     {"sloopdx", "FELUCCA sloopDX 4.0", true, "FM-1_900", false, sl_dxbank_change, true, sl_dxbank_kept},
@@ -1279,6 +1407,7 @@ const Profile kProfiles[] = {
     {"fm106", nullptr, false, "FM-1_907", false, nullptr, false, nullptr, fm106_run},
     {"obervave", nullptr, false, "FM-1_955", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"frodhes", nullptr, false, "FM-1_958", false, nullptr, false, nullptr, installer_run(nullptr, false)},
+    {"grimm", nullptr, false, "FM-1_966", false, nullptr, false, nullptr, grimm_run},
 };
 
 const Profile *profile_of(const std::string &id)

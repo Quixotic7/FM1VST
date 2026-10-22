@@ -14,9 +14,9 @@
 //   (r) the face knobs: a host write of Knob 1 (Voicing) at 0.25 and at 0.75 turns its pointer by the firmware's
 //       values' distance on the 270 degree sweep (build/panel/knob1-025.png, knob1-075.png: the knob's pixels
 //       differ), the panel's own turn moves it too; a relative knob turns 15 degrees per detent from any source;
-//   (e) every other core: build/panel/core-<id>.png (switchCore, 1.5 s after the power-on, then D4 held 300 ms; the
-//       Emulator theme): its screen and its button labels; the LCD region (at lcd-1x's layout) equals its
-//       framebuffer.
+//   (e) every other core: build/panel/core-<id>.png (switchCore, 1.5 s after the power-on (FMini-1 and GR!MM 3.6 s:
+//       past their boot screens), then D4 held 300 ms; the Emulator theme): its screen and its button labels; the LCD
+//       region (at lcd-1x's layout) equals its framebuffer.
 //   (k) the computer keys at the component (keyPressed / keyStateChanged with the key-down probe faked): a press and
 //       its repeats press once; a release the host swallowed is caught by the check; the fallback row (C = FX as
 //       F5) and its hints; two keys of one control; Cmd ignored; focus lost lets go; nothing sticks.
@@ -350,13 +350,14 @@ int main()
     }
 
     // ---- (e) the other cores: their screen and labels on the panel
-    for (const char *id : {"felucca", "melodee", "loom"}) {
+    for (const char *id : {"felucca", "melodee", "loom", "duell", "minitone", "fmini", "skiff", "grimm"}) {
         if (!built_cores().count(id))
             continue;                                    // (a build of some cores only)
         FM1Processor p;
         Host h(p, 44100.0, 256);
         const bool ok = p.switchCore(id);
-        h.run_ms(1500);
+        // (past the boot screens: FMini-1's splash 3 s, GR!MM's 3 s)
+        h.run_ms(!std::strcmp(id, "fmini") || !std::strcmp(id, "grimm") ? 3600 : 1500);
         Device *dev = p.deviceForTest();
         const int D4 = 62 - FM1Processor::kNoteBase;
         p.panelKey(D4, true);

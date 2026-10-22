@@ -22,6 +22,31 @@ LOOM-8 release so far is a "-beta" tag, and this is the newest (the other pins s
   call ("ship the original, it is from the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal
   made"); the About page's credits name that origin. X0X stays gated (CORES-PLAN.md 6).
 
+### Mini-Tone, FMini-1, Skiff and GR!MM, four new cores; DUELL public
+
+All four are in the public release, each pinned at its latest stable release (research/cores-2026-10-22/SURVEY.md):
+
+| core | firmware | pin | glue |
+|---|---|---|---|
+| `minitone` | [Mini-Tone](https://github.com/eldontyrellcorp/Mini-Tone) by Stephane Schmitz: Felucca 1.5 with six tracks and SID, CHIP, DUALVCO, ANALOG4, BRAIDS, SWARMER, FMTONE, WAVETONE, FMDRUM and TB303 engines | 1.0.1 (5e5d09c) | felucca_web |
+| `fmini` | [FMini-1](https://github.com/ruppert/fmini-1) by ruppert: a three-oscillator Minimoog-style monosynth on Felucca 1.6.1, 100 factory patches | 1.8.0 (ab0f5c8) | felucca_web (its 3 s splash) |
+| `skiff` | [Skiff](https://github.com/illuminus5/skiff) by illuminus5: a six-track groovebox, 14 engines, songs, PERFORM scenes (the FM-1 board) | 1.4 (c01fa1e) | felucca_web |
+| `grimm` | [GR!MM](https://github.com/GRiMMBIENT/grimm) by GRiMMBIENT: dark ambient on Dinghy, four tracks, seven sources, granular freeze, reverbs to infinite | 1.0 (815ca6b) | dinghy, on its browser shim |
+
+- Each runs its firmware's own browser unit, unmodified, and matches it (the golden checks: the felucca_web three
+  screen and audio identical to their `web/emu/felucca_web.c`; GR!MM's screen identical to its `tests/host.c`).
+- The managers answer: the three felucca_web cores' web editors (INFO, backup LIST / GET / PUT, user presets); GR!MM's
+  editor page (F0 7D 47 52: INFO, GET, PUT of sounds, slots and settings; its sample upload); each installer's
+  identity (Mini-Tone FM-1_910, FMini-1 FM-1_918, Skiff FM-1_714, GR!MM FM-1_966, as their release builds). "Show to
+  editors" names the ports as the units do ("Felucca", FMini-1's "FM-1 Midi") and links the FMini-1, Skiff and GR!MM
+  editors.
+- Mini-Tone's repository lacks the MIT and Apache-2.0 texts its LICENSING.md names: FM1VST supplies them (its About
+  page's credits, and the release's licences/cores/minitone/LICENSES/); tools/package_release.sh now checks that
+  every licence file a core's LICENSING.md names is in the release. Skiff's credits say its SLICE loops BREAK and FUNK
+  are AI-generated (the YuE2 model). FMini-1's few artist-named patch titles are names only.
+- **DUELL is public** (the owner's call): the core is the unmodified v0.2.20-beta, named "DUELL (unofficial build)"
+  with its commit, which satisfies its NOTICE.md naming terms; its credits say so and carry NOTICE.md.
+
 ### Firmware updates
 
 Each pin moved to its firmware's latest stable release:

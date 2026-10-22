@@ -46,6 +46,13 @@ The bundled cores, each built from its firmware's own, unmodified source (a pinn
 | `felucca` | Felucca 1.0.1: the multi-engine synth (13 engines: ANALOG, PHASE, LOFI, SAMPLE, VOICE, TRIO, WHEEL, GRAIN, PHYS, DRUM, NOISE, FM6, SLICE; the CC0 samples), four parts, a 64-step sequencer, the song chain | `cores/Felucca`, <https://github.com/hugelton/Felucca> at `20c275e39f75fa820978032efaceddfc5283c8cb` (tag `v1.0.1`) | GPL-3.0-only, Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments |
 | `melodee` | Melodee 1.4.5: Felucca's fork with the FM6 (Dexed's synthesis) and CZ-1 engines, pattern banks and USB audio (the sample engines removed) | `cores/melodee`, <https://github.com/keremimo/melodee> at `398ada1e09d864c12f3b778a43e45c7c2a8031b8` (tag `v1.4.5`) | GPL-3.0-only, Felucca's copyright plus modifications Copyright (C) 2026 Kerem Kilic (Ellic Studio) |
 
+The other cores and their pins are in CORES-PLAN.md section 1 (`tools/release/cores.tsv`: the public ones). Added
+2026-10-22, all public: `minitone` (Mini-Tone 1.0.1, Stephane Schmitz: Felucca 1.5 with six tracks and SID, BRAIDS,
+TB303 ..), `fmini` (FMini-1 1.8.0, ruppert: a Minimoog-style monosynth), `skiff` (Skiff 1.4, illuminus5: a six-track
+groovebox) on the felucca_web glue, `grimm` (GR!MM 1.0, GRiMMBIENT: dark ambient on Dinghy) on the dinghy glue; and
+`duell` ("DUELL (unofficial build)", OSCILL/R) is un-gated. Mini-Tone's tree lacks the MIT / Apache-2.0 texts its
+LICENSING.md names: FM1VST supplies them (core-glue/felucca_web/licences/minitone/).
+
 Felucca and Melodee have no emulator, only their host tests (`tests/hostsim.c`, the DSP; `tests/ui_test.c`, the UI
 against HAL stubs). Their cores are this repo's equivalent of ChoralRoot's emulator unit, written against the
 firmware's own power-on and main loop (`firmware/src/main.c`): the unit list follows `felucca.c` / `melodee.c`
@@ -409,7 +416,7 @@ Felucca-based cores, and each of them needs its submodule. Empty, the default, b
 `-DFM1_ONLY_CORES=""`. A core left out has no tests (its `core_smoke`, `core_conformance`, ..), and `hub_test` and
 `fm1emu_test` are not registered without `fm1emu`.
 
-**A release build** is the public build (`-DFM1_PUBLIC_BUILD=ON`: the 13 un-gated cores, CORES-PLAN.md 6) for Apple
+**A release build** is the public build (`-DFM1_PUBLIC_BUILD=ON`: the 18 un-gated cores, CORES-PLAN.md 6) for Apple
 silicon, made by `.github/workflows/release.yml` when a tag `v<version>` is pushed (the version is `project()`'s
 here; CHANGELOG.md has the notes) and by hand the same way:
 

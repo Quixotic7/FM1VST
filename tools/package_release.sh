@@ -15,6 +15,8 @@
 #     references kIOMainPortDefault below macOS 12 (a newer libusb's; it fails to load on macOS 11). A warning only
 #     unless FM1_RELEASE_STRICT=1 (CI): a local build may link Homebrew's newer bottle
 #   - the zip: the three bundles, the public cores in each, no gated core's name anywhere in it
+#   - each core's licences (licences/cores/<id>/): its LICENSE, and every LICENSES/<file> its LICENSING.md names (texts a
+#     firmware's tree lacks are supplied from core-glue/<family>/licences/<id>/: Mini-Tone's)
 #   - no raw preset source in the release (zip, package): no .syx, nothing from a core's assets/cz1-factory or
 #     assets/prophet5-factory, no file whose content is one of the cores' .syx files (ChoralRoot and Melodee ship
 #     those presets compiled into the firmware only)
@@ -153,7 +155,21 @@ while IFS=$'\t' read -r kind id cver commit clic fam src; do
                                         -o -iname 'NOTICE*' -o -iname 'LICENSING*' -o -iname 'CREDITS*' -o -iname 'ATTRIBUTION*' \) -print) |
         while IFS= read -r f; do mkdir -p "$d/$(dirname "$f")"; cp "$src/$f" "$d/$f"; done
     if [ -d "$src/LICENSES" ]; then ditto "$src/LICENSES" "$d/LICENSES"; fi
+    # the texts a firmware's LICENSING.md names but its tree lacks, supplied by FM1VST (core-glue/<family>/licences/<id>/:
+    # Mini-Tone's MIT and Apache-2.0 texts), beside its own
+    for sup in "$root"/core-glue/*/licences/"$id"; do
+        [ -d "$sup" ] || continue
+        mkdir -p "$d/LICENSES"
+        cp "$sup"/* "$d/LICENSES/"
+        printf 'Supplied by FM1VST (%s): %s\n' "${sup#$root/}" "$(cd "$sup" && ls | tr '\n' ' ')" > "$d/LICENSES/SUPPLIED-BY-FM1VST.txt"
+    done
     [ -f "$d/LICENSE" ] || bad "core $id: no LICENSE in $src"
+    # every LICENSES/<file> its LICENSING.md names is there
+    if [ -f "$src/LICENSING.md" ]; then
+        for f in $(grep -o 'LICENSES/[A-Za-z0-9._-]*[A-Za-z0-9]' "$src/LICENSING.md" | sort -u); do
+            [ -f "$d/$f" ] || bad "core $id: its LICENSING.md names $f, not in $src (supply it: core-glue/<family>/licences/$id/)"
+        done
+    fi
     printf '%s %s (%s): %s, %s at %s\n' "$cname" "$cver" "$id" "$clic" "${url:-?}" "$commit" > "$d/SOURCE.txt"
     core_rows+="$id"$'\t'"$cname"$'\t'"$cver"$'\t'"$clic"$'\t'"$url"$'\t'"$commit"$'\n'
 done < "$manifest"

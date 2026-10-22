@@ -50,6 +50,10 @@ FirmwareMeta FirmwareMeta::of(const String &id, const String &sourceUrl)
         {"purplemonkey", "Other", "For a small child", "Quixotic7"},
         {"rainbow", "Other", "Music toy", "J. Bartlett"},
         {"nomansky", "Other", "Space adventure", "Hericdk"},
+        {"minitone", "Synth", "Six-track multi-engine", "S. Schmitz"},
+        {"fmini", "Synth", "Three-oscillator mono", "ruppert"},
+        {"skiff", "Groovebox", "Six-track groovebox", "illuminus5"},
+        {"grimm", "Synth", "Dark ambient", "GRiMMBIENT"},
     };
     for (const E &e : table)
         if (id == e.id)
