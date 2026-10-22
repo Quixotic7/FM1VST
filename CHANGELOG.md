@@ -18,8 +18,9 @@ LOOM-8 release so far is a "-beta" tag, and this is the newest (the other pins s
   (backup and restore of the projects and user presets, SEL on the panel to confirm), the installer's identity
   (FM-1_10000600) and its log readout, a screen reader. "Show to editors" names the port "LOOM-8 FM-1 (FM1VST)" and
   links the samples page.
-- **Gated** (personal builds only): its factory 909 hi-hat is rendered from 9W9's hat samples, whose provenance gates
-  X0X too (CORES-PLAN.md 6).
+- **In the public release** (14 cores with the fm1emu engine): its factory 909 hi-hat ships unchanged, the owner's
+  call ("ship the original, it is from the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal
+  made"); the About page's credits name that origin. X0X stays gated (CORES-PLAN.md 6).
 
 ### Firmware updates
 

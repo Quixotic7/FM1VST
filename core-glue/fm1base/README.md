@@ -3,7 +3,7 @@
 | core | firmware | submodule | licence |
 |---|---|---|---|
 | `amb` | AMB-1 1.3 | `cores/fm1-amb` @ v1.3, with `base` = fm1-base @ 15dff6d, `base/bsp` = felucca-bsp @ 6b087c2 | MPL-2.0 |
-| `loom` | LOOM-8 0.6-beta | `cores/fm1-loom` @ v0.6-beta (e88f2e0), with `base` = fm1-base @ 71128a3, `base/bsp` = felucca-bsp @ 33cac69 | GPL-3.0-only (fm1-base MPL-2.0), **GATED** (the 909 hi-hat) |
+| `loom` | LOOM-8 0.6-beta | `cores/fm1-loom` @ v0.6-beta (e88f2e0), with `base` = fm1-base @ 71128a3, `base/bsp` = felucca-bsp @ 33cac69 | GPL-3.0-only (fm1-base MPL-2.0); un-gated 2026-10-21 (the owner's call: the 909 hi-hat) |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
@@ -72,12 +72,13 @@ NOR image, unity.c's stand-ins for the screen mirror); AMB-1 compiles it unused.
   NOR image (`plat_data`), so it is kept with the plugin's state.
 - **flash_sync** is ui.c's autosave without its waits: stopped, not recording, nothing asked, into the project's slot;
   AUTOSAVE off or a project with no slot: only SAVE writes.
-- **Licence: gated.** The code is GPL-3.0-only on MPL-2.0 fm1-base / felucca-bsp; Braids, PSXVerb and NuSaw are MIT
-  (LICENSING.md, carried whole in the credits with the OFL texts of its fonts); the four factory breaks are free loops
-  by u/FCTRYBEATS with their written permission; the recorded instruments are VSCO 2 CE (CC0). The factory 909 kit is
-  rendered from 9W9 (GPL-3.0), and its hi-hat from 9W9's hat samples (ER-99): the same unverified provenance that gates
-  X0X (they may be TR-909 ROM recordings). So LOOM-8 is gated with X0X (CORES-PLAN.md 6), and an answer for one
-  un-gates both.
+- **Licence: un-gated (the owner's call, 2026-10-21).** The code is GPL-3.0-only on MPL-2.0 fm1-base / felucca-bsp;
+  Braids, PSXVerb and NuSaw are MIT (LICENSING.md, carried whole in the credits with the OFL texts of its fonts); the
+  four factory breaks are free loops by u/FCTRYBEATS with their written permission; the recorded instruments are VSCO 2
+  CE (CC0). The factory 909 kit is rendered from 9W9 (GPL-3.0), its hi-hat (`app/samples/909_hat.wav`) from 9W9's hat
+  samples (ER-99), the question that gated LOOM-8 with X0X. The owner decided to ship it unchanged: "ship the original,
+  it is from the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal made"; the credits name
+  that origin. X0X stays gated (its own question, CORES-PLAN.md 6).
 
 ## A next fm1-base app
 

@@ -23,7 +23,7 @@
 // none), pushed back and counted from there; an echo of the pushed value quantised (k/23, k/24) makes none; a skipped
 // index is 2; a click into an end of the travel counts; the settle window drops a click; Knob Master stays absolute;
 // switching the mode turns nothing; the state keeps it. Felucca: Knob 1 and Tempo stepped.
-// LOOM-8 (when built: it is gated): a core without a parameter map, every knob a relative turn (Knob 2 its LENGTH).
+// LOOM-8 (when built: a public build has it since 2026-10-21): a core without a parameter map, every knob a relative turn (Knob 2 its LENGTH).
 // The message loop is not running: the test calls the drain itself. FM1EMU_HOME points under the build.
 #include <algorithm>
 #include <cstdio>
@@ -1148,7 +1148,7 @@ int main()
         p.drainTier2();
         check(fn(k[0]) == "Voicing" && namesFixed(), "ChoralRoot's view again (" + fn(k[0]) + "), the names unchanged");
     }
-    // ---- LOOM-8 (a core with no parameter map: every knob a relative turn; gated, so a public build has none)
+    // ---- LOOM-8 (a core with no parameter map: every knob a relative turn; in a public build too)
     if (built_cores().count("loom")) {
         check(p.switchCore("loom"), "switchCore(\"loom\")");
         h.run_ms(1500);

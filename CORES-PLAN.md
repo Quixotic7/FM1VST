@@ -10,7 +10,7 @@ three cores at their pinned versions pass everything). Phase 1 is done (branch c
 all 21 cores built and bundled, ABI 6 for the credits, the suite passing in the default, Release and public builds).
 Phase 2 is a plan. 2026-10-21 (branch cores-oct21): the pins moved to each firmware's latest stable release (the
 table's versions), and a 22nd core, LOOM-8 (Charles Vestal's groovebox on fm1-base), joined the fm1base glue, gated
-(section 6). The per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
+(section 6); the owner un-gated it the same day. The per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
 
 ## 1. What the survey found
 
@@ -139,14 +139,14 @@ so these need an answer first:
 | DUELL | naming terms for unofficial builds | an unmodified build at a release tag is probably fine; ask the author |
 | No Man Sky FM | credit request | credited in the About box (the descriptor's credits, ABI 6) |
 | X0X | 909 hi-hat / ride / crash samples "ER-99 via 9W9", GPL-3.0 | gated until ER-99's author confirms they are not TR-909 ROM recordings |
-| LOOM-8 | its factory 909 hi-hat (`app/samples/909_hat.wav`) is a render of 9W9's hat samples (ER-99), X0X's open question; the rest is cleared: code GPL-3.0-only on MPL-2.0 fm1-base, Braids / PSXVerb / NuSaw MIT, the four breaks by u/FCTRYBEATS with their written permission, the recorded instruments VSCO 2 CE (CC0), fonts OFL | gated with X0X (2026-10-21); un-gated by the same answer |
+| LOOM-8 | its factory 909 hi-hat (`app/samples/909_hat.wav`) is a render of 9W9's hat samples (ER-99), X0X's open question; the rest is cleared: code GPL-3.0-only on MPL-2.0 fm1-base, Braids / PSXVerb / NuSaw MIT, the four breaks by u/FCTRYBEATS with their written permission, the recorded instruments VSCO 2 CE (CC0), fonts OFL | un-gated (the owner's call, 2026-10-21): it ships with its factory `909_hat.wav`, unchanged. In the owner's words: "ship the original, it is from the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal made"; the credits name that origin. X0X stays gated (not decided) |
 | ChoralRoot, Melodee | Casio's CZ-1 preset tones and Sequential's Prophet-5 factory programs, no licence granted | un-gated (the owner's call, 2026-10-19): they ship compiled into the firmware, credited to Casio and Sequential; no raw .syx is distributed (tools/package_release.sh checks) |
 
 Gated today (left out of FM1_PUBLIC_BUILD): fm106 (Juno-106 patch data), duell (naming terms), rainbow (character
 look-alikes), fartmachine (recordings), orbit (OP-1 material, the Hugelton atlas), sloop and sloopdx (the Hugelton
-atlas), nomansky (game art), x0x (the cymbal samples), loom (the same 9W9 hi-hat). A public build bundles the
-other twelve: choralroot (the default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee, fomni, fimba,
-amb, obervave, frodhes.
+atlas), nomansky (game art), x0x (the cymbal samples). A public build bundles the other thirteen: choralroot (the
+default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee, fomni, fimba, amb, obervave, frodhes, loom
+(un-gated 2026-10-21), and the fm1emu engine.
 
 ## 7. Rules
 

@@ -31,11 +31,14 @@ set(_loom_gen "(lambda b: (setattr(b, 'APP', b.Path('.').resolve()), setattr(b, 
 set(_loom_vfs ${CMAKE_BINARY_DIR}/core_vfs/loom.yaml)
 file(WRITE ${_loom_vfs}.in "{ \"version\": 0, \"case-sensitive\": \"false\", \"roots\": [ { \"type\": \"file\", \"name\": \"${_loom}/app/plat_loom.c\", \"external-contents\": \"${CMAKE_CURRENT_LIST_DIR}/loom_plat.c\" } ] }\n")
 configure_file(${_loom_vfs}.in ${_loom_vfs} COPYONLY)
+# UN-GATED (the owner's call, 2026-10-21): the factory 909 hi-hat (app/samples/909_hat.wav, LICENSING.md: a render of
+# 9W9, its ER-99 engine and its hat samples) ships unchanged. In the owner's words: "ship the original, it is from the
+# emulated 909 on the schwung firmware for Ableton Move that Charles Vestal made". The credits name that origin. X0X
+# (core-glue/plat/core_x0x.cmake) stays gated: its 909 cymbals are a separate question, not decided
 fm1_add_core(loom ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_loom} UNIT core_loom.c DESC core_loom_desc.c
              EXTRA_SOURCES loom_synth.c loom_drumline.c loom_sample.c loom_fx.c loom_bench.c loom_pattern.c loom_seq.c
              FAMILY fm1base LICENSE GPL-3.0-only
-             GATED "the factory 909 hi-hat (app/samples/909_hat.wav) is a render of 9W9's hat samples (ER-99), whose provenance gates X0X: they may be TR-909 ROM recordings"
-             CREDITS "LOOM-8 by Charles Vestal. Built on fm1-base and felucca-bsp (MPL-2.0), from Felucca by Leo Kuroshita (Hügelton Instruments). Factory breaks: free loops by u/FCTRYBEATS, used with their permission. 909 drums: renders of 9W9 (GPL-3.0). Recorded instruments: Versilian Studios Chamber Orchestra 2 Community Edition (CC0 1.0). Inspired by teenage engineering's OP-XY, not affiliated with teenage engineering."
+             CREDITS "LOOM-8 by Charles Vestal. Built on fm1-base and felucca-bsp (MPL-2.0), from Felucca by Leo Kuroshita (Hügelton Instruments). Factory breaks: free loops by u/FCTRYBEATS, used with their permission. 909 drums, the hi-hat included: renders of 9W9 (GPL-3.0), the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal made. Recorded instruments: Versilian Studios Chamber Orchestra 2 Community Edition (CC0 1.0). Inspired by teenage engineering's OP-XY, not affiliated with teenage engineering."
              CREDITS_FILES LICENSING.md base/assets/fonts/Barlow-OFL.txt base/assets/fonts/Terminus-LICENSE.txt
              GEN ann_words.h felucca_font.h loom_build.h loom_font.h presets.h samples.h wavetables.h
              GEN_ROOT app GEN_PYTHON "${_loom_gen}" PYTHON_NEEDS raqm

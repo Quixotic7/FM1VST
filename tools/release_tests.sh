@@ -5,10 +5,10 @@
 #   tools/release_tests.sh BUILD_DIR
 #
 # Runs ctest; every test must pass, and the only skips allowed are those a public build already makes: param_test for
-# the cores without a parameter map, and tier2_test (the release configures no Tier 2 slots). ChoralRoot, Felucca and
-# Melodee are all in a public build now (ChoralRoot and Melodee un-gated, 2026-10-19), so the tests that drive them
-# (double_load_test, halt_test, plugin_test, knob_test, panel_render_test, ui_render_test, remote_test) must run. Any
-# other skip (one of those, a core's smoke, conformance or golden test) fails.
+# the cores without a parameter map, and tier2_test (the release configures no Tier 2 slots). ChoralRoot, Felucca,
+# Melodee and LOOM-8 are all in a public build now (ChoralRoot and Melodee un-gated 2026-10-19, LOOM-8 2026-10-21), so
+# the tests that drive them (double_load_test, halt_test, plugin_test, knob_test, panel_render_test, ui_render_test,
+# remote_test) must run. Any other skip (one of those, a core's smoke, conformance or golden test) fails.
 set -uo pipefail
 build="${1:?usage: release_tests.sh BUILD_DIR}"
 allowed='^(param_test_[a-z0-9]+|tier2_test)$'

@@ -352,7 +352,7 @@ int main()
     // ---- (e) the other cores: their screen and labels on the panel
     for (const char *id : {"felucca", "melodee", "loom"}) {
         if (!built_cores().count(id))
-            continue;                                    // (LOOM-8 is gated: a public build has none)
+            continue;                                    // (a build of some cores only)
         FM1Processor p;
         Host h(p, 44100.0, 256);
         const bool ok = p.switchCore(id);
