@@ -1,4 +1,4 @@
-# FM-106 Beta4: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# FM-106 Beta5: tests/core_conformance.cpp's script for this core (see its header for the directives)
 # the flash round trip: SAVE pressed and let go (a short save, < 500 ms): the patch goes to the first free user slot
 # (the user presets at 0x98000) and the settings record names it (0xFC000); after the reboot that user patch loads
 save wait 1500

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# ChoralRoot 0.25.1 (https://github.com/Quixotic7/ChoralRootFM1, tag v0.25.1): its own emulator's unit,
+# ChoralRoot 0.26.1 (https://github.com/Quixotic7/ChoralRootFM1, tag v0.26.1): its own emulator's unit,
 # tools/emu/emu_fw.c, through core_choralroot.c and the family's glue (crf_glue.h; cmake/FM1Cores.cmake: fm1_add_core)
 include(${CMAKE_CURRENT_LIST_DIR}/crf.cmake)
 set(_cr ${CMAKE_SOURCE_DIR}/cores/ChoralRootFM1)
@@ -11,7 +11,7 @@ set(_cr_defs "")
 if(FM1_EXPOSE_EDITOR)
     set(_cr_defs FM1_EXPOSE_EDITOR=1)
 endif()
-# the version: firmware/src/choralroot.c's FELUCCA_VERSION ("ChoralRoot 0.25.1", the device build's default and
+# the version: firmware/src/choralroot.c's FELUCCA_VERSION ("ChoralRoot 0.26.1", the device build's default and
 # tools/emu/build.sh's); the unit shows the same string (core_choralroot.c)
 # UN-GATED (the owner's call, 2026-10-19): LICENSING.md lists the Casio CZ-1 preset tones ("the rights stay with
 # Casio", "no licence granted") and Sequential's Prophet-5 factory programs ("the rights stay with Sequential"); the

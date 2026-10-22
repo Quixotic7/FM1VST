@@ -1,4 +1,4 @@
-# No Man Sky FM 0.4: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# No Man Sky FM 0.5: tests/core_conformance.cpp's script for this core (see its header for the directives)
 # the flash round trip: the working project (project.c's autosave, which flash_sync writes as persist_flush_now
 # does): on HOME (the game) SELECT turns the tempo (90 -> 95 BPM, the number top left) and PRESETS steps track 1's
 # sound; after the reboot autosave_resume brings both back and HOME shows 95 (after the game's ~5 s opening)

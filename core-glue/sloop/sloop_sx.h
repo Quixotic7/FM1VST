@@ -47,7 +47,7 @@ static int fl_erase4k_quiet(uint32_t off, uint32_t *took)
 
 /* ---- ota.c: the M-UPGRADE identity (common/sysex_ota.h). FELUCCA_ID: felucca.c's default, which tools/build.py
  * keeps without --release: every one of these packages answers "FM-1_900" (SLOOP's DUALCORE.md: "the package keeps
- * SLOOP's development identity"; No Man Sky's nomanskyfm-0.4.fwsc carries "ota-FM-1_900") ---- */
+ * SLOOP's development identity"; No Man Sky's nomanskyfm-0.5.fwsc carries "ota-FM-1_900") ---- */
 #ifndef FELUCCA_ID
 #define FELUCCA_ID "FM-1_900"
 #endif

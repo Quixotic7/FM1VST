@@ -3,10 +3,10 @@
  * submodule. It follows the firmware's own unity unit, firmware/src/felucca.c, in its order, with the device's HAL
  * headers (firmware/hal/fm1_*.h) replaced by sloop_hal.h, as the firmwares' own host builds do (tests/hostsim.c,
  * tests/ui_pages_test.c; No Man Sky's wasm/nms_wasm.c). Which firmware: FM1CORE_SL_FW (core_<id>.c sets it):
- *   FM1CORE_SL_SLOOP    SLOOP 2.7.1     3 synth parts + drums, the second core, ui_vis
+ *   FM1CORE_SL_SLOOP    SLOOP 2.8       3 synth parts + drums, the second core, ui_vis
  *   FM1CORE_SL_DX       sloopDX 4.0     SLOOP 2.7 with the DX7 engine (ui_voice), no ui_vis, MIDI program change
  *   FM1CORE_SL_ORBIT    ORBIT 0.7.1     SLOOP 2.4+ line, one core, ORBIT's engines and screens
- *   FM1CORE_SL_NMS      No Man Sky 0.4  SLOOP 2.7.1 with ui_nms / ui_game (no ui_song, icons, ui_vis), its tree
+ *   FM1CORE_SL_NMS      No Man Sky 0.5  SLOOP 2.7.1 with ui_nms / ui_game (no ui_song, icons, ui_vis), its tree
  *                                       one level down (cores/nomanskyFM/firmware)
  * Built out (they need the hardware), as the firmwares' host builds leave them out: FELUCCA_OTA (usb.c's SysEx
  * plumbing, the M-UPGRADE update session and recovery.c; editor.c, the web editor's SysEx, and ota.c's identity are

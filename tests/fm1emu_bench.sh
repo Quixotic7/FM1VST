@@ -57,10 +57,10 @@ while IFS='|' read -r name pkg native conf; do
 done <<EOF
 Felucca 1.6.1|$ROOT/build-fm1emu/fwsc/felucca-1.6.1.fwsc|felucca|$G/felucca_web/conformance_felucca.txt
 stock V15|$PKGS/MvaveFM1Unbricker/FM-1.fwsc|-|$G/fm1emu/conformance_fm1emu_mvave.txt
-SLOOP 2.7.1|$ROOT/cores/sloop-fm1/docs/firmware/sloop-2.7.1.fwsc|sloop|$G/sloop/conformance_sloop.txt
+SLOOP 2.8|$ROOT/cores/sloop-fm1/docs/firmware/sloop-2.8.fwsc|sloop|$G/sloop/conformance_sloop.txt
 sloopDX 4.0|$ROOT/cores/dxsloop/docs/firmware/sloopdx-4.0.fwsc|sloopdx|$G/sloop/conformance_sloopdx.txt
 OberVave 1.5|$ROOT/cores/obervave/docs/firmware/obervave-1.5.fwsc|obervave|$G/dinghy/conformance_obervave.txt
-No Man Sky 0.4|$ROOT/cores/nomanskyFM/release/nmsfm-0.4.fwsc|nomansky|$G/sloop/conformance_nomansky.txt
+No Man Sky 0.5|$ROOT/cores/nomanskyFM/release/nmsfm-0.5.fwsc|nomansky|$G/sloop/conformance_nomansky.txt
 FM-106|$ROOT/cores/fm-106/fm106.fwsc|fm106|$G/dinghy/conformance_fm106.txt
 ChoralRoot 0.25.1|$PKGS/fm1-backups/5BD75BE3-before-remotefm1-20261017/choralroot-0.25.1.fwsc|choralroot|$G/choralroot/conformance_choralroot.txt
 EOF

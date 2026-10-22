@@ -1,14 +1,14 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The ChoralRoot family's shared glue (core-glue/choralroot/README.md): ChoralRoot's emulator unit and its forks'
  * (PurpleMonkey, CoralFlower) behind the core ABI. Each fork keeps its OWN emu_hooks.h / emu_hal_t (they differ: the
- * 44453d0 base, the 0.22 line, 0.25.1), private to its firmware unit; this file translates that emu_hal to and from
+ * 44453d0 base, the 0.22 line, 0.25.1 on), private to its firmware unit; this file translates that emu_hal to and from
  * the ABI's fm1panel_t and defines the entry points the descriptor (crf_desc.h) points at.
  *
  * NOT A TRANSLATION UNIT OF ITS OWN: a firmware unit (core_<id>.c) includes its fork's emu_fw.c (so `emu_hal`,
  * `emu_keymap` and the emu_fw_* hooks are in scope, with the fork's own emu_hal_t), then this file, after defining
  *
  *   FM1CORE_CRF_P          the entry points' prefix: fm1core_<P>_init, fm1core_<P>_panel, .. (cr, pm, cf)
- *   FM1CORE_CRF_VEL        1: the fork's emu_hal_t has key_vel[32] / key_lean[32] (ChoralRoot 0.25.1)
+ *   FM1CORE_CRF_VEL        1: the fork's emu_hal_t has key_vel[32] / key_lean[32] (ChoralRoot 0.25.1 on)
  *   FM1CORE_CRF_LEVELS     4: led / led_mid / led_dim / led_faint (0.22 on); 2: led / led_dim (the 44453d0 base)
  *   FM1CORE_CRF_PA2        1: the fork's emu_hal_t has pa2 (the backlight pin: the panel black, no LED lit)
  *   FM1CORE_CRF_FLASH_SYNC a function `int f(void)` for the descriptor's flash_sync (the fork's settings save now)
@@ -17,8 +17,8 @@
  *                          2 PurpleMonkey's pm_info.c (INFO only: pmi_reply, FM1CORE_CRF_PMI_C its path); 0 none
  *   FM1CORE_CRF_OTA_C      with FM1CORE_CRF_SX: the fork's ota.c (the M-UPGRADE identity, common/sysex_ota.h), with
  *                          FELUCCA_ID its device unit's package identity
- *   FM1CORE_CRF_EMU_SX     1: the fork's emu_fw_frame answers short 7D frames from usb.sysex itself (ChoralRoot 0.25.1):
- *                          the glue takes them instead (the frame's bytes cleared once usb.c has seen them)
+ *   FM1CORE_CRF_EMU_SX     1: the fork's emu_fw_frame answers short 7D frames from usb.sysex itself (ChoralRoot
+ *                          0.25.1 on): the glue takes them instead (the frame's bytes cleared once usb.c has seen them)
  *
  * and, before its emu_fw.c, including stdlib.h, fm1core.h (FM1CORE_NO_EMU_NAMES), version.h, exit.h, nor_stdio.h
  * and common/env.h, and after it nor_stdio_end.h, exit_end.h and panel.h (core_choralroot.c is the template).

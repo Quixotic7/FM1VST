@@ -9,7 +9,7 @@
 // The script is the emulator's grammar (tests/script_runner.h). Each `shot X` is rewritten to build/emu/crf/<stem>_<n>.ppm for
 // the reference; the core's LCD at the same moment (emu.c: a shot at ms T runs after tick(T), before frame(T): the
 // screen as ms T-1 left it) is converted as emu_img.c does (RGB565 big-endian -> RGB888) and compared. The
-// script's `expect led` lines (ChoralRoot 0.25.1's four levels too) are checked by both runs. The environment: EMU_C1=thread is set before the core is loaded, and the process must have no more threads
+// script's `expect led` lines (ChoralRoot's four levels too, 0.25.1 on) are checked by both runs. The environment: EMU_C1=thread is set before the core is loaded, and the process must have no more threads
 // after the run than before it (common/env.h: the core reads no environment).
 #include <mach/mach.h>
 #include <sys/wait.h>

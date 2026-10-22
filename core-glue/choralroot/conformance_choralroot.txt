@@ -1,4 +1,4 @@
-# ChoralRoot 0.25.1: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# ChoralRoot 0.26.1: tests/core_conformance.cpp's script for this core (see its header for the directives)
 # the flash round trip: saving is manual since 0.18 (docs/SETTINGS.md): the tempo one detent up (SELECT on the view,
 # 120 -> 121 BPM), then the global save (SAVE held past the hold time: cr_settings_commit, the block and the session);
 # the second unit boots at 121 BPM

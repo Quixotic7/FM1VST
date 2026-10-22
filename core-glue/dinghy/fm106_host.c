@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* FM-106's fake FM-1 for the FM-106 core (core_fm106.c). FM-106's own tests/host.c has fallen behind the app at
- * Beta4 (19 errors with Apple clang: str_cpy, fm106_now_ms, fm1_adc_read / FM1_ADC_BATT, uac's newer fields,
- * audio_lates), and it is a stripped shim (no knobs, no releases, no LEDs, no preset flash). platform.c includes
+ * Beta4 and Beta5 (19 errors with Apple clang: str_cpy, fm106_now_ms, fm1_adc_read / FM1_ADC_BATT, uac's newer
+ * fields, audio_lates), and it is a stripped shim (no knobs, no releases, no LEDs, no preset flash). platform.c includes
  * "../../tests/host.c" by a relative path with no guard, so core_fm106.cmake maps that path to this file with
  * clang's -ivfsoverlay: the firmware tree stays unmodified.
  *

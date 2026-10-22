@@ -1,13 +1,13 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The ChoralRoot FM-1 core (0.25.1): the firmware unit of the ChoralRoot emulator, compiled here as is.
+/* The ChoralRoot FM-1 core (0.26.1): the firmware unit of the ChoralRoot emulator, compiled here as is.
  *
  * The firmware is built as ONE translation unit (emu_fw.c includes emu_firmware.h, which includes the
  * firmware's own .c files, the host DSP build and the Mac HAL), exactly as the submodule's
  * tools/emu/build.sh does. Including it from here builds it from the unmodified, pinned submodule:
  * nothing is copied or patched. Its includes resolve through the target's include path
  * (cores/ChoralRootFM1/build/gen, firmware/src, tools/emu; see core_choralroot.cmake). The family's shared glue
- * (crf_glue.h) translates its emu_hal (0.25.1's emu_hal_t: velocity and lean per key, four LED levels, PA2) to and
- * from the ABI's panel.
+ * (crf_glue.h) translates its emu_hal (0.25.1's emu_hal_t, unchanged in 0.26.1: velocity and lean per key, four LED
+ * levels, PA2) to and from the ABI's panel.
  *
  * The version the firmware shows: build.sh's "-DFELUCCA_VERSION=\"ChoralRoot X\"" (the reference emulator's), here
  * from the version fm1_add_core read out of firmware/src/choralroot.c (emu_firmware.h's own default is "EMU").

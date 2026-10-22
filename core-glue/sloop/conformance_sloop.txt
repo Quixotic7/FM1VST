@@ -1,4 +1,4 @@
-# SLOOP 2.7.1: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# SLOOP 2.8: tests/core_conformance.cpp's script for this core (see its header for the directives)
 # the flash round trip: the working project (project.c's autosave, which flash_sync writes as persist_flush_now
 # does): PRESETS turned on the TRACKS page steps track 1's sound (808 BOOM -> SUB BASS); after the reboot
 # autosave_resume brings it back and the TRACKS page shows it

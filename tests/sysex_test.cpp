@@ -524,7 +524,7 @@ ChangeFn up_store_change(uint8_t store_cmd = 19)
     };
 }
 // ---- the sloop family ----
-// SLOOP 2.7.1, sloopDX 4.0, ORBIT 0.7.1, No Man Sky FM 0.4: the firmware's own editor.c (web/EDITOR_PROTOCOL.md v12),
+// SLOOP 2.8, sloopDX 4.0, ORBIT 0.7.1, No Man Sky FM 0.5: the firmware's own editor.c (web/EDITOR_PROTOCOL.md v12),
 // their web editors' requests (web/editor.html `req`): INFO 1, the backup BK_LIST / BK_GET / BK_PUT 34 / 35 / 36
 // (256-byte chunks, backupCapture / backupRestore), the user presets UP_STORE 19, sloopDX's DX7 bank BANK_BEGIN /
 // BANK_WRITE / BANK_END / BANK_INFO 37..40 (512-byte chunks, dxbank.upload). No restart command: the reboot is the
@@ -997,7 +997,7 @@ void fm106_run(const std::string &module, Device &dev, Link &k, Session &s, cons
     const bool ok = fm106_dump(k, 128 + 5, u) && u.size() == 40;
     check(ok && std::equal(st.begin() + 5, st.begin() + 23, u.begin() + 5) && fm106_name(u) == name,
           "store (30) to user A 6, dumped back: the sliders, switches and name \"" + (ok ? fm106_name(u) : "") + "\"");
-    // burnToHardwareFlash. FM-106 Beta4's user bank is 16 + 128 x 82 = 10,512 bytes, its flash area 8 KiB:
+    // burnToHardwareFlash. FM-106 Beta5's user bank is 16 + 128 x 82 = 10,512 bytes, its flash area 8 KiB (as Beta4):
     // presets_flash_save refuses it (n > FM106_PRESETS_FLASH_SIZE) on the device as here, yet the ACK goes out
     // (fm106_sysex.h ignores the result). So the commit writes nothing and the stored preset is gone after a power
     // cycle, on a unit too; once a firmware writes it, the reboot below must find it.
@@ -1008,7 +1008,7 @@ void fm106_run(const std::string &module, Device &dev, Link &k, Session &s, cons
                                  2000);
     const bool wrote = dev.flash_dirty() != dirty0;
     check(acked, std::string("commit (35): the ACK; the NOR image ") +
-                     (wrote ? "written" : "unchanged (Beta4: the bank does not fit its 8 KiB, as on the device)"));
+                     (wrote ? "written" : "unchanged (Beta5: the bank does not fit its 8 KiB, as on the device)"));
     update_keys(k, s, p);
     const Bytes image(dev.flash(), dev.flash() + dev.flash_size());
     std::unique_ptr<LoadedCore> lc2 = load(module);
@@ -1038,12 +1038,12 @@ const Profile kProfiles[] = {
     {"ghoulbox", "FELUCCA v1.4.1 GB2.3.2", true, "FM-1_900", false, up_store_change()},
     {"rainbow", "FELUCCA v1.1.5", true, "FM-1_900", false, up_store_change()},
     {"duell", "FELUCCA DUELL 0.2.20", true, "FM-1_900", false, up_store_change()},
-    {"melodee", "MELODEE v1.4.4", true, "FM-1_900", false, up_store_change(80)},
+    {"melodee", "MELODEE v1.4.5", true, "FM-1_900", false, up_store_change(80)},
     // the sloop family: editor.c's v6 backup; the identity is build.py's development FM-1_900 (no --release)
-    {"sloop", "FELUCCA SLOOP 2.7.1", true, "FM-1_900", false, sl_upreset_change, true},
+    {"sloop", "FELUCCA SLOOP 2.8", true, "FM-1_900", false, sl_upreset_change, true},
     {"sloopdx", "FELUCCA sloopDX 4.0", true, "FM-1_900", false, sl_dxbank_change, true, sl_dxbank_kept},
     {"orbit", "FELUCCA ORBIT 0.7.1", true, "FM-1_900", false, sl_upreset_change, true},
-    {"nomansky", "FELUCCA NMS FM 0.4", true, "FM-1_900", false, sl_upreset_change, true},
+    {"nomansky", "FELUCCA NMS FM 0.5", true, "FM-1_900", false, sl_upreset_change, true},
     // plat, fm1base, dinghy
     {"x0x", "X0X ", false, "FM-1_9010100", false, nullptr, false, nullptr, x0x_run},
     {"amb", nullptr, false, "FM-1_7010300", false, nullptr, false, nullptr, installer_run("AMB-1 ", true)},
