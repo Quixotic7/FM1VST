@@ -19,6 +19,7 @@
 // and the worst reply time seen, in host blocks (the reply drained after the block that took the request: a request
 // that arrives just after a block waits one more).
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -715,11 +716,13 @@ bool reader_hello(Link &k, std::string &name)
 
 // ---- X0X: web/backup/index.html (PB.backup / PB.restore), firmware/src/backup.c ----
 // a backup: 0x42 "X0XB", the device's 0x42 frames (offset + data) to its 0x43 end (length, CRC-32, status, flags)
-bool x0x_backup(Link &k, Bytes &image, std::string &why, uint32_t *frames_out = nullptr)
+// (fm1-base's backup.c is X0X's, from Polly's: the same frames, the request's body the app's magic)
+bool x0x_backup(Link &k, Bytes &image, std::string &why, uint32_t *frames_out = nullptr,
+                const Bytes &magic = {0x58, 0x30, 0x58, 0x42})
 {
     k.frames.clear();
     image.clear();
-    k.put_frame(upd_frame(0x42, {0x58, 0x30, 0x58, 0x42}));
+    k.put_frame(upd_frame(0x42, magic));
     uint32_t frames = 0;
     const uint64_t end = k.blocks + (uint64_t)(20000 / kBlockMs);
     while (k.blocks < end) {
@@ -900,6 +903,228 @@ void x0x_run(const std::string &module, Device &dev, Link &k, Session &s, const 
     k.worst = std::max(k.worst, k2.worst);
 }
 
+std::function<void(const std::string &, Device &, Link &, Session &, const Profile &)>
+installer_run(const char *reader, bool log);
+// ---- LOOM-8: fm1-base's backup page (base/web/backup, base/tools/fm1_backup.py: backup.c, X0X's frames with the
+// app's magic "LM8B" and its 22 objects: the user presets, then the three project slots' 7 each), the user sample
+// bank (app/samples.c, tools/loom_samples.py: 7D 46 4C), the installer (the M-UPGRADE identity) and the screen
+// reader ----
+const Bytes kLoomMagic = {0x4C, 0x4D, 0x38, 0x42};          // APP_BACKUP_MAGIC 0x42384D4C, little-endian
+// backup.c's image: head (magic, u16 version 1, u16 count, u32 flags, CRC-32 of the 12 bytes), the records in
+// APP_BACKUP_OBJS's order (u16 id, u16 length, u32 CRC-32, the payload; length 0: absent), the tail
+bool loom_parse(const Bytes &im, std::string &why, std::string *sizes = nullptr)
+{
+    if (im.size() < 16 + 22 * 8 + 4 || rd32le(im, 0) != 0x42384D4Cu || (im[4] | im[5] << 8) != 1 ||
+        (im[6] | im[7] << 8) != 22 || rd32le(im, 12) != crc32(im.data(), 12))
+        return why = "the image's head", false;
+    size_t pos = 16;
+    for (uint32_t want = 1; want <= 22; want++) {           // OBJ_PRESETS (1), OBJ_PROJ0 + 0..20 (2..22)
+        if (pos + 8 > im.size())
+            return why = "cut short", false;
+        const uint32_t obj = im[pos] | im[pos + 1] << 8, ln = im[pos + 2] | im[pos + 3] << 8, c = rd32le(im, pos + 4);
+        pos += 8;
+        if (obj != want || ln > 3840 || pos + ln + 4 > im.size() || crc32(&im[pos], ln) != c)
+            return why = "record " + std::to_string(want), false;
+        if (sizes && ln)
+            *sizes += " " + std::to_string(obj) + ":" + std::to_string(ln);
+        pos += ln;
+    }
+    if (pos + 4 != im.size() || rd32le(im, pos) != crc32(im.data(), pos))
+        return why = "the tail", false;
+    return true;
+}
+
+// the sample bank's commands: F0 7D 46 4C cmd args F7 -> the reply's args (after the command byte)
+bool sb_req(Link &k, uint8_t cmd, const Bytes &args, Bytes &out, double limit = 3000)
+{
+    Bytes r;
+    if (!k.request(fl(cmd, args), fl_reply(cmd), r, limit))
+        return false;
+    out = fl_args(r);
+    return true;
+}
+Bytes sb_pack7(const uint8_t *p, size_t n)                   // loom_samples.py pack7: each 7 bytes after their top bits
+{
+    Bytes o;
+    for (size_t i = 0; i < n; i += 7) {
+        const size_t g = std::min<size_t>(7, n - i);
+        uint8_t hi = 0;
+        for (size_t j = 0; j < g; j++)
+            hi |= (uint8_t)((p[i + j] >> 7 & 1) << j);
+        o.push_back(hi);
+        for (size_t j = 0; j < g; j++)
+            o.push_back(p[i + j] & 0x7F);
+    }
+    return o;
+}
+// tools/sampleio.py user_bank for one sample (a 440 Hz sine): its checkpoints and IMA ADPCM at virtual 2048, the
+// header (magic "LSMP", version 2, the count, the data's length and CRC-32, the bank's size) and its 40-byte entry
+Bytes loom_bank(const std::string &name, uint32_t n, uint16_t rate)
+{
+    static const int STEP[89] = {7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60,
+                                 66, 73, 80, 88, 97, 107, 118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337,
+                                 371, 408, 449, 494, 544, 598, 658, 724, 796, 876, 963, 1060, 1166, 1282, 1411, 1552,
+                                 1707, 1878, 2066, 2272, 2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358, 5894,
+                                 6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899, 15289, 16818, 18500, 20350,
+                                 22385, 24623, 27086, 29794, 32767};
+    static const int IDX[8] = {-1, -1, -1, -1, 2, 4, 6, 8};
+    Bytes ck, nib;
+    int pred = 0, idx = 0;
+    for (uint32_t i = 0; i < n; i++) {
+        if (i % 64 == 0) {
+            const Bytes w = le32((uint32_t)(pred & 0xFFFF) | (uint32_t)idx << 16);
+            ck.insert(ck.end(), w.begin(), w.end());
+        }
+        const int x = (int)(12000.0 * std::sin(6.283185307179586 * 440.0 * i / rate));
+        const int step = STEP[idx];
+        int diff = x - pred, code = 0, vd = step >> 3;
+        if (diff < 0)
+            code = 8, diff = -diff;
+        if (diff >= step)
+            code |= 4, diff -= step, vd += step;
+        if (diff >= step >> 1)
+            code |= 2, diff -= step >> 1, vd += step >> 1;
+        if (diff >= step >> 2)
+            code |= 1, vd += step >> 2;
+        pred = code & 8 ? pred - vd : pred + vd;
+        pred = std::max(-32768, std::min(32767, pred));
+        idx = std::max(0, std::min(88, idx + IDX[code & 7]));
+        nib.push_back((uint8_t)code);
+    }
+    if (nib.size() & 1)
+        nib.push_back(0);
+    Bytes data(ck);                                          // the checkpoints at 2048, the ADPCM after them
+    for (size_t i = 0; i < nib.size(); i += 2)
+        data.push_back((uint8_t)(nib[i] | nib[i + 1] << 4));
+    const uint32_t c_off = 2048, a_off = 2048 + (uint32_t)ck.size();
+    Bytes img(2048, 0);
+    Bytes h = le32(0x504D534Cu);
+    h.insert(h.end(), {2, 0, 1, 0});                         // version 2, one sample
+    for (uint32_t v : {(uint32_t)data.size(), crc32(data.data(), data.size()), 0x1B000u + 0x17000u + 0x4000u}) {
+        const Bytes w = le32(v);
+        h.insert(h.end(), w.begin(), w.end());
+    }
+    std::copy(h.begin(), h.end(), img.begin());
+    Bytes e(name.begin(), name.end());
+    e.resize(12, 0);
+    for (uint32_t v : {a_off, c_off, n, 0u, 0u}) {
+        const Bytes w = le32(v);
+        e.insert(e.end(), w.begin(), w.end());
+    }
+    e.insert(e.end(), {69, 0, 0, 0, (uint8_t)rate, (uint8_t)(rate >> 8), 0, 0});   // root A4, no bars, the rate
+    std::copy(e.begin(), e.end(), img.begin() + 64);
+    img.insert(img.end(), data.begin(), data.end());
+    return img;
+}
+// loom_samples.py upload: BEGIN, the data in 256-byte WRITEs, the header in five 320-byte parts, END (each answered,
+// its last byte the rc)
+bool loom_upload(Link &k, const Bytes &img, std::string &why)
+{
+    Bytes r;
+    if (!sb_req(k, 11, {0}, r, 10000) || r.empty() || r.back())
+        return why = "BEGIN", false;
+    for (uint32_t off = 2048; off < img.size(); off += 256) {
+        Bytes a = {0, (uint8_t)(off & 0x7F), (uint8_t)(off >> 7 & 0x7F), (uint8_t)(off >> 14 & 0x7F)};
+        const Bytes d = sb_pack7(&img[off], std::min<size_t>(256, img.size() - off));
+        a.insert(a.end(), d.begin(), d.end());
+        if (!sb_req(k, 12, a, r, 5000) || r.empty() || r.back())
+            return why = "WRITE at " + std::to_string(off) + " rc " + (r.empty() ? "-" : std::to_string(r.back())), false;
+    }
+    for (uint8_t part = 0; part < 5; part++) {
+        Bytes a = {0, part};
+        const Bytes d = sb_pack7(&img[part * 320], 320);
+        a.insert(a.end(), d.begin(), d.end());
+        if (!sb_req(k, 16, a, r) || r.empty() || r.back())
+            return why = "header part " + std::to_string(part), false;
+    }
+    if (!sb_req(k, 13, {0}, r, 20000) || r.empty() || r.back())
+        return why = "END rc " + (r.empty() ? std::string("-") : std::to_string(r.back())), false;
+    return true;
+}
+// SMP_INFO from 0: the count, and the first sample's name, rate and length
+bool loom_bank_info(Link &k, uint32_t &count, std::string &first)
+{
+    Bytes r;
+    if (!sb_req(k, 15, {0}, r) || r.size() < 8 || r[0] != 2)
+        return false;
+    count = r[5];
+    first.clear();
+    if (r[7]) {
+        size_t i = 8;
+        for (; i < r.size() && r[i]; i++)
+            first += (char)r[i];
+        if (i + 6 < r.size())
+            first += " " + std::to_string(r[i + 1] | r[i + 2] << 7 | r[i + 3] << 14) + " Hz " +
+                     std::to_string(r[i + 4] | r[i + 5] << 7 | r[i + 6] << 14);
+    }
+    return true;
+}
+
+void loom_run(const std::string &module, Device &dev, Link &k, Session &s, const Profile &p)
+{
+    std::string v, why, sz, first;
+    installer_run("LOOM-8 ", true)(module, dev, k, s, p);   // the identity, the screen reader, the log, the update keys
+    check(s.info(v) && v.rfind(p.info, 0) == 0, "samples.c INFO: \"" + v + "\"");
+    Bytes r;
+    check(sb_req(k, 25, {}, r) && r.size() == 1 && r[0] == 0, "samples.c PING: 0");
+    uint32_t count = 99;
+    check(loom_bank_info(k, count, first) && count == 0,
+          "SMP_INFO on a fresh unit: " + std::to_string(count) + " user samples");
+    // an upload as tools/loom_samples.py makes it: one 4096-sample sine at 22050 Hz
+    const Bytes bank = loom_bank("SINE", 4096, 22050);
+    const uint32_t dirty0 = dev.flash_dirty();
+    check(loom_upload(k, bank, why), "a user sample uploaded (BEGIN, " + std::to_string((bank.size() - 2048 + 255) / 256) +
+                                         " WRITEs, 5 header parts, END: the data's CRC checked) " + why);
+    check(loom_bank_info(k, count, first) && count == 1 && first == "SINE 22050 Hz 4096",
+          "SMP_INFO after it: " + std::to_string(count) + " sample, \"" + first + "\"; the NOR image written (" +
+              std::to_string(dev.flash_dirty() - dirty0) + " writes)");
+
+    Bytes a0, a, b, c;
+    uint32_t frames = 0;
+    bool ok = x0x_backup(k, a0, why, &frames, kLoomMagic) && loom_parse(a0, why, &sz);
+    check(ok, "backup (0x42 \"LM8B\") of a fresh unit: " + std::to_string(a0.size()) + " bytes in " +
+                  std::to_string(frames) + " frames, 22 records, each its CRC-32 (" + sz + " ) " + why);
+    x0x_turn(dev, k, 2);              // G3: T1's step 2, saved into slot 1 (flash_sync: the autosave's write)
+    sz.clear();
+    ok = x0x_backup(k, a, why, &frames, kLoomMagic) && loom_parse(a, why, &sz);
+    check(ok && a != a0, "backup after a step written on the panel (saved): " + std::to_string(a.size()) +
+                             " bytes in " + std::to_string(frames) + " frames (" + sz + " ) " + why);
+    x0x_turn(dev, k, 4);              // A3: step 3
+    ok = x0x_backup(k, b, why, nullptr, kLoomMagic) && loom_parse(b, why);
+    check(ok && b != a, "another step: the backup differs " + why);
+
+    const uint32_t dirty1 = dev.flash_dirty();
+    int rc = x0x_restore(k, a, why, EMU_B_HOME);
+    check(rc == 11, "restore answered HOME on the FM-1: code " + std::to_string(rc) + " (11, RS_E_NO) " + why);
+    ok = x0x_backup(k, c, why, nullptr, kLoomMagic);
+    check(ok && c == b, "  nothing changed " + why);
+    rc = x0x_restore(k, a, why, EMU_B_SEL);
+    check(rc == 0, "restore of the earlier backup (0x41, SEL on the FM-1): code " + std::to_string(rc) + " " + why);
+    check(dev.flash_dirty() != dirty1, "  the NOR image written (flash_dirty " + std::to_string(dirty1) + " -> " +
+                                           std::to_string(dev.flash_dirty()) + ")");
+    ok = x0x_backup(k, c, why, nullptr, kLoomMagic);
+    check(ok && c == a, "backup after the restore: the restored project " + why);
+
+    const bool alive = update_keys(k, s, p);
+    if (alive) {
+        std::string idd;
+        check(mupg_identity_exact(k, idd) && idd == p.mupg, "  the installer and the backup page still find it");
+    }
+    dev.flash_sync();
+    const Bytes image(dev.flash(), dev.flash() + dev.flash_size());
+    std::unique_ptr<LoadedCore> lc2 = load(module);
+    Device dev2(lc2->core());
+    dev2.boot_from(image.data(), (uint32_t)image.size());
+    Link k2(dev2);
+    k2.run_ms(3000);
+    Bytes d;
+    ok = x0x_backup(k2, d, why, nullptr, kLoomMagic);
+    check(ok && d == a, "rebooted from the flash image: the backup is the restored project " + why);
+    check(loom_bank_info(k2, count, first) && count == 1 && first == "SINE 22050 Hz 4096",
+          "rebooted from the flash image: the user sample is there (" + std::to_string(count) + ", \"" + first + "\")");
+    k.worst = std::max(k.worst, k2.worst);
+}
+
 // ---- the installers' firmwares (FiMba, FoMni, Fart Machine One, AMB-1): the hub's installer (fm1ota.js) finds the
 // unit by the M-UPGRADE identity and offers the update (refused: the update key is not taken); AMB-1's installer also
 // reads the log (F0 7D 4C 47 F7: a frame a line, "end" last: its crash report). A screen reader where the firmware has
@@ -1047,6 +1272,7 @@ const Profile kProfiles[] = {
     // plat, fm1base, dinghy
     {"x0x", "X0X ", false, "FM-1_9010100", false, nullptr, false, nullptr, x0x_run},
     {"amb", nullptr, false, "FM-1_7010300", false, nullptr, false, nullptr, installer_run("AMB-1 ", true)},
+    {"loom", "LOOM-8 0.6-BETA", false, "FM-1_10000600", false, nullptr, false, nullptr, loom_run},
     {"fomni", nullptr, false, "FM-1_8000400", false, nullptr, false, nullptr, installer_run("FoMni-1 ", false)},
     {"fimba", nullptr, false, "FM-1_8000601", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"fartmachine", nullptr, false, "FM-1_701", false, nullptr, false, nullptr, installer_run(nullptr, false)},

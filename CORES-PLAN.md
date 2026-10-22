@@ -8,8 +8,9 @@ Sky FM.
 Status: phase 0 is done (branch cores-abi5: ABI 5, core-glue/common, per-core CMake, tests/core_conformance; the
 three cores at their pinned versions pass everything). Phase 1 is done (branch cores-all: the six families merged,
 all 21 cores built and bundled, ABI 6 for the credits, the suite passing in the default, Release and public builds).
-Phase 2 is a plan. The per-firmware research is in `research/hub-2026-10-18/<id>.md`;
-this file is its summary.
+Phase 2 is a plan. 2026-10-21 (branch cores-oct21): the pins moved to each firmware's latest stable release (the
+table's versions), and a 22nd core, LOOM-8 (Charles Vestal's groovebox on fm1-base), joined the fm1base glue, gated
+(section 6). The per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
 
 ## 1. What the survey found
 
@@ -24,22 +25,23 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | GHOULBOX 2.3.2 | GPL-3.0 (+ OFL fonts) | Felucca 1.4.1 | native + wasm (felucca_web) | A |
 | JIANT FM 0.9.9 (0912abb) | GPL-3.0 (+ CMUdict BSD-2) | Felucca 1.1.5.1 + SLOOP songs | native + wasm (felucca_web) | A |
 | DUELL 0.2.20-beta | GPL-3.0 + naming terms | Felucca main | felucca_web (native via its check) | A |
-| ChoralRoot 0.25.1 | GPL-3.0 | Felucca 1.0 + Melodee ports | native emulator + wasm | B |
+| ChoralRoot 0.26.1 | GPL-3.0 | Felucca 1.0 + Melodee ports | native emulator + wasm | B |
 | PurpleMonkey 0.11 | GPL-3.0 | ChoralRoot 44453d0 + SLOOP drums | native emulator + wasm | B |
-| CoralFlower 0.2 | GPL-3.0 | ChoralRoot 0.22 | native emulator + wasm | B |
+| CoralFlower 0.4.2 | GPL-3.0 | ChoralRoot 0.22 | native emulator + wasm | B |
 | X0X 1.1.0 | GPL-3.0 | Felucca fork + Charles Vestal's `plat.h` | native (`host/x0x_host.c`) + wasm | C |
 | FoMni 0.4 | GPL-3.0 | X0X's `plat.h` | native + wasm | C |
 | FiMba-1 0.6.1 | GPL-3.0 | FoMni | native + wasm | C |
 | Fart Machine One 1.0.0 | GPL-3.0 (code) | FoMni | native + wasm | C |
 | AMB-1 1.3 | **MPL-2.0** | fm1-base (Vestal) on felucca-bsp | native + wasm | C' |
-| SLOOP 2.7.1 | GPL-3.0 + Hügelton icons (§7) | early Felucca | native tests (`hostsim`, `ui_pages_test`) | D |
-| sloopDX 4.0 (eeec0a6) | GPL-3.0 | SLOOP 2.7 | native tests | D |
+| LOOM-8 0.6-beta (added 2026-10-21) | GPL-3.0-only (fm1-base MPL-2.0) | fm1-base 71128a3 on felucca-bsp | native (`app/host.c`) + wasm | C' |
+| SLOOP 2.8 | GPL-3.0 + Hügelton icons (§7) | early Felucca | native tests (`hostsim`, `ui_pages_test`) | D |
+| sloopDX 4.0 (tag v4.0) | GPL-3.0 | SLOOP 2.7 | native tests | D |
 | ORBIT 0.7.1 | GPL-3.0 + **OP-1 material** | SLOOP / Felucca | native preview + hostsim | D |
-| No Man Sky FM 0.4 (main) | GPL-3.0 (+ credit request) | SLOOP 2.7.1 | wasm only | D |
-| OberVave 1.5.1 | GPL-3.0 | Dinghy (zvenson) | native `tests/host.c` + wasm | E |
-| Frodhes 0.9.2 | GPL-3.0 | Dinghy | native + wasm | E |
-| FM-106 Beta4 | GPL-3.0 (KR-106 port: **provenance unchecked**) | Dinghy + a second core | native (needs a shim) | E |
-| Melodee 1.4.3 | GPL-3.0 (+ BSD-3 uPD933) | Felucca 1.0 + x0x 909 + Prophet / SID / CZ | native (`hostsim`, `ui_test`) | F |
+| No Man Sky FM 0.5 (main 32e7f4c) | GPL-3.0 (+ credit request) | SLOOP 2.7.1 | wasm only | D |
+| OberVave 1.5.3 | GPL-3.0 | Dinghy (zvenson) | native `tests/host.c` + wasm | E |
+| Frodhes 0.9.4 | GPL-3.0 | Dinghy | native + wasm | E |
+| FM-106 Beta5 | GPL-3.0 (KR-106 port: **provenance unchecked**) | Dinghy + a second core | native (needs a shim) | E |
+| Melodee 1.4.5 | GPL-3.0 (+ BSD-3 uPD933) | Felucca 1.0 + x0x 909 + Prophet / SID / CZ | native (`hostsim`, `ui_test`) | F |
 
 ## 2. What breaks today
 
@@ -108,7 +110,7 @@ The ABI stops including a firmware's header and owns its panel struct:
 | C | **plat** (+ fm1-base) | X0X 1.1.0, FoMni 0.4, FiMba-1 0.6.1, Fart Machine One 1.0.0, AMB-1 1.3 | small per-firmware adapters (FiMba's LED call); AMB's submodules; fm1-base's sense for later apps |
 | D | **sloop** (hand glue from `hostsim` + a main loop) | SLOOP 2.7.1, sloopDX 4.0, ORBIT 0.7.1, No Man Sky FM | user sample slots read in place from flash; no tags for two: pin commits |
 | E | **dinghy** (coroutine) | OberVave 1.5, Frodhes 0.9.2, FM-106 Beta4 | RAM stores copied into the NOR image in the device's sector format; FM-106's host shim as an overlay |
-| F | **melodee** (updated hand glue) | Melodee 1.4.3 | the LED overrun first; params map rebuilt |
+| F | **melodee** (updated hand glue) | Melodee 1.4.5 | the LED overrun first; params map rebuilt |
 
 - **New cores start without a parameter map** (`params` NULL, `knob_target` NULL: the knobs work as relative
   turns). The three existing cores keep and repair theirs.
@@ -137,12 +139,14 @@ so these need an answer first:
 | DUELL | naming terms for unofficial builds | an unmodified build at a release tag is probably fine; ask the author |
 | No Man Sky FM | credit request | credited in the About box (the descriptor's credits, ABI 6) |
 | X0X | 909 hi-hat / ride / crash samples "ER-99 via 9W9", GPL-3.0 | gated until ER-99's author confirms they are not TR-909 ROM recordings |
+| LOOM-8 | its factory 909 hi-hat (`app/samples/909_hat.wav`) is a render of 9W9's hat samples (ER-99), X0X's open question; the rest is cleared: code GPL-3.0-only on MPL-2.0 fm1-base, Braids / PSXVerb / NuSaw MIT, the four breaks by u/FCTRYBEATS with their written permission, the recorded instruments VSCO 2 CE (CC0), fonts OFL | gated with X0X (2026-10-21); un-gated by the same answer |
 | ChoralRoot, Melodee | Casio's CZ-1 preset tones and Sequential's Prophet-5 factory programs, no licence granted | un-gated (the owner's call, 2026-10-19): they ship compiled into the firmware, credited to Casio and Sequential; no raw .syx is distributed (tools/package_release.sh checks) |
 
 Gated today (left out of FM1_PUBLIC_BUILD): fm106 (Juno-106 patch data), duell (naming terms), rainbow (character
 look-alikes), fartmachine (recordings), orbit (OP-1 material, the Hugelton atlas), sloop and sloopdx (the Hugelton
-atlas), nomansky (game art), x0x (the cymbal samples). A public build bundles the other twelve: choralroot (the
-default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee, fomni, fimba, amb, obervave, frodhes.
+atlas), nomansky (game art), x0x (the cymbal samples), loom (the same 9W9 hi-hat). A public build bundles the
+other twelve: choralroot (the default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee, fomni, fimba,
+amb, obervave, frodhes.
 
 ## 7. Rules
 

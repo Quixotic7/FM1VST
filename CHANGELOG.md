@@ -3,6 +3,45 @@
 FM1VST's releases. The version is `project(FM1VST VERSION ..)` in CMakeLists.txt (the plugin shows it in its
 settings sheet); a release is the tag `v<version>` on it (.github/workflows/release.yml builds and publishes it).
 
+## Unreleased
+
+### LOOM-8, a new core
+
+`loom`: Charles Vestal's [LOOM-8](https://github.com/charlesvestal/fm1-loom) (GPL-3.0-only, on fm1-base and
+felucca-bsp, MPL-2.0), a pocket groovebox: eight tracks on nine engines, a 64-step sequencer with locks, weave, scenes
+and a song, and a user sample bank loaded over USB. Pinned at **v0.6-beta** (2026-10-21), a beta on purpose: every
+LOOM-8 release so far is a "-beta" tag, and this is the newest (the other pins stay on stable releases).
+
+- Built like AMB-1 on the fm1base glue, unmodified; its second core's jobs run in order on the host's thread, as in
+  LOOM-8's own simulator and browser emulator (the same split render, the same sums).
+- The managers answer: the samples page and `tools/loom_samples.py` (the user sample bank), fm1-base's backup page
+  (backup and restore of the projects and user presets, SEL on the panel to confirm), the installer's identity
+  (FM-1_10000600) and its log readout, a screen reader. "Show to editors" names the port "LOOM-8 FM-1 (FM1VST)" and
+  links the samples page.
+- **Gated** (personal builds only): its factory 909 hi-hat is rendered from 9W9's hat samples, whose provenance gates
+  X0X too (CORES-PLAN.md 6).
+
+### Firmware updates
+
+Each pin moved to its firmware's latest stable release:
+
+| core | was | now | glue |
+|---|---|---|---|
+| ChoralRoot | 0.25.1 | 0.26.1 | version only |
+| CoralFlower | 0.2 | 0.4.2 | flash_sync writes 0.4's settings log, its sequencer store and the parts' sound edits; the generate list (no melodee_cz1.h); the golden reference built at CR_VERSION 0.4.2 |
+| Melodee | 1.4.4 | 1.4.5 | version only; its USB port is now "Melodee FM-1", and so is the editor port's name |
+| SLOOP | 2.7.1 | 2.8 | version only (gated) |
+| sloopDX | 4.0 (eeec0a6) | 4.0 (tag v4.0) | none: the tag adds CI and installer changes only (gated) |
+| No Man Sky FM | 0.4 | 0.5 (32e7f4c, no tag: its README's current version) | two more generated headers; projects in format 7 (gated) |
+| OberVave | 1.5.1 | 1.5.3 | version only |
+| Frodhes | 0.9.2 | 0.9.4 | version only; the Inter Tight font's OFL in its credits |
+| FM-106 | Beta4 | Beta5 | version only (gated); Beta5 still refuses the commit to flash (the user bank does not fit its 8 KiB), as sysex_test records |
+
+Unchanged, already at their latest stable release: Felucca 1.6.1, GHOULBOX 2.3.2, PurpleMonkey 0.11, X0X 1.1.0,
+FoMni-1 0.4, FiMba-1 0.6.1, AMB-1 1.3, Fart Machine One 1.0.0, ORBIT 0.7.1, DUELL 0.2.20-beta, Rainbow Mode 1.1.5-rb
+(upstream changed only its landing page), JIANT FM 0.9.9 (upstream's installer still calls 0.9.9 stable; its newer
+builds are beta previews).
+
 ## 0.5.1 (2026-10-19): copy the screen
 
 ### Copy the screen

@@ -42,9 +42,9 @@ The bundled cores, each built from its firmware's own, unmodified source (a pinn
 
 | core | what | source (submodule, pin) | licence |
 |---|---|---|---|
-| `choralroot` | ChoralRoot FM-1: a chord instrument (strum, arp, pattern, harp, a bass part, a looper), forked from Felucca; its own emulator (`tools/emu`) is the core | `cores/ChoralRootFM1`, <https://github.com/Quixotic7/ChoralRootFM1> at `44453d0524e4aae93ed4c13adfc78b0a75bec55a` | GPL-3.0-only, Quixotic7 (on Felucca and Melodee: their lines below) |
+| `choralroot` | ChoralRoot FM-1: a chord instrument (strum, arp, pattern, harp, a bass part, a looper), forked from Felucca; its own emulator (`tools/emu`) is the core | `cores/ChoralRootFM1`, <https://github.com/Quixotic7/ChoralRootFM1> at `7d97982a7db3dad2da456a3e4d4478548b6571d9` (tag `v0.26.1`) | GPL-3.0-only, Quixotic7 (on Felucca and Melodee: their lines below) |
 | `felucca` | Felucca 1.0.1: the multi-engine synth (13 engines: ANALOG, PHASE, LOFI, SAMPLE, VOICE, TRIO, WHEEL, GRAIN, PHYS, DRUM, NOISE, FM6, SLICE; the CC0 samples), four parts, a 64-step sequencer, the song chain | `cores/Felucca`, <https://github.com/hugelton/Felucca> at `20c275e39f75fa820978032efaceddfc5283c8cb` (tag `v1.0.1`) | GPL-3.0-only, Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments |
-| `melodee` | Melodee 0.11.1: Felucca's fork with the FM6 (Dexed's synthesis) and CZ-1 engines, pattern banks and USB audio (the sample engines removed) | `cores/melodee`, <https://github.com/keremimo/melodee> at `9c271e26872fb293cd05cbf7520cbc74f098af82` (tag `v0.11.1`) | GPL-3.0-only, Felucca's copyright plus modifications Copyright (C) 2026 Kerem Kilic (Ellic Studio) |
+| `melodee` | Melodee 1.4.5: Felucca's fork with the FM6 (Dexed's synthesis) and CZ-1 engines, pattern banks and USB audio (the sample engines removed) | `cores/melodee`, <https://github.com/keremimo/melodee> at `398ada1e09d864c12f3b778a43e45c7c2a8031b8` (tag `v1.4.5`) | GPL-3.0-only, Felucca's copyright plus modifications Copyright (C) 2026 Kerem Kilic (Ellic Studio) |
 
 Felucca and Melodee have no emulator, only their host tests (`tests/hostsim.c`, the DSP; `tests/ui_test.c`, the UI
 against HAL stubs). Their cores are this repo's equivalent of ChoralRoot's emulator unit, written against the

@@ -157,11 +157,11 @@ static int runFake()
     struct {
         const char *id, *usb;
     } table[] = {{"choralroot", "ChoralRoot FM-1"}, {"purplemonkey", "ChoralRoot FM-1"}, {"felucca", "Felucca"},
-                 {"sloop", "Felucca"},              {"melodee", "Melodee"},              {"jiant", "JIANT FM"},
+                 {"sloop", "Felucca"},              {"melodee", "Melodee FM-1"},              {"jiant", "JIANT FM"},
                  {"duell", "DUELL"},                {"x0x", "X0X FM-1"},                 {"fm106", "FM-106"},
                  {"coralflower", "CoralFlower FM-1"}, {"fart", "FoMni FM-1"},           {"amb", "AMB-1 FM-1"},
                  {"fimba", "FiMba FM-1"},           {"fomni", "FoMni FM-1"},             {"obervave", "Felucca"},
-                 {"unknown-fw", "FM-1"}};
+                 {"loom", "LOOM-8 FM-1"},           {"unknown-fw", "FM-1"}};
     bool all = true;
     for (auto &t : table)
         all = all && EditorPort::usbProductName(t.id) == t.usb;

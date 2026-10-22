@@ -41,3 +41,34 @@ static int ota_wire_send(const uint8_t *p, uint32_t n)
     return -1;
 }
 #endif
+
+/* ---- what a newer fm1-base (LOOM-8's, 71128a3) reaches beyond the HAL above; unused by AMB-1's (15dff6d) ---- */
+/* felucca-bsp's steady mid level (fm1_input.h fm1_led_mid: lit one scan frame in FM1_LED_MID_N; plat_lights_mid):
+ * a third plane, between lit and the glow (plat_glue.h FM1CORE_PL_MID_PLANE) */
+static uint8_t fm1_led_mid[FM1P_NCOL];
+/* usb.c's out ring: its room (0: no host; a host is always there) and the connection's number (one, never again) */
+static uint32_t midi_out_room(void) { return MQ - (fm1core_pl_mo_w - fm1core_pl_mo_r); }
+static uint32_t midi_out_link(void) { return 1u; }
+/* the data area's two more windows (felucca-bsp fm1_flash.h; plat.h checks them against its own) */
+#define FL_XDATA0_LO 0x00093000u
+#define FL_XDATA0_HI 0x00097000u
+#define FL_XDATA1_LO 0x000E7000u
+#define FL_XDATA1_HI 0x000FC000u
+#define FL_AUTO_LO 0x000E5000u
+#define FL_AUTO_HI 0x000E7000u
+/* plat_data_erase / plat_data_write (a user sample bank): felucca-bsp's RAM driver on the NOR image (an erase stalls
+ * the audio there, as audio_silence does on the device) */
+static void audio_silence(void) {}
+static int fl_erase4k(uint32_t off, uint32_t *took)
+{
+    *took = 0;
+    return fm1nor_erase(off);
+}
+static int fl_write(uint32_t off, const void *p, uint32_t n) { return fm1nor_prog_span(off, p, n); }
+/* the screen mirror (FM1B_MIRROR, device/mirror.c) is not built: unity.c's stand-ins for it */
+static uint32_t mirror_in_buttons(void) { return 0; }
+static uint32_t mirror_in_keys(void) { return 0; }
+static int32_t mirror_in_enc(int role) { (void)role; return 0; }
+static uint32_t mirror_in_master(uint32_t pot) { return pot; }
+static void mirror_enc(int role, int32_t n) { (void)role, (void)n; }
+static void mirror_leds(uint32_t buttons, uint32_t keys) { (void)buttons, (void)keys; }
