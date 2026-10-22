@@ -73,3 +73,6 @@
 [submodule "cores/fm1-loom"]
 	path = cores/fm1-loom
 	url = https://github.com/charlesvestal/fm1-loom
+[submodule "cores/Speak37"]
+	path = cores/Speak37
+	url = https://github.com/genkigenki/Speak37.git

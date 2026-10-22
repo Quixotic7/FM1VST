@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# FM1VST's release: the public build (FM1_PUBLIC_BUILD=ON: the 13 un-gated cores and the fm1emu engine, a Rust module
+# FM1VST's release: the public build (FM1_PUBLIC_BUILD=ON: the 14 un-gated cores and the fm1emu engine, a Rust module
 # built with cargo, ChoralRoot the default) for Apple
 # silicon, tested, checked, zipped and packaged as an installer (.pkg) by the same scripts a local run uses
 # (tools/release_tests.sh, tools/package_release.sh).

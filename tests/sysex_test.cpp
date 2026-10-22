@@ -1279,6 +1279,9 @@ const Profile kProfiles[] = {
     {"fm106", nullptr, false, "FM-1_907", false, nullptr, false, nullptr, fm106_run},
     {"obervave", nullptr, false, "FM-1_955", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"frodhes", nullptr, false, "FM-1_958", false, nullptr, false, nullptr, installer_run(nullptr, false)},
+    // Speak37 (its own glue): no editor and no backup (speak.c builds neither), the installers' M-UPGRADE identity
+    // only, the v1.0 release package's (build.py --release 1.0: FM-1_5XY)
+    {"speak37", nullptr, false, "FM-1_510", false, nullptr},
 };
 
 const Profile *profile_of(const std::string &id)

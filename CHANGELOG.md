@@ -22,6 +22,24 @@ LOOM-8 release so far is a "-beta" tag, and this is the newest (the other pins s
   call ("ship the original, it is from the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal
   made"); the About page's credits name that origin. X0X stays gated (CORES-PLAN.md 6).
 
+### Speak37, a new core
+
+`speak37`: [Speak37](https://github.com/genkigenki/Speak37) by M. Geisler (GPL-3.0-only, on the Felucca platform),
+the talking synth: every key speaks the next word of a sentence at its pitch, chords speak in harmony, nine voices
+(CLASSIC .. CHOIR), 20 banks of sentences and songs plus a USER bank of 16, RHYTHM with an 808 and 16 grooves, and MOPE,
+"a gloomy robot who judges your chords". Pinned at **v1.0** (a617d60), its FM-1 build (`speak37-fm1-1.0.fwsc`:
+build.py BOARD=fm1speak); the SMK-37 build is a different panel, out of scope.
+
+- Its own glue, core-glue/speak37: the device's sources unmodified, the FM-1 HAL on the host, the device's power-on and
+  main loop on the plugin's clock, the device's own audio interrupt (sp_main.c).
+- Saves as the unit does: the sound in use, MASTER, the sentence (the autosave; a host's save writes it at once,
+  unless a voice still speaks), the 16 memories (SAVE held), the USER sentences.
+- The installer's identity answers (FM-1_510, the v1.0 package's); Speak37 has no editor. "Show to editors" names the
+  port "Speak37 (FM1VST)" and links its installer page.
+- **In the public release**: the TMS5220's coding tables and the Speak & Spell chirp are chip constants as MAME
+  tabulates them (BSD-3-Clause), the words are espeak-ng renders (no TI vocabulary); the About page carries MAME's and
+  FM1 Open's (the 808, MIT) notices.
+
 ### Firmware updates
 
 Each pin moved to its firmware's latest stable release:

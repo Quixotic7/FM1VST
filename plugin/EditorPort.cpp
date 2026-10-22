@@ -257,6 +257,8 @@ juce::String EditorPort::usbProductName(const juce::String &idIn)
         {"zp12", "Felucca"},
         // fm1-base apps: their fm1.toml usb_product
         {"loom", "LOOM-8 FM-1"},
+        // Speak37's FM-1 build (usb.c SPEAK_BUILD: "Speak37"; "Speak37 Update" is its loader)
+        {"speak37", "Speak37"},
     };
     for (const auto &e : kTable)
         if (id == e[0])
@@ -279,6 +281,7 @@ juce::String EditorPort::managerUrl(const juce::String &idIn, const juce::String
         {"choralroot", "https://quixotic7.github.io/ChoralRootFM1/"},
         {"fm106", "https://patttf.github.io/fm-106/Librarian.html"},
         {"loom", "https://charlesvestal.github.io/fm1-loom/samples/"},
+        {"speak37", "https://genkigenki.github.io/smk37/"},   // (no editor: its installer, the M-UPGRADE identity)
     };
     for (const auto &e : kTable)
         if (id == e[0])

@@ -409,7 +409,7 @@ Felucca-based cores, and each of them needs its submodule. Empty, the default, b
 `-DFM1_ONLY_CORES=""`. A core left out has no tests (its `core_smoke`, `core_conformance`, ..), and `hub_test` and
 `fm1emu_test` are not registered without `fm1emu`.
 
-**A release build** is the public build (`-DFM1_PUBLIC_BUILD=ON`: the 13 un-gated cores, CORES-PLAN.md 6) for Apple
+**A release build** is the public build (`-DFM1_PUBLIC_BUILD=ON`: the 14 un-gated cores, CORES-PLAN.md 6) for Apple
 silicon, made by `.github/workflows/release.yml` when a tag `v<version>` is pushed (the version is `project()`'s
 here; CHANGELOG.md has the notes) and by hand the same way:
 
