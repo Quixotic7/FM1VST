@@ -341,6 +341,9 @@ public:
     // arrives before the next UI frame, GLO up one frame later (all on the device clock)
     void panelFineTurn(int role, int detents);
     void panelReleaseAll();                          // every panel key and button up
+    // every power-on (boot, preset load, state restore, flash reset, core switch, a reboot) lets go of what the panel
+    // held (no button held into a boot) and moves this count: the panel then drops its latches
+    uint32_t panelPowerOns() const { return panelPowerOns_.load(); }
     // the latest snapshot: copies it into out when out.seq differs (the LCD only when out.lcdSeq differs);
     // false when nothing changed
     bool getPanelView(PanelView &out) const;
@@ -620,6 +623,7 @@ private:
 
     // the panel GUI's input (written by the message thread, taken by the audio thread at block start)
     std::atomic<uint32_t> panelKeys_{0}, panelButtons_{0}, panelKeyTaps_{0}, panelBtnTaps_{0};
+    std::atomic<uint32_t> panelPowerOns_{0};
     std::array<std::atomic<int32_t>, EMU_NE> panelEnc_{};
     std::atomic<int32_t> fineReq_{0};
     std::atomic<int> fineRole_{EMU_E_SELECT};

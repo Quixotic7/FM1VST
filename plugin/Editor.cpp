@@ -184,6 +184,10 @@ FM1Editor::FM1Editor(FM1Processor &p)
     };
     screen_.onContextMenu = [this] { openSettings(); };
     panel_.onScreenMenu = [this](const juce::MouseEvent &e) { showScreenMenu(e); };
+    panel_.onShiftHint = [this] {                // (once per user: settings.json remembers it)
+        if (!sheet_.isOpen() && !store_.flag("shiftLatchHint") && store_.setFlag("shiftLatchHint", true))
+            showToast("Shift-click to hold");
+    };
     screen_.onScreenMenu = [this](const juce::MouseEvent &e) { showScreenMenu(e); };
     addChildComponent(toast_);
     corner_.onClick = [this] { openSettings(); };

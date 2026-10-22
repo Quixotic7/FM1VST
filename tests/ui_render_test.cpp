@@ -9,7 +9,8 @@
 //       smallest to the largest (and with the big LCD), and stays inside the window;
 //   (s) the screen view at two sizes, with and without the button: square, its LCD equals the device's framebuffer at a
 //       whole multiple, the computer keys still play the panel;
-//   (m) the mouse: a right-click off the controls opens the sheet; on a key it still latches the key (no sheet);
+//   (m) the mouse: a right-click off the controls opens the sheet; on a key it still latches the key (no sheet); Shift
+//       over the panel the first time: the toast "Shift-click to hold", once (settings.json remembers it);
 //   (p) the state: the view mode and both sizes round-trip; a state from before them (no viewMode / screenSize, the
 //       old bar's height in editorH) opens the device view at the panel's aspect;
 //   (a) the accent of every theme preset reads on the sheet (3:1);
@@ -195,6 +196,14 @@ int main()
             check(ed.sheet().isOpen() && (p.deviceForTest()->panel()->keys & 1u) == 0,
                   "a right-click on the body (off the controls) opens the sheet");
             ed.sheet().close(false);
+            // (Shift went down over the panel: the panel's callback, as modifierKeysChanged calls it)
+            const bool before = ed.themeStore().flag("shiftLatchHint");
+            panel.onShiftHint();
+            const bool shown = ed.toast().text() == "Shift-click to hold" && ed.themeStore().flag("shiftLatchHint");
+            ed.showToast("Screen live");
+            panel.onShiftHint();
+            check(!before && shown && ed.toast().text() == "Screen live",
+                  "Shift over the panel the first time: the toast \"Shift-click to hold\", remembered; not again");
         }
 
         // ---- (k) copy the screen: the LCD's menu (drawn inside the editor), Option + right-click, the sheet's row
