@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The editor (see Editor.h).
 #include "Editor.h"
+#include "Dnsnd.h"
 
 #include "ScreenCapture.h"
 #include "StandaloneHooks.h"
@@ -433,7 +434,7 @@ void FM1Editor::timerCallback()
             const int bad = s.failed - importBase_.failed + importErrors_;
             juce::String t = juce::String(ok) + (ok == 1 ? " sound" : " sounds") + " imported into FIZZ";
             if (full)
-                t += ", " + juce::String(full) + " not: the library is full";
+                t += ", " + juce::String(full) + " not: the " + (fm1dnsnd::kImportIntoPool ? "pool" : "library") + " is full";
             if (bad)
                 t += ", " + juce::String(bad) + " failed";
             showToast(t);

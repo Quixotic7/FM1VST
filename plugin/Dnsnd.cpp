@@ -389,7 +389,7 @@ std::vector<uint8_t> storeFrame(const Sound &s, bool batch)
 {
     std::vector<uint8_t> f = {0xF0, 0x7D, 0x46, 0x5A, 0x01, 0x10};
     const size_t from = 5;
-    f.push_back(batch ? 0x02 : 0x00);            // flags: the LIBRARY (BATCH after the first)
+    f.push_back((uint8_t)((kImportIntoPool ? 0x01 : 0x00) | (batch ? 0x02 : 0x00)));   // flags: POOL / LIBRARY, BATCH
     f.push_back(0), f.push_back(0);              // slot 0: the first free
     for (int i = 0; i < 12; i++) {
         const juce::juce_wchar c = i < s.name.length() ? s.name[i] : ' ';

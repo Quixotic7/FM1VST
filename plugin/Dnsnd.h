@@ -21,6 +21,9 @@
 namespace fm1dnsnd {
 
 constexpr int kNp = 73, kBlob = 96;
+// where an imported sound goes in FIZZ: its LIBRARY (false) or the project's POOL (true), the first free slot either
+// way. One place to change (FIZZ's presets and sounds are being redesigned; FMToneSeq docs/SYSEX.md has both)
+constexpr bool kImportIntoPool = false;
 
 struct Sound {
     juce::String name;                          // soundFromDnsnd's: printable, trimmed, 12 letters ("DIGITONE": none)
@@ -36,7 +39,8 @@ struct Sound {
 bool parse(const void *data, size_t n, Sound &out, juce::String &err);
 bool read(const juce::File &f, Sound &out, juce::String &err);
 
-// FIZZ's STORE SOUND frame (F0 .. F7): the LIBRARY, slot 0 (the first free); batch: joins the previous one's undo
+// FIZZ's STORE SOUND frame (F0 .. F7): kImportIntoPool's place, slot 0 (the first free); batch: joins the previous
+// one's undo
 std::vector<uint8_t> storeFrame(const Sound &s, bool batch);
 
 }   // namespace fm1dnsnd
