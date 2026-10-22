@@ -46,6 +46,7 @@ All four are in the public release, each pinned at its latest stable release (re
   are AI-generated (the YuE2 model). FMini-1's few artist-named patch titles are names only.
 - **DUELL is public** (the owner's call): the core is the unmodified v0.2.20-beta, named "DUELL (unofficial build)"
   with its commit, which satisfies its NOTICE.md naming terms; its credits say so and carry NOTICE.md.
+
 ### PIGEON, a new core
 
 `pigeon`: The Shrimp Blimp's [PIGEON](https://github.com/TheShrimpBlimp/pigeon) (GPL-3.0-only, on Felucca 1.5.1), a
@@ -64,6 +65,25 @@ performance sampler after the SP-404 and the PO-33: two chopped songs (MP3 or IM
   identity (FM-1_900).
 - **In the public release** (15 cores with the fm1emu engine). Its credits name the splash logo's artist
   (Dendy0097), libmad and the ported DSP's notices.
+
+### Tonitor, a new core
+
+`tonitor`: Nuno Zimas's [Tonitor](https://github.com/nzimas/tonitor) (GPL-3.0-only, on Felucca and SLOOP), firmware
+for acousmatic and live-ambient music, built for low vision: six tracks of generated "sound objects" on seven engines
+(FM, ANIMA, CALIGULA, RUSSOLO, DRUID, BAYAREA, HIVE), free loops with overdubs, a granulator, a reverb, a delay, a
+modulation matrix per track, sessions and presets. **Pinned at c39d18f (0.53):** Tonitor has no tags or releases and
+publishes several times a day; the pin is the commit holding the Firmware Hub's current package (its "2026.10.21",
+firmware 0.53). Expect frequent bumps.
+
+- Its own glue (`core-glue/tonitor`): the device's unity build with a host HAL in place of the hardware headers, and
+  `main.c`'s power-on and main loop re-done on the plugin's clock. The loop runs on a coroutine: where the device
+  waits for its interrupts (a new sound waiting for the audio to take it, a reply waiting for room) it yields, and
+  the audio, MIDI and time move on as on the device. The second core's jobs run inline, where the device waits for
+  them (the same sound as Tonitor's own two-core / one-core check).
+- The managers answer: the installer's identity (FM-1_700) and the backup page's sessions and presets (LIST, READ,
+  WRITE, refused when damaged). "Show to editors" names the port "FM-1 Tonitor (FM1VST)" and links the backup page.
+  The update keys are ignored, as on every core.
+- **In the public release.**
 
 ### Firmware updates
 

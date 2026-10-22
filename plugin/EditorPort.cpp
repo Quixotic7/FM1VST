@@ -258,6 +258,8 @@ juce::String EditorPort::usbProductName(const juce::String &idIn)
         {"fmini", "FM-1 Midi"},            // (FMini-1's usb.c STR2: the MIDI / audio device's name)
         // fm1-base apps: their fm1.toml usb_product
         {"loom", "LOOM-8 FM-1"},
+        // Tonitor's usb.c STR2 (Felucca's, renamed)
+        {"tonitor", "FM-1 Tonitor"},
     };
     for (const auto &e : kTable)
         if (id == e[0])
@@ -284,6 +286,7 @@ juce::String EditorPort::managerUrl(const juce::String &idIn, const juce::String
         {"skiff", "https://illuminus5.github.io/skiff/webapp/editor/"},
         {"grimm", "https://grimmbient.github.io/grimm/editor.html"},
         {"pigeon", "https://theshrimpblimp.com/pigeon/webapp/pigeon/"},   // (its sample loader: the bank, web/pigeon)
+        {"tonitor", "https://nzimas.github.io/tonitor/backup.html"},   // (no editor: the sessions' backup page)
     };
     for (const auto &e : kTable)
         if (id == e[0])

@@ -88,3 +88,6 @@
 [submodule "cores/pigeon"]
 	path = cores/pigeon
 	url = https://github.com/TheShrimpBlimp/pigeon
+[submodule "cores/tonitor"]
+	path = cores/tonitor
+	url = https://github.com/nzimas/tonitor.git

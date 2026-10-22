@@ -1,0 +1,9 @@
+# the golden check's input (core.cmake): track 1 after the splash, then the REVERB page (SEQ: DELAY, again: REVERB) with KNOB 2 (DECAY) turned 3 detents, as host.c screen-12; a btn of 100 ms moves the script on by 100 ms (the knob at 2300)
+wait 1500
+btn SEQ 100
+wait 300
+btn SEQ 100
+wait 300
+knob KNOB2 +3
+wait 200
+quit
