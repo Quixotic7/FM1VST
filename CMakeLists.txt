@@ -183,7 +183,7 @@ juce_add_plugin(FM1VST
 target_sources(FM1VST PRIVATE plugin/Processor.cpp plugin/Tier2Parameter.cpp plugin/HostRefresh.cpp plugin/Editor.cpp plugin/Theme.cpp
                               plugin/PanelComponent.cpp plugin/RemoteLink.cpp plugin/Look.cpp plugin/Widgets.cpp plugin/Sheet.cpp
                               plugin/StandaloneHooks.cpp plugin/Hub.cpp plugin/EmuClock.cpp plugin/EditorPort.cpp
-                              plugin/ScreenCapture.cpp)
+                              plugin/ScreenCapture.cpp plugin/Dnsnd.cpp)
 # copy the screen (plugin/ScreenCapture.h): the image clipboard is NSPasteboard's (JUCE's is text only)
 if(APPLE)
     target_sources(FM1VST PRIVATE plugin/Clipboard.mm)
@@ -427,6 +427,27 @@ target_compile_definitions(plugin_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_
 add_dependencies(plugin_test ${FM1_CORE_TARGETS} ${FM1_EXTRA_CORE_TARGETS} FM1VST_VST3 FM1VST_AU)
 add_test(NAME plugin_test COMMAND plugin_test)
 set_tests_properties(plugin_test PROPERTIES SKIP_RETURN_CODE 77)   # (a public build: the cores it needs left out)
+
+# FIZZ P1.5s: the .dnsnd reader (plugin/Dnsnd.h) against ChoralRoot's JS on the owner's presets (read where they are,
+# never copied: registered only where the folder, ChoralRoot's web reader and node are), and the import through the
+# processor on the FIZZ core
+add_executable(dnsnd_test tests/dnsnd_test.cpp)
+target_link_libraries(dnsnd_test PRIVATE FM1VST fm1engine)
+target_include_directories(dnsnd_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
+target_compile_definitions(dnsnd_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS>
+    FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/dnsnd_test_home")
+set(FM1_DNSND_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../DigitonePresets" CACHE PATH "a folder of .dnsnd (dnsnd_test)")
+set(FM1_CHORALROOT_WEB "${CMAKE_CURRENT_SOURCE_DIR}/../../../../ChoralRootFM1/web" CACHE PATH "ChoralRoot's web/ (dnsnd_test)")
+find_program(FM1_NODE node)
+if(EXISTS "${FM1_DNSND_DIR}" AND EXISTS "${FM1_CHORALROOT_WEB}/fm1dnsnd.js" AND FM1_NODE)
+    add_test(NAME dnsnd_compare COMMAND ${FM1_NODE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/dnsnd_compare.mjs "${FM1_CHORALROOT_WEB}"
+             "${FM1_DNSND_DIR}" $<TARGET_FILE:dnsnd_test>)
+    if(TARGET fizz_core)
+        add_test(NAME dnsnd_import_fizz COMMAND dnsnd_test --import "${FM1_DNSND_DIR}")
+    endif()
+else()
+    message(STATUS "dnsnd_test: no presets / ChoralRoot web / node: not registered")
+endif()
 
 # the Tier 2 parameters on the plugin's processor (headless, as plugin_test)
 add_executable(tier2_test tests/tier2_test.cpp)

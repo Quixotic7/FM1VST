@@ -24,6 +24,11 @@
 // sheet's scale (its VIEW section's "Screen" row: Copy and the scale), where the host passes the key on (the Standalone
 // does; a plugin host may keep it). A toast over the LCD says what was copied.
 //
+// DIGITONE SOUNDS INTO FIZZ (FIZZ P1.5s): with the FIZZ firmware loaded, .dnsnd files dropped anywhere on the window
+// (one or many), or chosen with the screen menu's "Import Digitone sounds...", go into FIZZ's LIBRARY
+// (FM1Processor::importSounds); the unit shows each one ("imported"), and a toast says how many went in (and how many
+// did not: the library full, a file that is not a Digitone sound). Other firmwares: no drop, no menu item.
+//
 // The Standalone app: its window loses JUCE's "Options" bar (the native title bar instead); its audio / MIDI settings
 // and state files are in the sheet.
 #pragma once
@@ -90,7 +95,7 @@ private:
     float alpha_ = 0;
 };
 
-class FM1Editor : public juce::AudioProcessorEditor, private juce::Timer {
+class FM1Editor : public juce::AudioProcessorEditor, public juce::FileDragAndDropTarget, private juce::Timer {
 public:
     explicit FM1Editor(FM1Processor &p);
     ~FM1Editor() override;
@@ -126,7 +131,7 @@ public:
     bool isStandalone() const { return proc_.wrapperType == juce::AudioProcessor::wrapperType_Standalone; }
 
     // ---- copy the screen (see the top): the frame shown now; every call on the message thread
-    enum ScreenCmd { kCopy1 = 1, kCopy2, kCopy4, kSave1, kSave2, kSave4, kCopyRaw, kSaveRaw, kFreeze, kSettings };
+    enum ScreenCmd { kCopy1 = 1, kCopy2, kCopy4, kSave1, kSave2, kSave4, kCopyRaw, kSaveRaw, kFreeze, kSettings, kImport };
     juce::PopupMenu screenMenu();                 // the menu (its items' ids: ScreenCmd)
     void showScreenMenu(const juce::MouseEvent &e);
     void screenCommand(int cmd);
@@ -142,6 +147,12 @@ public:
     Toast &toast() { return toast_; }
     void showToast(const juce::String &text);
     bool keyPressed(const juce::KeyPress &k) override;
+
+    // ---- FIZZ P1.5s: Digitone sounds (see the top)
+    bool isInterestedInFileDrag(const juce::StringArray &files) override;
+    void filesDropped(const juce::StringArray &files, int x, int y) override;
+    void importSounds(const juce::Array<juce::File> &files);
+    void chooseSoundsToImport();
 
     // ---- the corner button
     CornerButton &cornerButton() { return corner_; }
@@ -189,6 +200,9 @@ private:
     Toast toast_;
     std::unique_ptr<juce::FileChooser> chooser_;
     int copyScale_ = 1;
+    bool importWatch_ = false;                    // (FIZZ P1.5s) a drop's replies awaited: the toast when done ..
+    FM1Processor::ImportStatus importBase_;       // .. the counts before it
+    int importErrors_ = 0;
     Constrainer constrainer_;
     Watcher watcher_{*this};
     Ticker chrome_;

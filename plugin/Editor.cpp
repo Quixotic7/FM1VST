@@ -425,6 +425,20 @@ void FM1Editor::refreshChrome()
 void FM1Editor::timerCallback()
 {
     refreshChrome();
+    if (importWatch_) {                           // (FIZZ P1.5s: a drop's sounds all answered: how it went)
+        const FM1Processor::ImportStatus s = proc_.importStatus();
+        if (s.pending == 0) {
+            importWatch_ = false;
+            const int ok = s.ok - importBase_.ok, full = s.full - importBase_.full;
+            const int bad = s.failed - importBase_.failed + importErrors_;
+            juce::String t = juce::String(ok) + (ok == 1 ? " sound" : " sounds") + " imported into FIZZ";
+            if (full)
+                t += ", " + juce::String(full) + " not: the library is full";
+            if (bad)
+                t += ", " + juce::String(bad) + " failed";
+            showToast(t);
+        }
+    }
     if (juce::String(proc_.getCoreInfo().info.id) != lastCore_)   // (a core switch: its button labels)
         coreChanged();
     if (proc_.themeSerial() != themeSerial_) {   // (a state restore set another theme)
@@ -476,6 +490,10 @@ juce::PopupMenu FM1Editor::screenMenu()
     m.addSubMenu("Advanced", adv);
     m.addSeparator();
     m.addItem(kFreeze, "Freeze screen", true, panel_.frozen());
+    if (proc_.canImportSounds()) {                // (FIZZ P1.5s)
+        m.addSeparator();
+        m.addItem(kImport, "Import Digitone sounds" + ellipsis);
+    }
     m.addSeparator();
     m.addItem(kSettings, "Settings" + ellipsis);
     return m;
@@ -512,6 +530,7 @@ void FM1Editor::screenCommand(int cmd)
     case kSaveRaw: saveScreenRaw(); break;
     case kFreeze: setScreenFrozen(!panel_.frozen()); break;
     case kSettings: openSettings(); break;
+    case kImport: chooseSoundsToImport(); break;
     default: break;
     }
 }
@@ -586,6 +605,58 @@ void FM1Editor::saveScreenRaw()
                               const bool ok = fm1screen::saveRaw(f, frame->data());
                               if (self)
                                   self->showToast(ok ? "Saved " + f.getFileName() : "Couldn't save " + f.getFileName());
+                          });
+}
+
+// ------------------------------------------- FIZZ P1.5s: Digitone sounds ---
+bool FM1Editor::isInterestedInFileDrag(const juce::StringArray &files)
+{
+    if (!proc_.canImportSounds())
+        return false;
+    for (const juce::String &f : files)
+        if (juce::File(f).hasFileExtension("dnsnd"))
+            return true;
+    return false;
+}
+
+void FM1Editor::filesDropped(const juce::StringArray &files, int, int)
+{
+    juce::Array<juce::File> fs;
+    for (const juce::String &f : files)
+        if (juce::File(f).hasFileExtension("dnsnd"))
+            fs.add(juce::File(f));
+    importSounds(fs);
+}
+
+void FM1Editor::importSounds(const juce::Array<juce::File> &files)
+{
+    if (files.isEmpty())
+        return;
+    juce::StringArray errors;
+    if (!importWatch_) {
+        importBase_ = proc_.importStatus();
+        importErrors_ = 0;
+    }
+    const int n = proc_.importSounds(files, errors);
+    importErrors_ += errors.size();
+    if (n > 0) {
+        importWatch_ = true;
+        showToast("Importing " + juce::String(n) + (n == 1 ? " sound" : " sounds") + juce::String::fromUTF8("â¦"));
+    } else if (!errors.isEmpty()) {
+        showToast(errors.size() == 1 ? errors[0] : juce::String(errors.size()) + " files are not Digitone sounds");
+    }
+}
+
+void FM1Editor::chooseSoundsToImport()
+{
+    chooser_ = std::make_unique<juce::FileChooser>("Import Digitone sounds into FIZZ",
+                                                   juce::File::getSpecialLocation(juce::File::userHomeDirectory), "*.dnsnd");
+    juce::Component::SafePointer<FM1Editor> self(this);
+    chooser_->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles |
+                              juce::FileBrowserComponent::canSelectMultipleItems,
+                          [self](const juce::FileChooser &fc) {
+                              if (self)
+                                  self->importSounds(fc.getResults());
                           });
 }
 

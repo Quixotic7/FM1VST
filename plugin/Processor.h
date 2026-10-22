@@ -126,6 +126,7 @@
 #include <array>
 #include <atomic>
 #include <cstring>
+#include <deque>
 #include <memory>
 #include <optional>
 #include <string>
@@ -405,6 +406,19 @@ public:
     static bool isRemotePanelMidi(const uint8_t *d, int n);
     static bool isRemotePanelMidi(const juce::MidiMessage &m) { return isRemotePanelMidi(m.getRawData(), m.getRawDataSize()); }
 
+    // ---- FIZZ (P1.5s): Digitone .dnsnd sounds into FIZZ's LIBRARY, dropped on the window or chosen from the screen's
+    // menu (message thread). Each file is read (plugin/Dnsnd.h: ChoralRoot's reader, ported), queued as FIZZ's STORE
+    // SOUND SysEx (FMToneSeq docs/SYSEX.md; BATCH after the first of a drop: one undo on the unit) and sent into the
+    // core's midi_in one at a time on the clock thread, its reply read back (not passed to the host): OK, FULL or a
+    // failure counted. Only while the FIZZ core is loaded; another core: the queue dropped.
+    bool canImportSounds() const;
+    int importSounds(const juce::Array<juce::File> &files, juce::StringArray &errors);   // queued; the rest in errors
+    struct ImportStatus {
+        int ok = 0, full = 0, failed = 0, pending = 0;
+        uint32_t serial = 0;                         // moves with each reply
+    };
+    ImportStatus importStatus() const;
+
     // ---- Show to editors (message thread; stored in the state; see SHOW TO EDITORS above)
     void setEditorPortEnabled(bool on);
     bool getEditorPortEnabled() const { return editorOn_.load(); }
@@ -499,6 +513,8 @@ private:
     void flushMidiIn();
     void drainMidiOut(int samplePos);
     void pullEditorMidi();                           // (devLock_ held) the port's whole messages into inRing_
+    void pumpImport();                               // (devLock_ held) FIZZ P1.5s: the next STORE into the core
+    bool takeImportReply();                          // (devLock_ held) sysexOut_ is FIZZ's STORE reply: counted
     void decodePacket(uint32_t pkt, int samplePos);
     void renderSegment(float *L, float *R, int from, int to);
     void resetAudioState();
@@ -686,6 +702,16 @@ private:
     bool remotePubValid_ = false;
     uint32_t remotePubMs_ = 0, remotePubWrites_ = 0, remotePubs_ = 0;
     rfm_leds_t remotePubLeds_{};
+
+    // FIZZ P1.5s: the .dnsnd import (see importSounds): the frames waiting (importLock_: the message thread adds, the
+    // clock thread takes, never waiting on it), the one sent and not answered yet, the counts
+    juce::SpinLock importLock_;
+    std::deque<std::vector<uint8_t>> importQ_;
+    bool importInFlight_ = false;
+    uint32_t importSentMs_ = 0;
+    std::atomic<int> impOk_{0}, impFull_{0}, impFailed_{0}, impPending_{0};
+    std::atomic<uint32_t> impSerial_{0};
+    static constexpr uint32_t kImportReplyMs = 1500;  // no reply by then (device ms): failed, the next one goes
 
     // Show to editors (see the top): the port (made with the processor; its devices and thread only while on)
     std::unique_ptr<EditorPort> editorPort_;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The plugin's AudioProcessor: see Processor.h for the threads, the Tier 2 seam, the files and the preset format.
 #include "Processor.h"
+#include "Dnsnd.h"
 #include "Editor.h"
 
 #include <algorithm>
@@ -2312,6 +2313,7 @@ void FM1Processor::editorIdleTick(uint32_t ms)
     applyTier1();                                // (the panel and the parameters, as at a block's start: a manager that
     applyHostParameters();                       // waits for a press on the unit, X0X's restore, gets it while idle)
     pullEditorMidi();
+    pumpImport();
     for (uint32_t i = 0; i < ms; i++) {
         dev_->run_ms();
         flushMidiIn();
@@ -2539,6 +2541,10 @@ void FM1Processor::decodePacket(uint32_t p, int pos)
         }
     };
     auto sxEnd = [this, pos]() {
+        if (!sysexOutOverflow_ && takeImportReply()) {   // (FIZZ P1.5s: an import's reply: ours, not the host's)
+            sysexOut_.clear();
+            return;
+        }
         if (!sysexOutOverflow_ && sysexOut_.size() >= 2 && sysexOut_.front() == 0xF0 && sysexOut_.back() == 0xF7) {
             if (editorPort_->isOpen())           // (Show to editors: every SysEx of the core to the port, none to the host)
                 editorPort_->sysexFromCore(sysexOut_.data(), (int)sysexOut_.size());
@@ -2602,6 +2608,89 @@ void FM1Processor::pullEditorMidi()
     flushMidiIn();
 }
 
+// ------------------------------------------- FIZZ P1.5s: .dnsnd into FIZZ ---
+bool FM1Processor::canImportSounds() const { return loaded_ != nullptr && coreId_ == "fizz" && !isEmulated(); }
+
+int FM1Processor::importSounds(const juce::Array<juce::File> &files, juce::StringArray &errors)
+{
+    if (!canImportSounds()) {
+        errors.add("Digitone sounds go into FIZZ: load the FIZZ firmware first");
+        return 0;
+    }
+    std::vector<std::vector<uint8_t>> frames;
+    for (const juce::File &f : files) {
+        fm1dnsnd::Sound s;
+        juce::String err;
+        if (!f.hasFileExtension("dnsnd"))
+            continue;
+        if (!fm1dnsnd::read(f, s, err)) {
+            errors.add(f.getFileNameWithoutExtension() + ": " + err);
+            continue;
+        }
+        frames.push_back(fm1dnsnd::storeFrame(s, !frames.empty()));
+    }
+    {
+        const juce::SpinLock::ScopedLockType l(importLock_);
+        for (auto &fr : frames)
+            importQ_.push_back(std::move(fr));
+    }
+    impPending_.fetch_add((int)frames.size());
+    return (int)frames.size();
+}
+
+FM1Processor::ImportStatus FM1Processor::importStatus() const
+{
+    ImportStatus s;
+    s.ok = impOk_.load(), s.full = impFull_.load(), s.failed = impFailed_.load(), s.pending = impPending_.load();
+    s.serial = impSerial_.load();
+    return s;
+}
+
+void FM1Processor::pumpImport()
+{
+    const juce::SpinLock::ScopedTryLockType l(importLock_);
+    if (!l.isLocked())
+        return;                                  // (the message thread is adding: next block)
+    if (coreId_ != "fizz") {                     // (another core: nothing goes)
+        if (!importQ_.empty() || importInFlight_) {
+            impFailed_.fetch_add((int)importQ_.size() + importInFlight_);
+            impPending_.store(0);
+            importQ_.clear();
+            importInFlight_ = false;
+            impSerial_.fetch_add(1);
+        }
+        return;
+    }
+    if (importInFlight_ && dev_->ms() - importSentMs_ > kImportReplyMs) {
+        importInFlight_ = false;                 // (no reply: failed, the next one goes)
+        impFailed_.fetch_add(1);
+        impPending_.fetch_sub(1);
+        impSerial_.fetch_add(1);
+    }
+    if (importInFlight_ || importQ_.empty())
+        return;
+    const std::vector<uint8_t> &f = importQ_.front();
+    if (kInRing - (inW_ - inR_) < (uint32_t)f.size() / 3u + 2u)
+        return;                                  // (no room behind the host's MIDI yet)
+    toUsbPackets(f.data(), (int)f.size(), [this](uint32_t p) { inRing_[inW_++ % kInRing] = p; });
+    importQ_.pop_front();
+    importInFlight_ = true;
+    importSentMs_ = dev_->ms();
+    flushMidiIn();
+}
+
+bool FM1Processor::takeImportReply()
+{
+    const std::vector<uint8_t> &s = sysexOut_;
+    if (!importInFlight_ || s.size() < 11 || s[0] != 0xF0 || s[1] != 0x7D || s[2] != 0x46 || s[3] != 0x5A || s[5] != 0x50)
+        return false;
+    importInFlight_ = false;
+    (s[6] == 0 ? impOk_ : s[6] == 1 ? impFull_ : impFailed_).fetch_add(1);
+    impPending_.fetch_sub(1);
+    impSerial_.fetch_add(1);
+    return true;
+}
+
 void FM1Processor::renderSegment(float *L, float *R, int from, int to)
 {
     int k = from;
@@ -2643,6 +2732,7 @@ void FM1Processor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuff
     applyTier1();
     applyHostParameters();
     pullEditorMidi();
+    pumpImport();                                // (FIZZ P1.5s: a dropped .dnsnd's STORE, one at a time)
 
     float *L = buffer.getWritePointer(0);
     float *R = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : nullptr;
