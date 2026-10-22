@@ -16,8 +16,8 @@ DUELL un-gated (section 6). 2026-10-22 (branch cores-pigeon): PIGEON 0.4.1 (The 
 1.5.1) joined the felucca_web glue, public; its 500 KiB sample bank lives in the 1 MiB NOR as on the device (section
 6's table). 2026-10-22 (branch cores-tonitor): Tonitor 0.53 joined on a glue of its own (core-glue/tonitor), public
 (`research/cores-2026-10-22/SURVEY.md`). 2026-10-22 (branch cores-speak37): Speak37's FM-1 build
-joined on a glue of its own (core-glue/speak37), public (research/cores-2026-10-22/SURVEY.md section 10). The
-per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
+joined on a glue of its own (core-glue/speak37), public (research/cores-2026-10-22/SURVEY.md section 10).
+That makes 29 cores, 21 of them public (section 6). The per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
 
 ## 1. What the survey found
 

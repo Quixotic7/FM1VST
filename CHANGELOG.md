@@ -18,7 +18,7 @@ LOOM-8 release so far is a "-beta" tag, and this is the newest (the other pins s
   (backup and restore of the projects and user presets, SEL on the panel to confirm), the installer's identity
   (FM-1_10000600) and its log readout, a screen reader. "Show to editors" names the port "LOOM-8 FM-1 (FM1VST)" and
   links the samples page.
-- **In the public release** (14 cores with the fm1emu engine): its factory 909 hi-hat ships unchanged, the owner's
+- **In the public release** (21 cores and the fm1emu engine): its factory 909 hi-hat ships unchanged, the owner's
   call ("ship the original, it is from the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal
   made"); the About page's credits name that origin. X0X stays gated (CORES-PLAN.md 6).
 
@@ -63,7 +63,7 @@ performance sampler after the SP-404 and the PO-33: two chopped songs (MP3 or IM
   "PIGEON (FM1VST)" and links the sample loader.
 - The managers answer: the bank (negotiate, upload, export, erase, diagnostics), the editor's backup, the installer's
   identity (FM-1_900).
-- **In the public release** (15 cores with the fm1emu engine). Its credits name the splash logo's artist
+- **In the public release**. Its credits name the splash logo's artist
   (Dendy0097), libmad and the ported DSP's notices.
 
 ### Tonitor, a new core

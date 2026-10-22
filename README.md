@@ -75,6 +75,28 @@ PIGEON's sample loader (<https://theshrimpblimp.com/pigeon/webapp/pigeon/>) or `
 SysEx (the editor protocol's bank commands 90..97). Turn on **Show to editors** and pick the port "PIGEON (FM1VST)"
 in the loader.
 
+**Editors.** **Show to editors** (the settings sheet) opens a virtual MIDI port named like the loaded core's USB port
+plus " (FM1VST)", so the firmware's own web manager finds the plugin as if it were an FM-1 (`plugin/EditorPort.h`).
+The name and the linked page come from the loaded core's id (`EditorPort::usbProductName`, `managerUrl`), never
+from the installer identity it answers: several cores share one (the Felucca family's FM-1_900), and the Hub matches
+a package by its SHA-256. What the public cores answer (`tests/sysex_test.cpp` checks each):
+
+| core | port | linked page | answers |
+|---|---|---|---|
+| `choralroot` | ChoralRoot FM-1 | ChoralRoot's editor | its editor, backup, identity FM-1_920 |
+| `purplemonkey` | ChoralRoot FM-1 | | identity FM-1_927 |
+| `coralflower` | CoralFlower FM-1 | | backup, identity FM-1_930 |
+| `felucca`, `ghoulbox`, `jiant`, `melodee` | Felucca (JIANT FM, Melodee FM-1) | each one's web editor | the web editor (INFO, backup, user presets), identity FM-1_900 |
+| `duell` | DUELL | | Felucca's web editor protocol, identity FM-1_900 |
+| `minitone`, `skiff` | Felucca | Skiff's web editor | the web editor, identity FM-1_910 / FM-1_714 |
+| `fmini` | FM-1 Midi | FMini-1's editor | the web editor, identity FM-1_918 |
+| `pigeon` | PIGEON | its sample loader | the bank (upload, export, erase), backup, identity FM-1_900 |
+| `loom` | LOOM-8 FM-1 | its samples page | the sample bank, fm1-base's backup, identity FM-1_10000600 |
+| `grimm` | Felucca | GR!MM's editor | its editor (sounds, slots, settings, samples), identity FM-1_966 |
+| `tonitor` | FM-1 Tonitor | its backup page | sessions and presets (LIST, READ, WRITE), identity FM-1_700 |
+| `amb`, `fomni`, `fimba`, `obervave`, `frodhes` | AMB-1 FM-1, FoMni FM-1, FiMba FM-1, Felucca | | the installer's identity |
+| `speak37` | Speak37 | its installer page | identity FM-1_510 only (no editor) |
+
 **Adding a core.** A firmware becomes a core with its glue folder `core-glue/<family>/` and a `core.cmake` there
 (found by the top-level glob: no shared file is edited):
 
@@ -426,7 +448,7 @@ Felucca-based cores, and each of them needs its submodule. Empty, the default, b
 `-DFM1_ONLY_CORES=""`. A core left out has no tests (its `core_smoke`, `core_conformance`, ..), and `hub_test` and
 `fm1emu_test` are not registered without `fm1emu`.
 
-**A release build** is the public build (`-DFM1_PUBLIC_BUILD=ON`: the 19 un-gated cores, CORES-PLAN.md 6) for Apple
+**A release build** is the public build (`-DFM1_PUBLIC_BUILD=ON`: the 21 un-gated cores and the fm1emu engine, CORES-PLAN.md 6) for Apple
 silicon, made by `.github/workflows/release.yml` when a tag `v<version>` is pushed (the version is `project()`'s
 here; CHANGELOG.md has the notes) and by hand the same way:
 

@@ -55,6 +55,9 @@ FirmwareMeta FirmwareMeta::of(const String &id, const String &sourceUrl)
         {"fmini", "Synth", "Three-oscillator mono", "ruppert"},
         {"skiff", "Groovebox", "Six-track groovebox", "illuminus5"},
         {"grimm", "Synth", "Dark ambient", "GRiMMBIENT"},
+        {"loom", "Groovebox", "Pocket groovebox", "C. Vestal"},
+        {"pigeon", "Groovebox", "Performance sampler", "The Shrimp Blimp"},
+        {"speak37", "Other", "Talking synth", "M. Geisler"},
     };
     for (const E &e : table)
         if (id == e.id)

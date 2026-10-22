@@ -26,9 +26,12 @@ static uint32_t fm1_micros(void) { return fm1t_ticks24() / FM1_TICKS_PER_US; }
 static void fm1_time_init(void) {}
 static void fm1_delay_us(uint32_t us) { (void)us; }  /* (busy waits: simulated time does not move in a call) */
 static void fm1_delay_ms(uint32_t ms) { (void)ms; }
-/* the CPU clock the boot screen shows ("AC791N .. MHZ"), measured on the device against TIMER4 with a NOP loop:
- * there is no CPU to measure in a core, so 0, as Speak37's own FM-1 host test (tests/sp_screen.c) draws it */
-static uint32_t fm1_cpu_mhz(void) { return 0; }
+/* the CPU clock the boot screen shows ("AC791N .. MHZ"), measured on the device against TIMER4 with a NOP loop
+ * (rounded to 10 MHz): there is no CPU to measure in a core, so the FM-1's own clock, the AC791N's nominal 360 MHz,
+ * as the device reads it. (Speak37's FM-1 host test, tests/sp_screen.c, never sets it and draws "0 MHZ": the golden
+ * check leaves that line out, speak37_golden.cpp.) */
+#define FM1CORE_SP_CPU_MHZ 360u
+static uint32_t fm1_cpu_mhz(void) { return FM1CORE_SP_CPU_MHZ; }
 
 /* -------------------------------------------------------- fm1_sys.h --- */
 static struct {
