@@ -239,7 +239,7 @@ const int EXT_RANGES[kExt][3] = {{0,1,0},{0,127,127},{0,2,0},{0,127,32},{0,1,0},
     {0,127,0},{0,127,0},{0,1,1},
     {0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},
     {0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0}};
-enum { X_AMOD = 74, X_HOLD = 75, X_PORT = 76, X_PTIM = 77, X_DRPRE = 79 };
+enum { X_AMOD = 74, X_HOLD = 75, X_PORT = 76, X_PTIM = 77, X_DRPRE = 79, X_BITS = 83, X_SRR = 84, X_CRPOST = 85 };
 void extDefaults(std::array<int, kExt> &x)
 {
     for (int k = 0; k < kExt; k++)
@@ -836,10 +836,12 @@ bool parseDn2(const void *data, size_t n, Sound &s, juce::String &err)
     {   // the amp: ADSR as it is; AHD (MODE 0): FIZZ's AHD (E1: AMOD, HOLD 1:1, 127 NOTE; DEC 127 INF, as FIZZ's)
         const int adec = r.lo(206);
         const double rel = r.hi(210);
+        extSet(ext, X_HOLD, r.lo(204));                          // (HOLD is stored whatever the mode: kept)
         if (r.lo(222) == 0) {
             extSet(ext, X_AMOD, 1);
-            extSet(ext, X_HOLD, r.lo(204));
             o.p[EDEC] = std::min(127, adec);
+            o.p[ESUS] = r.lo(208);                               // (stored though AHD has none: kept for ADSR)
+            o.p[EREL] = rel >= 127 ? 127 : (int)std::min(126.0, jsRound(rel));
         } else {
             o.p[EDEC] = adec >= 127 ? 127 : std::min(126, adec);
             o.p[ESUS] = r.lo(208);
@@ -848,10 +850,11 @@ bool parseDn2(const void *data, size_t n, Sound &s, juce::String &err)
     }
     if (r.lo(224) == 0)
         o.notes.add("AMP ENV RESET off not imported (FM TONE's amp envelope always resets)");
-    if (r.lo(230))
-        o.notes.add("BIT REDUCTION " + juce::String(r.lo(230)) + " not imported");
-    if (r.lo(232))
-        o.notes.add("SAMPLE RATE REDUCTION " + juce::String(r.lo(232)) + " not imported");
+    if (r.lo(230) || r.lo(232)) {                                // E3's CRUSH values, 1:1 (the laws not verified)
+        extSet(ext, X_BITS, r.lo(230)), extSet(ext, X_SRR, r.lo(232)), extSet(ext, X_CRPOST, r.lo(234) ? 1 : 0);
+        o.notes.add("BIT REDUCTION " + juce::String(r.lo(230)) + ", SAMPLE RATE REDUCTION " + juce::String(r.lo(232)) +
+                    ": taken 1:1 (the laws are not verified)");
+    }
     if (r.lo(226) == 64)                                         // (E1: PORT ON, TIME 1:1)
         extSet(ext, X_PORT, 1), extSet(ext, X_PTIM, r.lo(228));
     if (r.lo(240) == 0) {                                        // E1: OD ROUTING 0 read as before the filter (a guess)
