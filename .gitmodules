@@ -91,3 +91,6 @@
 [submodule "cores/tonitor"]
 	path = cores/tonitor
 	url = https://github.com/nzimas/tonitor.git
+[submodule "cores/Speak37"]
+	path = cores/Speak37
+	url = https://github.com/genkigenki/Speak37.git

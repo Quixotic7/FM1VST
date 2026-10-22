@@ -1,0 +1,22 @@
+# Speak37 1.0: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the sound: a key speaks the selected sentence's next word at its pitch (sp_dsp.c sp_key_on); no prelude: the sound
+# runs from power-on, under the boot screen too, as on the device
+# the flash round trip: ALGORITHM turned (the voice: CHOIR, the default, -> GIANT); flash_sync runs the autosave
+# (sp_ui_autosave: the record with the sound in use); after the reboot sp_store_boot brings the voice back and the
+# knob block shows it
+save wait 1500
+save knob ALGORITHM -1
+save wait 600
+save quit
+saved wait 1500
+saved quit
+saved-lcd-differs
+# the boot guard (fm1_cstart): this reset counts the run before it, and a second failed boot in a row enters UBOOT
+# (exit(3))
+reboot-guard 1
+# OCT- + OCT+ held 5 s: UBOOT (fm1_main's countdown from 2 s; core_speak37.c)
+reboot wait 1500
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

@@ -163,7 +163,7 @@ static int runFake()
                  {"fimba", "FiMba FM-1"},           {"fomni", "FoMni FM-1"},             {"obervave", "Felucca"},
                  {"loom", "LOOM-8 FM-1"},           {"minitone", "Felucca"},             {"fmini", "FM-1 Midi"},
                  {"skiff", "Felucca"},              {"grimm", "Felucca"},                {"pigeon", "PIGEON"},
-                 {"tonitor", "FM-1 Tonitor"},       {"unknown-fw", "FM-1"}};
+                 {"tonitor", "FM-1 Tonitor"},       {"speak37", "Speak37"},              {"unknown-fw", "FM-1"}};
     bool all = true;
     for (auto &t : table)
         all = all && EditorPort::usbProductName(t.id) == t.usb;
@@ -171,6 +171,7 @@ static int runFake()
     check(EditorPort::managerUrl("felucca").startsWith("https://hugelton.github.io/Felucca/"), "Felucca's editor URL");
     check(EditorPort::managerUrl("pigeon").startsWith("https://theshrimpblimp.com/pigeon/webapp/pigeon/"),
           "PIGEON's sample loader URL");
+    check(EditorPort::managerUrl("speak37") == "https://genkigenki.github.io/smk37/", "Speak37's installer URL");
     check(EditorPort::managerUrl("x", "https://example.org/ed/") == "https://example.org/ed/", "the catalog's editor wins");
     check(EditorPort::isUpdateKey(sx({0xF0, 0x22, 0x24, 0x35, 0x7D, 0xF7}).data(), 6) &&
               EditorPort::isUpdateKey(sx({0xF0, 0x22, 0x24, 0x35, 0x7F, 0xF7}).data(), 6),

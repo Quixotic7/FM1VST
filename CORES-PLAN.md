@@ -15,7 +15,9 @@ FMini-1 and Skiff on the felucca_web glue and GR!MM on the dinghy glue (`researc
 DUELL un-gated (section 6). 2026-10-22 (branch cores-pigeon): PIGEON 0.4.1 (The Shrimp Blimp's sampler on Felucca
 1.5.1) joined the felucca_web glue, public; its 500 KiB sample bank lives in the 1 MiB NOR as on the device (section
 6's table). 2026-10-22 (branch cores-tonitor): Tonitor 0.53 joined on a glue of its own (core-glue/tonitor), public
-(`research/cores-2026-10-22/SURVEY.md`). The per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
+(`research/cores-2026-10-22/SURVEY.md`). 2026-10-22 (branch cores-speak37): Speak37's FM-1 build
+joined on a glue of its own (core-glue/speak37), public (research/cores-2026-10-22/SURVEY.md section 10). The
+per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
 
 ## 1. What the survey found
 
@@ -43,6 +45,7 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | AMB-1 1.3 | **MPL-2.0** | fm1-base (Vestal) on felucca-bsp | native + wasm | C' |
 | LOOM-8 0.6-beta (added 2026-10-21) | GPL-3.0-only (fm1-base MPL-2.0) | fm1-base 71128a3 on felucca-bsp | native (`app/host.c`) + wasm | C' |
 | Tonitor 0.53 (c39d18f, no tags: the Hub package's commit; added 2026-10-22) | GPL-3.0-only (msfa Apache-2.0, Rings MIT, LIRA-8 BSD-3) | Felucca / SLOOP's HAL, its own unity build | a render / screen harness (`tests/host/host.c`), no main loop; no wasm | G (its own: tonitor) |
+| Speak37 1.0, the FM-1 build (added 2026-10-22) | GPL-3.0-only (+ MAME's TMS5220 tables BSD-3, FM1 Open's 808 MIT) | the Felucca platform (`speak.c`, not Felucca's UI) | native test (`tests/sp_screen.c -DT_FM1=1`); its web emu is plain Felucca | own glue (speak37) |
 | SLOOP 2.8 | GPL-3.0 + Hügelton icons (§7) | early Felucca | native tests (`hostsim`, `ui_pages_test`) | D |
 | sloopDX 4.0 (tag v4.0) | GPL-3.0 | SLOOP 2.7 | native tests | D |
 | ORBIT 0.7.1 | GPL-3.0 + **OP-1 material** | SLOOP / Felucca | native preview + hostsim | D |
@@ -156,14 +159,15 @@ so these need an answer first:
 | X0X | 909 hi-hat / ride / crash samples "ER-99 via 9W9", GPL-3.0 | gated until ER-99's author confirms they are not TR-909 ROM recordings |
 | LOOM-8 | its factory 909 hi-hat (`app/samples/909_hat.wav`) is a render of 9W9's hat samples (ER-99), X0X's open question; the rest is cleared: code GPL-3.0-only on MPL-2.0 fm1-base, Braids / PSXVerb / NuSaw MIT, the four breaks by u/FCTRYBEATS with their written permission, the recorded instruments VSCO 2 CE (CC0), fonts OFL | un-gated (the owner's call, 2026-10-21): it ships with its factory `909_hat.wav`, unchanged. In the owner's words: "ship the original, it is from the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal made"; the credits name that origin. X0X stays gated (not decided) |
 | PIGEON | the splash logo is by Dendy0097, no licence stated, shipped by the author in every build; the samples it compiles in are CC0 (VSCO-2, VCSL) and the Hügelton Sample Pack (CC0 since Felucca 5738617); no samples or bank ship with it | public (the owner's call, 2026-10-22): the logo shipped as the author ships it, credited |
+| Speak37 | the TMS5220's coding tables and the Speak & Spell chirp (chip constants, as MAME tabulates them, BSD-3-Clause); the words rendered by espeak-ng at build time (no TI ROM vocabulary); the editor's word lists CC BY-SA 4.0 (FrequencyWords); the 808 FM1 Open's (MIT) | public (the owner's call, 2026-10-22): the credits carry MAME's BSD-3 and FM1 Open's MIT notices and name FrequencyWords, espeak-ng and Inter Tight |
 | ChoralRoot, Melodee | Casio's CZ-1 preset tones and Sequential's Prophet-5 factory programs, no licence granted | un-gated (the owner's call, 2026-10-19): they ship compiled into the firmware, credited to Casio and Sequential; no raw .syx is distributed (tools/package_release.sh checks) |
 
 Gated today (left out of FM1_PUBLIC_BUILD): fm106 (Juno-106 patch data), rainbow (character
 look-alikes), fartmachine (recordings), orbit (OP-1 material, the Hugelton atlas), sloop and sloopdx (the Hugelton
-atlas), nomansky (game art), x0x (the cymbal samples). A public build bundles the other twenty: choralroot (the
-default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee, fomni, fimba, amb, obervave, frodhes, loom
-(un-gated 2026-10-21), duell (un-gated 2026-10-22), minitone, fmini, skiff, grimm, pigeon, tonitor (added public
-2026-10-22), and the fm1emu engine.
+atlas), nomansky (game art), x0x (the cymbal samples). A public build bundles the other twenty-one: choralroot
+(the default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee, fomni, fimba, amb, obervave, frodhes,
+loom (un-gated 2026-10-21), duell (un-gated 2026-10-22), minitone, fmini, skiff, grimm, pigeon, tonitor, speak37
+(added public 2026-10-22), and the fm1emu engine.
 
 ## 7. Rules
 

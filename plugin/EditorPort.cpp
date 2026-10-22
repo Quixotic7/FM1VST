@@ -260,6 +260,8 @@ juce::String EditorPort::usbProductName(const juce::String &idIn)
         {"loom", "LOOM-8 FM-1"},
         // Tonitor's usb.c STR2 (Felucca's, renamed)
         {"tonitor", "FM-1 Tonitor"},
+        // Speak37's FM-1 build (usb.c SPEAK_BUILD: "Speak37"; "Speak37 Update" is its loader)
+        {"speak37", "Speak37"},
     };
     for (const auto &e : kTable)
         if (id == e[0])
@@ -287,6 +289,7 @@ juce::String EditorPort::managerUrl(const juce::String &idIn, const juce::String
         {"grimm", "https://grimmbient.github.io/grimm/editor.html"},
         {"pigeon", "https://theshrimpblimp.com/pigeon/webapp/pigeon/"},   // (its sample loader: the bank, web/pigeon)
         {"tonitor", "https://nzimas.github.io/tonitor/backup.html"},   // (no editor: the sessions' backup page)
+        {"speak37", "https://genkigenki.github.io/smk37/"},   // (no editor: its installer, the M-UPGRADE identity)
     };
     for (const auto &e : kTable)
         if (id == e[0])
