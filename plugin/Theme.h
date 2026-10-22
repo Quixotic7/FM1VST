@@ -10,7 +10,8 @@
 //   dir/themes/*.json custom themes, one per file, the keys of a presets.json entry:
 //                     {"name": "My Teal", "base": "#RRGGBB", "membrane": "#RRGGBB", "knob": "#RRGGBB",
 //                      "bed": "#RRGGBB" (optional), "label": "#RRGGBB" (optional)}
-//   dir/settings.json {"defaultTheme": "Black"}: the theme a new instance starts with (other keys are kept)
+//   dir/settings.json {"defaultTheme": "Black"}: the theme a new instance starts with (other keys are kept); also
+//                     the app's one-time flags ({"shiftLatchHint": true}: the panel's "Shift-click to hold" was shown)
 // The plugin state carries the theme itself (name and colours): a set reopens looking the same even when the
 // custom file is gone.
 #pragma once
@@ -89,6 +90,8 @@ public:
     juce::String defaultName() const;                        // settings.json defaultTheme ("" if unset)
     bool setDefaultName(const juce::String &name);
     Theme defaultTheme() const;                              // find(defaultName()), else the "Emulator" preset
+    bool flag(const juce::String &key) const;                // settings.json key == true
+    bool setFlag(const juce::String &key, bool on);
 
 private:
     juce::File dir_;

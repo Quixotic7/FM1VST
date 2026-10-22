@@ -775,6 +775,8 @@ void FM1Processor::bootLocked()
 {
     if (!loaded_ || dev_)
         return;
+    panelReleaseAll();                           // (a latched panel button never reaches a boot)
+    panelPowerOns_.fetch_add(1);
     std::vector<uint8_t> bytes;
     const bool emu = coreId_ == kEmuCore;
     if (emu) {

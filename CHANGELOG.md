@@ -124,6 +124,17 @@ FoMni-1 0.4, FiMba-1 0.6.1, AMB-1 1.3, Fart Machine One 1.0.0, ORBIT 0.7.1, DUEL
 (upstream changed only its landing page), JIANT FM 0.9.9 (upstream's installer still calls 0.9.9 stable; its newer
 builds are beta previews).
 
+### Shift-click to hold
+
+A mouse holds one control at a time; now several stay down. **Shift-click** a button (FX .. REC, OCT- / OCT+) or a
+key and it latches: down on the click, still down after the mouse is up, marked by a ring and a dot. Plain clicks on
+the others stay momentary (latch HOME, then tap keys); Shift-click latches more. Any click on a latched control lets
+it go; **Esc** lets go of all of them (Esc is OCT- again once none is latched), and so do the focus leaving the editor
+for good, a reboot or a firmware switch, and closing the editor. Right-click / ctrl-click still latch as before.
+Shift on a knob changes nothing; the computer keys are unchanged. The first time Shift is held over the panel, a
+toast says "Shift-click to hold" (once: settings.json remembers it). A power-on now lets go of whatever the panel
+held, so a latched button never reaches a firmware's boot.
+
 ## 0.5.1 (2026-10-19): copy the screen
 
 ### Copy the screen
