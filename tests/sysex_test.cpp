@@ -24,6 +24,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <deque>
+#include <fstream>
 #include <functional>
 #include <memory>
 #include <string>
@@ -1374,6 +1375,169 @@ void grimm_run(const std::string &module, Device &dev, Link &k, Session &s, cons
 }
 // ---- end of plat, fm1base, dinghy ----
 
+// ---- felucca_web: PIGEON's sample bank (cores/pigeon tools/ko_bank.py upload / export, editor.c ko_bank_editor.c:
+// the FL protocol's commands 90 negotiate, 91 begin, 92 data, 93 commit, 94 read, 95 metadata, 96 erase). The bank is
+// tests/fixtures/pigeon/bank.kob (make_bank.py: an MP3 song, four ADPCM pads); it lives in the NOR at the device's
+// extents, so it is part of the flash image and the reboot from that image keeps it.
+Bytes pg_u21(uint32_t v) { return {(uint8_t)(v & 127u), (uint8_t)(v >> 7 & 127u), (uint8_t)(v >> 14 & 127u)}; }
+uint32_t pg_r21(const Bytes &a, size_t p) { return a[p] | a[p + 1] << 7 | (uint32_t)a[p + 2] << 14; }
+constexpr uint32_t kPgSize = 0x7D000, kPgHead = 4096, kPgHeader = 668;
+// 90: the layout ko_bank.py negotiate() insists on (KOB2, capacity, header, the codecs); active: a bank is there
+bool pg_negotiate(Link &k, int &active, std::string &why)
+{
+    Bytes r;
+    if (!sb_req(k, 90, {}, r))
+        return why = "90: no reply", false;
+    if (r.size() != 10 || r[0] != 0x4B || r[1] != 3 || pg_r21(r, 2) != kPgSize || pg_r21(r, 5) != kPgHead || r[9] != 3)
+        return why = "90: not PIGEON's KOB2 layout (" + std::to_string(r.size()) + " bytes)", false;
+    active = r[8];
+    return true;
+}
+bool pg_ok(Link &k, uint8_t cmd, const Bytes &args, std::string &why, double limit = 5000)
+{
+    Bytes r;
+    if (!sb_req(k, cmd, args, r, limit) || r != Bytes{0})
+        return why = std::to_string(cmd) + ": " + (r.empty() ? "no reply" : "rc " + std::to_string(r[0])), false;
+    return true;
+}
+bool pg_upload(Link &k, const Bytes &image, std::string &why)   // ko_bank.py upload()
+{
+    const uint32_t used = image[8] | image[9] << 8 | image[10] << 16 | (uint32_t)image[11] << 24;
+    const uint32_t version = image[4];
+    if (!pg_ok(k, 91, pg_u21(used), why))
+        return false;
+    auto data = [&](uint32_t from, uint32_t to) {
+        for (uint32_t off = from; off < to; off += 256) {
+            Bytes a = pg_u21(off), pk = sb_pack7(image.data() + off, std::min<uint32_t>(256, to - off));
+            a.insert(a.end(), pk.begin(), pk.end());
+            if (!pg_ok(k, 92, a, why))
+                return false;
+        }
+        return true;
+    };
+    if (!data(kPgHead, used) || !data(0, kPgHeader * (version == 3 ? 2 : 1)) || !pg_ok(k, 93, {}, why, 30000))
+        return false;
+    for (uint32_t off = 0; image.size() > used && off < 4096; off += 256) {   // (the chop / compressor metadata)
+        Bytes a = pg_u21(off), pk = sb_pack7(image.data() + used + off, 256);
+        a.insert(a.end(), pk.begin(), pk.end());
+        if (!pg_ok(k, 95, a, why))
+            return false;
+    }
+    return true;
+}
+bool pg_read(Link &k, uint32_t off, uint32_t n, Bytes &out, std::string &why)   // ko_bank.py read(): 94
+{
+    Bytes r = pg_u21(off), d;
+    r.push_back(n & 127u);
+    r.push_back((uint8_t)(n >> 7));
+    Bytes a;
+    if (!sb_req(k, 94, r, a) || a.empty() || a[0] || !unpack(a, 1, n, d))
+        return why = "94 @" + std::to_string(off) + ": " + (a.empty() ? "no reply" : "rc " + std::to_string(a[0])), false;
+    out.insert(out.end(), d.begin(), d.end());
+    return true;
+}
+bool pg_export(Link &k, uint32_t used, Bytes &out, std::string &why)   // ko_bank.py export(): the bank, then its metadata
+{
+    out.clear();
+    for (uint32_t off = 0; off < used; off += 256)
+        if (!pg_read(k, off, std::min<uint32_t>(256, used - off), out, why))
+            return false;
+    for (uint32_t off = 0; off < 4096; off += 256)
+        if (!pg_read(k, kPgSize + off, 256, out, why))
+            return false;
+    return true;
+}
+int pg_peak(Link &k, uint32_t keys, double ms)   // the keys held ms (velocity 100), the output's peak (int16 scale)
+{
+    for (int i = 0; i < 27; i++)
+        if (keys >> i & 1u)
+            k.dev.key_vel(i, 100);
+    k.dev.keys(keys);
+    float pk = 0;
+    for (uint64_t end = k.blocks + (uint64_t)(ms / kBlockMs + 0.999); k.blocks < end;) {
+        k.block();
+        for (uint32_t i = 0; i < kBlock; i++)
+            pk = std::max(pk, std::max(std::fabs(k.L[i]), std::fabs(k.R[i])));
+    }
+    k.dev.keys(0);
+    k.run_ms(300);
+    return (int)(pk * 32768.0f);
+}
+void pigeon_run(const std::string &module, Device &dev, Link &k, Session &s, const Profile &p)
+{
+    std::string v, why, mid;
+    check(s.info(v) && v.rfind(p.info, 0) == 0, "INFO: \"" + v + "\" (starts \"" + p.info + "\")");
+    check(mupg_identity(k, mid) && mid == p.mupg, "M-UPGRADE identity: \"" + mid + "\" (the package's " + p.mupg + ")");
+    std::ifstream f(std::string(FM1_SOURCE_DIR) + "/tests/fixtures/pigeon/bank.kob", std::ios::binary);
+    const Bytes bank((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    check(bank.size() > kPgHead, "the test bank: tests/fixtures/pigeon/bank.kob, " + std::to_string(bank.size()) + " bytes");
+    if (bank.size() <= kPgHead)
+        return;
+    const uint32_t used = bank[8] | bank[9] << 8 | bank[10] << 16 | (uint32_t)bank[11] << 24;
+    int active = -1;
+    check(pg_negotiate(k, active, why) && active == 0,
+          "90 negotiate on a fresh unit: KOB2, 500 KiB (" + std::to_string(kPgSize) + "), header 4096, codecs IMA + MP3, "
+          "no bank (" + std::to_string(active) + ") " + why);
+    check(pg_peak(k, 1u << 9, 400) == 0, "  a fresh unit is silent: D4 on Song 1 (no factory bank)");
+    const uint32_t dirty0 = dev.flash_dirty();
+    check(pg_upload(k, bank, why), "the bank uploaded as ko_bank.py upload does (91, " +
+                                       std::to_string((used - kPgHead + 255) / 256) + " + 6 x 92, 93 commit) " + why);
+    check(pg_negotiate(k, active, why) && active == 1, "90 after it: the bank is active; the NOR written (" +
+                                                           std::to_string(dev.flash_dirty() - dirty0) + " writes) " + why);
+    Bytes back;
+    check(pg_export(k, used, back, why) && Bytes(back.begin(), back.begin() + std::min<size_t>(used, back.size())) ==
+                                               Bytes(bank.begin(), bank.begin() + used),
+          "94 export (ko_bank.py export): the bank reads back byte for byte (" + std::to_string(used) + " bytes) " + why);
+    int pk = pg_peak(k, 1u << 9, 400);
+    check(pk > 64, "D4 (chop 6 of Song 1, MP3 through libmad) sounds: peak " + std::to_string(pk));
+    Bytes dg;                                     // 97 diagnostics v1: ten 35-bit counters (ko_bank.py diagnostics)
+    auto ctr = [&](int i) { uint64_t v = 0; for (int j = 0; j < 5; j++) v |= (uint64_t)dg[2 + i * 5 + j] << (7 * j); return v; };
+    const bool dok = sb_req(k, 97, {}, dg) && dg.size() == 52 && dg[0] == 0 && dg[1] == 1;
+    check(dok && ctr(3) > 0 && ctr(1) == 0, "97 diagnostics: " + (dok ? std::to_string(ctr(3)) + " MP3 decode calls, " +
+                                                std::to_string(ctr(1)) + " decoder errors, " + std::to_string(ctr(0)) +
+                                                " missing sample reads" : std::string("no reply")));
+    std::vector<Obj> man;
+    check(s.list(man), "backup LIST: " + std::to_string(man.size()) + " objects " + s.why);
+    uint32_t total = 0, nonempty = 0;
+    bool all = true;
+    for (const Obj &o : man) {
+        Bytes b;
+        if (!o.size)
+            continue;
+        nonempty++;
+        total += o.size;
+        if (!s.get(o, b)) {
+            all = false;
+            std::printf("    %s\n", s.why.c_str());
+        }
+    }
+    check(all, "backup GET: every object (" + std::to_string(nonempty) + " not empty, " + std::to_string(total) +
+                   " bytes), each matching LIST's CRC");
+    const bool alive = update_keys(k, s, p);
+
+    dev.flash_sync();
+    const Bytes image(dev.flash(), dev.flash() + dev.flash_size());
+    std::unique_ptr<LoadedCore> lc2 = load(module);
+    Device dev2(lc2->core());
+    dev2.boot_from(image.data(), (uint32_t)image.size());
+    Link k2(dev2);
+    Session s2(k2);
+    k2.run_ms(3500);
+    check(alive && pg_negotiate(k2, active, why) && active == 1,
+          "rebooted from the flash image (" + std::to_string(image.size()) + " bytes): the bank is active " + why);
+    check(pg_export(k2, used, back, why) && Bytes(back.begin(), back.begin() + std::min<size_t>(used, back.size())) ==
+                                                Bytes(bank.begin(), bank.begin() + used),
+          "  it reads back byte for byte " + why);
+    pk = pg_peak(k2, 1u << 9, 400);
+    check(pk > 64, "  D4 sounds: peak " + std::to_string(pk));
+    pk = pg_peak(k2, 1u << 0, 400);
+    check(pk > 64, "  F3 (chop 1) sounds: peak " + std::to_string(pk));
+    check(pg_ok(k2, 96, {}, why) && pg_negotiate(k2, active, why) && active == 0,
+          "96 erase (ko_bank.py erase): the bank is gone " + why);
+    check(pg_peak(k2, 1u << 9, 400) == 0, "  and D4 is silent again");
+    k.worst = std::max(k.worst, k2.worst);
+}
+
 const Profile kProfiles[] = {
     {"choralroot", "ChoralRoot ", true, "FM-1_920", true, fm6_bank_change},
     // CoralFlower: no DX7 receive service (its main loop has no fm6_service): the chord part's sound, PRESETS +2, in
@@ -1386,6 +1550,7 @@ const Profile kProfiles[] = {
     {"ghoulbox", "FELUCCA v1.4.1 GB2.3.2", true, "FM-1_900", false, up_store_change()},
     {"rainbow", "FELUCCA v1.1.5", true, "FM-1_900", false, up_store_change()},
     {"duell", "FELUCCA DUELL 0.2.20", true, "FM-1_900", false, up_store_change()},
+    {"pigeon", "PIGEON v0.4.1", true, "FM-1_900", false, nullptr, false, nullptr, pigeon_run},
     {"melodee", "MELODEE v1.4.5", true, "FM-1_900", false, up_store_change(80)},
     // Mini-Tone, FMini-1, Skiff: Felucca's editor.c (their web editors' INFO, BACKUP_LIST / GET / PUT, UP_STORE);
     // the identity is each build.py --release's (FM-1_9XY; Skiff's FM-1_7XY)

@@ -85,3 +85,6 @@
 [submodule "cores/grimm"]
 	path = cores/grimm
 	url = https://github.com/GRiMMBIENT/grimm
+[submodule "cores/pigeon"]
+	path = cores/pigeon
+	url = https://github.com/TheShrimpBlimp/pigeon

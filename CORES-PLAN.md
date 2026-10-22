@@ -12,7 +12,9 @@ Phase 2 is a plan. 2026-10-21 (branch cores-oct21): the pins moved to each firmw
 table's versions), and a 22nd core, LOOM-8 (Charles Vestal's groovebox on fm1-base), joined the fm1base glue, gated
 (section 6); the owner un-gated it the same day. 2026-10-22 (branch cores-fw): four more public cores, Mini-Tone,
 FMini-1 and Skiff on the felucca_web glue and GR!MM on the dinghy glue (`research/cores-2026-10-22/SURVEY.md`), and
-DUELL un-gated (section 6). The per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
+DUELL un-gated (section 6). 2026-10-22 (branch cores-pigeon): PIGEON 0.4.1 (The Shrimp Blimp's sampler on Felucca
+1.5.1) joined the felucca_web glue, public; its 500 KiB sample bank lives in the 1 MiB NOR as on the device (section
+6's table). The per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
 
 ## 1. What the survey found
 
@@ -48,6 +50,7 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | FM-106 Beta5 | GPL-3.0 (KR-106 port: **provenance unchecked**) | Dinghy + a second core | native (needs a shim) | E |
 | GR!MM 1.0 (added 2026-10-22) | GPL-3.0-only | Dinghy | native `tests/host.c` + wasm (`web/fm1_web.c`) | E |
 | Melodee 1.4.5 | GPL-3.0 (+ BSD-3 uPD933) | Felucca 1.0 + x0x 909 + Prophet / SID / CZ | native (`hostsim`, `ui_test`) | F |
+| PIGEON 0.4.1 (added 2026-10-22) | GPL-3.0-only (+ libmad GPL-2.0-or-later) | Felucca 1.5.1 | native + wasm (felucca_web) | A |
 
 ## 2. What breaks today
 
@@ -150,14 +153,15 @@ so these need an answer first:
 | No Man Sky FM | credit request | credited in the About box (the descriptor's credits, ABI 6) |
 | X0X | 909 hi-hat / ride / crash samples "ER-99 via 9W9", GPL-3.0 | gated until ER-99's author confirms they are not TR-909 ROM recordings |
 | LOOM-8 | its factory 909 hi-hat (`app/samples/909_hat.wav`) is a render of 9W9's hat samples (ER-99), X0X's open question; the rest is cleared: code GPL-3.0-only on MPL-2.0 fm1-base, Braids / PSXVerb / NuSaw MIT, the four breaks by u/FCTRYBEATS with their written permission, the recorded instruments VSCO 2 CE (CC0), fonts OFL | un-gated (the owner's call, 2026-10-21): it ships with its factory `909_hat.wav`, unchanged. In the owner's words: "ship the original, it is from the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal made"; the credits name that origin. X0X stays gated (not decided) |
+| PIGEON | the splash logo is by Dendy0097, no licence stated, shipped by the author in every build; the samples it compiles in are CC0 (VSCO-2, VCSL) and the Hügelton Sample Pack (CC0 since Felucca 5738617); no samples or bank ship with it | public (the owner's call, 2026-10-22): the logo shipped as the author ships it, credited |
 | ChoralRoot, Melodee | Casio's CZ-1 preset tones and Sequential's Prophet-5 factory programs, no licence granted | un-gated (the owner's call, 2026-10-19): they ship compiled into the firmware, credited to Casio and Sequential; no raw .syx is distributed (tools/package_release.sh checks) |
 
 Gated today (left out of FM1_PUBLIC_BUILD): fm106 (Juno-106 patch data), rainbow (character
 look-alikes), fartmachine (recordings), orbit (OP-1 material, the Hugelton atlas), sloop and sloopdx (the Hugelton
-atlas), nomansky (game art), x0x (the cymbal samples). A public build bundles the other eighteen: choralroot (the
+atlas), nomansky (game art), x0x (the cymbal samples). A public build bundles the other nineteen: choralroot (the
 default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee, fomni, fimba, amb, obervave, frodhes, loom
-(un-gated 2026-10-21), duell (un-gated 2026-10-22), minitone, fmini, skiff, grimm (added public 2026-10-22), and the
-fm1emu engine.
+(un-gated 2026-10-21), duell (un-gated 2026-10-22), minitone, fmini, skiff, grimm, pigeon (added public 2026-10-22),
+and the fm1emu engine.
 
 ## 7. Rules
 
