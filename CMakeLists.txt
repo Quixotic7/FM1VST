@@ -448,6 +448,16 @@ if(EXISTS "${FM1_DNSND_DIR}" AND EXISTS "${FM1_CHORALROOT_WEB}/fm1dnsnd.js" AND 
 else()
     message(STATUS "dnsnd_test: no presets / ChoralRoot web / node: not registered")
 endif()
+# FIZZ P1.5x: the Digitone II reader (plugin/Dnsnd.cpp parseDn2) against FMToneSeq's tools/dn2pst.mjs: synthetic files
+# the JS writes into the build tree, and the owner's .dn2pst (read where they are, never copied)
+set(FM1_DN2PST_JS "${CMAKE_CURRENT_SOURCE_DIR}/../../../../FMToneSeq/tools/dn2pst.mjs" CACHE FILEPATH "FMToneSeq's dn2pst.mjs (dn2pst_compare)")
+set(FM1_DN2PST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../Digitone2Presets" CACHE PATH "a folder of .dn2pst (dn2pst_compare)")
+if(EXISTS "${FM1_DN2PST_JS}" AND FM1_NODE)
+    add_test(NAME dn2pst_compare COMMAND ${FM1_NODE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/dn2pst_compare.mjs "${FM1_DN2PST_JS}"
+             $<TARGET_FILE:dnsnd_test> "${CMAKE_BINARY_DIR}/dn2pst_compare" "${FM1_DN2PST_DIR}")
+else()
+    message(STATUS "dn2pst_compare: no FMToneSeq dn2pst.mjs / node: not registered")
+endif()
 
 # the Tier 2 parameters on the plugin's processor (headless, as plugin_test)
 add_executable(tier2_test tests/tier2_test.cpp)

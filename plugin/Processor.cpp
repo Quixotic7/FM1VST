@@ -2621,7 +2621,7 @@ int FM1Processor::importSounds(const juce::Array<juce::File> &files, juce::Strin
     for (const juce::File &f : files) {
         fm1dnsnd::Sound s;
         juce::String err;
-        if (!f.hasFileExtension("dnsnd"))
+        if (!f.hasFileExtension("dnsnd") && !f.hasFileExtension("dn2pst"))   // (P1.5x: Digitone II too)
             continue;
         if (!fm1dnsnd::read(f, s, err)) {
             errors.add(f.getFileNameWithoutExtension() + ": " + err);

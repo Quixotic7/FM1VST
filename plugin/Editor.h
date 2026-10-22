@@ -203,6 +203,7 @@ private:
     bool importWatch_ = false;                    // (FIZZ P1.5s) a drop's replies awaited: the toast when done ..
     FM1Processor::ImportStatus importBase_;       // .. the counts before it
     int importErrors_ = 0;
+    juce::String importFirstError_;              // (P1.5x: a refused file's reason, e.g. a Digitone II WAVETONE sound)
     Constrainer constrainer_;
     Watcher watcher_{*this};
     Ticker chrome_;

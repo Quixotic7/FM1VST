@@ -436,7 +436,8 @@ void FM1Editor::timerCallback()
             if (full)
                 t += ", " + juce::String(full) + " not: the " + (fm1dnsnd::kImportIntoPool ? "pool" : "library") + " is full";
             if (bad)
-                t += ", " + juce::String(bad) + " failed";
+                t += ", " + juce::String(bad) + " failed" + (importFirstError_.isNotEmpty() ? " (" + importFirstError_ + ")"
+                                                                                           : juce::String());
             showToast(t);
         }
     }
@@ -615,7 +616,7 @@ bool FM1Editor::isInterestedInFileDrag(const juce::StringArray &files)
     if (!proc_.canImportSounds())
         return false;
     for (const juce::String &f : files)
-        if (juce::File(f).hasFileExtension("dnsnd"))
+        if (juce::File(f).hasFileExtension("dnsnd") || juce::File(f).hasFileExtension("dn2pst"))   // (P1.5x)
             return true;
     return false;
 }
@@ -624,7 +625,7 @@ void FM1Editor::filesDropped(const juce::StringArray &files, int, int)
 {
     juce::Array<juce::File> fs;
     for (const juce::String &f : files)
-        if (juce::File(f).hasFileExtension("dnsnd"))
+        if (juce::File(f).hasFileExtension("dnsnd") || juce::File(f).hasFileExtension("dn2pst"))
             fs.add(juce::File(f));
     importSounds(fs);
 }
@@ -637,9 +638,12 @@ void FM1Editor::importSounds(const juce::Array<juce::File> &files)
     if (!importWatch_) {
         importBase_ = proc_.importStatus();
         importErrors_ = 0;
+        importFirstError_.clear();
     }
     const int n = proc_.importSounds(files, errors);
     importErrors_ += errors.size();
+    if (importFirstError_.isEmpty() && !errors.isEmpty())
+        importFirstError_ = errors[0];
     if (n > 0) {
         importWatch_ = true;
         showToast("Importing " + juce::String(n) + (n == 1 ? " sound" : " sounds") + juce::String::fromUTF8("â¦"));
@@ -651,7 +655,7 @@ void FM1Editor::importSounds(const juce::Array<juce::File> &files)
 void FM1Editor::chooseSoundsToImport()
 {
     chooser_ = std::make_unique<juce::FileChooser>("Import Digitone sounds into FIZZ",
-                                                   juce::File::getSpecialLocation(juce::File::userHomeDirectory), "*.dnsnd");
+                                                   juce::File::getSpecialLocation(juce::File::userHomeDirectory), "*.dnsnd;*.dn2pst");
     juce::Component::SafePointer<FM1Editor> self(this);
     chooser_->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles |
                               juce::FileBrowserComponent::canSelectMultipleItems,

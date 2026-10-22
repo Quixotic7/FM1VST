@@ -4,6 +4,9 @@
 //   dnsnd_test DIR              every DIR/*.dnsnd: one line each, "file<TAB>name<TAB>drive<TAB>pan<TAB>reverb<TAB>delay
 //                               <TAB>chorus<TAB>the blob in hex" (or "file<TAB>ERROR<TAB>why"), for tools/dnsnd_compare.mjs,
 //                               which checks them against ChoralRoot's JS reader byte for byte
+//   dnsnd_test --dn2 DIR...     P1.5x: every DIR/*.dn2pst the same way, with FIZZ's tags (a number) after the blob,
+//                               for tools/dn2pst_compare.mjs (against FMToneSeq tools/dn2pst.mjs)
+//   dnsnd_test --frame FILE     P1.5x: FILE's STORE frame in hex (its pan, sends, mixmask, tags byte)
 //   dnsnd_test --import DIR     the processor on the FIZZ core (headless, as plugin_test): the folder's first presets
 //                               imported (importSounds), the blocks run, every reply OK, the library holding them
 //                               (the core's ui_info is not enough: the replies counted by the processor)
@@ -43,6 +46,43 @@ static int dump(const juce::File &dir)
         std::printf("%s\t%s\t%d\t%d\t%d\t%d\t%d\t%s\n", f.getFileName().toRawUTF8(), s.name.toRawUTF8(), s.drive, s.pan,
                     s.reverb, s.delay, s.chorus, hex.toRawUTF8());
     }
+    return 0;
+}
+
+static int dumpDn2(int argc, char **argv)
+{
+    for (int a = 2; a < argc; a++) {
+        juce::Array<juce::File> fs = juce::File(argv[a]).findChildFiles(juce::File::findFiles, false, "*.dn2pst");
+        fs.sort();
+        for (const juce::File &f : fs) {
+            fm1dnsnd::Sound s;
+            juce::String err;
+            if (!fm1dnsnd::read(f, s, err)) {
+                std::printf("%s\tERROR\t%s\n", f.getFileName().toRawUTF8(), err.toRawUTF8());
+                continue;
+            }
+            juce::String hex;
+            for (uint8_t b : s.blob)
+                hex += juce::String::toHexString((int)b).paddedLeft('0', 2);
+            std::printf("%s\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%d\n", f.getFileName().toRawUTF8(), s.name.toRawUTF8(), s.drive,
+                        s.pan, s.reverb, s.delay, s.chorus, hex.toRawUTF8(), s.tags);
+        }
+    }
+    return 0;
+}
+
+static int frame(const char *path)
+{
+    fm1dnsnd::Sound s;
+    juce::String err;
+    if (!fm1dnsnd::read(juce::File(path), s, err)) {
+        std::printf("ERROR\t%s\n", err.toRawUTF8());
+        return 1;
+    }
+    juce::String hex;
+    for (uint8_t b : fm1dnsnd::storeFrame(s, false))
+        hex += juce::String::toHexString((int)b).paddedLeft('0', 2);
+    std::printf("%s\n", hex.toRawUTF8());
     return 0;
 }
 
@@ -102,6 +142,10 @@ int main(int argc, char **argv)
         return dump(juce::File(juce::String(argv[1])));
     if (argc == 3 && juce::String(argv[1]) == "--import")
         return import(juce::File(juce::String(argv[2])));
-    std::fprintf(stderr, "usage: dnsnd_test DIR | dnsnd_test --import DIR\n");
+    if (argc >= 3 && juce::String(argv[1]) == "--dn2")
+        return dumpDn2(argc, argv);
+    if (argc == 3 && juce::String(argv[1]) == "--frame")
+        return frame(argv[2]);
+    std::fprintf(stderr, "usage: dnsnd_test DIR | --dn2 DIR... | --frame FILE | --import DIR\n");
     return 2;
 }
