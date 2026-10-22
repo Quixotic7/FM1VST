@@ -1,0 +1,25 @@
+# Mini-Tone 1.0.1: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: the palette (the settings record): HOME held opens the menu at DISPLAY > COLOR, KNOB 1 steps
+# the palette (GREY -> GREEN), HOME closes the menu; after the reboot HOME shows the other palette. (The parameter
+# map has no FM1P_PERSIST entry: parts and song are the project and the autosave.)
+save wait 1500
+save btn HOME down
+save wait 1200
+save btn HOME up
+save wait 400
+save knob KNOB1 +1
+save wait 400
+save btn HOME 100
+save wait 600
+save quit
+saved wait 1500
+saved quit
+saved-lcd-differs
+# the boot guard: a second failed boot in a row enters UBOOT (exit(3), fw_core.h as main.c fm1_cstart)
+reboot-guard 2
+# OCT- + OCT+ held 5 s: UBOOT (fw_core.h, main.c's countdown)
+reboot wait 1500
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

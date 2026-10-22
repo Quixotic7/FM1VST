@@ -10,7 +10,9 @@ three cores at their pinned versions pass everything). Phase 1 is done (branch c
 all 21 cores built and bundled, ABI 6 for the credits, the suite passing in the default, Release and public builds).
 Phase 2 is a plan. 2026-10-21 (branch cores-oct21): the pins moved to each firmware's latest stable release (the
 table's versions), and a 22nd core, LOOM-8 (Charles Vestal's groovebox on fm1-base), joined the fm1base glue, gated
-(section 6); the owner un-gated it the same day. The per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
+(section 6); the owner un-gated it the same day. 2026-10-22 (branch cores-fw): four more public cores, Mini-Tone,
+FMini-1 and Skiff on the felucca_web glue and GR!MM on the dinghy glue (`research/cores-2026-10-22/SURVEY.md`), and
+DUELL un-gated (section 6). The per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
 
 ## 1. What the survey found
 
@@ -25,6 +27,9 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | GHOULBOX 2.3.2 | GPL-3.0 (+ OFL fonts) | Felucca 1.4.1 | native + wasm (felucca_web) | A |
 | JIANT FM 0.9.9 (0912abb) | GPL-3.0 (+ CMUdict BSD-2) | Felucca 1.1.5.1 + SLOOP songs | native + wasm (felucca_web) | A |
 | DUELL 0.2.20-beta | GPL-3.0 + naming terms | Felucca main | felucca_web (native via its check) | A |
+| Mini-Tone 1.0.1 (added 2026-10-22) | GPL-3.0-only (Braids / DaisySP / Rings MIT, msfa Apache-2.0, reSID GPL-2.0+) | Felucca 1.5 | native + wasm (felucca_web) | A |
+| FMini-1 1.8.0 (added 2026-10-22) | GPL-3.0-only (Felucca-Engines MIT) | Felucca 1.6.1 | native + wasm (felucca_web) | A |
+| Skiff 1.4 (added 2026-10-22) | GPL-3.0-only | Felucca 1.1.5 + most of 1.6.1 | native + wasm (felucca_web) | A |
 | ChoralRoot 0.26.1 | GPL-3.0 | Felucca 1.0 + Melodee ports | native emulator + wasm | B |
 | PurpleMonkey 0.11 | GPL-3.0 | ChoralRoot 44453d0 + SLOOP drums | native emulator + wasm | B |
 | CoralFlower 0.4.2 | GPL-3.0 | ChoralRoot 0.22 | native emulator + wasm | B |
@@ -41,6 +46,7 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | OberVave 1.5.3 | GPL-3.0 | Dinghy (zvenson) | native `tests/host.c` + wasm | E |
 | Frodhes 0.9.4 | GPL-3.0 | Dinghy | native + wasm | E |
 | FM-106 Beta5 | GPL-3.0 (KR-106 port: **provenance unchecked**) | Dinghy + a second core | native (needs a shim) | E |
+| GR!MM 1.0 (added 2026-10-22) | GPL-3.0-only | Dinghy | native `tests/host.c` + wasm (`web/fm1_web.c`) | E |
 | Melodee 1.4.5 | GPL-3.0 (+ BSD-3 uPD933) | Felucca 1.0 + x0x 909 + Prophet / SID / CZ | native (`hostsim`, `ui_test`) | F |
 
 ## 2. What breaks today
@@ -136,17 +142,22 @@ so these need an answer first:
 | Fart Machine One | 11 bundled recordings, said to be from Pixabay; redistribution rights unverified | check, or ship without the recordings |
 | SLOOP (and forks with its icons) | Hügelton icon atlas, all rights reserved under a GPL §7 permission | check the permission covers a plugin, or use replacement icons |
 | AMB-1 | MPL-2.0 | combinable with GPL unless marked "Incompatible With Secondary Licenses": check the headers |
-| DUELL | naming terms for unofficial builds | an unmodified build at a release tag is probably fine; ask the author |
+| DUELL | naming terms for unofficial builds (NOTICE.md: a build that is not the official release must not present itself as one) | un-gated (the owner's call, 2026-10-22): the core is the unmodified v0.2.20-beta tree named "DUELL (unofficial build)" with its commit in its source link, which satisfies the naming terms; the credits say it is unofficial and carry NOTICE.md. Keep the label wherever the plugin and the site show it |
+| Mini-Tone | its LICENSING.md names MIT / Apache-2.0 / OFL texts its tree lacks (only GPL-2.0-reSID.txt is there) | public (the owner's call, 2026-10-22): FM1VST supplies the texts (core-glue/felucca_web/licences/minitone/, in its credits; tools/package_release.sh copies them and checks every named file is there) |
+| FMini-1 | a few factory patch names name artists or marks (EMERSON, NUMAN, MOOG BASS ..): names only, the author's own patches | public (the owner's call, 2026-10-22) |
+| Skiff | SLICE's BREAK and FUNK loops are AI-generated (the YuE2 model, published under YuE2's permission for creators) | public (the owner's call, 2026-10-22); the credits say they are AI-generated |
+| GR!MM | none: its LICENSING.md leaves out Felucca's DX7-like FM patches and Dinghy's logo itself | public (2026-10-22) |
 | No Man Sky FM | credit request | credited in the About box (the descriptor's credits, ABI 6) |
 | X0X | 909 hi-hat / ride / crash samples "ER-99 via 9W9", GPL-3.0 | gated until ER-99's author confirms they are not TR-909 ROM recordings |
 | LOOM-8 | its factory 909 hi-hat (`app/samples/909_hat.wav`) is a render of 9W9's hat samples (ER-99), X0X's open question; the rest is cleared: code GPL-3.0-only on MPL-2.0 fm1-base, Braids / PSXVerb / NuSaw MIT, the four breaks by u/FCTRYBEATS with their written permission, the recorded instruments VSCO 2 CE (CC0), fonts OFL | un-gated (the owner's call, 2026-10-21): it ships with its factory `909_hat.wav`, unchanged. In the owner's words: "ship the original, it is from the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal made"; the credits name that origin. X0X stays gated (not decided) |
 | ChoralRoot, Melodee | Casio's CZ-1 preset tones and Sequential's Prophet-5 factory programs, no licence granted | un-gated (the owner's call, 2026-10-19): they ship compiled into the firmware, credited to Casio and Sequential; no raw .syx is distributed (tools/package_release.sh checks) |
 
-Gated today (left out of FM1_PUBLIC_BUILD): fm106 (Juno-106 patch data), duell (naming terms), rainbow (character
+Gated today (left out of FM1_PUBLIC_BUILD): fm106 (Juno-106 patch data), rainbow (character
 look-alikes), fartmachine (recordings), orbit (OP-1 material, the Hugelton atlas), sloop and sloopdx (the Hugelton
-atlas), nomansky (game art), x0x (the cymbal samples). A public build bundles the other thirteen: choralroot (the
+atlas), nomansky (game art), x0x (the cymbal samples). A public build bundles the other eighteen: choralroot (the
 default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee, fomni, fimba, amb, obervave, frodhes, loom
-(un-gated 2026-10-21), and the fm1emu engine.
+(un-gated 2026-10-21), duell (un-gated 2026-10-22), minitone, fmini, skiff, grimm (added public 2026-10-22), and the
+fm1emu engine.
 
 ## 7. Rules
 
