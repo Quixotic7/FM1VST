@@ -57,6 +57,8 @@ pst("ahd-inf.dn2pst", rec0({ ...want, "amp.mode": 0, "amp.hold": 10, "amp.dec": 
 pst("port-on.dn2pst", rec0({ ...want, portamento: 64, "portamento.time": 77 }));          // (E1: PORT ON, TIME 77)
 pst("port-off.dn2pst", rec0({ ...want, portamento: 63, "portamento.time": 77 }));
 { const r = rec0(); r[240] = 1; pst("od-post.dn2pst", r); }                                // (E1: OD ROUTING 1: after)
+for (const [m, nm] of [[0, "multi"], [1, "lp4"], [2, "eq"], [3, "comb-"], [4, "legacy"], [5, "comb+"]])   // (E2: the machines)
+  for (const ty of [0, 40, 127]) { const r = rec0({ ...want, "filter.type": ty, "filter.reso": 70.5 }); r[245] = m; r[238] = ty & 1; pst(`mach-${nm}-${ty}.dn2pst`, r); }
 for (const o of [-24, -12, -7, 5, 12, 24]) pst(`octave${o}.dn2pst`, rec0({ ...want, octave: o }));
 for (const [fm, types] of [[0, [0, 20, 33, 64, 95, 96, 127]], [1, [0]], [2, [0]], [3, [0]], [4, [0, 1, 2, 3, 7]], [5, [0]], [9, [0]]])
   for (const ty of types) { const r = rec0({ ...want, "filter.type": ty }); r[245] = fm; pst(`filter-${fm}-${ty}.dn2pst`, r); }

@@ -15,7 +15,7 @@ namespace {
 const int RANGES[kNp][3] = {{1,8,1},{0,18,3},{0,63,3},{0,18,3},{-2600,2600,0},{0,12700,0},{0,127,0},{-64,63,-64},
     {-100,100,0},{-100,100,0},{-100,100,0},{-100,100,0},{0,127,0},{0,127,32},{0,127,127},{0,127,0},{0,127,0},{0,127,32},
     {0,127,127},{0,127,0},{0,127,0},{0,1,1},{0,1,1},{0,4,1},{0,127,0},{0,1,1},{0,1,1},{0,127,64},{0,127,0},{0,127,0},
-    {0,127,0},{0,127,64},{0,127,0},{0,127,64},{0,12700,12700},{0,12700,0},{0,3,1},{-6400,6399,0},{0,127,0},{0,127,0},
+    {0,127,0},{0,127,64},{0,127,0},{0,127,64},{0,12700,12700},{0,12700,0},{0,7,1},{-6400,6399,0},{0,127,0},{0,127,0},
     {0,12700,0},{0,127,127},{0,127,8},{0,127,32},{0,127,96},{0,127,24},{0,127,110},{-6400,6399,3200},{0,23,5},
     {-64,63,0},{0,57,0},{0,6,0},{0,127,0},{0,4,0},{-6400,6399,0},{-6400,6399,3200},{0,23,5},{-64,63,0},{0,57,0},
     {0,6,0},{0,127,0},{0,4,0},{-6400,6399,0},{-6400,6399,3200},{0,23,5},{-64,63,0},{0,57,0},{0,6,0},{0,127,0},{0,4,0},
@@ -239,7 +239,8 @@ const int EXT_RANGES[kExt][3] = {{0,1,0},{0,127,127},{0,2,0},{0,127,32},{0,1,0},
     {0,127,0},{0,127,0},{0,1,1},
     {0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},
     {0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0},{0,8,0},{0,57,0},{-127,127,0}};
-enum { X_AMOD = 74, X_HOLD = 75, X_PORT = 76, X_PTIM = 77, X_DRPRE = 79, X_BITS = 83, X_SRR = 84, X_CRPOST = 85 };
+enum { X_AMOD = 74, X_HOLD = 75, X_PORT = 76, X_PTIM = 77, X_DRPRE = 79, X_FSHAPE = 80, X_FGAIN = 81, X_BWPOST = 82,
+       X_BITS = 83, X_SRR = 84, X_CRPOST = 85 };
 void extDefaults(std::array<int, kExt> &x)
 {
     for (int k = 0; k < kExt; k++)
@@ -809,7 +810,10 @@ bool parseDn2(const void *data, size_t n, Sound &s, juce::String &err)
     o.pan = std::max(-64, std::min(63, r.lo(218) - 64));
     o.set(LEVEL, jsRound(r.hi(220)));
     o.drive = (int)std::max(0.0, std::min(127.0, jsRound(r.hi(236))));
-    // the filter: machine + TYPE -> FM TONE's OFF LP12 HP12 LP24
+    // the filter: machine + TYPE (E2: FIZZ's machines, dn2pst.mjs's: LEGACY, LOWPASS 4, MULTI, COMB+, COMB-, EQ; TYPE
+    // their FSHAPE; EQ's GAIN RESO's coarse - 64; BW ROUTING 1: BWPOST)
+    std::array<int, kExt> ext;
+    extDefaults(ext);
     const int ty = r.lo(174);
     if (filterMachine == 1) {
         o.p[FTYPE] = 3;
@@ -817,26 +821,25 @@ bool parseDn2(const void *data, size_t n, Sound &s, juce::String &err)
         o.p[FTYPE] = ty == 0 ? 1 : ty == 1 ? 2 : 0;
         if (ty > 3)
             o.notes.add("LEGACY LP/HP type " + juce::String(ty) + ": not a known value, the filter off");
-    } else if (filterMachine == 0) {
-        o.p[FTYPE] = ty >= 96 ? 2 : 1;
-        if (ty > 32 && ty < 96)
-            o.notes.add("MULTI-MODE filter type " + juce::String(ty) + " (between low-pass and high-pass): FM TONE has no "
-                        "band-pass, read as LP12");
-        else if (ty)
-            o.notes.add("MULTI-MODE filter type " + juce::String(ty) + " read as " + (ty >= 96 ? "HP12" : "LP12") +
-                        " (the TYPE law is not verified)");
+    } else if (filterMachine == 0 || filterMachine == 5 || filterMachine == 3 || filterMachine == 2) {
+        o.p[FTYPE] = filterMachine == 0 ? 4 : filterMachine == 5 ? 5 : filterMachine == 3 ? 6 : 7;
+        extSet(ext, X_FSHAPE, ty);
+        if (filterMachine == 2)
+            extSet(ext, X_FGAIN, (int)jsRound(r.hi(178)) - 64);
+        if (filterMachine == 0 && ty)
+            o.notes.add("MULTI-MODE TYPE " + juce::String(ty) + " taken 1:1 as FIZZ's morph (the law is not verified)");
     } else {
         o.p[FTYPE] = 0;
-        o.notes.add(filterName + " filter: FM TONE has none, the filter off");
+        o.notes.add(filterName + " filter: not a known machine, the filter off");
     }
+    if (r.lo(238))
+        extSet(ext, X_BWPOST, 1);
     if (r.lo(186) == 127) {
         o.p[FSUS] = 127;
         o.notes.add("filter DEC INF: FM TONE's filter SUS set to 127");
     }
     if (r.lo(198) == 0)
         o.notes.add("FILTER ENV RESET off not imported");
-    std::array<int, kExt> ext;
-    extDefaults(ext);
     {   // the amp: ADSR as it is; AHD (MODE 0): FIZZ's AHD (E1: AMOD, HOLD 1:1, 127 NOTE; DEC 127 INF, as FIZZ's)
         const int adec = r.lo(206);
         const double rel = r.hi(210);
