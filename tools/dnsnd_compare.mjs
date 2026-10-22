@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The C++ .dnsnd reader (plugin/Dnsnd.cpp, through tests/dnsnd_test) against ChoralRoot's JS (web/fm1dnsnd.js
 // dnsndToQuad, fm1sounds.js soundFromDnsnd's name) on a folder of presets: the 96-byte blob byte for byte, the name,
-// DRIVE, PAN, the three sends (the JS's params rounded as the C++ does), or the same refusal.
+// DRIVE, PAN, the three sends (the JS's params rounded as the C++ does), or the same refusal. P1.5z: a sound with DRIVE
+// above 0 goes as STORE6 with DRIVE PRE set (the Digitone drives before its filter), DRIVE 0 as STORE.
 //
 //   node tools/dnsnd_compare.mjs CHORALROOT_WEB_DIR PRESETS_DIR DNSND_TEST
 import { readFileSync, readdirSync } from "node:fs";
@@ -28,7 +29,8 @@ for (const f of files) {
     const p = await parseDnsnd(new Uint8Array(readFileSync(join(dir, f))));
     const q = dnsndToQuad(p);
     js = [f, soundFromDnsnd(p).name, String(q.drive), String(q.pan), String(c7(p.params["send.reverb"])),
-          String(c7(p.params["send.delay"])), String(c7(p.params["send.chorus"])), hex(q.blob)];
+          String(c7(p.params["send.delay"])), String(c7(p.params["send.chorus"])), hex(q.blob),
+          q.drive > 0 ? "1" : "0", q.drive > 0 ? "1" : "0"];   // (P1.5z: DRIVE above 0: STORE6 with DRIVE PRE)
   } catch (e) {
     js = [f, "ERROR"];
   }

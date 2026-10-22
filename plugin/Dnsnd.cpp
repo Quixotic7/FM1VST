@@ -401,6 +401,10 @@ bool parse(const void *data, size_t n, Sound &s, juce::String &err)
     s.notes = o.notes;
     extDefaults(s.ext);                          // (E1: a .dnsnd: FIZZ's values 74.. at their defaults, STORE)
     s.six = false;
+    if (s.drive > 0) {                           // P1.5z (the owner): the Digitone drives before its filter: DRIVE PRE,
+        extSet(s.ext, X_DRPRE, 1);               // STORE6; DRIVE 0 stays STORE
+        s.six = true;
+    }
     pack6(s.blob, s.drive, s.ext, s.blob6);
     return true;
 }

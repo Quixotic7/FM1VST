@@ -18,7 +18,8 @@
 //
 // FIZZ E1 (0.8.0): FIZZ's values 74..109 (AHD, portamento, DRIVE before the filter, ..): a .dn2pst that uses them gives
 // ext, six and the 128-byte version-6 blob6 (FMToneSeq tools/dn2pst.mjs dn2pstToQuad's), and storeFrame sends it as
-// STORE6 (0x11). A .dnsnd keeps the 96-byte blob (the owner's DN1 records carry no portamento bytes).
+// STORE6 (0x11). A .dnsnd keeps the 96-byte blob (the owner's DN1 records carry no portamento bytes); P1.5z: one with
+// DRIVE above 0 drives before the filter (DRPRE, as the Digitone does): STORE6.
 //
 // storeFrame() makes FIZZ's STORE SOUND SysEx for it (FMToneSeq docs/SYSEX.md, protocol 1): into the LIBRARY's first
 // free slot, its name, its DRIVE, P1.5x its pan and sends (mixmask 0F: FIZZ keeps them with the preset) and its tags

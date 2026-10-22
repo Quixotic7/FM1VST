@@ -44,8 +44,9 @@ static int dump(const juce::File &dir)
         juce::String hex;
         for (uint8_t b : s.blob)
             hex += juce::String::toHexString((int)b).paddedLeft('0', 2);
-        std::printf("%s\t%s\t%d\t%d\t%d\t%d\t%d\t%s\n", f.getFileName().toRawUTF8(), s.name.toRawUTF8(), s.drive, s.pan,
-                    s.reverb, s.delay, s.chorus, hex.toRawUTF8());
+        std::printf("%s\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%d\n", f.getFileName().toRawUTF8(), s.name.toRawUTF8(), s.drive,
+                    s.pan, s.reverb, s.delay, s.chorus, hex.toRawUTF8(), (int)s.six, (int)s.blob6[88 + 79 - 74]);
+                    // (P1.5z: STORE6, and DRPRE in the version-6 blob: both 1 when DRIVE is above 0)
     }
     return 0;
 }
