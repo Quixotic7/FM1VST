@@ -4,6 +4,9 @@
 // Device as the plugin drives it) is powered on from a fresh flash and its screen compared at device ms 500 with the
 // test's boot screen (fm1_boot.ppm: sp_boot_frame(500)), pixel for pixel in RGB565. (sp_screen writes a pixel as
 // c << 3 / c << 2, common/ppm.h as c * 255 / 31: both are read back to the panel's 5-6-5 values.)
+// Left out: the clock line under the title (y 40..63, above the glass at y 64: sp_boot_frame's "AC791N <n> MHZ").
+// The device measures its CPU clock at power-on (hal/fm1_time.h fm1_cpu_mhz) and the core gives the FM-1's nominal
+// 360 MHz (speak37_hal.h); sp_screen.c never sets sp_mhz, so its boot screen says "AC791N 0 MHZ".
 //
 //   speak37_golden MODULE REF OUT
 #include <algorithm>
@@ -23,6 +26,8 @@ namespace {
 uint16_t rgb565(const uint8_t *px) { return (uint16_t)((px[0] >> 3) << 11 | (px[1] >> 2) << 5 | (px[2] >> 3)); }
 
 // the core's screen against a sp_screen PPM: the pixels that differ (their bounding box in `why`)
+constexpr int kClockY0 = 40, kClockY1 = 63;      // the clock line, left out (above)
+
 int compare(const Device &d, const std::string &ref, std::string &why)
 {
     std::vector<uint8_t> rgb(FM1G_RGB_BYTES);
@@ -34,6 +39,8 @@ int compare(const Device &d, const std::string &ref, std::string &why)
     int n = 0, x0 = 999, y0 = 999, x1 = -1, y1 = -1;
     for (int y = 0; y < FM1P_LCD_H; y++)
         for (int x = 0; x < FM1P_LCD_W; x++) {
+            if (y >= kClockY0 && y <= kClockY1)
+                continue;
             const int i = y * FM1P_LCD_W + x;
             const uint16_t ours = (uint16_t)(p[i] >> 8 | p[i] << 8);   // (big-endian as sent)
             if (ours == rgb565(&rgb[3 * i]))

@@ -26,7 +26,8 @@ fm1_add_core(speak37 ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/
 # The golden check (speak37_golden.cpp): Speak37's own FM-1 host test, tests/sp_screen.c -DT_FM1=1 (as its
 # tests/run_tests.sh builds it, with the section flag above), runs its whole check and writes its 28 FM-1 screens; the
 # core is powered on and its screen compared, pixel for pixel, with the one that does not depend on the test's own
-# constructed state: the boot screen at 500 ms (sp_boot_frame(500): SPEAK37 typed half-way, AC791N 0 MHZ). The
+# constructed state: the boot screen at 500 ms (sp_boot_frame(500): SPEAK37 typed half-way), but for its clock line: the test draws
+# AC791N 0 MHZ (it never measures a clock), the core 360 MHZ, the FM-1's (speak37_golden.cpp). The
 # test's other screens are states it sets up directly (knobs swept far past both ends, pages and touches written into
 # the UI's state, the clock moved by hand), not reachable from the panel.
 if(TARGET speak37_core AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
