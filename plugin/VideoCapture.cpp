@@ -14,11 +14,16 @@
 namespace fm1video {
 
 // ============================================================ settings ===
-juce::Point<int> Settings::frameSize() const
+juce::Point<int> Settings::frameSize(bool bigLcd) const
 {
     const bool big = size >= 1080;
     if (view == kViewLcd)
         return big ? juce::Point<int>{1080, 1080} : juce::Point<int>{720, 720};
+    if (view == kViewDevice && bigLcd) {         // portrait, the layout's aspect, the short side kept; even
+        const int w = big ? 1080 : 720;
+        const float aspect = PanelComponent::frameAspect(true);
+        return {w, 2 * juce::roundToInt((float)w / aspect / 2.0f)};
+    }
     return big ? juce::Point<int>{1920, 1080} : juce::Point<int>{1280, 720};
 }
 
@@ -105,35 +110,29 @@ void scaleLcd(const uint16_t *lcd, juce::Image &frame)
 namespace {
 class LcdSource : public FrameSource {
 public:
-    explicit LcdSource(FM1Processor &p) : p_(p) {}
-    void render(juce::Image &frame, int64_t) override
-    {
-        p_.getPanelView(view_);
-        scaleLcd(view_.lcd.data(), frame);
-    }
-
-private:
-    FM1Processor &p_;
-    PanelView view_;
+    void render(juce::Image &frame, const PanelView &state) override { scaleLcd(state.lcd.data(), frame); }
 };
 
-// a PanelComponent of its own: never on the desktop, no timer, no input; refreshed and painted on the recorder's thread
+// a PanelComponent of its own: never on the desktop, no timer, no input; given each frame's snapshot and painted on the
+// recorder's thread
 class MirrorBase : public FrameSource {
 public:
     MirrorBase(FM1Processor &p) : p_(p), panel_(std::make_unique<PanelComponent>(p, true))
     {
         panel_->setButtonNames(p.buttonNames());
         panel_->setTheme(p.getTheme());
+        panel_->setKeyHints(p.getKeyHints());
         serial_ = p.themeSerial();
         panel_->setVisible(true);
     }
-    void follow()
+    void follow(const PanelView &state)
     {
         if (p_.themeSerial() != serial_) {       // (a theme picked while recording)
             serial_ = p_.themeSerial();
             panel_->setTheme(p_.getTheme());
         }
-        panel_->refresh();
+        panel_->setKeyHints(p_.getKeyHints());   // (the editor's setting; nothing to do while it stays)
+        panel_->showView(state);                 // (the snapshot taken at the frame's instant, not the panel now)
     }
 
 protected:
@@ -142,12 +141,18 @@ protected:
     uint32_t serial_ = 0;
 };
 
+// (with the big LCD: the panel's own layout, the LCD above it drawn from the same snapshot as the panel; fixed for the
+// take)
 class DeviceSource : public MirrorBase {
 public:
-    DeviceSource(FM1Processor &p, juce::Point<int> size) : MirrorBase(p) { panel_->setBounds(0, 0, size.x, size.y); }
-    void render(juce::Image &frame, int64_t) override
+    DeviceSource(FM1Processor &p, juce::Point<int> size, bool bigLcd) : MirrorBase(p)
     {
-        follow();
+        panel_->setBigLcd(bigLcd);
+        panel_->setBounds(0, 0, size.x, size.y);
+    }
+    void render(juce::Image &frame, const PanelView &state) override
+    {
+        follow(state);
         juce::Graphics g(frame);
         panel_->paintEntireComponent(g, true);
     }
@@ -162,9 +167,9 @@ public:
         view_->setVisible(true);
         x_ = (size.x - side) / 2, y_ = (size.y - side) / 2;
     }
-    void render(juce::Image &frame, int64_t) override
+    void render(juce::Image &frame, const PanelView &state) override
     {
-        follow();
+        follow(state);
         if (!body_.isValid() || bodySerial_ != serial_) {   // (the body and the bezel, drawn once per theme: the
             bodySerial_ = serial_;                          // bezel's shadow is a blur)
             body_ = juce::Image(juce::Image::ARGB, view_->getWidth(), view_->getHeight(), true, juce::SoftwareImageType());
@@ -187,12 +192,12 @@ private:
 };
 }   // namespace
 
-std::unique_ptr<FrameSource> makeViewSource(FM1Processor &p, int view, juce::Point<int> size)
+std::unique_ptr<FrameSource> makeViewSource(FM1Processor &p, int view, juce::Point<int> size, bool bigLcd)
 {
     switch (view) {
-    case kViewLcd: return std::make_unique<LcdSource>(p);
+    case kViewLcd: return std::make_unique<LcdSource>();
     case kViewScreen: return std::make_unique<ScreenSource>(p, size);
-    default: return std::make_unique<DeviceSource>(p, size);
+    default: return std::make_unique<DeviceSource>(p, size, bigLcd);
     }
 }
 
@@ -271,21 +276,23 @@ Recorder::~Recorder()
 
 bool Recorder::start(Config c, juce::String &error)
 {
-    if (started_ || !c.main || !c.source) {
+    if (started_ || !c.main || !c.frames || !c.source) {
         error = "the recorder is busy";
         return false;
     }
     c_ = std::move(c);
     sr_ = juce::roundToInt(c_.spec.inputRate);
     c_.main->clear();                            // (the clock reads nothing of the last take)
+    c_.frames->arm(sr_, c_.spec.fps);            // (the pictures: from this take's first frame)
     if (c_.mic)
         c_.mic->clear();
     c_.spec.audioTracks = c_.mic && !c_.mix ? 2 : 1;
     if (!enc_.open(c_.spec, error))
         return false;
     frame_ = juce::Image(juce::Image::ARGB, c_.spec.width, c_.spec.height, true, juce::SoftwareImageType());
-    a_.assign((size_t)kChunk * 2, 0.0f);
     b_.assign((size_t)kChunk * 2, 0.0f);
+    for (Pending &p : pend_)
+        p.data.assign((size_t)kChunk * 2, 0.0f), p.k = 0;
     res_ = {};
     res_.file = c_.spec.file;
     started_ = true;
@@ -315,29 +322,85 @@ int64_t Recorder::framesBefore(int64_t t) const
     return (t * fps + sr_ - 1) / sr_;
 }
 
-bool Recorder::emitFrames(int64_t due, int64_t now)
+// the picture of frame k is in the snapshot ring (captured on the audio thread at k's instant): drawn from it however
+// late. Frames whose snapshot is missing (the ring was full) or dropped (this thread more than half a ring behind:
+// the oldest go first) repeat the last picture drawn; none ever shows a later state. Up to `limit` frames (the end)
+bool Recorder::drainFrames(int64_t limit, int64_t now)
 {
-    if (next_ >= due)
+    SnapshotRing<PanelView> &ring = *c_.frames;
+    const double t0 = juce::Time::getMillisecondCounterHiRes();
+    const bool final = limit != INT64_MAX;
+    auto write = [&](int64_t upTo, bool fresh) {   // frames next_ .. upTo - 1 from frame_ (fresh: frame_ was just drawn)
+        const juce::Image::BitmapData d(frame_, juce::Image::BitmapData::readOnly);
+        for (bool first = fresh; next_ < upTo; first = false) {
+            if (!enc_.addVideo(next_, d.getLinePointer(0), d.lineStride))
+                return false;                    // (the input busy: the rest next time)
+            if (!first)
+                res_.duplicated++;
+            next_++;
+            res_.videoFrames++;
+        }
         return true;
-    c_.source->render(frame_, next_ * sr_ / c_.spec.fps);
-    res_.rendered++;
-    if (!first_.isValid()) {
-        const juce::SpinLock::ScopedLockType l(firstLock_);
-        first_ = frame_.createCopy();
+    };
+    auto repeat = [&](int64_t upTo) {            // (no snapshot to draw for these: the last picture again)
+        if (next_ >= upTo)
+            return true;
+        if (!drawn_)                             // (nothing drawn yet: the frame stays black)
+            frame_.clear(frame_.getBounds(), juce::Colours::black);
+        const int64_t n = upTo - next_;
+        const bool ok = write(upTo, false);
+        dropped_.fetch_add(n - (upTo - next_));
+        return ok;
+    };
+    while (const SnapshotRing<PanelView>::Slot *s = ring.front()) {
+        const int64_t k0 = juce::jmax(s->k0, next_), k1 = juce::jmin(s->k1, limit);
+        if (k0 >= limit)
+            break;
+        if (k0 > next_ && !repeat(k0))           // (the producer had no room for these)
+            return !enc_.failed();
+        if (k1 > k0) {
+            if (drawn_ && ring.backlog() > ring.capacity() / 2) {   // behind: the oldest go, as repeats
+                if (!repeat(k1))
+                    return !enc_.failed();
+            } else {
+                const double r0 = juce::Time::getMillisecondCounterHiRes();
+                c_.source->render(frame_, s->state);
+                const double rt = juce::Time::getMillisecondCounterHiRes() - r0;
+                res_.renderMsMax = juce::jmax(res_.renderMsMax, rt);
+                res_.renderMsTotal += rt;
+                drawn_ = true;
+                res_.rendered++;
+                if (!first_.isValid()) {
+                    const juce::SpinLock::ScopedLockType l(firstLock_);
+                    first_ = frame_.createCopy();
+                }
+                // (how long after the frame's instant its picture was drawn, at worst: the delay, not the content)
+                const int64_t lag = now - k0 * sr_ / c_.spec.fps;
+                res_.maxLagMs = juce::jmax(res_.maxLagMs, (int)(lag * 1000 / juce::jmax(1, sr_)));
+                if (!write(k1, true))
+                    return !enc_.failed();
+            }
+        }
+        if (next_ < s->k1 && s->k1 <= limit)
+            return true;                         // (not all of it written)
+        ring.pop();
+        if (!final && juce::Time::getMillisecondCounterHiRes() - t0 > 12.0)
+            return true;                         // (the audio is drained in between: a slow drawing never starves it)
     }
-    // (how late the picture is against the instant of the frame it is shown at, at worst)
-    const int64_t lag = now - next_ * sr_ / c_.spec.fps;
-    res_.maxLagMs = juce::jmax(res_.maxLagMs, (int)(lag * 1000 / juce::jmax(1, sr_)));
-    const juce::Image::BitmapData d(frame_, juce::Image::BitmapData::readOnly);
-    const int64_t from = next_;
-    while (next_ < due) {
-        if (!enc_.addVideo(next_, d.getLinePointer(0), d.lineStride))
-            return !enc_.failed();               // (the input busy: the rest next time, as repeats)
-        if (next_ > from)
-            res_.duplicated++;
-        next_++;
-        res_.videoFrames++;
-    }
+    return true;
+}
+
+// a chunk taken from a ring waits here until the writer takes it (its input busy: tried again next time, never lost)
+bool Recorder::flushPending(int track, bool final)
+{
+    Pending &p = pend_[track];
+    if (p.k <= 0)
+        return true;
+    if (!enc_.addAudio(track, p.pos, p.data.data(), p.k, final ? 2000 : 250))
+        return false;
+    if (track == 0)
+        res_.endFrame = juce::jmax(res_.endFrame, p.pos + p.k);
+    p.k = 0;
     return true;
 }
 
@@ -351,46 +414,48 @@ bool Recorder::drainAudio(int64_t upTo, bool final)
         if (!final && upTo - juce::jmax<int64_t>(0, mp) > sr_)
             micAbsent_ = true;
     }
+    auto busy = [&] { return !enc_.failed() && !final; };   // (true: try again later; false: the take fails)
     // track 0: the main tap (+ the mic when mixed)
     while (true) {
+        if (!flushPending(0, final))
+            return busy();
         const int64_t pos = m.consumed();
         int64_t n = upTo - pos;
         if (c_.mix && mic && !micAbsent_ && !final)
             n = juce::jmin(n, juce::jmax<int64_t>(0, mic->produced()) - mic->consumed());
         if (n <= 0)
             break;
-        if (!final && !enc_.audioReady(0))
-            return true;
-        const int k = m.read(a_.data(), (int)juce::jmin<int64_t>(n, kChunk));
+        Pending &p = pend_[0];
+        const int k = m.read(p.data.data(), (int)juce::jmin<int64_t>(n, kChunk));
         if (k <= 0)
             break;
         if (c_.mix && mic && !micAbsent_) {
             const int mk = mic->read(b_.data(), k);
             for (int i = 0; i < mk * 2; i++)
-                a_[(size_t)i] += b_[(size_t)i];
+                p.data[(size_t)i] += b_[(size_t)i];
         }
-        if (!enc_.addAudio(0, pos, a_.data(), k, final ? 2000 : 250))
-            return !enc_.failed() && !final;
-        res_.endFrame = juce::jmax(res_.endFrame, pos + k);
+        p.pos = pos, p.k = k;
     }
-    // track 1: the mic, separate
+    // track 1: the mic, separate (micPos_: what track 1 holds; the tap's frames while it has them, then, at the end,
+    // silence)
     if (mic && !c_.mix) {
-        // (micPos_: what track 1 holds; the tap's frames while it has them, then, at the end, silence)
-        while (micPos_ < upTo) {
+        while (true) {
+            if (!flushPending(1, final))
+                return busy();
+            if (micPos_ >= upTo)
+                break;
+            Pending &p = pend_[1];
             const int64_t avail = juce::jmin(upTo, juce::jmax<int64_t>(0, mic->produced()));
             int k = 0;
             if (avail > micPos_ && mic->consumed() == micPos_) {
-                if (!final && !enc_.audioReady(1))
-                    return true;
-                k = mic->read(b_.data(), (int)juce::jmin<int64_t>(avail - micPos_, kChunk));
-            } else if (final) {                  // (the end: silence where the mic gave nothing)
+                k = mic->read(p.data.data(), (int)juce::jmin<int64_t>(avail - micPos_, kChunk));
+            } else if (final) {
                 k = (int)juce::jmin<int64_t>(upTo - micPos_, kChunk);
-                std::fill(b_.begin(), b_.begin() + k * 2, 0.0f);
+                std::fill(p.data.begin(), p.data.begin() + k * 2, 0.0f);
             }
             if (k <= 0)
                 break;
-            if (!enc_.addAudio(1, micPos_, b_.data(), k, final ? 2000 : 250))
-                return !enc_.failed() && !final;
+            p.pos = micPos_, p.k = k;
             micPos_ += k;
         }
     }
@@ -405,7 +470,7 @@ void Recorder::run()
         const bool frozen = m.frozen();          // (read first: produced() after it is the take's end)
         const int64_t now = m.produced();
         if (now > 0) {
-            if (!drainAudio(now, false) || !emitFrames(framesBefore(now), now)) {
+            if (!drainAudio(now, false) || !drainFrames(INT64_MAX, now)) {
                 why = "Recording stopped: " + enc_.error() + ". What was written is kept.";
                 break;
             }
@@ -432,7 +497,18 @@ void Recorder::run()
     }
     bool ok = !enc_.failed();
     if (ok)
-        ok = drainAudio(end, true) && emitFrames(framesBefore(end), end);
+        ok = drainAudio(end, true) && drainFrames(framesBefore(end), end);
+    if (ok && next_ < framesBefore(end)) {        // (the last block's snapshot can miss the take: Stop came between the
+        const int64_t was = dropped_.load();     // push and the capture; its frames repeat the last picture)
+        while (ok && next_ < framesBefore(end)) {
+            const juce::Image::BitmapData d(frame_, juce::Image::BitmapData::readOnly);
+            ok = enc_.addVideo(next_, d.getLinePointer(0), d.lineStride, 2000);
+            next_ += ok ? 1 : 0;
+            res_.videoFrames += ok ? 1 : 0;
+        }
+        dropped_.store(was);
+    }
+    res_.dropped = dropped_.load() + c_.frames->dropped();
     juce::String err;
     const bool fin = enc_.finish(end, err);
     res_.ok = fin && ok && why.isEmpty();
@@ -699,16 +775,19 @@ bool Session::start()
     Recorder::Config c;
     c.spec.file = file_;
     c.spec.mov = s_.mov;
-    const juce::Point<int> size = s_.frameSize();
+    const bool big = s_.view == kViewDevice && p_.getBigLcd();   // (read now: kept for the take)
+    const juce::Point<int> size = s_.frameSize(big);
     c.spec.width = size.x;
     c.spec.height = size.y;
     c.spec.fps = s_.fps;
     c.spec.inputRate = sr;
     c.main = &p_.videoTap();
+    c.frames = &p_.videoFrames();
     c.mic = mic ? &micTap_ : nullptr;
     c.mix = s_.micMix;
-    c.source = makeViewSource(p_, s_.view, size);
+    c.source = makeViewSource(p_, s_.view, size, big);
     p_.videoTap().allocate();
+    p_.videoFrames().allocate(kFrameSlots);
     micTap_.allocate();
     rec_ = std::make_unique<Recorder>();
     juce::String err;
@@ -721,6 +800,8 @@ bool Session::start()
             openInput(false);
         return false;
     }
+    takeBig_ = big;
+    takeSize_ = size;
     if (mic) {
         micTap_.arm();
         mic_->configure(s_.inChannel, s_.inChannels, (float)s_.micGainDb, s_.monitor);

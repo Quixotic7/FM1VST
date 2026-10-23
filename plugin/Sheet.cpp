@@ -616,6 +616,8 @@ private:
     Row view_{look_, "Show", &viewSeg_, 150, 30};
     Switch bigSw_{look_};
     Row big_{look_, "Big LCD above the panel", &bigSw_, Switch::kW, 24};
+    Switch hintsSw_{look_};
+    Row hints_{look_, "Show keyboard shortcuts", &hintsSw_, Switch::kW, 24};
     ScreenCopyControls screenCtl_{look_};
     Row screen_{look_, "Screen", &screenCtl_, ScreenCopyControls::kW, 30};
 
@@ -857,7 +859,13 @@ Sheet::MainPage::MainPage(Sheet &s, FM1Editor &ed) : ScrollPage(ed.look()), shee
     };
     stack_.add(big_);
     big_.setCaption("also the ` key");
-    bigSw_.onChange = [this](bool on) { ed_.setBigLcd(on); };
+    bigSw_.onChange = [this](bool on) {
+        ed_.setBigLcd(on);
+        refresh(false);                          // (the Video section's Device size follows)
+    };
+    stack_.add(hints_);
+    hints_.setCaption("the computer keys printed on the panel");
+    hintsSw_.onChange = [this](bool on) { ed_.setKeyHints(on); };
     stack_.add(screen_);
     screen_.setCaption(String::fromUTF8("to the clipboard, pixel for pixel \xc2\xb7 \xe2\x87\xa7\xe2\x8c\x98" "C"));
     screen_.setTooltip("Copies the firmware's screen as an image (PNG and TIFF, sRGB), for an image editor: Photoshop, Figma, "
@@ -1319,6 +1327,7 @@ void Sheet::MainPage::refresh(bool full)
         refreshThemes();
     viewSeg_.setSelected(ed_.viewMode());
     bigSw_.setOn(ed_.panel().bigLcd());
+    hintsSw_.setOn(ed_.keyHints());
     const bool dev = ed_.viewMode() == FM1Processor::kViewDevice;
     bigSw_.setEnabledLook(dev);
     big_.setEnabledLook(dev);
@@ -1394,14 +1403,18 @@ void Sheet::MainPage::refreshVideo()
     const String dot = String::fromUTF8(" \xc2\xb7 "), times = String::fromUTF8(" \xc3\x97 ");
     recP_.setText(rec ? "Stop" : "Record");
     recP_.setKind(rec ? Look::DangerFill : Look::Primary);
-    record_.setCaption(rec ? fm1video::formatTime(video_->seconds()) + dot + video_->currentFile().getFileName()
+    const juce::int64 drops = video_->droppedFrames();
+    record_.setCaption(rec ? fm1video::formatTime(video_->seconds()) + dot +
+                                 (drops > 0 ? String(drops) + " frames dropped" + dot : String()) + video_->currentFile().getFileName()
                            : String::fromUTF8("\xe2\x87\xa7\xe2\x8c\x98" "R") + dot + "~/Movies/FM1VST",
                        Look::col(rec ? Look::C::red : Look::C::muted));
     vViewSeg_.setSelected(s.view);
     vSizeSeg_.setSelected(s.size >= 1080 ? 1 : 0);
-    const juce::Point<int> fs = s.frameSize();
+    const juce::Point<int> fs = video_->frameSize();   // (Device with the big LCD: the taller layout; a take's own)
     vSize_.setCaption(String(fs.x) + times + String(fs.y) +
-                      (s.view == fm1video::kViewLcd ? dot + (s.size >= 1080 ? "4.5" : "3") + String::fromUTF8("\xc3\x97 nearest") : String()));
+                      (s.view == fm1video::kViewLcd ? dot + (s.size >= 1080 ? "4.5" : "3") + String::fromUTF8("\xc3\x97 nearest")
+                       : video_->bigLcd()           ? dot + "the big LCD above"
+                                                    : String()));
     vFpsSeg_.setSelected(s.fps >= 60 ? 1 : 0);
     vFmtSeg_.setSelected(s.mov ? 1 : 0);
     for (Widget *w : std::initializer_list<Widget *>{&vView_, &vViewSeg_, &vSize_, &vSizeSeg_, &vFps_, &vFpsSeg_, &vFmt_, &vFmtSeg_})

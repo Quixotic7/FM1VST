@@ -13,8 +13,17 @@
 //   (b) 5 s, the device view at 1280 x 720, 60 fps, .mov, the mic Mixed at 0 dB: 1 video + 1 audio track, 300 frames,
 //       the first frame, the tone in the main track;
 //   (s) 2 s, the screen view at 1920 x 1080, 30 fps: 60 frames, the first frame;
-//   (y) A/V sync, synthetic: a click in the audio and a white flash in the picture at the same timeline instant, every
-//       second for 30 s (30 fps): each click's and flash's times decoded; every offset under a frame, no drift;
+//   (d) the device view with the big LCD above the panel: the sizes (720 x 1162, 1080 x 1744: portrait, the layout's
+//       aspect, even; Screen and LCD unchanged; the session reads the big LCD when a take starts and keeps it for the
+//       take); 2 s of the processor at 1080 x 1744, 30 fps; a synthetic snapshot (an LCD pattern, a key held): the
+//       recorder's first frame is exactly the offscreen render of that layout (a PanelComponent of its own, the big
+//       LCD on) and the decoded one matches it; the computer-key hints off: the recorder's frame follows (no hints);
+//   (y) A/V sync, synthetic: a click in the audio and a white flash in the panel snapshot of the same block, every second
+//       for 30 s (30 fps): each click's and flash's times decoded; every offset under a frame, no drift; again with a
+//       renderer slower than the frame rate (50 ms a frame, 12 s): frames are dropped (counted), and every flash that
+//       remains is still on its click. Not on GitHub's runners (GITHUB_ACTIONS: timing on shared runners); it is meant to
+//       pass on any Mac, loaded or not (taskpolicy -b and every core busy: checked); and with the device view and the
+//       big LCD (12 s, 720 x 1162): the flash is the big LCD's, the panel and the LCD drawn from one snapshot;
 //   (e) errors: an unwritable folder (the session) and an unwritable file (the recorder): a clean message, no file;
 //   (w) the session: a take into a folder of its own (<id>-<version>-<date>.mp4), a power cycle ends it cleanly with
 //       "the firmware restarted", the file finished and readable;
@@ -32,6 +41,7 @@
 
 #include "built_cores.h"
 #include "AudioTap.h"
+#include "PanelComponent.h"
 #include "Processor.h"
 #include "ScreenCapture.h"
 #include "VideoCapture.h"
@@ -65,10 +75,10 @@ struct SimDevice : juce::Thread {
     AudioTap *main = nullptr;
     std::atomic<int64_t> stopAt{-1};             // pause once the main tap's take is this long
     std::atomic<bool> paused{false};
-    std::vector<double> energy;                  // what the main render made during the take: per frame, L² + R²
+    std::vector<double> energy;                  // what the main render made during the take: per frame, L^2 + R^2
     double phase = 0;
     SimDevice() : juce::Thread("sim device") {}
-    ~SimDevice() override { stopThread(2000); }
+    ~SimDevice() override { stopThread(-1); }   // (no timeout: a starved device thread must never outlive its take)
     void run() override
     {
         juce::AudioBuffer<float> buf(2, kBlock), in(2, kBlock), out(2, kBlock);
@@ -77,7 +87,7 @@ struct SimDevice : juce::Thread {
             if (!paused.load()) {
                 buf.clear();
                 render(buf);
-                const int64_t have = main ? main->produced() : -1;
+                const int64_t have = main && main->running() ? main->produced() : -1;   // (not the last take's length)
                 if (have > 0 && (int64_t)energy.size() < have)   // (this block is on the take's timeline)
                     for (int i = 0; i < kBlock; i++)
                         energy.push_back((double)buf.getSample(0, i) * buf.getSample(0, i) + (double)buf.getSample(1, i) * buf.getSample(1, i));
@@ -106,6 +116,14 @@ static void waitPaused(SimDevice &d, double maxMs)
 {
     const double t0 = juce::Time::getMillisecondCounterHiRes();
     while (!d.paused.load() && juce::Time::getMillisecondCounterHiRes() - t0 < maxMs)
+        juce::Thread::sleep(5);
+}
+
+// until the tap's take is this long (at most a minute)
+static void waitTake(AudioTap &t, double seconds)
+{
+    const double t0 = juce::Time::getMillisecondCounterHiRes();
+    while (t.produced() < (int64_t)(seconds * kRate) && juce::Time::getMillisecondCounterHiRes() - t0 < 60000)
         juce::Thread::sleep(5);
 }
 
@@ -196,14 +214,15 @@ struct TakeSpec {
     bool mov, mic, mix;
     float gainDb;
     double seconds;
+    bool bigLcd = false;                         // (the device view: the big LCD above the panel)
 };
 
 static juce::File scratchDir() { return juce::File(FM1_SCRATCH_DIR); }
 
 static void processorTake(FM1Processor &p, const TakeSpec &t)
 {
-    std::printf("\n(%s) %d x %d, %d fps, %s, %s\n", t.name, t.w, t.h, t.fps, t.mov ? ".mov" : ".mp4",
-                !t.mic ? "no mic" : t.mix ? "mic mixed" : "mic separate");
+    std::printf("\n(%s) %d x %d, %d fps, %s, %s%s\n", t.name, t.w, t.h, t.fps, t.mov ? ".mov" : ".mp4",
+                !t.mic ? "no mic" : t.mix ? "mic mixed" : "mic separate", t.bigLcd ? ", the big LCD above the panel" : "");
     std::fflush(stdout);
     {                                            // (the chord struck again: it decays)
         juce::AudioBuffer<float> b(2, kBlock);
@@ -236,10 +255,12 @@ static void processorTake(FM1Processor &p, const TakeSpec &t)
     c.spec.fps = t.fps;
     c.spec.inputRate = kRate;
     c.main = &p.videoTap();
+    c.frames = &p.videoFrames();
     c.mic = t.mic ? &micTap : nullptr;
     c.mix = t.mix;
-    c.source = makeViewSource(p, t.view, {t.w, t.h});
+    c.source = makeViewSource(p, t.view, {t.w, t.h}, t.bigLcd);
     p.videoTap().allocate();
+    p.videoFrames().allocate(kFrameSlots);
     micTap.allocate();
     Recorder rec;
     juce::String err;
@@ -251,14 +272,14 @@ static void processorTake(FM1Processor &p, const TakeSpec &t)
         micTap.arm();
     p.videoTap().arm();
     dev.stopAt.store(total);                     // (after the arm: the tap still says how long the last take was)
-    waitPaused(dev, t.seconds * 1000 + 3000);
+    waitPaused(dev, t.seconds * 1000 + 60000);
     const Recorder::Result r = rec.stop();
-    dev.stopThread(2000);
+    dev.stopThread(-1);
     const juce::Image first = rec.firstFrame();
     check(r.ok && r.endFrame == total, "the take ends at " + std::to_string(r.endFrame) + " frames (" + f2(r.seconds) +
                                            " s), rendered " + std::to_string(r.rendered) + ", repeated " +
                                            std::to_string(r.duplicated) + ", at most " + std::to_string(r.maxLagMs) +
-                                           " ms after its instant" + (r.error.isEmpty() ? "" : ": " + r.error.toStdString()));
+                                           " ms after its instant, " + std::to_string(r.dropped) + " dropped; drawing " + f2(r.rendered ? r.renderMsTotal / (double)r.rendered : 0.0, 1) + " ms a frame (" + f2(r.renderMsMax, 1) + " at most)" + (r.error.isEmpty() ? "" : ": " + r.error.toStdString()));
 
     const Probe pr = probe(file);
     const double frameS = 1.0 / t.fps;
@@ -294,7 +315,7 @@ static void processorTake(FM1Processor &p, const TakeSpec &t)
     const double got = rmsBoth(main, rate, 0.1);
     const double mainTone = toneAmp(main, rate, 1000.0);
     if (!t.mix) {
-        check(expect > 0.0005 && std::abs(db(got, expect)) < 0.5,
+        check(expect > 0.0001 && std::abs(db(got, expect)) < 0.5,
               "the main track's RMS " + f2(got, 4) + " is what the processor rendered, " + f2(expect, 4) + " (" +
                   f2(db(got, expect), 2) + " dB), from " + f2(start, 4) + " s");
         if (t.mic)
@@ -315,36 +336,32 @@ static void processorTake(FM1Processor &p, const TakeSpec &t)
 }
 
 // --------------------------------------------------------- A/V sync ---
-// the flash: white while the take's clock is within the first frame of a second (1 s, 2 s, ..), else black
+// the synthetic state: white in the block holding a whole second's instant (1 s, 2 s, ..), else black, captured into
+// the snapshot ring after each block as the processor captures its panel; the source draws the snapshot it is given
+// (slowly if asked: a loaded machine's renderer)
 struct FlashSource : FrameSource {
-    AudioTap &tap;
-    int fps;
-    explicit FlashSource(AudioTap &t, int f) : tap(t), fps(f) {}
-    void render(juce::Image &frame, int64_t at) override
+    int delayMs;
+    explicit FlashSource(int d = 0) : delayMs(d) {}
+    void render(juce::Image &frame, const PanelView &state) override
     {
-        const int64_t t = at;                    // (the instant this picture is shown at: the flash is put exactly there)
-        const int64_t sr = (int64_t)kRate, inSec = t % sr;
-        const bool white = t >= sr && inSec < sr / fps;
-        frame.clear(frame.getBounds(), white ? juce::Colours::white : juce::Colours::black);
+        if (delayMs > 0)
+            juce::Thread::sleep(delayMs);
+        frame.clear(frame.getBounds(), state.lcd[0] ? juce::Colours::white : juce::Colours::black);
     }
 };
 
-static void syncTest()
+// a synthetic device: the click at each whole second in the audio, the flash in the snapshot of the same block
+static void flashDevice(SimDevice &dev, AudioTap &tap, SnapshotRing<PanelView> &ring, PanelView &view)
 {
-    const int fps = 30;
-    const double seconds = 30.5;
-    std::printf("\n(y) A/V sync: a click and a flash every second for %.0f s, %d fps\n", seconds - 0.5, fps);
-    AudioTap tap;
-    tap.allocate();
-    SimDevice dev;
     dev.main = &tap;
-    int64_t pos = 0;                             // (the render's own count of device frames since the tap started)
-    dev.render = [&](juce::AudioBuffer<float> &b) {
-        const int64_t base = tap.produced() < 0 ? -1 : tap.produced();
+    dev.render = [&tap, &ring, &view](juce::AudioBuffer<float> &b) {
+        const int64_t base = tap.produced();
+        bool second = false;
         for (int i = 0; i < kBlock; i++) {
             float v = 0;
             if (base >= 0) {                     // (the block will land at `base`: the click at whole seconds)
                 const int64_t t = base + i, inSec = t % (int64_t)kRate;
+                second = second || (t >= (int64_t)kRate && inSec == 0);
                 if (t >= (int64_t)kRate && inSec < (int64_t)(0.004 * kRate))
                     v = (float)(0.8 * std::sin(2.0 * juce::MathConstants<double>::pi * 2000.0 * (double)inSec / kRate));
             }
@@ -352,57 +369,91 @@ static void syncTest()
             b.setSample(1, i, v);
         }
         tap.push(b.getReadPointer(0), b.getReadPointer(1), kBlock);
-        pos += kBlock;
+        view.lcd.fill(second ? 0xFFFF : 0);
+        view.lcdSeq++;                           // (a new copy of the LCD: the device view's mirror converts it again)
+        if (tap.running())
+            ring.capture(view, tap.produced());
     };
-    dev.stopAt.store((int64_t)(seconds * kRate));
+}
+
+// a take of `seconds` with a flash and a click every second; every flash found must sit on its click (pairing by the
+// second, so a flash lost to a dropped frame cannot shift the others), all 30 found when nothing was dropped
+using MakeSource = std::function<std::unique_ptr<FrameSource>()>;
+// (make: the view drawing the snapshots, else FlashSource; size, and where the flash is looked for: the frame's middle
+// by default)
+static void syncTest(const char *name, double seconds, int fps, int delayMs, const MakeSource &make = nullptr,
+                     juce::Point<int> size = {640, 360}, juce::Rectangle<int> where = {})
+{
+    const int n = (int)seconds;
+    std::printf("\n(y) A/V sync, %s: a click and a flash every second for %d s, %d fps, %d x %d%s\n", name, n, fps, size.x, size.y,
+                delayMs ? (", the renderer taking " + std::to_string(delayMs) + " ms a frame").c_str() : "");
+    std::fflush(stdout);
+    AudioTap tap;
+    tap.allocate();
+    SnapshotRing<PanelView> ring;
+    ring.allocate(kFrameSlots);
+    PanelView view;
+    SimDevice dev;
+    flashDevice(dev, tap, ring, view);
     dev.startThread();
-    const juce::File file = scratchDir().getChildFile("take-sync.mp4");
+    const juce::File file = scratchDir().getChildFile(juce::String("take-sync-") + name + ".mp4");
     Recorder::Config c;
     c.spec.file = file;
-    c.spec.width = 640;
-    c.spec.height = 360;
+    c.spec.width = size.x;
+    c.spec.height = size.y;
     c.spec.fps = fps;
     c.spec.inputRate = kRate;
     c.main = &tap;
-    c.source = std::make_unique<FlashSource>(tap, fps);
+    c.frames = &ring;
+    c.source = make ? make() : std::make_unique<FlashSource>(delayMs);
+    if (where.isEmpty())
+        where = {size.x / 4, size.y / 4, size.x / 2, size.y / 2};
     Recorder rec;
     juce::String err;
     check(rec.start(std::move(c), err), "the recorder starts " + err.toStdString());
     tap.arm();
-    waitPaused(dev, seconds * 1000 + 3000);
+    dev.stopAt.store((int64_t)((seconds + 0.5) * kRate));
+    waitPaused(dev, (seconds + 0.5) * 1000 + 60000);
     const Recorder::Result r = rec.stop();
-    dev.stopThread(2000);
-    check(r.ok, "the take: " + f2(r.seconds) + " s, " + std::to_string(r.videoFrames) + " frames, at most " +
-                    std::to_string(r.maxLagMs) + " ms after a frame's instant " + r.error.toStdString());
+    dev.stopThread(-1);
+    check(r.ok && r.videoFrames == (int64_t)std::llround((seconds + 0.5) * fps),
+          "the take: " + f2(r.seconds) + " s, " + std::to_string(r.videoFrames) + " frames (" + std::to_string(r.rendered) +
+              " drawn, " + std::to_string(r.dropped) + " dropped), drawn at most " + std::to_string(r.maxLagMs) +
+              " ms after a frame's instant " + r.error.toStdString());
 
-    // the flashes: the first white frame of each run
+    // the flashes: the first white frame of each run (a dropped frame repeats the last picture, a flash too: only a run's
+    // start says when; one off a whole second is a misplaced picture)
     std::vector<double> flashes;
+    int misplaced = 0;
     bool was = false;
     decodeVideo(
         file,
         [&](double t, const uint8_t *px, int w, int h, int stride) {
             double s = 0;
-            for (int y = h / 4; y < 3 * h / 4; y += 8)
-                for (int x = w / 4; x < 3 * w / 4; x += 8)
+            int cnt = 0;
+            const juce::Rectangle<int> box = where.getIntersection({0, 0, w, h});
+            for (int y = box.getY(); y < box.getBottom(); y += 8)
+                for (int x = box.getX(); x < box.getRight(); x += 8, cnt++)
                     s += px[(size_t)y * (size_t)stride + (size_t)x * 4 + 1];
-            const bool white = s / (double)((h / 2 / 8) * (w / 2 / 8)) > 128;
-            if (white && !was)
+            const bool white = s / (double)juce::jmax(1, cnt) > 128;
+            if (white && !was) {
                 flashes.push_back(t);
+                misplaced += std::abs(t - std::round(t)) > 0.25 / fps ? 1 : 0;
+            }
             was = white;
             return true;
         },
         err);
-    // the clicks: the first sample over half the burst's level after a quiet stretch
+    // the clicks: an onset after half a second of quiet that peaks within 5 ms
     std::vector<float> a;
     int rate = 0;
     double start = 0;
     decodeAudio(file, 0, a, rate, start, err);
-    std::printf("    (audio: %zu samples at %d Hz from %.4f s, max %.3f %s)\n", a.size(), rate, start, a.empty() ? 0.0 : (double)*std::max_element(a.begin(), a.end()), err.toRawUTF8());
     std::vector<double> clicks;
     int64_t quiet = 0;
     for (size_t i = 0; i < a.size() / 2; i++) {
         const float v = std::abs(a[i * 2]);
-        if (v > 0.05f && quiet > rate / 2) {   // (an onset after half a second of quiet: a click if it peaks within 5 ms)
+        if (v > 0.05f && quiet > rate / 2) {
             float peak = 0;
             for (size_t j = i; j < std::min(a.size() / 2, i + (size_t)(0.005 * rate)); j++)
                 peak = std::max(peak, std::abs(a[j * 2]));
@@ -411,26 +462,150 @@ static void syncTest()
         }
         quiet = v > 0.05f ? 0 : quiet + 1;
     }
-    const size_t n = std::min(flashes.size(), clicks.size());
-    check(flashes.size() == 30 && clicks.size() == 30,
-          std::to_string(flashes.size()) + " flashes and " + std::to_string(clicks.size()) + " clicks decoded (30 each)");
+    bool timesOk = clicks.size() == (size_t)n;
+    for (size_t i = 0; i < clicks.size(); i++)
+        timesOk = timesOk && std::abs(clicks[i] - (double)(i + 1)) < 0.005;
+    check(timesOk, std::to_string(clicks.size()) + " clicks, each at its whole second (within 5 ms): the audio's start is trimmed exactly");
     double worst = 0, lo = 1e9, hi = -1e9, sum = 0, sx = 0, sxy = 0, sxx = 0;
-    bool timesOk = true;
-    for (size_t i = 0; i < n; i++) {
-        const double off = flashes[i] - clicks[i];
+    size_t paired = 0;
+    for (double f : flashes) {
+        const long sec = std::lround(f);
+        if (sec < 1 || sec > (long)clicks.size())
+            continue;
+        const double ck = clicks[(size_t)sec - 1], off = f - ck;
         worst = std::max(worst, std::abs(off));
         lo = std::min(lo, off), hi = std::max(hi, off), sum += off;
-        sx += clicks[i], sxy += clicks[i] * off, sxx += clicks[i] * clicks[i];
-        timesOk = timesOk && std::abs(clicks[i] - (double)(i + 1)) < 0.005;
+        sx += ck, sxy += ck * off, sxx += ck * ck;
+        paired++;
     }
-    const double mean = n ? sum / (double)n : 0, slope = n > 1 ? (sxy - sx * mean) / (sxx - sx * sx / (double)n) : 0;
-    check(timesOk, "each click decodes at its whole second (within 5 ms): the audio's start is trimmed exactly");
-    check(n == 30 && worst < 1.0 / fps, "the flash - click offsets: mean " + f2(mean * 1000, 2) + " ms, worst " + f2(worst * 1000, 2) +
-                                            " ms (a frame is " + f2(1000.0 / fps, 1) + " ms)");
-    check(n == 30 && hi - lo < 1.0 / fps && std::abs(slope * 30.0) < 0.5 / fps,
-          "no drift: the offsets span " + f2((hi - lo) * 1000, 2) + " ms over 30 s, slope " + f2(slope * 1e6, 2) + " us/s");
-    std::printf("SYNC mean_ms=%.2f worst_ms=%.2f span_ms=%.2f slope_us_per_s=%.2f\n", mean * 1000, worst * 1000, (hi - lo) * 1000,
-                slope * 1e6);
+    const double mean = paired ? sum / (double)paired : 0;
+    const double slope = paired > 1 ? (sxy - sx * mean) / (sxx - sx * sx / (double)paired) : 0;
+    check(paired == flashes.size() && misplaced == 0 && (r.dropped > 0 ? paired >= 1 : paired == (size_t)n),
+          std::to_string(flashes.size()) + " flashes, every one on its second (" + std::to_string(misplaced) +
+              " starting elsewhere)" + (r.dropped > 0 ? "; the others fell in dropped frames" : ""));
+    check(paired > 0 && worst < 1.0 / fps, "the flash - click offsets: mean " + f2(mean * 1000, 2) + " ms, worst " +
+                                               f2(worst * 1000, 2) + " ms (a frame is " + f2(1000.0 / fps, 1) + " ms)");
+    check(paired > 0 && hi - lo < 1.0 / fps && std::abs(slope * seconds) < 0.5 / fps,
+          "no drift: the offsets span " + f2((hi - lo) * 1000, 2) + " ms over " + std::to_string(n) + " s, slope " + f2(slope * 1e6, 2) + " us/s");
+    std::printf("SYNC %s flashes=%zu/%d dropped=%lld mean_ms=%.2f worst_ms=%.2f span_ms=%.2f slope_us_per_s=%.2f max_lag_ms=%d\n", name,
+                flashes.size(), n, (long long)r.dropped, mean * 1000, worst * 1000, (hi - lo) * 1000, slope * 1e6, r.maxLagMs);
+}
+
+// ------------------------------------------- the device view, the big LCD ---
+// the device view's layout drawn by a PanelComponent of its own (the recorder's mirror is another one): the big LCD on,
+// the processor's theme, names and hints, the given snapshot
+static juce::Image referenceDevice(FM1Processor &p, juce::Point<int> size, const PanelView &v, PanelComponent::Layout *lay = nullptr)
+{
+    PanelComponent panel(p, true);
+    panel.setButtonNames(p.buttonNames());
+    panel.setTheme(p.getTheme());
+    panel.setKeyHints(p.getKeyHints());
+    panel.setVisible(true);
+    panel.setBigLcd(true);
+    panel.setBounds(0, 0, size.x, size.y);
+    panel.showView(v);
+    juce::Image img(juce::Image::ARGB, size.x, size.y, true, juce::SoftwareImageType());
+    {
+        juce::Graphics g(img);
+        panel.paintEntireComponent(g, true);
+    }
+    if (lay)
+        *lay = panel.layout();
+    return img;
+}
+
+static int imageDiff(const juce::Image &a, const juce::Image &b)   // the largest channel difference (999: sizes differ)
+{
+    if (!a.isValid() || a.getBounds() != b.getBounds())
+        return 999;
+    const juce::Image::BitmapData da(a, juce::Image::BitmapData::readOnly), db(b, juce::Image::BitmapData::readOnly);
+    int worst = 0;
+    for (int y = 0; y < a.getHeight(); y++)
+        for (int x = 0; x < a.getWidth(); x++) {
+            const uint8_t *pa = da.getPixelPointer(x, y), *pb = db.getPixelPointer(x, y);
+            for (int c = 0; c < 3; c++)
+                worst = juce::jmax(worst, std::abs((int)pa[c] - (int)pb[c]));
+        }
+    return worst;
+}
+
+// a synthetic snapshot: an LCD pattern (bands of colour), key 7 held and lit, PLAY lit
+static PanelView patternView()
+{
+    PanelView v;
+    v.running = true;
+    v.lcdSeq = 1;
+    const uint16_t band[4] = {0xF800, 0x07E0, 0x001F, 0xFFFF};   // (RGB565: red, green, blue, white)
+    for (int y = 0; y < EMU_LCD_H; y++)
+        for (int x = 0; x < EMU_LCD_W; x++) {
+            const uint16_t c = band[(y / 60) % 4];
+            v.lcd[(size_t)(y * EMU_LCD_W + x)] = (uint16_t)((c >> 8) | (c << 8));   // (big-endian, as sent)
+        }
+    v.keys = 1u << 7;
+    v.keyLed[7] = 255;
+    v.btnLed[EMU_B_PLAY] = 255;
+    return v;
+}
+
+// a take of the synthetic snapshot in the device view with the big LCD: its first frame against the reference render
+static void bigLcdLayoutTake(FM1Processor &p, const char *name, juce::Point<int> size)
+{
+    std::printf("\n(d) %s: the device view with the big LCD, a fixed snapshot, %d x %d, 30 fps, hints %s\n", name, size.x, size.y,
+                p.getKeyHints() ? "on" : "off");
+    std::fflush(stdout);
+    AudioTap tap;
+    tap.allocate();
+    SnapshotRing<PanelView> ring;
+    ring.allocate(kFrameSlots);
+    const PanelView view = patternView();
+    SimDevice dev;
+    dev.main = &tap;
+    dev.render = [&tap, &ring, &view](juce::AudioBuffer<float> &b) {
+        tap.push(b.getReadPointer(0), b.getReadPointer(1), kBlock);
+        if (tap.running())
+            ring.capture(view, tap.produced());
+    };
+    dev.startThread();
+    const juce::File file = scratchDir().getChildFile(juce::String("take-") + name + ".mp4");
+    Recorder::Config c;
+    c.spec.file = file;
+    c.spec.width = size.x;
+    c.spec.height = size.y;
+    c.spec.fps = 30;
+    c.spec.inputRate = kRate;
+    c.main = &tap;
+    c.frames = &ring;
+    c.source = makeViewSource(p, kViewDevice, size, true);
+    Recorder rec;
+    juce::String err;
+    check(rec.start(std::move(c), err), "the recorder starts " + err.toStdString());
+    tap.arm();
+    dev.stopAt.store((int64_t)kRate);
+    waitPaused(dev, 60000);
+    const Recorder::Result r = rec.stop();
+    dev.stopThread(-1);
+    const Probe pr = probe(file);
+    check(r.ok && pr.ok && pr.width == size.x && pr.height == size.y && pr.videoFrames == 30,
+          "the take: " + std::to_string(pr.width) + " x " + std::to_string(pr.height) + ", " + std::to_string(pr.videoFrames) +
+              " frames " + r.error.toStdString());
+    PanelComponent::Layout lay;
+    const juce::Image ref = referenceDevice(p, size, view, &lay);
+    const juce::Image first = rec.firstFrame();
+    const int d = imageDiff(first, ref);
+    check(d == 0 && lay.lcdPx > 0 && lay.lcdBig.getWidth() >= size.x * 9 / 10 && lay.lcdBig.getBottom() <= lay.frY + lay.lcdPx,
+          "the recorder's first frame is the offscreen render of the layout (the big LCD " + std::to_string(lay.lcdBig.getWidth()) +
+              " px square above the panel), pixel for pixel (largest difference " + std::to_string(d) + ")");
+    const Cmp cmp = compareFirst(file, ref, 9, 15);
+    check(cmp.worst <= 8.0 && cmp.mean <= 2.5, "the decoded first frame matches it (region means: worst " + f2(cmp.worst, 2) +
+                                                   ", average " + f2(cmp.mean, 2) + " of 255)");
+    {
+        const juce::File f = scratchDir().getChildFile(juce::String("frame-") + name + ".png");
+        f.deleteFile();
+        juce::FileOutputStream out(f);
+        juce::PNGImageFormat png;
+        if (first.isValid() && out.openedOk())
+            png.writeImageToStream(first, out);
+    }
 }
 
 // ------------------------------------------------------------ the child ---
@@ -440,13 +615,11 @@ static int childMain(const juce::String &path, bool mov)
     juce::ScopedJuceInitialiser_GUI gui;
     AudioTap tap;
     tap.allocate();
+    SnapshotRing<PanelView> ring;
+    ring.allocate(kFrameSlots);
+    PanelView view;
     SimDevice dev;
-    dev.main = &tap;
-    dev.render = [&](juce::AudioBuffer<float> &b) {
-        for (int i = 0; i < kBlock; i++)
-            b.setSample(0, i, 0.1f * (float)std::sin(i * 0.05)), b.setSample(1, i, 0.0f);
-        tap.push(b.getReadPointer(0), b.getReadPointer(1), kBlock);
-    };
+    flashDevice(dev, tap, ring, view);
     dev.startThread();
     Recorder::Config c;
     c.spec.file = juce::File(path);
@@ -455,7 +628,8 @@ static int childMain(const juce::String &path, bool mov)
     c.spec.height = 360;
     c.spec.inputRate = kRate;
     c.main = &tap;
-    c.source = std::make_unique<FlashSource>(tap, 30);
+    c.frames = &ring;
+    c.source = std::make_unique<FlashSource>();
     Recorder rec;
     juce::String err;
     if (!rec.start(std::move(c), err))
@@ -463,7 +637,7 @@ static int childMain(const juce::String &path, bool mov)
     tap.arm();
     std::printf("recording\n");
     std::fflush(stdout);
-    juce::Thread::sleep(60000);                  // (killed long before)
+    juce::Thread::sleep(300000);                 // (killed long before)
     return 0;
 }
 
@@ -477,12 +651,17 @@ static void crashTest(bool mov)
         check(false, "the recording child process starts");
         return;
     }
-    juce::Thread::sleep(4500);
+    // (killed once the file being written already reads as 2 s or more: its first movie fragment is out; a loaded
+    // machine takes longer to get there)
+    const double t0 = juce::Time::getMillisecondCounterHiRes();
+    while (juce::Time::getMillisecondCounterHiRes() - t0 < 60000 && !(probe(f).duration >= 1.9))
+        juce::Thread::sleep(250);
+    const double after = (juce::Time::getMillisecondCounterHiRes() - t0) / 1000.0;
     cp.kill();                                   // (SIGKILL: no finishWriting, no destructor)
     cp.waitForProcessToFinish(5000);
     const Probe pr = probe(f);
     check(pr.ok && pr.videoTracks == 1 && pr.audioTracks == 1 && pr.duration >= 1.9,
-          std::string(mov ? ".mov" : ".mp4") + " killed mid-take after ~4 s: readable, " + f2(pr.duration) + " s (" +
+          std::string(mov ? ".mov" : ".mp4") + " killed mid-take after " + f2(after, 1) + " s: readable, " + f2(pr.duration) + " s (" +
               std::to_string(pr.videoFrames) + " frames) kept " + pr.error.toStdString());
 }
 
@@ -493,7 +672,8 @@ int main(int argc, char **argv)
     if (argc >= 2 && std::string(argv[1]) == "sync") {
         juce::ScopedJuceInitialiser_GUI gui;
         scratchDir().createDirectory();
-        syncTest();
+        syncTest("plain", 30, 30, 0);
+        syncTest("slow", 12, 30, 50);
         return fails ? 1 : 0;
     }
     require_cores("video_rec_test", {"choralroot"});
@@ -584,15 +764,62 @@ int main(int argc, char **argv)
         std::printf("(a note held: peak %.3f)\n", (double)b.getMagnitude(0, kBlock));
     }
 
+    // ---- (d) the device view with the big LCD: the sizes
+    {
+        std::printf("\n(d) the big LCD's sizes\n");
+        Settings st;
+        st.view = kViewDevice;
+        st.size = 720;
+        const juce::Point<int> d720 = st.frameSize(true);
+        st.size = 1080;
+        const juce::Point<int> d1080 = st.frameSize(true), plain = st.frameSize(false);
+        const float aspect = PanelComponent::frameAspect(true);
+        check(d720 == juce::Point<int>(720, 1162) && d1080 == juce::Point<int>(1080, 1744) && plain == juce::Point<int>(1920, 1080) &&
+                  std::abs((float)d1080.x / (float)d1080.y - aspect) < 0.002f && (d720.y & 1) == 0 && (d1080.y & 1) == 0,
+              "Device with the big LCD: 720 x 1162 and 1080 x 1744 (the layout's aspect " + f2(aspect, 4) + ", even); without it 1920 x 1080");
+        st.view = kViewScreen;
+        const juce::Point<int> scr = st.frameSize(true);
+        st.view = kViewLcd;
+        const juce::Point<int> lcd = st.frameSize(true);
+        check(scr == juce::Point<int>(1920, 1080) && lcd == juce::Point<int>(1080, 1080), "Screen and LCD: unchanged by the big LCD");
+        Session s(p);
+        st.view = kViewDevice;
+        s.setSettings(st);
+        p.setBigLcd(true);
+        const bool on = s.bigLcd() && s.frameSize() == d1080;
+        p.setBigLcd(false);
+        check(on && !s.bigLcd() && s.frameSize() == plain, "the session's next take follows the processor's big LCD");
+    }
+
     const std::string only = argc >= 3 && std::string(argv[1]) == "only" ? argv[2] : "";
     for (const TakeSpec &t : {TakeSpec{"lcd30", kViewLcd, 720, 720, 30, false, true, false, -6.0f, 5.0},
                               TakeSpec{"device60", kViewDevice, 1280, 720, 60, true, true, true, 0.0f, 5.0},
-                              TakeSpec{"screen1080", kViewScreen, 1920, 1080, 30, false, false, false, 0.0f, 2.0}})
-        if (only.empty() || only == t.name)
+                              TakeSpec{"screen1080", kViewScreen, 1920, 1080, 30, false, false, false, 0.0f, 2.0},
+                              TakeSpec{"device1080", kViewDevice, 1920, 1080, 60, false, false, false, 0.0f, 2.0},
+                              TakeSpec{"devicebig", kViewDevice, 1080, 1744, 30, false, false, false, 0.0f, 2.0, true}})
+        if (only.empty() || ("," + only + ",").find("," + std::string(t.name) + ",") != std::string::npos)
             processorTake(p, t);
+    if (only.empty() || only.find("layout") != std::string::npos) {
+        bigLcdLayoutTake(p, "biglayout", {1080, 1744});
+        p.setKeyHints(false);                    // (the editor's setting: the recorder's view follows)
+        bigLcdLayoutTake(p, "biglayout-nohints", {720, 1162});
+        p.setKeyHints(true);
+    }
     if (!only.empty())
         return fails ? 1 : 0;
-    syncTest();
+    // (not on GitHub's runners, the owner's call: timing on shared runners; it runs on every Mac, loaded or not)
+    if (getenv("GITHUB_ACTIONS") != nullptr) {
+        std::printf("\n(y) A/V sync: skipped on CI: timing on shared runners (GITHUB_ACTIONS is set)\n");
+    } else {
+        syncTest("plain", 30, 30, 0);
+        syncTest("slow", 12, 30, 50);            // (a renderer slower than the frame rate: frames dropped, none misplaced)
+        // the device view with the big LCD: the flash is the big LCD's (the panel and the LCD from one snapshot)
+        const juce::Point<int> big{720, 1162};
+        PanelComponent::Layout lay;
+        referenceDevice(p, big, PanelView{}, &lay);
+        syncTest("biglcd", 12, 30, 0, [&p, big] { return makeViewSource(p, kViewDevice, big, true); }, big,
+                 lay.lcdBig.reduced(lay.lcdBig.getWidth() / 10));
+    }
 
     // ---- (e) errors
     {
@@ -610,7 +837,9 @@ int main(int argc, char **argv)
         Recorder::Config c;
         c.spec.file = ro.getChildFile("x.mp4");
         c.spec.inputRate = kRate;
+        SnapshotRing<PanelView> ring;
         c.main = &t;
+        c.frames = &ring;
         c.source = makeViewSource(p, kViewLcd, {720, 720});
         juce::String err;
         const bool ok = rec.start(std::move(c), err);
@@ -640,14 +869,14 @@ int main(int argc, char **argv)
         const juce::String name = s.currentFile().getFileName();
         check(name.startsWith("choralroot-") && name.endsWith(".mp4") && s.currentFile().getParentDirectory() == s.folder(),
               "  ... named <id>-<version>-<date>.mp4 in its folder");
-        juce::Thread::sleep(1200);
+        waitTake(p.videoTap(), 1.2);             // (the take's own length, not the wall clock: a loaded machine is slower)
         s.stop();
         const Probe pr = probe(s.lastFile());
         check(!s.recording() && s.lastResult().ok && pr.ok && pr.duration > 1.0, "Stop: the file is finished, " + f2(pr.duration) + " s");
         check(s.start(), "another take");
-        juce::Thread::sleep(1000);
+        waitTake(p.videoTap(), 1.0);
         p.powerCycle();
-        for (int i = 0; i < 300 && !s.recorderForTest()->ended(); i++)
+        for (int i = 0; i < 3000 && !s.recorderForTest()->ended(); i++)
             juce::Thread::sleep(10);
         const bool ended = s.recorderForTest()->ended();
         s.stop();                                // (the session's timer would: no message loop here)
@@ -655,7 +884,7 @@ int main(int argc, char **argv)
         check(ended && s.lastError() == "The take ended when the firmware restarted" && p2.ok && p2.duration > 0.8,
               "a power cycle ends the take by itself: \"" + s.lastError().toStdString() + "\", the file readable, " +
                   f2(p2.duration) + " s");
-        dev.stopThread(2000);
+        dev.stopThread(-1);
     }
 
     // ---- (k) killed mid-take

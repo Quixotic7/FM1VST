@@ -182,3 +182,81 @@ private:
     int64_t r_ = 0;                              // (the consumer's own)
     bool init_ = false;
 };
+
+// The video recorder's pictures (VideoCapture.h "SYNC"): what the frames show, captured on the audio thread at the
+// frames' instants, so a frame's content is tied to the timeline however late it is drawn. After each block the
+// producer (the audio thread) is given the timeline's length and the state now (the panel's snapshot); every frame whose
+// instant k * rate / fps the block passed gets that state: one slot for frames [k0, k1) (a block longer than a frame
+// covers several). Lock-free, one producer, one consumer (the recorder's thread); the slots are made by allocate() on
+// the consumer's side, never on the audio thread. A full ring drops the newest frames (dropped()): the consumer
+// repeats the last picture it drew for them, never the state "now".
+template <class T> class SnapshotRing {
+public:
+    struct Slot {
+        int64_t k0 = 0, k1 = 0;                  // the frames [k0, k1) show `state`
+        T state{};
+    };
+    // ---- the consumer (allocate and arm only while the tap is not running)
+    void allocate(int slots)
+    {
+        if ((int)slots_.size() != std::max(2, slots))
+            slots_.assign((size_t)std::max(2, slots), Slot{});
+    }
+    int capacity() const { return (int)slots_.size(); }
+    void arm(int64_t rate, int fps)
+    {
+        if (slots_.empty())
+            allocate(64);
+        rate_.store(rate);
+        fps_.store(fps);
+        r_ = w_.load(std::memory_order_acquire);   // (nothing of the last take)
+        rp_.store(r_, std::memory_order_release);
+        dropped_.store(0);
+        gen_.fetch_add(1, std::memory_order_release);
+    }
+    // the oldest slot not taken yet (nullptr none); pop() when done with it
+    const Slot *front() const { return r_ < w_.load(std::memory_order_acquire) ? &slots_[(size_t)(r_ % (int64_t)slots_.size())] : nullptr; }
+    void pop()
+    {
+        if (r_ < w_.load(std::memory_order_acquire))
+            rp_.store(++r_, std::memory_order_release);
+    }
+    int backlog() const { return (int)(w_.load(std::memory_order_acquire) - r_); }
+    int64_t dropped() const { return dropped_.load(std::memory_order_relaxed); }   // frames the producer had no room for
+
+    // ---- the producer (the audio thread, after a block): the timeline's length now, the state now
+    void capture(const T &state, int64_t produced) noexcept
+    {
+        if (slots_.empty() || produced <= 0)
+            return;
+        const int64_t g = gen_.load(std::memory_order_acquire);
+        if (g != seenGen_) {                     // (a new take)
+            seenGen_ = g;
+            nextK_ = 0;
+        }
+        const int64_t rate = rate_.load(std::memory_order_relaxed), fps = fps_.load(std::memory_order_relaxed);
+        if (rate <= 0 || fps <= 0)
+            return;
+        const int64_t kEnd = (produced * fps + rate - 1) / rate;   // frames whose instant is before `produced`
+        if (kEnd <= nextK_)
+            return;
+        const int64_t w = w_.load(std::memory_order_relaxed);
+        if (w - rp_.load(std::memory_order_acquire) >= (int64_t)slots_.size()) {
+            dropped_.fetch_add(kEnd - nextK_, std::memory_order_relaxed);
+        } else {
+            Slot &s = slots_[(size_t)(w % (int64_t)slots_.size())];
+            s.k0 = nextK_;
+            s.k1 = kEnd;
+            s.state = state;
+            w_.store(w + 1, std::memory_order_release);
+        }
+        nextK_ = kEnd;
+    }
+
+private:
+    std::vector<Slot> slots_;
+    std::atomic<int64_t> w_{0}, rp_{0}, rate_{0}, gen_{0}, dropped_{0};
+    std::atomic<int> fps_{0};
+    int64_t r_ = 0;                              // (the consumer's own)
+    int64_t nextK_ = 0, seenGen_ = 0;            // (the producer's own)
+};

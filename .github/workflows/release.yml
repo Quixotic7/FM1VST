@@ -3,7 +3,7 @@
 # built with cargo, ChoralRoot the default) for Apple
 # silicon, tested, checked, zipped and packaged as an installer (.pkg) by the same scripts a local run uses
 # (tools/release_tests.sh, tools/package_release.sh).
-#   - a tag v<version> (git tag v0.5.1 && git push origin v0.5.1): builds and publishes the GitHub Release (the zip,
+#   - a tag v<version> (git tag v0.6.1 && git push origin v0.6.1): builds and publishes the GitHub Release (the zip,
 #     the pkg, SHA256SUMS, the notes); the tag must equal CMakeLists.txt's project(FM1VST VERSION ..)
 #   - Run workflow (workflow_dispatch), or a push to the release-ci branch: the same build as a dry run, uploaded as an
 #     artifact, nothing published

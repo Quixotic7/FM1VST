@@ -5,11 +5,17 @@
 // THE PICTURE is never a screen capture (no Screen Recording permission; covering or moving the window changes
 // nothing): a view source renders it offscreen with the editor's own paint code, on the recorder's thread:
 //   Device   a PanelComponent of its own (a mirror: no timer, no input, never on the desktop) painted at the frame's
-//            size, letterboxed on the theme's backdrop, as the device view draws it (held keys and buttons lit);
+//            size, letterboxed on the theme's backdrop, as the device view draws it (held keys and buttons lit; the
+//            computer-key hints as the editor's setting, followed live). With the big LCD above the panel on (the
+//            sheet's View, the ` key; read when the take starts, kept for the take) the frame is that layout: the LCD
+//            square above the panel, both from the frame's one snapshot, in a portrait frame of the layout's aspect
+//            (876 x 1414 units) with the short side kept: 720 x 1162 or 1080 x 1744 (even, about the pixels of the 16:9
+//            sizes: the same drawing and encoding load, within H.264's limits; no bars around a letterboxed panel);
 //   Screen   a ScreenView on such a mirror, square, centred on the backdrop;
 //   LCD      the firmware's frame buffer (the processor's PanelView), nearest-neighbour: 240 -> 720 (3x) or 1080
 //            (4.5x: each pixel a 4 or 5 pixel block, every output pixel exactly one LCD pixel's colour, as argbOf).
-// Sizes: 1280 x 720 or 1920 x 1080 (Device, Screen), 720 x 720 or 1080 x 1080 (LCD); 30 or 60 fps.
+// Sizes: 1280 x 720 or 1920 x 1080 (Device, Screen), 720 x 1162 or 1080 x 1744 (Device with the big LCD), 720 x 720
+// or 1080 x 1080 (LCD); 30 or 60 fps.
 //
 // THE SOUND is FM1VST's output captured in processBlock after the core rendered it (the Standalone has no output gain
 // after it): AudioTap (lock-free, AudioTap.h), the processor's videoTap(). The mic / line input: the Standalone's audio
@@ -18,14 +24,18 @@
 // (summed into the main track), and an optional monitor through the outputs (off by default: feedback).
 //
 // SYNC: one clock, the main tap's sample counter. A take's timeline starts at the first sample of the first block
-// after arming; audio track times are timeline frames / the device's rate, exactly. The frame clock (Recorder's thread)
-// is slaved to that counter: frame k (shown from k / fps) is due once the timeline has passed k * rate / fps, and is
-// rendered then from the state at that moment (at most one audio block and one render later than its instant). When
-// rendering falls behind, the frames whose instants passed meanwhile repeat the one rendered (duplicated against the
-// clock); none is ever moved in time. So no drift is possible: video and audio count the same samples, and a device
-// whose clock runs fast or slow against the computer's changes both together. The mic's blocks go on the same
-// timeline: its callback runs right after the processor's in the same device cycle, so a block of n frames there is the
-// main tap's last n (pushAt; a cycle the processor skipped is dropped from the mic, a gap filled with silence).
+// after arming; audio track times are timeline frames / the device's rate, exactly. Frame k is shown from k / fps,
+// exactly, and its CONTENT is tied to the same instant: after each block the audio thread copies the panel's snapshot
+// (the LCD frame buffer, the LEDs, the held keys and buttons, the knobs: PanelView) into a ring for every frame whose
+// instant k * rate / fps the block passed (SnapshotRing, lock-free; at most one block after the instant). The
+// recorder's thread draws each frame from its own snapshot however late it gets to it, so a slow or loaded machine
+// delays the drawing, never the picture against the sound. Behind by more than half the ring (64 of its kFrameSlots:
+// about 1 s at 60 fps, 2 s at 30) it drops the oldest snapshots, and a full ring drops the newest: those frames
+// repeat the last picture drawn (counted: Result::dropped, the sheet, the take's toast), never the state of a later
+// moment. No drift is possible: video and audio count the same samples, and a device whose clock runs fast or slow
+// against the computer's changes both together. The mic's blocks go on the same timeline: its callback runs right after
+// the processor's in the same device cycle, so a block of n frames there is the main tap's last n (pushAt; a cycle the
+// processor skipped is dropped from the mic, a gap filled with silence).
 //
 // A TAKE ENDS by Stop (the button, Cmd+Shift+R), and cleanly by itself at a firmware switch or reboot (any power-on:
 // the processor freezes the tap before the new firmware's first sample, like the site's recorder ending a take before
@@ -41,13 +51,13 @@
 #include <memory>
 
 #include "AudioTap.h"
+#include "Processor.h"
 #include "VideoRecorder.h"
-
-class FM1Processor;
 
 namespace fm1video {
 
 enum View { kViewDevice = 0, kViewScreen = 1, kViewLcd = 2 };
+constexpr int kFrameSlots = 128;               // the snapshot ring (115 KB each: the LCD)
 
 struct Settings {
     int view = kViewDevice;
@@ -61,22 +71,23 @@ struct Settings {
     int micGainDb = 0;                           // -24 .. +24
     bool micMix = false;                         // false: "Separate", a track of its own
     bool monitor = false;
-    juce::Point<int> frameSize() const;
+    juce::Point<int> frameSize(bool bigLcd = false) const;   // bigLcd: the big LCD shown (the Device view's portrait size)
     Settings normalised() const;
     juce::String toJson() const;
     static Settings fromJson(const juce::String &json);
     bool operator==(const Settings &o) const { return toJson() == o.toJson(); }
 };
 
-// a view rendered into a frame (ARGB, the frame's size): called on the recorder's thread only. `at`: the timeline frame
-// the picture is first shown at (a view draws the state it has now; a test's synthetic source can draw that instant)
+// a view rendered into a frame (ARGB, the frame's size) from the panel's snapshot taken at the frame's instant (the
+// processor's videoFrames()): called on the recorder's thread only
 class FrameSource {
 public:
     virtual ~FrameSource() = default;
-    virtual void render(juce::Image &frame, int64_t at) = 0;
+    virtual void render(juce::Image &frame, const PanelView &state) = 0;
 };
-// the processor's view (made on the message thread; then the recorder's thread's alone)
-std::unique_ptr<FrameSource> makeViewSource(FM1Processor &p, int view, juce::Point<int> size);
+// the processor's view (made on the message thread; then the recorder's thread's alone); bigLcd: the Device view with
+// the big LCD above the panel
+std::unique_ptr<FrameSource> makeViewSource(FM1Processor &p, int view, juce::Point<int> size, bool bigLcd = false);
 // the LCD alone, nearest-neighbour from 240 x 240 RGB565 big-endian (as sent) into a side x side ARGB image
 void scaleLcd(const uint16_t *lcdBe, juce::Image &frame);
 
@@ -109,6 +120,7 @@ public:
     struct Config {
         EncoderSpec spec;
         AudioTap *main = nullptr;                // the master clock
+        SnapshotRing<PanelView> *frames = nullptr;   // what each frame shows, captured at its instant
         AudioTap *mic = nullptr;                 // optional
         bool mix = false;                        // the mic summed into track 0 (else track 1)
         std::unique_ptr<FrameSource> source;
@@ -120,6 +132,9 @@ public:
         double seconds = 0;
         int64_t endFrame = 0, videoFrames = 0, duplicated = 0, rendered = 0;
         int maxLagMs = 0;                        // the latest a frame was rendered after its instant (timeline ms)
+        int64_t dropped = 0;                     // frames that repeat an earlier picture: no room in the ring, or drawing fell
+                                                 // more than half a ring behind
+        double renderMsMax = 0, renderMsTotal = 0;   // the view's drawing time (rendered: how many)
     };
     Recorder();
     ~Recorder() override;
@@ -130,22 +145,31 @@ public:
     bool active() const { return started_ && !collected_; }
     bool ended() const { return started_ && !isThreadRunning(); }   // ended by itself: stop() collects the result
     double seconds() const;
+    int64_t droppedFrames() const { return dropped_.load() + (c_.frames ? c_.frames->dropped() : 0); }
     juce::Image firstFrame() const;              // (tests) the first frame rendered
 
 private:
     void run() override;
     bool drainAudio(int64_t upTo, bool final);
-    bool emitFrames(int64_t due, int64_t now);
+    struct Pending {
+        std::vector<float> data;
+        int64_t pos = 0;
+        int k = 0;
+    };
+    Pending pend_[2];
+    bool flushPending(int track, bool final);
+    bool drainFrames(int64_t limit, int64_t now);
     int64_t framesBefore(int64_t timelineFrame) const;   // frames whose instant is before it
 
     Config c_;
     Encoder enc_;
     juce::Image frame_, first_;
     mutable juce::SpinLock firstLock_;
-    std::vector<float> a_, b_;
+    std::vector<float> b_;
     int64_t next_ = 0, micPos_ = 0;
     int sr_ = 48000;
-    bool started_ = false, collected_ = false, micAbsent_ = false;
+    bool started_ = false, collected_ = false, micAbsent_ = false, drawn_ = false;
+    std::atomic<int64_t> dropped_{0};
     std::atomic<int64_t> end_{-1};
     Result res_;
 };
@@ -159,11 +183,16 @@ public:
     static bool available(const FM1Processor &p);   // the Standalone app (not a plugin)
 
     const Settings &settings() const { return s_; }
+    // the Device view with the big LCD above the panel, and the frame's size: a take's own while recording, else what
+    // a take started now would be (the setting, the processor's big LCD)
+    bool bigLcd() const { return rec_ ? takeBig_ : s_.view == kViewDevice && p_.getBigLcd(); }
+    juce::Point<int> frameSize() const { return rec_ ? takeSize_ : s_.frameSize(bigLcd()); }
     void setSettings(const Settings &s);         // saved; the monitor follows
     bool start();                                // false: lastError() says why
     void stop();
     bool recording() const { return rec_ != nullptr; }
     double seconds() const { return rec_ ? rec_->seconds() : 0.0; }
+    int64_t droppedFrames() const { return rec_ ? rec_->droppedFrames() : 0; }   // (this take so far)
     juce::File currentFile() const { return file_; }
     juce::File lastFile() const { return last_.file; }
     const Recorder::Result &lastResult() const { return last_; }
@@ -203,6 +232,8 @@ private:
     bool micAttached_ = false, inputOpen_ = false;
     juce::AudioDeviceManager::AudioDeviceSetup saved_;
     std::unique_ptr<Recorder> rec_;
+    bool takeBig_ = false;
+    juce::Point<int> takeSize_;
     Recorder::Result last_;
     juce::String error_;
     uint32_t serial_ = 0;

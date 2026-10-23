@@ -184,7 +184,11 @@ FM1Processor::FM1Processor()
         const juce::ScopedLock l(devLock_);
         bindTier2Locked();
     }
-    theme_ = ThemeStore(home()).defaultTheme();  // (a state restore replaces it)
+    {
+        const ThemeStore store(home());
+        theme_ = store.defaultTheme();           // (a state restore replaces it)
+        keyHints_.store(store.flag("keyHints", true));
+    }
     startTimerHz(30);                            // the Tier 2 feedback drain
 }
 
@@ -2776,6 +2780,10 @@ void FM1Processor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuff
     if (videoTap_.armed() && buffer.getNumChannels() > 0)
         videoTap_.push(buffer.getReadPointer(0), buffer.getNumChannels() > 1 ? buffer.getReadPointer(1) : nullptr,
                        buffer.getNumSamples());
+    // ... and what the take's frames whose instants this block passed show: the panel as this block left it (view_ is
+    // written on this thread only)
+    if (videoTap_.running())
+        videoFrames_.capture(view_, videoTap_.produced());
 }
 
 fm1video::Session *FM1Processor::videoSession()

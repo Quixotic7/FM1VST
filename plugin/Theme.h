@@ -12,6 +12,7 @@
 //                      "bed": "#RRGGBB" (optional), "label": "#RRGGBB" (optional)}
 //   dir/settings.json {"defaultTheme": "Black"}: the theme a new instance starts with (other keys are kept); also
 //                     the app's one-time flags ({"shiftLatchHint": true}: the panel's "Shift-click to hold" was shown)
+//                     and switches ({"keyHints": false}: the panel's computer-key hints hidden; absent: shown)
 // The plugin state carries the theme itself (name and colours): a set reopens looking the same even when the
 // custom file is gone.
 #pragma once
@@ -90,7 +91,7 @@ public:
     juce::String defaultName() const;                        // settings.json defaultTheme ("" if unset)
     bool setDefaultName(const juce::String &name);
     Theme defaultTheme() const;                              // find(defaultName()), else the "Emulator" preset
-    bool flag(const juce::String &key) const;                // settings.json key == true
+    bool flag(const juce::String &key, bool absent = false) const;   // settings.json key == true (absent: no such key)
     bool setFlag(const juce::String &key, bool on);
 
 private:

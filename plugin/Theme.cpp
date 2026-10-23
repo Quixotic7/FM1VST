@@ -241,10 +241,10 @@ bool ThemeStore::setDefaultName(const juce::String &name)
     return dir_.createDirectory() && settingsFile().replaceWithText(juce::JSON::toString(v) + "\n");
 }
 
-bool ThemeStore::flag(const juce::String &key) const
+bool ThemeStore::flag(const juce::String &key, bool absent) const
 {
     const juce::var v = juce::JSON::parse(settingsFile().loadFileAsString());
-    return v.isObject() && (bool)v.getProperty(juce::Identifier(key), false);
+    return v.isObject() ? (bool)v.getProperty(juce::Identifier(key), absent) : absent;
 }
 
 bool ThemeStore::setFlag(const juce::String &key, bool on)

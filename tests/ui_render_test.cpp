@@ -25,6 +25,11 @@
 //       the general one); the sheet's Screen row (ui-sheet-screen.png); in the screen view, the menu on the LCD
 //       (ui-screen-view-menu.png) and the sheet from the body around the bezel
 //   (n) PIGEON (when built): its test bank uploaded as host SysEx, a chop held, the device view (ui-core-pigeon.png)
+//   (h) the computer-key hints: shown by default; off (the sheet's "Show keyboard shortcuts"): the panel without them
+//       (ui-hints-off.png, ui-sheet-hints-off.png), remembered in settings.json, a new instance opens with them off; on
+//       again, remembered;
+//   (r) video, the device view with the big LCD: the sheet's size (ui-sheet-video-biglcd.png), a take at 720 x 1162;
+//       the big LCD turned off mid-take changes nothing in it (the file 720 x 1162; the next take 1280 x 720)
 // FM1EMU_HOME points at a scratch folder under the build.
 #include <algorithm>
 #include <cstdio>
@@ -42,6 +47,7 @@
 #include "Sheet.h"
 #include "Theme.h"
 #include "VideoCapture.h"
+#include "VideoRecorder.h"
 
 static int fails = 0;
 static void check(bool c, const std::string &what)
@@ -207,6 +213,29 @@ int main()
             panel.onShiftHint();
             check(!before && shown && ed.toast().text() == "Screen live",
                   "Shift over the panel the first time: the toast \"Shift-click to hold\", remembered; not again");
+        }
+
+        // ---- (h) the computer-key hints: the sheet's "Show keyboard shortcuts", remembered in settings.json
+        {
+            check(ed.keyHints() && p.getKeyHints() && !ed.themeStore().settingsFile().loadFileAsString().contains("keyHints"),
+                  "the computer-key hints: shown by default (nothing in settings.json)");
+            ed.setKeyHints(false);
+            ed.hideChromeNow();
+            shot(ed, "hints-off");
+            ed.openSettings(false);
+            ed.sheet().scrollToView();
+            shot(ed, "sheet-hints-off");
+            ed.sheet().close(false);
+            {
+                FM1Processor q;
+                FM1Editor e2(q);
+                check(!ed.panel().keyHints() && !p.getKeyHints() && !ed.themeStore().flag("keyHints", true) && !q.getKeyHints() &&
+                          !e2.panel().keyHints(),
+                      "off: the panel without them, remembered in settings.json; a new instance opens with them off");
+            }
+            ed.setKeyHints(true);
+            FM1Processor q;
+            check(ed.panel().keyHints() && q.getKeyHints() && ed.themeStore().flag("keyHints", false), "on again: remembered");
         }
 
         // ---- (k) copy the screen: the LCD's menu (drawn inside the editor), Option + right-click, the sheet's row
@@ -604,6 +633,31 @@ int main()
             ed.sheet().scrollToVideo();
             shot(ed, "sheet-video");
             ed.sheet().close(false);
+            // ---- (r) the device view with the big LCD: the sheet says the size; a take keeps it when the LCD goes
+            {
+                fm1video::Settings sd = vs->settings();
+                sd.view = fm1video::kViewDevice;
+                sd.mic = false;
+                vs->setSettings(sd);
+                ed.setBigLcd(true);
+                ed.openSettings(false);
+                ed.sheet().scrollToVideo();
+                shot(ed, "sheet-video-biglcd");
+                ed.sheet().close(false);
+                check(vs->bigLcd() && vs->frameSize() == juce::Point<int>(720, 1162), "Device with the big LCD: the next take 720 x 1162");
+                ed.toggleRecording();
+                hq.run_ms(500);
+                ed.setBigLcd(false);                 // (mid-take: the take keeps its layout and size)
+                const bool kept = vs->recording() && vs->bigLcd() && vs->frameSize() == juce::Point<int>(720, 1162);
+                hq.run_ms(500);
+                ed.toggleRecording();
+                const fm1video::Probe pr = fm1video::probe(vs->lastFile());
+                check(kept && vs->lastResult().ok && pr.ok && pr.width == 720 && pr.height == 1162 && !vs->bigLcd() &&
+                          vs->frameSize() == juce::Point<int>(1280, 720),
+                      "the big LCD off mid-take: the take stays 720 x 1162 (" + std::to_string(pr.width) + " x " +
+                          std::to_string(pr.height) + "); the next one 1280 x 720");
+                ed.toast().setVisible(false);
+            }
         }
     }
 
