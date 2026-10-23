@@ -40,10 +40,11 @@ fm1_add_core(fizz ${_qd}/core/glue SOURCE ${_qd}
              CREDITS "FIZZ, an FM TONE step sequencer for the FM-1: Phase 1 prototype.\nFM TONE, the effects and the output chain: ChoralRoot FM-1 v0.25.1 (GPL-3.0-only, ChoralRoot FM-1 contributors), a fork of Felucca (Leo Kuroshita, Hugelton Instruments).\nDrawn with plutovg (MIT). Portions of this software are copyright (c) 2006 The FreeType Project (www.freetype.org). All rights reserved.\nType: Inter Tight (SIL Open Font License 1.1)."
              CREDITS_FILES third_party/plutovg/LICENSE assets/fonts/OFL.txt
              NO_GEN
-             VERSION 0.9.6-p1.6h)
+             VERSION 0.10.0-p2.1)
 if(TARGET core_fizz_obj)
-    # plutovg is vendored unmodified: its own warnings are not ours (ChoralRoot's copies keep theirs off themselves:
-    # quad_voice.c and qd_fx.c push their diagnostics around them)
+    # plutovg is vendored (FIZZ P2.1 patches three files for the device's strips and arena, each marked): its own
+    # warnings are not ours (ChoralRoot's copies keep theirs off themselves: quad_voice.c and qd_fx.c push their
+    # diagnostics around them)
     set(_qd_pvg_abs ${_qd_pvg_sources})
     list(TRANSFORM _qd_pvg_abs PREPEND ${_qd}/core/glue/)
     set_source_files_properties(${_qd_pvg_abs} TARGET_DIRECTORY core_fizz_obj PROPERTIES COMPILE_OPTIONS "-w")
