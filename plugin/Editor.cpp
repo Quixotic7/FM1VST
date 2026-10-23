@@ -206,6 +206,7 @@ FM1Editor::FM1Editor(FM1Processor &p)
     look_.setAccentFrom(proc_.getTheme());
     themeSerial_ = proc_.themeSerial();
     panel_.setBigLcd(proc_.getBigLcd());
+    panel_.setKeyHints(proc_.getKeyHints());
     panel_.onBigLcdToggled = [this](bool on) { setBigLcd(on); };
     panel_.onContextMenu = [this] { openSettings(); };
     panel_.onLcdChanged = [this] {
@@ -338,6 +339,13 @@ void FM1Editor::setViewMode(int m)
     resized();
     if (!sheet_.isOpen())
         focusActiveView();
+}
+
+void FM1Editor::setKeyHints(bool on)
+{
+    panel_.setKeyHints(on);
+    proc_.setKeyHints(on);
+    store_.setFlag("keyHints", on);              // (the user's: every instance made after this one starts with it)
 }
 
 void FM1Editor::setBigLcd(bool on)

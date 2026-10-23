@@ -3,6 +3,17 @@
 FM1VST's releases. The version is `project(FM1VST VERSION ..)` in CMakeLists.txt (the plugin shows it in its
 settings sheet); a release is the tag `v<version>` on it (.github/workflows/release.yml builds and publishes it).
 
+## Unreleased
+
+- **Video recording: the big LCD in Device takes.** With "Big LCD above the panel" on (the sheet's View, or the `
+  key), a Device take records that layout: the LCD square above the panel, both drawn from the same moment, so sync
+  is as before. The frame is portrait in the layout's shape, 720 × 1162 (720p) or 1080 × 1744 (1080p): about as many
+  pixels as the 16:9 sizes, with no bars. The setting is read when a take starts; turning it off or on mid-take
+  leaves that take as it is. The sheet's Size row shows the size. Screen and LCD takes are unchanged.
+- **Show keyboard shortcuts** (the sheet's View section, on by default): turned off, the panel draws no computer-key
+  labels ("F3 2", "TAB", "F5/C") and centres the keys' and buttons' names in the space the labels used. The keys
+  still work. The setting is remembered for every instance, and Device video takes follow it.
+
 ## 0.6.0 (2026-10-23): seven new cores, video recording, Shift-click to hold
 
 ### Video recording (Standalone)

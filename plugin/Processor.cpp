@@ -183,7 +183,11 @@ FM1Processor::FM1Processor()
         const juce::ScopedLock l(devLock_);
         bindTier2Locked();
     }
-    theme_ = ThemeStore(home()).defaultTheme();  // (a state restore replaces it)
+    {
+        const ThemeStore store(home());
+        theme_ = store.defaultTheme();           // (a state restore replaces it)
+        keyHints_.store(store.flag("keyHints", true));
+    }
     startTimerHz(30);                            // the Tier 2 feedback drain
 }
 

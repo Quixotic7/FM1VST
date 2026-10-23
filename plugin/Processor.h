@@ -283,6 +283,11 @@ public:
     void setEditorSize(int w, int h) { editorW_.store(w), editorH_.store(h); }
     bool getBigLcd() const { return bigLcd_.load(); }
     void setBigLcd(bool on) { bigLcd_.store(on); }
+    // the computer-key hints on the panel (the sheet's "Show keyboard shortcuts"): the user's, not the state's
+    // (settings.json "keyHints", default on; read when the instance is made); the editor's panel and the video
+    // recorder's Device view follow it
+    bool getKeyHints() const { return keyHints_.load(); }
+    void setKeyHints(bool on) { keyHints_.store(on); }
     // the editor's view (stored in the state; a state without it: the device): the whole FM-1, or its screen alone in
     // a square window whose side is remembered apart from the device view's size (0: never shown)
     enum ViewMode { kViewDevice = 0, kViewScreen = 1 };
@@ -634,7 +639,7 @@ private:
     Theme theme_;
     std::atomic<uint32_t> themeSerial_{0};
     std::atomic<int> editorW_{0}, editorH_{0};
-    std::atomic<bool> bigLcd_{false};
+    std::atomic<bool> bigLcd_{false}, keyHints_{true};
     std::atomic<int> viewMode_{kViewDevice}, screenSize_{0};
 
     // the panel GUI's input (written by the message thread, taken by the audio thread at block start)

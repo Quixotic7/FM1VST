@@ -30,7 +30,8 @@
 // per notch (MASTER: 16 of 1023); vertical drag on a knob: one detent per 8 points; a click on a knob selects it for
 // Up / Down. The keyboard map is keymap.c's (by key: see keymap() in PanelComponent.cpp; the screenshot, recording
 // and dump keys are left out), plus a fallback row for the F-key buttons (a host or macOS often takes F5 .. F10): C V B N M , = FX SEL ENV LFO
-// EDIT GLO; a control whose first key is an F key shows both on the panel ("F5/C").
+// EDIT GLO; a control whose first key is an F key shows both on the panel ("F5/C"; setKeyHints(false): no hints
+// drawn, the keys still work).
 // A key held from the keyboard is pressed once (keyPressed's repeats are ignored while it is held) and let go when
 // its release arrives (keyStateChanged) or, when a host swallowed the release, when the check finds it up: on every
 // keyStateChanged and at 30 Hz while any key is held (checkHeldKeys). "Up" is the physical key's state when its press
@@ -63,6 +64,11 @@ public:
     void setBigLcd(bool on);
     bool bigLcd() const { return bigLcd_; }
     std::function<void(bool)> onBigLcdToggled;             // the backtick key toggled it
+    // the computer-key hints (the green labels: "F3 2", "TAB", "F5/C"; the sheet's "Show keyboard shortcuts", on by
+    // default): off, none is drawn, and the keys' LED and note name and the buttons' names sit centred in the room the
+    // labels took (as the site's panel); the keys still work
+    void setKeyHints(bool on);
+    bool keyHints() const { return keyHints_; }
 
     // the frame's width / height in units: the panel alone, or with the big LCD above it
     static float frameAspect(bool bigLcd);
@@ -174,7 +180,7 @@ private:
     Theme theme_;
     Palette pal_;
     juce::StringArray names_;
-    bool bigLcd_ = false;
+    bool bigLcd_ = false, keyHints_ = true;
 
     // layout and images
     Layout lay_;

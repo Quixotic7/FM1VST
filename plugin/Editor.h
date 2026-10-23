@@ -122,6 +122,9 @@ public:
     int viewMode() const { return mode_; }
     void setViewMode(int m);
     void setBigLcd(bool on);
+    void setKeyHints(bool on);                    // the panel's computer-key hints (the sheet's "Show keyboard shortcuts"),
+                                                  // remembered in settings.json; the recorder's Device view follows
+    bool keyHints() const { return panel_.keyHints(); }
     // the device view's default size: the panel at 1.6 logical points per unit (an integer LCD scale: 1x, 2x on
     // Retina), 1402 x 861 points, about 80 % of a 1080p screen's height; the screen view's: the LCD at 2 points per
     // pixel

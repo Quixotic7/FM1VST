@@ -5,11 +5,17 @@
 // THE PICTURE is never a screen capture (no Screen Recording permission; covering or moving the window changes
 // nothing): a view source renders it offscreen with the editor's own paint code, on the recorder's thread:
 //   Device   a PanelComponent of its own (a mirror: no timer, no input, never on the desktop) painted at the frame's
-//            size, letterboxed on the theme's backdrop, as the device view draws it (held keys and buttons lit);
+//            size, letterboxed on the theme's backdrop, as the device view draws it (held keys and buttons lit; the
+//            computer-key hints as the editor's setting, followed live). With the big LCD above the panel on (the
+//            sheet's View, the ` key; read when the take starts, kept for the take) the frame is that layout: the LCD
+//            square above the panel, both from the frame's one snapshot, in a portrait frame of the layout's aspect
+//            (876 x 1414 units) with the short side kept: 720 x 1162 or 1080 x 1744 (even, about the pixels of the 16:9
+//            sizes: the same drawing and encoding load, within H.264's limits; no bars around a letterboxed panel);
 //   Screen   a ScreenView on such a mirror, square, centred on the backdrop;
 //   LCD      the firmware's frame buffer (the processor's PanelView), nearest-neighbour: 240 -> 720 (3x) or 1080
 //            (4.5x: each pixel a 4 or 5 pixel block, every output pixel exactly one LCD pixel's colour, as argbOf).
-// Sizes: 1280 x 720 or 1920 x 1080 (Device, Screen), 720 x 720 or 1080 x 1080 (LCD); 30 or 60 fps.
+// Sizes: 1280 x 720 or 1920 x 1080 (Device, Screen), 720 x 1162 or 1080 x 1744 (Device with the big LCD), 720 x 720
+// or 1080 x 1080 (LCD); 30 or 60 fps.
 //
 // THE SOUND is FM1VST's output captured in processBlock after the core rendered it (the Standalone has no output gain
 // after it): AudioTap (lock-free, AudioTap.h), the processor's videoTap(). The mic / line input: the Standalone's audio
@@ -65,7 +71,7 @@ struct Settings {
     int micGainDb = 0;                           // -24 .. +24
     bool micMix = false;                         // false: "Separate", a track of its own
     bool monitor = false;
-    juce::Point<int> frameSize() const;
+    juce::Point<int> frameSize(bool bigLcd = false) const;   // bigLcd: the big LCD shown (the Device view's portrait size)
     Settings normalised() const;
     juce::String toJson() const;
     static Settings fromJson(const juce::String &json);
@@ -79,8 +85,9 @@ public:
     virtual ~FrameSource() = default;
     virtual void render(juce::Image &frame, const PanelView &state) = 0;
 };
-// the processor's view (made on the message thread; then the recorder's thread's alone)
-std::unique_ptr<FrameSource> makeViewSource(FM1Processor &p, int view, juce::Point<int> size);
+// the processor's view (made on the message thread; then the recorder's thread's alone); bigLcd: the Device view with
+// the big LCD above the panel
+std::unique_ptr<FrameSource> makeViewSource(FM1Processor &p, int view, juce::Point<int> size, bool bigLcd = false);
 // the LCD alone, nearest-neighbour from 240 x 240 RGB565 big-endian (as sent) into a side x side ARGB image
 void scaleLcd(const uint16_t *lcdBe, juce::Image &frame);
 
@@ -176,6 +183,10 @@ public:
     static bool available(const FM1Processor &p);   // the Standalone app (not a plugin)
 
     const Settings &settings() const { return s_; }
+    // the Device view with the big LCD above the panel, and the frame's size: a take's own while recording, else what
+    // a take started now would be (the setting, the processor's big LCD)
+    bool bigLcd() const { return rec_ ? takeBig_ : s_.view == kViewDevice && p_.getBigLcd(); }
+    juce::Point<int> frameSize() const { return rec_ ? takeSize_ : s_.frameSize(bigLcd()); }
     void setSettings(const Settings &s);         // saved; the monitor follows
     bool start();                                // false: lastError() says why
     void stop();
@@ -221,6 +232,8 @@ private:
     bool micAttached_ = false, inputOpen_ = false;
     juce::AudioDeviceManager::AudioDeviceSetup saved_;
     std::unique_ptr<Recorder> rec_;
+    bool takeBig_ = false;
+    juce::Point<int> takeSize_;
     Recorder::Result last_;
     juce::String error_;
     uint32_t serial_ = 0;

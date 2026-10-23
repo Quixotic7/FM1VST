@@ -248,7 +248,7 @@ void drawLatchMark(Canvas &c, R r, float rad, float dotX, float dotY, juce::Colo
     c.circle(dotX, dotY, 2.6f, col);
 }
 
-void drawKey(Canvas &c, const Palette &p, int k, bool held, int lv, bool latched)
+void drawKey(Canvas &c, const Palette &p, int k, bool held, int lv, bool latched, bool hints)
 {
     const R r = geo().key[k];
     const float cx = r.x + KEY_W / 2;
@@ -256,18 +256,20 @@ void drawKey(Canvas &c, const Palette &p, int k, bool held, int lv, bool latched
     c.rrectLine(r, 21, held ? p.hint : p.capOutline, 1, held ? 1.5f : 1);
     if (latched)
         drawLatchMark(c, r, 21, cx, r.y + 8.5f, p.hint);
+    const juce::String h = hints ? PanelComponent::keymapHintText(PanelComponent::KM_KEY, k) : juce::String();
+    const float y = r.y + (h.isNotEmpty() ? 0.f : 3.f);   // (no hint: the LED and the name 3 units lower, centred)
     if (ledLit(lv))
-        c.rrect(R{cx - 9, r.y + 9, 18, 40}, 9, p.white, .16f * ledAlpha(lv));
-    c.rrect(R{cx - 4, r.y + 14, 8, 30}, 4, p.ledOff);
+        c.rrect(R{cx - 9, y + 9, 18, 40}, 9, p.white, .16f * ledAlpha(lv));
+    c.rrect(R{cx - 4, y + 14, 8, 30}, 4, p.ledOff);
     if (lv)
-        c.rrect(R{cx - 4, r.y + 14, 8, 30}, 4, p.white, ledAlpha(lv));
-    c.text(cx, r.y + 50, 6.5f, noteName(k).c_str(), p.noteText);
-    const juce::String h = PanelComponent::keymapHintText(PanelComponent::KM_KEY, k);
+        c.rrect(R{cx - 4, y + 14, 8, 30}, 4, p.white, ledAlpha(lv));
+    c.text(cx, y + 50, 6.5f, noteName(k).c_str(), p.noteText);
     if (h.isNotEmpty())
         c.text(cx, r.y + 61, 6.5f, h.toRawUTF8(), p.hint, .9f);
 }
 
-void drawButton(Canvas &c, const Palette &p, int i, const juce::String &name, bool held, int lv, int green, bool latched)
+void drawButton(Canvas &c, const Palette &p, int i, const juce::String &name, bool held, int lv, int green, bool latched,
+                bool hints)
 {
     const R r = geo().btn[i];
     const bool oct = i >= EMU_B_OCTDN;
@@ -278,10 +280,10 @@ void drawButton(Canvas &c, const Palette &p, int i, const juce::String &name, bo
         c.rrect(r, rad, col, ledAlpha(lv));
     c.rrectLine(r, rad, held ? p.hint : p.capOutline, 1, held ? 2 : 1);
     const juce::String n = name.toUpperCase();
-    const float size = fitSize(n.toRawUTF8(), oct ? 6.5f : 7.5f, r.w - 5);
-    c.text(r.x + r.w / 2, r.y + (oct ? 7.5f : 11) + ((oct ? 6.5f : 7.5f) - size) / 2, size, n.toRawUTF8(),
-           ledLit(lv) ? p.litText : lv ? p.capTextDim : p.capText);
-    const juce::String hs = PanelComponent::keymapHintText(PanelComponent::KM_BTN, i);
+    const juce::String hs = hints ? PanelComponent::keymapHintText(PanelComponent::KM_BTN, i) : juce::String();
+    const float base = oct ? 6.5f : 7.5f, size = fitSize(n.toRawUTF8(), base, r.w - 5);
+    const float ny = oct ? 7.5f : hs.isNotEmpty() ? 11.f : (r.h - base) / 2;   // (no hint: the name centred on the cap)
+    c.text(r.x + r.w / 2, r.y + ny + (base - size) / 2, size, n.toRawUTF8(), ledLit(lv) ? p.litText : lv ? p.capTextDim : p.capText);
     const char *h = hs.toRawUTF8();
     if (hs.isNotEmpty() && !oct)
         c.text(r.x + r.w / 2, r.y + 25, 5, h, ledLit(lv) ? p.hintLit : lv ? p.hintDim : p.hint, .9f);
@@ -437,6 +439,15 @@ void PanelComponent::setBigLcd(bool on)
     repaint();
 }
 
+void PanelComponent::setKeyHints(bool on)
+{
+    if (on == keyHints_)
+        return;
+    keyHints_ = on;
+    fullRedraw_ = true;                          // (the base too: the knobs' hints are printed on it)
+    repaint();
+}
+
 // ---------------------------------------------------------------- layout ---
 // emu.c relayout: fit the frame (the big LCD, if shown, a square as wide as the panel; the panel) in the
 // component's physical pixels, keeping the aspect ratio; snap to an integer scale of the panel's 240x240 screen when
@@ -519,7 +530,7 @@ void PanelComponent::drawBase()
         c.circle(dx, 404, 2, p.bedEdge);
     for (int i = 0; i < EMU_NE; i++) {
         c.text(ENC_CX[i], ENC_LY[i] - 6, 7, ENC_NAME[i], p.label);
-        if (const char *h = keymapHint(KM_SELECT, i))
+        if (const char *h = keyHints_ ? keymapHint(KM_SELECT, i) : nullptr)
             c.text(ENC_CX[i], ENC_CY[i] + ENC_R + 6, 7, h, p.hint, .9f);
     }
     // the panel's own printed labels (FX SEL ENV ..), small on the bed over the top row and under the bottom row,
@@ -609,10 +620,10 @@ bool PanelComponent::updateControls(bool force)
         Canvas c(panel_, lay_.k);
         for (const Todo &t : todo) {
             if (t.kind == 0) {
-                drawKey(c, pal_, t.i, t.d.a != 0, t.d.b, t.d.c != 0);
+                drawKey(c, pal_, t.i, t.d.a != 0, t.d.b, t.d.c != 0, keyHints_);
                 keyDrawn_[(size_t)t.i] = t.d;
             } else if (t.kind == 1) {
-                drawButton(c, pal_, t.i, names_[t.i], t.d.a != 0, t.d.b, t.d.c, t.d.d != 0);
+                drawButton(c, pal_, t.i, names_[t.i], t.d.a != 0, t.d.b, t.d.c, t.d.d != 0, keyHints_);
                 btnDrawn_[(size_t)t.i] = t.d;
             } else {
                 const float a = t.i == EMU_E_MASTER ? masterAngle(view_.master) : knobAngle_[(size_t)t.i];

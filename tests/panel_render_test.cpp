@@ -24,6 +24,9 @@
 //       (build/panel/latched.png); a plain click on a key meanwhile is momentary; a click on HOME lets it go; Esc lets
 //       go of every latch (not OCT-; with none latched Esc is OCT- as before); the focus gone for good, a reboot and a
 //       firmware switch let go; Shift on a knob turns it as a plain drag does, nothing latched.
+//   (h) the computer-key hints off (setKeyHints(false), the sheet's "Show keyboard shortcuts"): no hint drawn on any key
+//       or button (build/panel/hints-off.png, hints-on.png); the keys' note names move 3 units down and the buttons'
+//       names to the middle of the cap (as the site's panel); the keys still play; on again, the panel as before.
 // FM1EMU_HOME points at a scratch folder under the build.
 #include <cstdio>
 #include <cstdlib>
@@ -677,6 +680,97 @@ int main()
                   std::to_string(shiftTurns) + ")");
         h.run_ms(100);
         check(hal()->keys == 0 && hal()->buttons == 0, "nothing sticks: no key or button bit left on the device");
+    }
+
+    // ---- (h) the computer-key hints off: none drawn, the names re-centred, the keys still play
+    {
+        std::printf("\n(h) the computer-key hints\n");
+        FM1Processor p;
+        Host h(p, 44100.0, 256);
+        h.run_ms(600);
+        PanelComponent panel(p);
+        panel.setButtonNames(p.buttonNames());
+        panel.setTheme(ThemeStore::preset("Emulator").value_or(Theme{}));
+        panel.setBounds(0, 0, 904, 566);
+        const float scale = 2.0f;
+        const juce::Image on = render(panel, scale);
+        const PanelComponent::Layout L = panel.layout();
+        panel.setKeyHints(false);
+        const juce::Image off = render(panel, scale);
+        check(juce::exactlyEqual(panel.layout().k, L.k) && !panel.keyHints(), "setKeyHints(false): the same layout, drawn again");
+        panel.setKeyHints(true);
+        const juce::Image back = render(panel, scale);   // (no block in between: the same snapshot)
+        check(writePng(on, out.getChildFile("hints-on.png")) && writePng(off, out.getChildFile("hints-off.png")),
+              "wrote hints-on.png, hints-off.png");
+        // the ink in a band of a control (units: x .. x + w, rows y0 .. y1): every pixel's distance from the control's
+        // own colour at (bx, by), and the band's vertical centroid of it (units)
+        auto ink = [&](const juce::Image &img, float x, float w, float y0, float y1, float bx, float by, double &centroid) {
+            const juce::Image::BitmapData d(img, juce::Image::BitmapData::readOnly);
+            const int top = L.frY + L.lcdPx;
+            auto px = [&](float ux) { return L.frX + (int)std::lround((ux - 14) * L.k); };
+            auto py = [&](float uy) { return top + (int)std::lround((uy - 14) * L.k); };
+            const juce::Colour bg = d.getPixelColour(px(bx), py(by));
+            double sum = 0, sy = 0;
+            for (int yy = py(y0); yy < py(y1); yy++)
+                for (int xx = px(x); xx < px(x + w); xx++) {
+                    const juce::Colour c = d.getPixelColour(xx, yy);
+                    const int dist = juce::jmax(std::abs(c.getRed() - bg.getRed()), std::abs(c.getGreen() - bg.getGreen()),
+                                                std::abs(c.getBlue() - bg.getBlue()));
+                    const double wgt = juce::jlimit(0.0, 1.0, (dist - 6) / 60.0);
+                    sum += wgt;
+                    sy += wgt * (((double)yy + 0.5 - top) / L.k + 14);
+                }
+            centroid = sum > 0 ? sy / sum : -1;
+            return sum;
+        };
+        double unused, k0, k1, b0, b1;
+        // key 0 (F3, white: 71, 408, 42 x 76; its colour at 6, 40): its hint "2" (rows 60.5 .. 68.5), its note name
+        // (rows 48 .. 60.5)
+        const float ky = 408;
+        const double kHintOn = ink(on, 71 + 8, 26, ky + 60.5f, ky + 68.5f, 71 + 6, ky + 40, unused);
+        const double kHintOff = ink(off, 71 + 8, 26, ky + 60.5f, ky + 68.5f, 71 + 6, ky + 40, unused);
+        ink(on, 71 + 8, 26, ky + 48, ky + 60.5f, 71 + 6, ky + 40, k0);
+        ink(off, 71 + 8, 26, ky + 48, ky + 60.5f, 71 + 6, ky + 40, k1);
+        // HOME (500, 231, 36 x 36; its colour at 3, 18): its hint "7" (rows 24 .. 31.5), its name
+        const float by = 231;
+        const double bHintOn = ink(on, 503, 30, by + 24, by + 31.5f, 503, by + 18, unused);
+        const double bHintOff = ink(off, 503, 30, by + 24, by + 31.5f, 503, by + 18, unused);
+        ink(on, 503, 30, by + 5, by + 23, 503, by + 18, b0);
+        ink(off, 503, 30, by + 5, by + 31.5f, 503, by + 18, b1);
+        // OCT- (87, 250, 42 x 22): its hint "Z" under it, on the bed
+        const double octOn = ink(on, 98, 20, 274.5f, 278, 90, 276, unused);
+        const double octOff = ink(off, 98, 20, 274.5f, 278, 90, 276, unused);
+        std::printf("    key F3: hint %.1f -> %.1f, name centre %.2f -> %.2f; HOME: hint %.1f -> %.1f, name centre %.2f -> %.2f "
+                    "(the cap's middle: %.0f); OCT- hint %.1f -> %.1f\n",
+                    kHintOn, kHintOff, k0 - ky, k1 - ky, bHintOn, bHintOff, b0 - by, b1 - by, 18.0, octOn, octOff);
+        check(kHintOn > 20 && kHintOff < 0.5 && bHintOn > 20 && bHintOff < 0.5 && octOn > 5 && octOff < 0.5,
+              "off: no hint on a key, a button or under OCT (on: drawn)");
+        check(std::abs(k1 - k0 - 3.0) < 0.4, "off: the key's note name 3 units lower (" + std::to_string(k1 - k0) + ")");
+        check(std::abs(b1 - b0 - 3.25) < 0.4 && std::abs(b1 - by - 18.0) < 1.0,
+              "off: the button's name in the middle of the cap (" + std::to_string(b1 - by) + " units down a 36-unit cap; on: " +
+                  std::to_string(b0 - by) + ")");
+        int worst = 0;
+        {
+            const juce::Image::BitmapData a(on, juce::Image::BitmapData::readOnly), b(back, juce::Image::BitmapData::readOnly);
+            for (int y = 0; y < on.getHeight(); y++)
+                for (int x = 0; x < on.getWidth(); x++) {
+                    const juce::Colour ca = a.getPixelColour(x, y), cb = b.getPixelColour(x, y);
+                    worst = juce::jmax(worst, std::abs(ca.getRed() - cb.getRed()) + std::abs(ca.getGreen() - cb.getGreen()) +
+                                                  std::abs(ca.getBlue() - cb.getBlue()));
+                }
+        }
+        check(worst == 0, "on again: the panel as before (largest difference " + std::to_string(worst) + ")");
+        // the keys still play with the hints off: A is key 7, as before
+        panel.setKeyHints(false);
+        panel.setKeyProbe([](int) { return true; });
+        panel.keyStateChanged(true);
+        panel.keyPressed(juce::KeyPress('A'));
+        h.run_ms(60);
+        const bool down = (p.deviceForTest()->panel()->keys & (1u << 7)) != 0;
+        panel.setKeyProbe([](int) { return false; });
+        panel.checkHeldKeys();
+        h.run_ms(60);
+        check(down && (p.deviceForTest()->panel()->keys & (1u << 7)) == 0, "off: the A key still plays key 7 (down, then up)");
     }
 
     // ---- (c) the contrast floors, every preset (and the custom theme)

@@ -14,11 +14,16 @@
 namespace fm1video {
 
 // ============================================================ settings ===
-juce::Point<int> Settings::frameSize() const
+juce::Point<int> Settings::frameSize(bool bigLcd) const
 {
     const bool big = size >= 1080;
     if (view == kViewLcd)
         return big ? juce::Point<int>{1080, 1080} : juce::Point<int>{720, 720};
+    if (view == kViewDevice && bigLcd) {         // portrait, the layout's aspect, the short side kept; even
+        const int w = big ? 1080 : 720;
+        const float aspect = PanelComponent::frameAspect(true);
+        return {w, 2 * juce::roundToInt((float)w / aspect / 2.0f)};
+    }
     return big ? juce::Point<int>{1920, 1080} : juce::Point<int>{1280, 720};
 }
 
@@ -116,6 +121,7 @@ public:
     {
         panel_->setButtonNames(p.buttonNames());
         panel_->setTheme(p.getTheme());
+        panel_->setKeyHints(p.getKeyHints());
         serial_ = p.themeSerial();
         panel_->setVisible(true);
     }
@@ -125,6 +131,7 @@ public:
             serial_ = p_.themeSerial();
             panel_->setTheme(p_.getTheme());
         }
+        panel_->setKeyHints(p_.getKeyHints());   // (the editor's setting; nothing to do while it stays)
         panel_->showView(state);                 // (the snapshot taken at the frame's instant, not the panel now)
     }
 
@@ -134,9 +141,15 @@ protected:
     uint32_t serial_ = 0;
 };
 
+// (with the big LCD: the panel's own layout, the LCD above it drawn from the same snapshot as the panel; fixed for the
+// take)
 class DeviceSource : public MirrorBase {
 public:
-    DeviceSource(FM1Processor &p, juce::Point<int> size) : MirrorBase(p) { panel_->setBounds(0, 0, size.x, size.y); }
+    DeviceSource(FM1Processor &p, juce::Point<int> size, bool bigLcd) : MirrorBase(p)
+    {
+        panel_->setBigLcd(bigLcd);
+        panel_->setBounds(0, 0, size.x, size.y);
+    }
     void render(juce::Image &frame, const PanelView &state) override
     {
         follow(state);
@@ -179,12 +192,12 @@ private:
 };
 }   // namespace
 
-std::unique_ptr<FrameSource> makeViewSource(FM1Processor &p, int view, juce::Point<int> size)
+std::unique_ptr<FrameSource> makeViewSource(FM1Processor &p, int view, juce::Point<int> size, bool bigLcd)
 {
     switch (view) {
     case kViewLcd: return std::make_unique<LcdSource>();
     case kViewScreen: return std::make_unique<ScreenSource>(p, size);
-    default: return std::make_unique<DeviceSource>(p, size);
+    default: return std::make_unique<DeviceSource>(p, size, bigLcd);
     }
 }
 
@@ -762,7 +775,8 @@ bool Session::start()
     Recorder::Config c;
     c.spec.file = file_;
     c.spec.mov = s_.mov;
-    const juce::Point<int> size = s_.frameSize();
+    const bool big = s_.view == kViewDevice && p_.getBigLcd();   // (read now: kept for the take)
+    const juce::Point<int> size = s_.frameSize(big);
     c.spec.width = size.x;
     c.spec.height = size.y;
     c.spec.fps = s_.fps;
@@ -771,7 +785,7 @@ bool Session::start()
     c.frames = &p_.videoFrames();
     c.mic = mic ? &micTap_ : nullptr;
     c.mix = s_.micMix;
-    c.source = makeViewSource(p_, s_.view, size);
+    c.source = makeViewSource(p_, s_.view, size, big);
     p_.videoTap().allocate();
     p_.videoFrames().allocate(kFrameSlots);
     micTap_.allocate();
@@ -786,6 +800,8 @@ bool Session::start()
             openInput(false);
         return false;
     }
+    takeBig_ = big;
+    takeSize_ = size;
     if (mic) {
         micTap_.arm();
         mic_->configure(s_.inChannel, s_.inChannels, (float)s_.micGainDb, s_.monitor);
