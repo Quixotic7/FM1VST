@@ -3,7 +3,7 @@
 FM1VST's releases. The version is `project(FM1VST VERSION ..)` in CMakeLists.txt (the plugin shows it in its
 settings sheet); a release is the tag `v<version>` on it (.github/workflows/release.yml builds and publishes it).
 
-## Unreleased
+## 0.6.1 (2026-10-23): the big LCD in Device recordings, Show keyboard shortcuts
 
 - **Video recording: the big LCD in Device takes.** With "Big LCD above the panel" on (the sheet's View, or the `
   key), a Device take records that layout: the LCD square above the panel, both drawn from the same moment, so sync
