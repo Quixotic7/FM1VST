@@ -31,6 +31,18 @@ std::unique_ptr<juce::Component> createAudioSettings()
     return sel;
 }
 
+juce::AudioDeviceManager *deviceManager()
+{
+    auto *h = holder();
+    return h ? &h->deviceManager : nullptr;
+}
+
+juce::PropertySet *appSettings()
+{
+    auto *h = holder();
+    return h ? h->settings.get() : nullptr;
+}
+
 void saveAudioState()
 {
     if (auto *h = holder())

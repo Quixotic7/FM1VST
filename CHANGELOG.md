@@ -3,6 +3,159 @@
 FM1VST's releases. The version is `project(FM1VST VERSION ..)` in CMakeLists.txt (the plugin shows it in its
 settings sheet); a release is the tag `v<version>` on it (.github/workflows/release.yml builds and publishes it).
 
+## Unreleased
+
+### Video recording (Standalone)
+
+The Standalone app records the firmware playing as a movie: a red record button at the panel's top-left corner (the
+dot pulses while recording, with the take's time), Cmd+Shift+R, or the settings sheet's new **Video** section. Takes go
+to `~/Movies/FM1VST/<firmware>-<version>-<YYYYMMDD-HHMMSS>.mp4`; "Show in Finder" after each. Plug-ins leave it out
+(the DAW records).
+
+- The picture is drawn by FM1VST itself, never a screen capture: no Screen Recording permission, and covering or
+  moving the window changes nothing. The whole FM-1 (as the device view draws it, pressed keys and buttons lit), the
+  screen view, or the LCD alone pixel for pixel (nearest-neighbour, 720 or 1080 square); 720p or 1080p, 30 or 60 fps;
+  H.264 (the hardware encoder) in `.mp4` or `.mov`.
+- The sound is FM1VST's own output, AAC 48 kHz stereo 256 kbps. An optional mic / line input from the audio device
+  (a mono channel or a stereo pair, a gain, as a second audio track or mixed in, an optional monitor): macOS asks for
+  the microphone permission the first time it is turned on, and the input is opened only while recording or
+  monitoring.
+- One clock: the audio's sample count; every video frame is placed on it, so picture and sound stay in sync over any
+  length (measured: under 0.1 ms off over 30 s, no drift). A firmware switch or restart ends the take cleanly; a crash
+  or a full disk keeps what was written up to the last two seconds.
+
+### LOOM-8, a new core
+
+`loom`: Charles Vestal's [LOOM-8](https://github.com/charlesvestal/fm1-loom) (GPL-3.0-only, on fm1-base and
+felucca-bsp, MPL-2.0), a pocket groovebox: eight tracks on nine engines, a 64-step sequencer with locks, weave, scenes
+and a song, and a user sample bank loaded over USB. Pinned at **v0.6.1** (2026-10-22), LOOM-8's first release without
+"-beta" (it joined at v0.6-beta, a beta on purpose while every LOOM-8 release was one): chord mode on Steps, the b/w
+theme, the filter type "off" moved past bp12 (older projects and user presets migrate on load).
+
+- Built like AMB-1 on the fm1base glue, unmodified; its second core's jobs run in order on the host's thread, as in
+  LOOM-8's own simulator and browser emulator (the same split render, the same sums).
+- The managers answer: the samples page and `tools/loom_samples.py` (the user sample bank), fm1-base's backup page
+  (backup and restore of the projects and user presets, SEL on the panel to confirm), the installer's identity
+  (FM-1_10000601) and its log readout, a screen reader. "Show to editors" names the port "LOOM-8 FM-1 (FM1VST)" and
+  links the samples page.
+- **In the public release** (21 cores and the fm1emu engine): its factory 909 hi-hat ships unchanged, the owner's
+  call ("ship the original, it is from the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal
+  made"); the About page's credits name that origin. X0X stays gated (CORES-PLAN.md 6).
+
+### Mini-Tone, FMini-1, Skiff and GR!MM, four new cores; DUELL public
+
+All four are in the public release, each pinned at its latest stable release (research/cores-2026-10-22/SURVEY.md):
+
+| core | firmware | pin | glue |
+|---|---|---|---|
+| `minitone` | [Mini-Tone](https://github.com/eldontyrellcorp/Mini-Tone) by Stephane Schmitz: Felucca 1.5 with six tracks and SID, CHIP, DUALVCO, ANALOG4, BRAIDS, SWARMER, FMTONE, WAVETONE, FMDRUM and TB303 engines | 1.0.1 (5e5d09c) | felucca_web |
+| `fmini` | [FMini-1](https://github.com/ruppert/fmini-1) by ruppert: a three-oscillator Minimoog-style monosynth on Felucca 1.6.1, 100 factory patches | 1.8.0 (ab0f5c8) | felucca_web (its 3 s splash) |
+| `skiff` | [Skiff](https://github.com/illuminus5/skiff) by illuminus5: a six-track groovebox, 14 engines, songs, PERFORM scenes (the FM-1 board) | 1.4 (c01fa1e) | felucca_web |
+| `grimm` | [GR!MM](https://github.com/GRiMMBIENT/grimm) by GRiMMBIENT: dark ambient on Dinghy, four tracks, seven sources, granular freeze, reverbs to infinite | 1.0 (815ca6b) | dinghy, on its browser shim |
+
+- Each runs its firmware's own browser unit, unmodified, and matches it (the golden checks: the felucca_web three
+  screen and audio identical to their `web/emu/felucca_web.c`; GR!MM's screen identical to its `tests/host.c`).
+- The managers answer: the three felucca_web cores' web editors (INFO, backup LIST / GET / PUT, user presets); GR!MM's
+  editor page (F0 7D 47 52: INFO, GET, PUT of sounds, slots and settings; its sample upload); each installer's
+  identity (Mini-Tone FM-1_910, FMini-1 FM-1_918, Skiff FM-1_714, GR!MM FM-1_966, as their release builds). "Show to
+  editors" names the ports as the units do ("Felucca", FMini-1's "FM-1 Midi") and links the FMini-1, Skiff and GR!MM
+  editors.
+- Mini-Tone's repository lacks the MIT and Apache-2.0 texts its LICENSING.md names: FM1VST supplies them (its About
+  page's credits, and the release's licences/cores/minitone/LICENSES/); tools/package_release.sh now checks that
+  every licence file a core's LICENSING.md names is in the release. Skiff's credits say its SLICE loops BREAK and FUNK
+  are AI-generated (the YuE2 model). FMini-1's few artist-named patch titles are names only.
+- **DUELL is public** (the owner's call): the core is the unmodified v1.0, named "DUELL (unofficial build)"
+  with its commit, which satisfies its NOTICE.md naming terms; its credits say so and carry NOTICE.md and CREDITS.md.
+
+### PIGEON, a new core
+
+`pigeon`: The Shrimp Blimp's [PIGEON](https://github.com/TheShrimpBlimp/pigeon) (GPL-3.0-only, on Felucca 1.5.1), a
+performance sampler after the SP-404 and the PO-33: two chopped songs (MP3 or IMA ADPCM, up to 32 chops each) and a
+16-pad kit, a 64-step sequencer with four notes a step, patterns A-D and an arrangement. Pinned at **v0.4.1**
+(8f34e81), its latest stable release (the Hub offers 0.5.0-beta.1).
+
+- The firmware's own browser unit on the felucca_web glue, unmodified, with its MP3 decoder (`ko_mp3.c` and libmad
+  0.15.1b) built from its tree.
+- **The sample bank**: as on the FM-1, the 500 KiB bank lives in the 1 MiB NOR (the extents PIGEON's package frees
+  for it), so it is part of the core's flash image: saved with the plugin state and presets, kept across a power
+  cycle. No bank ships with the release, so a fresh PIGEON is silent until one is loaded the device's way: PIGEON's
+  sample loader or `tools/ko_bank.py upload` (the editor protocol's bank commands). "Show to editors" names the port
+  "PIGEON (FM1VST)" and links the sample loader.
+- The managers answer: the bank (negotiate, upload, export, erase, diagnostics), the editor's backup, the installer's
+  identity (FM-1_900).
+- **In the public release**. Its credits name the splash logo's artist
+  (Dendy0097), libmad and the ported DSP's notices.
+
+### Tonitor, a new core
+
+`tonitor`: Nuno Zimas's [Tonitor](https://github.com/nzimas/tonitor) (GPL-3.0-only, on Felucca and SLOOP), firmware
+for acousmatic and live-ambient music, built for low vision: six tracks of generated "sound objects" on seven engines
+(FM, ANIMA, CALIGULA, RUSSOLO, DRUID, BAYAREA, HIVE), free loops with overdubs, a granulator, a reverb, a delay, a
+modulation matrix per track, sessions and presets. **Pinned at a240bc1 (0.55):** Tonitor has no tags or releases and
+publishes several times a day; the pin is the commit holding the Firmware Hub's current package (its "2026.10.22",
+firmware 0.55; 0.54 and 0.55 changed only the USB audio out, which a core builds out). Expect frequent bumps.
+
+- Its own glue (`core-glue/tonitor`): the device's unity build with a host HAL in place of the hardware headers, and
+  `main.c`'s power-on and main loop re-done on the plugin's clock. The loop runs on a coroutine: where the device
+  waits for its interrupts (a new sound waiting for the audio to take it, a reply waiting for room) it yields, and
+  the audio, MIDI and time move on as on the device. The second core's jobs run inline, where the device waits for
+  them (the same sound as Tonitor's own two-core / one-core check).
+- The managers answer: the installer's identity (FM-1_700) and the backup page's sessions and presets (LIST, READ,
+  WRITE, refused when damaged). "Show to editors" names the port "FM-1 Tonitor (FM1VST)" and links the backup page.
+  The update keys are ignored, as on every core.
+- **In the public release.**
+
+### Speak37, a new core
+
+`speak37`: [Speak37](https://github.com/genkigenki/Speak37) by M. Geisler (GPL-3.0-only, on the Felucca platform),
+the talking synth: every key speaks the next word of a sentence at its pitch, chords speak in harmony, nine voices
+(CLASSIC .. CHOIR), 20 banks of sentences and songs plus a USER bank of 16, RHYTHM with an 808 and 16 grooves, and MOPE,
+"a gloomy robot who judges your chords". Pinned at **v1.0** (a617d60), its FM-1 build (`speak37-fm1-1.0.fwsc`:
+build.py BOARD=fm1speak); the SMK-37 build is a different panel, out of scope.
+
+- Its own glue, core-glue/speak37: the device's sources unmodified, the FM-1 HAL on the host, the device's power-on and
+  main loop on the plugin's clock, the device's own audio interrupt (sp_main.c).
+- Saves as the unit does: the sound in use, MASTER, the sentence (the autosave; a host's save writes it at once,
+  unless a voice still speaks), the 16 memories (SAVE held), the USER sentences.
+- The installer's identity answers (FM-1_510, the v1.0 package's); Speak37 has no editor. "Show to editors" names the
+  port "Speak37 (FM1VST)" and links its installer page.
+- **In the public release**: the TMS5220's coding tables and the Speak & Spell chirp are chip constants as MAME
+  tabulates them (BSD-3-Clause), the words are espeak-ng renders (no TI vocabulary); the About page carries MAME's and
+  FM1 Open's (the 808, MIT) notices.
+
+### Firmware updates
+
+Each pin moved to its firmware's latest stable release:
+
+| core | was | now | glue |
+|---|---|---|---|
+| ChoralRoot | 0.25.1 | 0.26.1 | version only |
+| CoralFlower | 0.2 | 0.5 | flash_sync writes 0.4's settings log, its sequencer store, the parts' sound edits and (0.5) the patterns' own sounds and their tweak stores; the generate list (no melodee_cz1.h); the golden reference built at CR_VERSION 0.5 |
+| DUELL | 0.2.20-beta | 1.0 (its first non-beta release) | the generate list (midi_map_defaults.h); the credits carry its new CREDITS.md |
+| Melodee | 1.4.4 | 1.4.5 | version only; its USB port is now "Melodee FM-1", and so is the editor port's name |
+| SLOOP | 2.7.1 | 2.8 | version only (gated) |
+| sloopDX | 4.0 (eeec0a6) | 4.0 (tag v4.0) | none: the tag adds CI and installer changes only (gated) |
+| No Man Sky FM | 0.4 | 0.5 (32e7f4c, no tag: its README's current version) | two more generated headers; projects in format 7 (gated) |
+| OberVave | 1.5.1 | 1.5.3 | version only |
+| Frodhes | 0.9.2 | 0.9.4 | version only; the Inter Tight font's OFL in its credits |
+| FM-106 | Beta4 | Beta5 | version only (gated); Beta5 still refuses the commit to flash (the user bank does not fit its 8 KiB), as sysex_test records |
+
+Unchanged, already at their latest stable release: Felucca 1.6.1, GHOULBOX 2.3.2, PurpleMonkey 0.11, X0X 1.1.0,
+FoMni-1 0.4, FiMba-1 0.6.1, AMB-1 1.3, Fart Machine One 1.0.0, ORBIT 0.7.1, Rainbow Mode 1.1.5-rb
+(upstream changed only its landing page), JIANT FM 0.9.9 (upstream's installer still calls 0.9.9 stable; its newer
+builds are beta previews).
+
+### Shift-click to hold
+
+A mouse holds one control at a time; now several stay down. **Shift-click** a button (FX .. REC, OCT- / OCT+) or a
+key and it latches: down on the click, still down after the mouse is up, marked by a ring and a dot. Plain clicks on
+the others stay momentary (latch HOME, then tap keys); Shift-click latches more. Any click on a latched control lets
+it go; **Esc** lets go of all of them (Esc is OCT- again once none is latched), and so do the focus leaving the editor
+for good, a reboot or a firmware switch, and closing the editor. Right-click / ctrl-click still latch as before.
+Shift on a knob changes nothing; the computer keys are unchanged. The first time Shift is held over the panel, a
+toast says "Shift-click to hold" (once: settings.json remembers it). A power-on now lets go of whatever the panel
+held, so a latched button never reaches a firmware's boot.
+
 ## 0.5.1 (2026-10-19): copy the screen
 
 ### Copy the screen

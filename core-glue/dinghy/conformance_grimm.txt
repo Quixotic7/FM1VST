@@ -1,0 +1,13 @@
+# GR!MM 1.0: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: the autosave (the work: the tracks, the mixer, the FX; grimm.c, the hands at rest 2.5 s and
+# silence; flash_sync does it at once): KNOB 1 on HOME turned after the boot screen (3 s, ui.c UI_BOOT_MS); after the
+# reboot HOME shows the new value
+save wait 3500
+save knob KNOB1 +8
+save wait 500
+save quit
+saved wait 3500
+saved quit
+saved-lcd-differs
+# the reboot: the browser shim has no reset path (UBOOT is a USB request, the boot guard the device branch's)
+reboot none the browser shim has no reset path (UBOOT over USB, the boot guard in the device branch only)

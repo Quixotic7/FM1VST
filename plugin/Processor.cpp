@@ -3,6 +3,7 @@
 #include "Processor.h"
 #include "Dnsnd.h"
 #include "Editor.h"
+#include "VideoCapture.h"
 
 #include <algorithm>
 #include <cmath>
@@ -189,6 +190,7 @@ FM1Processor::FM1Processor()
 
 FM1Processor::~FM1Processor()
 {
+    video_.reset();                              // (a take in progress is finished first)
     alive_->store(false);                        // (a download finishing later reaches nothing)
     stopTimer();
     editorPort_.reset();                         // (its thread joined before devLock_ is taken: the idle clock takes it)
@@ -776,6 +778,9 @@ void FM1Processor::bootLocked()
 {
     if (!loaded_ || dev_)
         return;
+    videoTap_.freeze(AudioTap::kPowerOn);        // (a take ends before the new firmware's first sample)
+    panelReleaseAll();                           // (a latched panel button never reaches a boot)
+    panelPowerOns_.fetch_add(1);
     std::vector<uint8_t> bytes;
     const bool emu = coreId_ == kEmuCore;
     if (emu) {
@@ -851,6 +856,7 @@ int FM1Processor::latencyLocked() const
 
 void FM1Processor::teardownLocked()
 {
+    videoTap_.freeze(AudioTap::kPowerOn);
     latencyFn_ = nullptr;
     unbindTier2Locked();                         // (before the module goes: no slot may call into it)
     dev_.reset();
@@ -2149,6 +2155,7 @@ void FM1Processor::setStateInformation(const void *data, int sizeInBytes)
 // ========================================================== audio thread ===
 void FM1Processor::prepareToPlay(double sampleRate, int maximumExpectedSamplesPerBlock)
 {
+    videoTap_.freeze(AudioTap::kDevice);         // (a device restart ends a take: the rate may change)
     {
         const juce::ScopedLock l(devLock_);
         sampleRate_ = sampleRate > 0 ? sampleRate : 44100.0;
@@ -2707,6 +2714,22 @@ void FM1Processor::renderSegment(float *L, float *R, int from, int to)
 }
 
 void FM1Processor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midi)
+{
+    renderBlock(buffer, midi);
+    // the video recorder's capture (VideoCapture.h): the block as rendered, before anything after the plugin; lock-free
+    if (videoTap_.armed() && buffer.getNumChannels() > 0)
+        videoTap_.push(buffer.getReadPointer(0), buffer.getNumChannels() > 1 ? buffer.getReadPointer(1) : nullptr,
+                       buffer.getNumSamples());
+}
+
+fm1video::Session *FM1Processor::videoSession()
+{
+    if (!video_ && fm1video::Session::available(*this))
+        video_ = std::make_unique<fm1video::Session>(*this);
+    return video_.get();
+}
+
+void FM1Processor::renderBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midi)
 {
     juce::ScopedNoDenormals noDenormals;
     const int n = buffer.getNumSamples();

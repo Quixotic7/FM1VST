@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The FM-106 core: FM-106 (https://github.com/PatttF/fm-106, the pinned, unmodified submodule cores/fm-106) on this
- * glue's own fake FM-1, fm106_host.c: platform.c includes "../../tests/host.c" (FM-106's, broken at Beta4), which
+ * glue's own fake FM-1, fm106_host.c: platform.c includes "../../tests/host.c" (FM-106's, broken since Beta4), which
  * core_fm106.cmake maps to fm106_host.c with clang's -ivfsoverlay. The family glue (dinghy_pre.h, dinghy_glue.h)
  * runs the main loop as a coroutine.
  *
@@ -11,8 +11,9 @@
  *   SysEx            in: the librarian's messages (41 ..) reach fm106_sysex_handle before the next pass, the others
  *                    ota.c's ota_service (the M-UPGRADE identity), as the device's platform_poll hands them over; out:
  *                    the replies as USB-MIDI SysEx packets. A store (30) changes the RAM bank, the commit (35) writes
- *                    it to the NOR image (presets_flash_save: 0x98000, two sectors), as the device. The update key
- *                    and UBOOT's are not acted on (dinghy_glue.h)
+ *                    it to the NOR image (presets_flash_save: 0x98000, two sectors), as the device: at Beta5 the
+ *                    bank (10,512 B) is over the 8 KiB, so both refuse it and only the ACK goes out
+ *                    (tests/sysex_test.cpp fm106_run). The update key and UBOOT's are not acted on (dinghy_glue.h)
  *   the backlight    fm1_led_bg (the buttons' dim plane) as FM1P_LED_FAINT */
 #define DINGHY_HOST 1
 #include "dinghy_pre.h"

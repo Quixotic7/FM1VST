@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The FM-1 HAL for the SLOOP-family cores (SLOOP 2.7.1, sloopDX 4.0, ORBIT 0.7.1, No Man Sky FM 0.4): what the
+/* The FM-1 HAL for the SLOOP-family cores (SLOOP 2.8, sloopDX 4.0, ORBIT 0.7.1, No Man Sky FM 0.5): what the
  * device's firmware/hal/fm1_*.h headers give firmware/src/felucca.c, on the host. Included by sloop_firmware.h in
  * the place of those headers (first, before libc.c). None of these firmwares ships an emulator unit: this header is
  * modelled on their tests/ui_pages_test.c stubs (time, input, display) and No Man Sky's wasm/nms_wasm.c (the whole

@@ -1,0 +1,21 @@
+# FMini-1 1.8.0: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# its splash stands 3 s (fa_splash): main.c's loop starts at 3030 ms (the web unit's web_boot_ms), the key after it
+settle_ms 3500
+# the flash round trip: the autosave (project.c): PRESETS two patches on (track 1, the instrument); flash_sync writes
+# the autosave at once (its quiet time waived: fw_core.h); the second unit restores it at power-on (the patch number
+# and name at the foot of the screen)
+save wait 3500
+save knob PRESETS +2
+save wait 600
+save quit
+saved wait 4000
+saved quit
+saved-lcd-differs
+# the boot guard: a second failed boot in a row enters UBOOT (exit(3), fw_core.h as main.c fm1_cstart)
+reboot-guard 2
+# OCT- + OCT+ held 5 s: UBOOT (fw_core.h, main.c's countdown, from the loop's start after the splash)
+reboot wait 3500
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

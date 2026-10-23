@@ -241,6 +241,21 @@ bool ThemeStore::setDefaultName(const juce::String &name)
     return dir_.createDirectory() && settingsFile().replaceWithText(juce::JSON::toString(v) + "\n");
 }
 
+bool ThemeStore::flag(const juce::String &key) const
+{
+    const juce::var v = juce::JSON::parse(settingsFile().loadFileAsString());
+    return v.isObject() && (bool)v.getProperty(juce::Identifier(key), false);
+}
+
+bool ThemeStore::setFlag(const juce::String &key, bool on)
+{
+    juce::var v = juce::JSON::parse(settingsFile().loadFileAsString());
+    if (!v.isObject())
+        v = juce::var(new juce::DynamicObject());
+    v.getDynamicObject()->setProperty(juce::Identifier(key), on);
+    return dir_.createDirectory() && settingsFile().replaceWithText(juce::JSON::toString(v) + "\n");
+}
+
 Theme ThemeStore::defaultTheme() const
 {
     const juce::String n = defaultName();

@@ -241,12 +241,21 @@ float ledAlpha(int level)
 }
 bool ledLit(int level) { return fm1p_led_class((uint8_t)juce::jlimit(0, 255, level)) == FM1P_LC_LIT; }
 
-void drawKey(Canvas &c, const Palette &p, int k, bool held, int lv)
+// a latched control's mark (Shift-click): a ring inside the cap and a dot, in the hint colour (the panel's accent)
+void drawLatchMark(Canvas &c, R r, float rad, float dotX, float dotY, juce::Colour col)
+{
+    c.rrectLine(R{r.x + 3, r.y + 3, r.w - 6, r.h - 6}, std::fmax(rad - 3, 2.f), col, .95f, 1.5f);
+    c.circle(dotX, dotY, 2.6f, col);
+}
+
+void drawKey(Canvas &c, const Palette &p, int k, bool held, int lv, bool latched)
 {
     const R r = geo().key[k];
     const float cx = r.x + KEY_W / 2;
     c.rrect(r, 21, held ? p.pressed : p.cap);
     c.rrectLine(r, 21, held ? p.hint : p.capOutline, 1, held ? 1.5f : 1);
+    if (latched)
+        drawLatchMark(c, r, 21, cx, r.y + 8.5f, p.hint);
     if (ledLit(lv))
         c.rrect(R{cx - 9, r.y + 9, 18, 40}, 9, p.white, .16f * ledAlpha(lv));
     c.rrect(R{cx - 4, r.y + 14, 8, 30}, 4, p.ledOff);
@@ -258,7 +267,7 @@ void drawKey(Canvas &c, const Palette &p, int k, bool held, int lv)
         c.text(cx, r.y + 61, 6.5f, h.toRawUTF8(), p.hint, .9f);
 }
 
-void drawButton(Canvas &c, const Palette &p, int i, const juce::String &name, bool held, int lv, int green)
+void drawButton(Canvas &c, const Palette &p, int i, const juce::String &name, bool held, int lv, int green, bool latched)
 {
     const R r = geo().btn[i];
     const bool oct = i >= EMU_B_OCTDN;
@@ -284,6 +293,8 @@ void drawButton(Canvas &c, const Palette &p, int i, const juce::String &name, bo
         if (green)
             c.circle(r.x + 6, r.y + r.h - 6, 3.2f, p.green, ledAlpha(green));
     }
+    if (latched)                                  // (the dot top right: PLAY's green LED is bottom left)
+        drawLatchMark(c, r, rad, r.x + r.w - (oct ? 7.f : 6.5f), r.y + (oct ? r.h / 2 : 6.5f), ledLit(lv) ? p.hintLit : p.hint);
 }
 
 // a knob; fn: what it does now (the firmware value it is bound to), a small caption under its printed name
@@ -377,22 +388,25 @@ juce::String PanelComponent::keymapHintText(Kind kind, int idx)
 static int normKey(int code) { return code >= 'a' && code <= 'z' ? code - 32 : code; }
 
 // ============================================================ component ===
-PanelComponent::PanelComponent(FM1Processor &p) : proc_(p)
+PanelComponent::PanelComponent(FM1Processor &p, bool mirror) : proc_(p), mirror_(mirror)
 {
     for (int i = 0; i < EMU_NB; i++)
         names_.add(FM1Processor::kPanelLabels[i]);
     pal_ = derive(theme_);
+    powerOnsSeen_ = p.panelPowerOns();
     lcd240_ = softwareImage(EMU_LCD_W, EMU_LCD_H);
     lcd240_.clear(lcd240_.getBounds(), juce::Colours::black);
-    setWantsKeyboardFocus(true);
+    setWantsKeyboardFocus(!mirror);
     setOpaque(true);
-    startTimerHz(60);
+    if (!mirror)                                 // (a mirror is refreshed by its owner, on its own thread)
+        startTimerHz(60);
 }
 
 PanelComponent::~PanelComponent()
 {
     stopTimer();
-    proc_.panelReleaseAll();                     // (no stuck notes when the editor closes)
+    if (!mirror_)
+        proc_.panelReleaseAll();                 // (no stuck notes when the editor closes)
 }
 
 float PanelComponent::frameAspect(bool big) { return VIEW.w / (VIEW.h + (big ? VIEW.w : 0.f)); }
@@ -553,6 +567,7 @@ bool PanelComponent::updateControls(bool force)
         Drawn d;
         d.a = keySrc_[(size_t)k] || ((view_.keys >> k) & 1u);
         d.b = view_.keyLed[(size_t)k];
+        d.c = (keySrc_[(size_t)k] & SRC_LATCH) != 0;
         if (force || d != keyDrawn_[(size_t)k])
             todo.push_back({0, k, d});
     }
@@ -561,6 +576,7 @@ bool PanelComponent::updateControls(bool force)
         d.a = btnSrc_[(size_t)i] || ((view_.buttons >> i) & 1u);
         d.b = view_.btnLed[(size_t)i];
         d.c = i == EMU_B_PLAY ? view_.playGreen : 0;
+        d.d = (btnSrc_[(size_t)i] & SRC_LATCH) != 0;
         if (force || d != btnDrawn_[(size_t)i])
             todo.push_back({1, i, d});
     }
@@ -593,10 +609,10 @@ bool PanelComponent::updateControls(bool force)
         Canvas c(panel_, lay_.k);
         for (const Todo &t : todo) {
             if (t.kind == 0) {
-                drawKey(c, pal_, t.i, t.d.a != 0, t.d.b);
+                drawKey(c, pal_, t.i, t.d.a != 0, t.d.b, t.d.c != 0);
                 keyDrawn_[(size_t)t.i] = t.d;
             } else if (t.kind == 1) {
-                drawButton(c, pal_, t.i, names_[t.i], t.d.a != 0, t.d.b, t.d.c);
+                drawButton(c, pal_, t.i, names_[t.i], t.d.a != 0, t.d.b, t.d.c, t.d.d != 0);
                 btnDrawn_[(size_t)t.i] = t.d;
             } else {
                 const float a = t.i == EMU_E_MASTER ? masterAngle(view_.master) : knobAngle_[(size_t)t.i];
@@ -642,6 +658,10 @@ void PanelComponent::rebuildLcdImages()
 void PanelComponent::refresh()
 {
     proc_.getPanelView(view_);
+    if (const uint32_t n = proc_.panelPowerOns(); n != powerOnsSeen_) {   // (a power-on let go of the device's side)
+        powerOnsSeen_ = n;
+        releaseLatches();
+    }
     // the knobs' pointers: a bound one at its value (whoever moved it: the host, the Roto-Control, the panel, the
     // firmware), a relative one turned by every detent the device was given (the panel's, the host's)
     for (int r = 0; r < EMU_NE - 1; r++) {
@@ -926,8 +946,9 @@ void PanelComponent::mouseDown(const juce::MouseEvent &e)
         updateControls(false);
         return;
     }
-    if (e.mods.isPopupMenu() || e.mods.isCtrlDown()) {   // right-click / ctrl-click: latch
-        const bool on = kind == KM_KEY ? (keySrc_[(size_t)idx] & SRC_LATCH) != 0 : (btnSrc_[(size_t)idx] & SRC_LATCH) != 0;
+    // a latched one: any click lets it go; Shift-click / right-click / ctrl-click: latch it; else momentary
+    const bool on = kind == KM_KEY ? keyLatched(idx) : buttonLatched(idx);
+    if (on || e.mods.isShiftDown() || e.mods.isPopupMenu() || e.mods.isCtrlDown()) {
         if (kind == KM_KEY)
             holdKey(idx, SRC_LATCH, !on);
         else
@@ -1000,8 +1021,49 @@ void PanelComponent::mouseWheelMove(const juce::MouseEvent &e, const juce::Mouse
 void PanelComponent::timerCallback()
 {
     refresh();
-    if (!heldCodes_.empty() && (++pollTick_ & 1))   // (30 Hz: a release the host swallowed)
+    if ((!heldCodes_.empty() || !swallowed_.empty()) && (++pollTick_ & 1))   // (30 Hz: a release the host swallowed)
         checkHeldKeys();
+    if (focusLostAt_ > 0)
+        checkFocusGone(juce::Time::getMillisecondCounterHiRes());
+}
+
+int PanelComponent::latchCount() const
+{
+    int n = 0;
+    for (uint8_t s : keySrc_)
+        n += (s & SRC_LATCH) != 0;
+    for (uint8_t s : btnSrc_)
+        n += (s & SRC_LATCH) != 0;
+    return n;
+}
+
+void PanelComponent::releaseLatches()
+{
+    releaseSrc(SRC_LATCH);
+    focusLostAt_ = 0;
+}
+
+bool PanelComponent::checkFocusGone(double nowMs)
+{
+    if (focusLostAt_ <= 0 || latchCount() == 0) {
+        focusLostAt_ = 0;
+        return false;
+    }
+    juce::Component *root = findParentComponentOfClass<juce::AudioProcessorEditor>();
+    if (!root)
+        root = getTopLevelComponent();
+    if (root && root->hasKeyboardFocus(true)) {  // (back: the panel, the sheet, the screen view)
+        focusLostAt_ = 0;
+        return false;
+    }
+    if (juce::ModalComponentManager::getInstance()->getNumModalComponents() > 0) {   // (a menu, a dialog: wait)
+        focusLostAt_ = nowMs;
+        return false;
+    }
+    if (nowMs - focusLostAt_ < 1000.0)
+        return false;
+    releaseLatches();
+    return true;
 }
 
 // macOS virtual key codes of the modifier keys (Events.h kVK_RightCommand .. kVK_Function): never a mapped key
@@ -1071,6 +1133,13 @@ bool PanelComponent::keyPressed(const juce::KeyPress &k)
             m = &e;
     if (!m)
         return false;
+    if (swallowed_.count(code))
+        return true;                             // (Esc's repeats after it let go of the latches)
+    if (code == juce::KeyPress::escapeKey && latchCount() > 0 && !heldCodes_.count(code)) {
+        releaseLatches();                        // Esc: every latch up (not OCT-)
+        swallowed_.insert(code);
+        return true;
+    }
     shiftHeld_ = k.getModifiers().isShiftDown();
     if (m->kind == KM_TURN) {                    // (repeats)
         keyAction(*m, true, SRC_KEY);
@@ -1087,6 +1156,8 @@ bool PanelComponent::keyPressed(const juce::KeyPress &k)
 
 bool PanelComponent::checkHeldKeys()
 {
+    for (auto it = swallowed_.begin(); it != swallowed_.end();)
+        it = keyStillDown(*it, -1) ? std::next(it) : swallowed_.erase(it);
     std::vector<int> up;
     for (const auto &h : heldCodes_)
         if (!keyStillDown(h.first, h.second))
@@ -1098,12 +1169,21 @@ bool PanelComponent::checkHeldKeys()
 
 bool PanelComponent::keyStateChanged(bool) { return checkHeldKeys(); }
 
-void PanelComponent::modifierKeysChanged(const juce::ModifierKeys &m) { shiftHeld_ = m.isShiftDown(); }
+void PanelComponent::modifierKeysChanged(const juce::ModifierKeys &m)
+{
+    const bool was = shiftHeld_;
+    shiftHeld_ = m.isShiftDown();
+    if (shiftHeld_ && !was && onShiftHint && isShowing() && isMouseOver(true))
+        onShiftHint();
+}
 
 void PanelComponent::focusLost(FocusChangeType)
 {
     heldCodes_.clear();
-    releaseSrc(SRC_KEY | SRC_ESC | SRC_MOUSE);   // no stuck notes (latches stay)
+    swallowed_.clear();
+    releaseSrc(SRC_KEY | SRC_ESC | SRC_MOUSE);   // no stuck notes (latches: when the focus is gone for good)
     shiftHeld_ = false;
     dragKnob_ = mouseKind_ = -1;
+    if (latchCount() > 0)
+        focusLostAt_ = juce::Time::getMillisecondCounterHiRes();
 }

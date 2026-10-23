@@ -132,6 +132,7 @@
 #include <string>
 #include <vector>
 
+#include "AudioTap.h"
 #include "EditorPort.h"
 #include "EmuClock.h"
 #include "HostRefresh.h"
@@ -190,6 +191,10 @@ struct PanelView {
     };
     std::array<Knob, EMU_NE - 1> knobs{};
 };
+
+namespace fm1video {
+class Session;
+}
 
 class FM1Processor : public juce::AudioProcessor, private juce::AsyncUpdater, private juce::Timer {
 public:
@@ -342,6 +347,9 @@ public:
     // arrives before the next UI frame, GLO up one frame later (all on the device clock)
     void panelFineTurn(int role, int detents);
     void panelReleaseAll();                          // every panel key and button up
+    // every power-on (boot, preset load, state restore, flash reset, core switch, a reboot) lets go of what the panel
+    // held (no button held into a boot) and moves this count: the panel then drops its latches
+    uint32_t panelPowerOns() const { return panelPowerOns_.load(); }
     // the latest snapshot: copies it into out when out.seq differs (the LCD only when out.lcdSeq differs);
     // false when nothing changed
     bool getPanelView(PanelView &out) const;
@@ -440,6 +448,11 @@ public:
     void editorIdleTick(uint32_t ms);
     EditorPort *editorPortForTest() { return editorPort_.get(); }
 
+    // ---- video recording (the Standalone app: VideoCapture.h). The output captured in processBlock, after the core
+    // rendered it, while a take runs (lock-free); a power-on or a device restart (prepareToPlay) ends the take first
+    AudioTap &videoTap() { return videoTap_; }
+    fm1video::Session *videoSession();             // (message thread) made on first use; nullptr in a plugin
+
     // ---- for tests (call only between processBlock calls, on the thread that calls them) ----
     Device *deviceForTest() { return dev_.get(); }
     RemoteLink *remoteForTest() { return remote_.get(); }
@@ -506,6 +519,9 @@ private:
     bool backupLocked(const juce::String &why);
 
     // the audio thread
+    void renderBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &);   // (processBlock: this, then the video tap)
+    AudioTap videoTap_;
+    std::unique_ptr<fm1video::Session> video_;
     void applyTier1();
     void pushKeys();
     void handleMidi(const juce::MidiMessage &m);
@@ -636,6 +652,7 @@ private:
 
     // the panel GUI's input (written by the message thread, taken by the audio thread at block start)
     std::atomic<uint32_t> panelKeys_{0}, panelButtons_{0}, panelKeyTaps_{0}, panelBtnTaps_{0};
+    std::atomic<uint32_t> panelPowerOns_{0};
     std::array<std::atomic<int32_t>, EMU_NE> panelEnc_{};
     std::atomic<int32_t> fineReq_{0};
     std::atomic<int> fineRole_{EMU_E_SELECT};

@@ -19,8 +19,14 @@
 // INPUT (emu.c mouse_event / key_event). Each key and button has a set of sources (keyboard, End's OCT pair,
 // mouse, latch), as emu.c's key_src / btn_src; a control is held while any source holds it, and the processor
 // hears panelKey / panelButton when that changes (a separate "held" source merged with the host parameters on the
-// audio thread: the panel never moves the btn_ / key_ parameters). Left click: press / release; right-click or
-// ctrl-click: latch down, again to release (on the LCD: the screen's menu, Editor.h); wheel over a knob: one detent
+// audio thread: the panel never moves the btn_ / key_ parameters). Left click: press / release; Shift-click,
+// right-click or ctrl-click on a key or button: latch it down (it stays down with no mouse button held: hold several
+// at once), and any click on a latched one lets it go; plain clicks on the others stay momentary while some are
+// latched (latch HOME, then tap keys). A latched control shows a ring and a dot in the hint colour. Esc lets go of
+// every latch (then not OCT-; with none latched Esc is OCT- as before), as do the focus leaving the editor for good
+// (1 s, no menu open), a power-on (a firmware switch, a reboot) and closing the editor. Shift held over the panel the
+// first time: a toast, "Shift-click to hold" (onShiftHint; the editor remembers it). (On the LCD a right-click is the
+// screen's menu, Editor.h.) Shift on a knob changes nothing (a drag turns it as before). Wheel over a knob: one detent
 // per notch (MASTER: 16 of 1023); vertical drag on a knob: one detent per 8 points; a click on a knob selects it for
 // Up / Down. The keyboard map is keymap.c's (by key: see keymap() in PanelComponent.cpp; the screenshot, recording
 // and dump keys are left out), plus a fallback row for the F-key buttons (a host or macOS often takes F5 .. F10): C V B N M , = FX SEL ENV LFO
@@ -30,8 +36,8 @@
 // keyStateChanged and at 30 Hz while any key is held (checkHeldKeys). "Up" is the physical key's state when its press
 // could be matched to one key (macOS: the HID state, CGEventSourceKeyState; JUCE's KeyPress::isKeyCurrentlyDown only
 // moves with the events the host passes on), else JUCE's. Two keys of one control (Z and Esc): it is held while
-// either is. Losing the keyboard focus releases what the keyboard and the mouse hold (latches stay); destroying the
-// component releases everything.
+// either is. Losing the keyboard focus releases what the keyboard and the mouse hold (latches: see above); destroying
+// the component releases everything.
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -45,7 +51,9 @@
 
 class PanelComponent : public juce::Component, private juce::Timer {
 public:
-    explicit PanelComponent(FM1Processor &p);
+    // mirror: a copy for the video recorder (VideoCapture.h): no timer, no input, never on the desktop; its owner calls
+    // refresh() and paints it on its own thread, and destroying it lets go of nothing
+    explicit PanelComponent(FM1Processor &p, bool mirror = false);
     ~PanelComponent() override;
 
     void setTheme(const Theme &t);
@@ -72,6 +80,7 @@ public:
     // asks for the screen's menu instead of the settings; the frame shown now (RGB565 big-endian, as sent: the copy
     // lcdImage() was converted from); frozen: the shown frame is kept (the firmware and the audio run on) until thawed
     std::function<void(const juce::MouseEvent &)> onScreenMenu;
+    std::function<void()> onShiftHint;                    // Shift went down over the shown panel (the editor's toast)
     bool overScreen(juce::Point<float> logical) const;   // on the LCD (logical, at the last paint's layout)
     const std::array<uint16_t, EMU_LCD_W * EMU_LCD_H> &shownLcd() const { return shown_; }
     void setFrozen(bool on);
@@ -127,6 +136,15 @@ public:
     bool checkHeldKeys();                          // lets go of every held key found up; true if any
     int keysHeldFromKeyboard() const { return (int)heldCodes_.size(); }
 
+    // ---- latches (Shift-click; see the top)
+    bool keyLatched(int k) const { return k >= 0 && k < EMU_NKEY && (keySrc_[(size_t)k] & SRC_LATCH) != 0; }
+    bool buttonLatched(int b) const { return b >= 0 && b < EMU_NB && (btnSrc_[(size_t)b] & SRC_LATCH) != 0; }
+    int latchCount() const;
+    void releaseLatches();
+    // the focus left the editor (focusLost) and has not come back for 1 s, no menu or dialog open: let go of the
+    // latches; true if it did (the timer's work; tests pass the time, Time::getMillisecondCounterHiRes)
+    bool checkFocusGone(double nowMs);
+
 private:
     enum { SRC_KEY = 1, SRC_ESC = 2, SRC_MOUSE = 4, SRC_LATCH = 8 };
     void timerCallback() override;
@@ -149,6 +167,7 @@ private:
     bool hit(float ux, float uy, int &kind, int &idx) const;
 
     FM1Processor &proc_;
+    const bool mirror_ = false;
     Theme theme_;
     Palette pal_;
     juce::StringArray names_;
@@ -186,6 +205,9 @@ private:
     int mouseKind_ = -1, mouseIdx_ = 0, dragKnob_ = -1;
     float dragAcc_ = 0, wheelAcc_ = 0, dragY_ = 0;
     bool shiftHeld_ = false;
+    std::set<int> swallowed_;                  // key codes eaten (Esc letting go of the latches) until they are up
+    double focusLostAt_ = 0;                   // ms, while the focus is away with latches down (0: not away)
+    uint32_t powerOnsSeen_ = 0;
     std::map<int, int> heldCodes_;             // key codes down -> the physical key seen at the press (-1 unknown)
     KeyProbe keyProbe_;
     int pollTick_ = 0;

@@ -1,0 +1,13 @@
+# GR!MM's golden check (dinghy_golden.c): the script in tests/host.c's format, run by its own host sim and by the
+# core; the screens compared at 3500 ms (one of host.c's fixed SHOT times). HOME to MIXER 1 and its GRAIN SEND up, a
+# chord on T1, ALGORITHM to T2, HOME twice (MIXER 2, HOME), FX (TAPE) and its WOW turned.
+100 btn 8
+110 enc 5 100
+500 keys 0x4880
+900 keys 0
+1000 enc 1 1
+2000 btn 8
+2010 btn 8
+3000 btn 2
+3100 enc 2 40
+3510 end

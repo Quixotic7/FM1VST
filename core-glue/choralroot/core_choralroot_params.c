@@ -1,8 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The ChoralRoot core's Tier 2 parameter map (FM1-VST-PLAN.md 4.5; core-api/fm1core.h fm1param_t), for ChoralRoot
- * 0.25.1 (repaired from the 44453d0 map: the FX layer's pages and the reworked delay / reverb, the master filter, the
- * KEY layer's two pages, the PLAY menu's two pages, the LOCK and VIEW layers, the knobs' acceleration, the Options of
- * 0.19 .. 0.25.1 and the manual saving of 0.18).
+ * 0.25.1 and 0.26.1 (0.26 changed no parameter, only DSP and the two cores' sharing; repaired from the 44453d0 map:
+ * the FX layer's pages and the reworked delay / reverb, the master filter, the KEY layer's two pages, the PLAY menu's
+ * two pages, the LOCK and VIEW layers, the knobs' acceleration, the Options of 0.19 .. 0.25.1 and the manual saving
+ * of 0.18).
  *
  * NOT A TRANSLATION UNIT OF ITS OWN: core_choralroot.c includes this file after the firmware unit (emu_fw.c), so
  * the firmware's statics (cr_ui.c's mirror `cs`, its knob code, cr_out.c's engine `cr` and event queue, cr_fx.c's

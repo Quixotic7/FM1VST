@@ -21,7 +21,7 @@
  * ui_layer.c layer_knob): the value clamped to the descriptor's range, past a retired enum alias in the direction
  * of travel (params.c enum_step), stored in the part's (or the song's) parameter array, then motion_capture
  * (motion.c: a live edit becomes the motion sequencer's base value; recorded while the part records; not while LFO
- * held makes an edit momentary, nor in the designer) with its "PLAY TO RECORD MOTION" hint, and scale_share (SCALE,
+ * held makes an edit momentary, nor in the designer) with its "PLAY TO RECORD MOTION" hint, and scale_share (ROOT, SCALE,
  * QUANT, the MPC degree are set on every part at once). The native engines' pages (Prophet, CZ-1, FM6) write back
  * into the patch as edit_param does (p5_edit_value, cz_ed_put, fm6_page_put); GLO's device settings (BOOT, A4,
  * BUDGET, the WEIGHTS, DRUM) are saved at once. The audio ISR reads the arrays as they are (it is what the knob

@@ -1,0 +1,32 @@
+# LOOM-8 0.6.1's golden check (plat_golden_test: fm1-base plat_host's grammar): power-on (T1, a drum kit, on its
+# Steps page), four steps written, PLAY (the playhead, the kit's hits through the split render), a knob, a kit sound
+# on a black key, SELECT's pages, stopped
+wait 600
+shot boot.png
+tapkey w0
+wait 60
+tapkey w4
+wait 60
+tapkey w8
+wait 60
+tapkey w12
+wait 300
+shot steps.png
+tap PLAY
+wait 1000
+shot playing.png
+turn K2 3
+wait 300
+shot knob.png
+tapkey b2
+wait 100
+shot sound.png
+turn SELECT 1
+wait 300
+shot page1.png
+turn SELECT 1
+wait 300
+shot page2.png
+tap PLAY
+wait 600
+shot stopped.png

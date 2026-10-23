@@ -4,7 +4,12 @@
 //
 // Supported: wait MS|MSms|Ss, frames N, key NAME down|up|[MS], btn NAME down|up|[MS], press / tap / hold / down /
 // release / up (the older forms), knob|turn NAME +-N, master ADC, midi HEX [HEX [HEX]] [xN MS], expect led NAME
-// on|lit|mid|dim|faint|off (the level's fm1p_led_class, emu.c's planes), expect sound|silence, quit, a leading "<ms>" (absolute time), '#' comments. The computer keys
+// on|lit|mid|dim|faint|off (the level's fm1p_led_class, emu.c's planes), expect sound|silence, quit, a leading "<ms>" (absolute time), '#' comments.
+// FM1VST's own: sysex FILE, a file of SysEx frames (F0 .. F7, one after another: a manager's requests, e.g. a sample
+// upload) sent from that ms as USB-MIDI packets (CIN 4..7), each offered again every ms while the core refuses it
+// (its request buffer busy), the core's SysEx out drained and its frames counted; it counts as an expect: ok when
+// every frame got a reply. The run does not end before the last packet is taken and answered (or 3 s passed). FILE: absolute, or relative to the
+// working directory, else to the FM1VST tree (FM1_SOURCE_DIR). The computer keys
 // are keymap.c's table by name (cap) with emu.c's aliases (SHIFT, ENTER), including SELECT / PAGE DOWN / PAGE UP /
 // UP / DOWN and Shift + Up / Down (the fine turn: GLO held around the detent, emu.c fine_turn / fine_frame).
 // Parsed and ignored (they only look, or need a window): shot, window, dump, rec, and the keys F12 (dump),
@@ -84,4 +89,10 @@ private:
     int sel_knob_ = EMU_E_PRESETS;
     bool shift_held_ = false;
     int fine_steps_ = 0, fine_role_ = 0, fine_stage_ = 0;
+    // sysex FILE: the packets not taken yet, the frames sent and the replies seen (the core's SysEx out, reassembled)
+    void sysex_ms(uint32_t ms);
+    std::vector<uint32_t> sx_pend_;
+    size_t sx_at_ = 0;
+    uint32_t sx_frames_ = 0, sx_replies_ = 0, sx_last_ms_ = 0;
+    bool sx_on_ = false, sx_in_frame_ = false;
 };

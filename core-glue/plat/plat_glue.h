@@ -28,6 +28,8 @@
  *   FM1CORE_PL_DIM_LEVEL                 the dim plane's level (FM1P_LED_DIM; fm1-base: its DIM LO / HI)
  *   FM1CORE_PL_DIM_ON (optional)         whether the dim plane shows (default: fm1_led_dim_div != 0; FiMba's HAL
  *                                        has no divider: always)
+ *   FM1CORE_PL_MID_PLANE (optional)      a steady mid-level plane between lit and dim (fm1-base's plat_lights_mid:
+ *                                        felucca-bsp's fm1_led_mid), shown at FM1P_LED_MID
  *   FM1CORE_PL_NAME                      for the log lines ("X0X")
  * Optional: FM1CORE_PL_SX (1: the managers' SysEx, plat_sx.h included before the firmware's sources: see
  * there), FM1CORE_PL_TICK_HOOK() (each device ms, after the input: fm1-base's app_tick), FM1CORE_PL_KEY_HOOK(down,
@@ -132,9 +134,16 @@ static void fm1core_pl_in(void)                  /* the panel's input, at the to
 
 static void fm1core_pl_out(void)                 /* the LEDs and the LCD, after init / frame / idle */
 {
+#ifdef FM1CORE_PL_MID_PLANE
+    /* lit, then the steady mid level (felucca-bsp's fm1_led_mid), then the glow */
+    const uint8_t lv[3] = {FM1P_LED_LIT, FM1P_LED_MID, (uint8_t)(FM1CORE_PL_DIM_LEVEL)};
+    const uint8_t *const pl[3] = {fm1_led, FM1CORE_PL_MID_PLANE, fm1_led_dim};
+    fm1p_leds_planes(FM1CORE_PL_P, pl, lv, (FM1CORE_PL_DIM_ON) ? 3 : 2, FM1P_PLAY_GREEN_POS);
+#else
     const uint8_t lv[2] = {FM1P_LED_LIT, (uint8_t)(FM1CORE_PL_DIM_LEVEL)};
     const uint8_t *const pl[2] = {fm1_led, fm1_led_dim};
     fm1p_leds_planes(FM1CORE_PL_P, pl, lv, (FM1CORE_PL_DIM_ON) ? 2 : 1, FM1P_PLAY_GREEN_POS);
+#endif
     fm1p_lcd_out(FM1CORE_PL_P, fm1core_pl_lcd, fm1core_pl_lcd_writes);
 }
 

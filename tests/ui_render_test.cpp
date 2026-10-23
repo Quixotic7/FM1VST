@@ -9,7 +9,8 @@
 //       smallest to the largest (and with the big LCD), and stays inside the window;
 //   (s) the screen view at two sizes, with and without the button: square, its LCD equals the device's framebuffer at a
 //       whole multiple, the computer keys still play the panel;
-//   (m) the mouse: a right-click off the controls opens the sheet; on a key it still latches the key (no sheet);
+//   (m) the mouse: a right-click off the controls opens the sheet; on a key it still latches the key (no sheet); Shift
+//       over the panel the first time: the toast "Shift-click to hold", once (settings.json remembers it);
 //   (p) the state: the view mode and both sizes round-trip; a state from before them (no viewMode / screenSize, the
 //       old bar's height in editorH) opens the device view at the panel's aspect;
 //   (a) the accent of every theme preset reads on the sheet (3:1);
@@ -23,7 +24,9 @@
 //       Option + right-click copies at once, the toast over the LCD (ui-screen-toast.png; a private pasteboard, never
 //       the general one); the sheet's Screen row (ui-sheet-screen.png); in the screen view, the menu on the LCD
 //       (ui-screen-view-menu.png) and the sheet from the body around the bezel
+//   (n) PIGEON (when built): its test bank uploaded as host SysEx, a chop held, the device view (ui-core-pigeon.png)
 // FM1EMU_HOME points at a scratch folder under the build.
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <set>
@@ -38,6 +41,7 @@
 #include "Processor.h"
 #include "Sheet.h"
 #include "Theme.h"
+#include "VideoCapture.h"
 
 static int fails = 0;
 static void check(bool c, const std::string &what)
@@ -195,6 +199,14 @@ int main()
             check(ed.sheet().isOpen() && (p.deviceForTest()->panel()->keys & 1u) == 0,
                   "a right-click on the body (off the controls) opens the sheet");
             ed.sheet().close(false);
+            // (Shift went down over the panel: the panel's callback, as modifierKeysChanged calls it)
+            const bool before = ed.themeStore().flag("shiftLatchHint");
+            panel.onShiftHint();
+            const bool shown = ed.toast().text() == "Shift-click to hold" && ed.themeStore().flag("shiftLatchHint");
+            ed.showToast("Screen live");
+            panel.onShiftHint();
+            check(!before && shown && ed.toast().text() == "Screen live",
+                  "Shift over the panel the first time: the toast \"Shift-click to hold\", remembered; not again");
         }
 
         // ---- (k) copy the screen: the LCD's menu (drawn inside the editor), Option + right-click, the sheet's row
@@ -314,6 +326,48 @@ int main()
             } else {
                 std::printf("  (no Felucca package at %s: the emulated pages are not drawn)\n", FM1_FELUCCA_FWSC);
             }
+        }
+        // ---- (n) PIGEON at its device view with its test bank (ui-core-pigeon.png): a sampler is silent and its
+        // waveform empty without one; tests/fixtures/pigeon/bank.syx (PIGEON's ko_bank.py upload frames) sent as host
+        // SysEx through processBlock, a frame a block, as a manager on the editor port would; then a chop held
+        if (core_built("pigeon")) {
+            juce::MemoryBlock syx;
+            juce::File(FM1_SOURCE_DIR "/tests/fixtures/pigeon/bank.syx").loadFileAsData(syx);
+            check(p.switchCore("pigeon"), "PIGEON: switched to");
+            h.run_ms(3300);                       // (its three-second splash)
+            ed.coreChanged();
+            const auto *b = static_cast<const uint8_t *>(syx.getData());
+            int frames = 0;
+            for (size_t i = 0; i < syx.getSize(); i++) {
+                if (b[i] != 0xF0)
+                    continue;
+                size_t j = i;
+                while (j < syx.getSize() && b[j] != 0xF7)
+                    j++;
+                juce::MidiBuffer m;
+                m.addEvent(juce::MidiMessage::createSysExMessage(b + i + 1, (int)(j - i - 1)), 0);
+                h.buf.clear();
+                p.processBlock(h.buf, m);
+                frames++;
+                i = j;
+            }
+            h.run_ms(400);
+            p.panelKey(9, true);                  // D4: chop 6 of Song 1
+            h.run_ms(250);
+            float peak = 0;
+            for (int i = 0; i < 20; i++) {
+                juce::MidiBuffer m;
+                h.buf.clear();
+                p.processBlock(h.buf, m);
+                peak = std::max(peak, h.buf.getMagnitude(0, h.bs));
+            }
+            check(frames > 100 && peak > 0.002f, "PIGEON: " + std::to_string(frames) + " bank frames, D4 sounds (peak " +
+                                                     std::to_string(peak) + ")");
+            ed.hideChromeNow();
+            shot(ed, "core-pigeon");
+            ed.showChromeNow();
+            p.panelKey(9, false);
+            h.run_ms(100);
         }
         p.switchCore("choralroot");               // (the rest of the test is ChoralRoot's, at its size)
         h.run_ms(1200);
@@ -456,6 +510,101 @@ int main()
             list += " " + t.name.toStdString() + " " + toHex(l.accent()).toStdString() + " (" + juce::String(r, 1).toStdString() + ")";
         }
         check(ok, "every preset's accent reads on the sheet:" + list);
+    }
+
+    // ---- (r) video recording: the Standalone has it; a plugin (VST3, AU) has none of it
+    for (auto type : {juce::AudioProcessor::wrapperType_VST3, juce::AudioProcessor::wrapperType_AudioUnit}) {
+        juce::AudioProcessor::setTypeOfNextNewPlugin(type);
+        FM1Processor q;
+        juce::AudioProcessor::setTypeOfNextNewPlugin(juce::AudioProcessor::wrapperType_Undefined);
+        FM1Editor ed(q);
+        ed.openSettings(false);
+        ed.sheet().scrollToVideo();
+        const bool consumed = ed.keyPressed(juce::KeyPress('R', juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier, 0));
+        bool child = false;
+        for (juce::Component *c : ed.getChildren())
+            child = child || c == &ed.recordButton();
+        const std::string fmt = type == juce::AudioProcessor::wrapperType_VST3 ? "VST3" : "AU";
+        check(q.videoSession() == nullptr && !ed.videoAvailable() && !child && !consumed,
+              fmt + ": no video recording (no session, no record button, Cmd+Shift+R passed on to the host)");
+        if (type == juce::AudioProcessor::wrapperType_VST3)
+            shot(ed, "plugin-sheet-no-video");
+    }
+    {
+        const juce::File movies = scratch.getChildFile("Movies");
+        juce::AudioProcessor::setTypeOfNextNewPlugin(juce::AudioProcessor::wrapperType_Standalone);
+        FM1Processor q;
+        juce::AudioProcessor::setTypeOfNextNewPlugin(juce::AudioProcessor::wrapperType_Undefined);
+        Host hq(q, 48000.0, 480);
+        hq.run_ms(1200);
+        fm1video::Session *vs = q.videoSession();
+        check(vs != nullptr, "the Standalone: a video session");
+        if (vs) {
+            vs->setFolder(movies);
+            fm1video::Settings st = vs->settings();
+            st.view = fm1video::kViewLcd;
+            st.size = 720;
+            st.mic = true;                       // (the sheet's mic rows; no audio device here: the take has no mic)
+            st.monitor = false;
+            vs->setSettings(st);
+            FM1Editor ed(q);
+            check(ed.videoAvailable() && ed.recordButton().isVisible(), "  ... the record button");
+            ed.showChromeNow();
+            ed.panel().refresh();
+            shot(ed, "video-button");
+            // the button never covers a control, idle or recording (the pill as wide as 59:59), at every width
+            bool clear = true, inside = true;
+            std::string worst;
+            for (int big = 0; big < 2; big++) {
+                ed.setBigLcd(big != 0);
+                for (int w = FM1Editor::kMinW; w <= FM1Editor::kMaxW; w += (w < 1600 ? 7 : 61)) {
+                    const int hgt = big ? juce::jlimit(300, 4000, (int)(w * 0.9)) : juce::roundToInt((float)w / PanelComponent::frameAspect(false));
+                    ed.setSize(w, hgt);
+                    ed.panel().refresh();
+                    const juce::Rectangle<float> c = ed.recordCircle();
+                    // (the recording pill: from the circle rightwards, as wide as "59:59" at this size)
+                    const float d = c.getWidth();
+                    const float pw = d * 0.36f + d * 0.4f + 7.0f + Look::textWidth(Look::font(juce::jlimit(11.0f, 13.0f, d * 0.47f), Look::Bold), "88:88") + d * 0.42f;
+                    const juce::Rectangle<float> pill(c.getX(), c.getY(), pw, d);
+                    if (ed.panel().overlapsControl(c) || ed.panel().overlapsControl(pill) || pill.intersects(ed.cornerCircle()))
+                        clear = false, worst = std::to_string(w) + " x " + std::to_string(hgt) + (big ? " (big LCD)" : "");
+                    if (!ed.getLocalBounds().toFloat().contains(pill))
+                        inside = false, worst = std::to_string(w) + " x " + std::to_string(hgt) + " (outside)";
+                }
+            }
+            ed.setBigLcd(false);
+            ed.setSize(1402, 861);
+            render(ed, 1.0f);
+            check(clear && inside, "the record button and its recording pill cover no control, name, hint, the screen or the corner "
+                                   "button, inside the window, at every width 640 .. 5000" +
+                                       (worst.empty() ? std::string() : ": fails at " + worst));
+            // a take: Cmd+Shift+R starts it, the pill pulses with the time, the sheet's Video section
+            const bool started = ed.keyPressed(juce::KeyPress('R', juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier, 0));
+            check(started && vs->recording() && ed.recordButton().state() == RecordButton::kRecording,
+                  "Cmd+Shift+R starts a take: " + vs->currentFile().getFileName().toStdString());
+            hq.run_ms(3200);
+            ed.layoutChrome();
+            ed.toast().setVisible(false);
+            check(ed.recordButton().text() == "0:03", "  ... the pill shows the time (" + ed.recordButton().text().toStdString() + ")");
+            shot(ed, "video-recording");
+            ed.openSettings(false);
+            ed.sheet().scrollToVideo();
+            shot(ed, "sheet-video-recording");
+            ed.sheet().close(false);
+            ed.toggleRecording();
+            const juce::File take = vs->lastFile();
+            check(!vs->recording() && vs->lastResult().ok && take.existsAsFile() && take.getParentDirectory() == movies &&
+                      ed.recordButton().state() == RecordButton::kSaved && ed.toast().text().startsWith("Saved "),
+                  "Stop: " + take.getFileName().toStdString() + ", the toast \"" + ed.toast().text().toStdString() +
+                      "\", the button says Show in Finder");
+            ed.layoutChrome();
+            shot(ed, "video-saved");
+            ed.toast().setVisible(false);
+            ed.openSettings(false);
+            ed.sheet().scrollToVideo();
+            shot(ed, "sheet-video");
+            ed.sheet().close(false);
+        }
     }
 
     std::printf("ui_render_test: %s (%d failure%s)\n", fails ? "FAILED" : "passed", fails, fails == 1 ? "" : "s");

@@ -1,0 +1,19 @@
+# Skiff 1.4: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: the autosave (project.c): KNOB 1 turned on HOME changes track 1's CUTOFF; flash_sync writes
+# the autosave at once (its quiet time waived: fw_core.h); the second unit restores it at power-on (HOME's CUTOFF).
+# (HOME held is Skiff's SHIFT, not the menu)
+save wait 1500
+save knob KNOB1 +8
+save wait 400
+save quit
+saved wait 1500
+saved quit
+saved-lcd-differs
+# the boot guard: a second failed boot in a row enters UBOOT (exit(3), fw_core.h as main.c fm1_cstart)
+reboot-guard 2
+# OCT- + OCT+ held 5 s: UBOOT (fw_core.h, main.c's countdown)
+reboot wait 1500
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

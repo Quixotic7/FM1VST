@@ -3,6 +3,7 @@
 // which the editor hides): the audio / MIDI device selector, its state files, a reset. Everything is a no-op (and
 // available() false) inside a plugin host.
 #pragma once
+#include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <memory>
@@ -15,4 +16,6 @@ void saveState();                                    // "Save current state..." 
 void loadState();                                    // "Load a saved state..."
 void resetToDefault();                               // the plugin re-created in its default state (asynchronously)
 void tweakWindow(juce::Component &editor);           // the window: no "Options" bar, the native title bar
+juce::AudioDeviceManager *deviceManager();          // the app's audio device (the video recorder's mic input), or nullptr
+juce::PropertySet *appSettings();                    // the app's settings file (the video recorder's settings), or nullptr
 }

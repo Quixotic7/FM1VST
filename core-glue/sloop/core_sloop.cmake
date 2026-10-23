@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# SLOOP 2.7.1 (https://github.com/isod89/sloop-fm1, tag v2.7.1): the SLOOP-family glue (core-glue/sloop: sloop_hal.h,
+# SLOOP 2.8 (https://github.com/isod89/sloop-fm1, tag v2.8): the SLOOP-family glue (core-glue/sloop: sloop_hal.h,
 # sloop_firmware.h, sloop_fw.c, sloop_core.c) over the unmodified submodule cores/sloop-fm1 (cmake/FM1Cores.cmake)
 # GATED: the firmware compiles assets/icons.png (tools/gen_icons.py -> felucca_icons.h), the Hugelton icon atlas,
 # all rights reserved; LICENSING.md's GPL section 7 permission to convey the combination asks to follow terms for
@@ -10,7 +10,7 @@ fm1_add_core(sloop ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/sl
              GEN felucca_font.h felucca_icons.h felucca_tables.h felucca_samples.h felucca_drumkits.h felucca_fm6.h
                  sloop_logo.h
              PYTHON_NEEDS numpy
-             VERSION 2.7.1)
+             VERSION 2.8)
 
 # the golden check: SLOOP's own tests/ui_pages_test.c (the real UI on its test doubles) writes its pages; the core runs
 # golden_sloop.txt to the same state: the splash, the TRACKS page and the EDIT page are pixel for pixel the same,

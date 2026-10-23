@@ -206,7 +206,7 @@ int main(int argc, char **argv)
                 if (e.name.containsIgnoreCase(n))
                     bad += " " + s(e.name);
         }
-        check(b.origin == "bundled" && b.firmwares.size() >= 20 && b.find("felucca") && gated.size() >= 9 && bad.empty(),
+        check(b.origin == "bundled" && b.firmwares.size() >= 20 && b.find("felucca") && gated.size() >= 8 && bad.empty(),
               "the bundled fallback list: " + std::to_string(b.firmwares.size()) + " firmwares, none of the " +
                   std::to_string(gated.size()) + " gated ones" + (bad.empty() ? "" : ": FOUND" + bad));
         const juce::String raw = juce::File(FM1_FALLBACK_CATALOG).loadFileAsString().toLowerCase();

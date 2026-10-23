@@ -1,6 +1,7 @@
-# CoralFlower 0.2: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# CoralFlower 0.5: tests/core_conformance.cpp's script for this core (see its header for the directives)
 # the flash round trip: PRESETS +2 (the chord part's sound, a place in the sound row: cf_settings.c's record); the
-# record is written a while after the change once nothing sounds, or by flash_sync; the second unit shows that sound
+# record is written half a second after the change (0.4.2: even while it sounds, a log entry), or by flash_sync; the
+# second unit shows that sound
 save wait 3000
 save knob PRESETS +2
 save wait 600

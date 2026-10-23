@@ -29,6 +29,12 @@
 // (FM1Processor::importSounds); the unit shows each one ("imported"), and a toast says how many went in (and how many
 // did not: the library full, a file that is not a Digitone sound). Other firmwares: no drop, no menu item.
 //
+// VIDEO RECORDING (the Standalone only; VideoCapture.h): a record button, the corner button's mirror image at the
+// body's top-left corner (the window's in the big-LCD view, the bezel's in the screen view), fading with it while idle;
+// while recording, a pill with the red dot pulsing and the take's time, always shown; after a take, "Show in Finder"
+// for 8 s. Cmd+Shift+R starts and stops a take (the computer-key map has no Cmd keys: the panel passes them on). A
+// toast says what was saved, or why a take could not start or ended early. The sheet's Video section has the rest.
+//
 // The Standalone app: its window loses JUCE's "Options" bar (the native title bar instead); its audio / MIDI settings
 // and state files are in the sheet.
 #pragma once
@@ -47,18 +53,28 @@
 #include "Theme.h"
 #include "Widgets.h"
 
+namespace fm1video {
+class Session;
+}
+
 // the screen view: the LCD in its bezel
 class ScreenView : public juce::Component {
 public:
     explicit ScreenView(PanelComponent &panel);
-    void lcdChanged() { repaint(lcdArea().getSmallestIntegerContainer()); }
+    void lcdChanged()                             // (its scaled copy made again at the next paint)
+    {
+        serial_++;
+        repaint(lcdArea().getSmallestIntegerContainer());
+    }
     juce::Rectangle<float> lcdArea() const;       // the LCD's rectangle at the last paint's pixel scale (logical)
     juce::Rectangle<float> bezelArea() const;
     int lcdScale() const { return lastN_; }       // the last paint: the LCD's whole multiple (0: smoothed)
     std::function<void()> onContextMenu;
     std::function<void(const juce::MouseEvent &)> onScreenMenu;   // a right-click on the bezel / LCD
 
-    void paint(juce::Graphics &g) override;
+    void paint(juce::Graphics &g) override;     // paintBody, then paintLcd
+    void paintBody(juce::Graphics &g);            // the body and the bezel (the video recorder caches it)
+    void paintLcd(juce::Graphics &g);             // the LCD alone
     void mouseDown(const juce::MouseEvent &e) override;
     // the computer keys: the panel's (it is hidden, its key handling is not)
     bool keyPressed(const juce::KeyPress &k) override { return panel_.keyPressed(k); }
@@ -144,6 +160,7 @@ public:
     int copyScale() const { return copyScale_; }  // the sheet's scale (Cmd+Shift+C, its Copy button): 1, 2 or 4
     void setCopyScale(int s) { copyScale_ = s == 2 || s == 4 ? s : 1; }
     juce::String screenFileName(const juce::String &ext) const;   // <firmware id>-<version>-<YYYYMMDD-HHMMSS><ext>
+    static juce::String fileNameFor(const FM1Processor &p, const juce::String &ext);   // (the same, for any instance)
     Toast &toast() { return toast_; }
     void showToast(const juce::String &text);
     bool keyPressed(const juce::KeyPress &k) override;
@@ -153,6 +170,13 @@ public:
     void filesDropped(const juce::StringArray &files, int x, int y) override;
     void importSounds(const juce::Array<juce::File> &files);
     void chooseSoundsToImport();
+
+    // ---- video recording (the Standalone only: VideoCapture.h; a plugin has none of it, the DAW records): the record
+    // button opposite the corner button, Cmd+Shift+R, the sheet's Video section
+    bool videoAvailable() const { return video_ != nullptr; }
+    void toggleRecording();
+    RecordButton &recordButton() { return rec_; }
+    juce::Rectangle<float> recordCircle() const;  // the idle button's circle (logical, in the editor)
 
     // ---- the corner button
     CornerButton &cornerButton() { return corner_; }
@@ -196,6 +220,11 @@ private:
     PanelComponent panel_;
     ScreenView screen_;
     CornerButton corner_;
+    RecordButton rec_;
+    fm1video::Session *video_ = nullptr;
+    uint32_t videoSerial_ = 0;
+    double savedUntil_ = 0;
+    void videoChanged();
     Sheet sheet_;
     Toast toast_;
     std::unique_ptr<juce::FileChooser> chooser_;

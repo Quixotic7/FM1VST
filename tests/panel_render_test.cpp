@@ -14,12 +14,16 @@
 //   (r) the face knobs: a host write of Knob 1 (Voicing) at 0.25 and at 0.75 turns its pointer by the firmware's
 //       values' distance on the 270 degree sweep (build/panel/knob1-025.png, knob1-075.png: the knob's pixels
 //       differ), the panel's own turn moves it too; a relative knob turns 15 degrees per detent from any source;
-//   (e) every other core: build/panel/core-<id>.png (switchCore, 1.5 s after the power-on, then D4 held 300 ms; the
-//       Emulator theme): its screen and its button labels; the LCD region (at lcd-1x's layout) equals its
-//       framebuffer.
+//   (e) every other core: build/panel/core-<id>.png (switchCore, 1.5 s after the power-on (FMini-1 and GR!MM 3.6 s:
+//       past their boot screens), then D4 held 300 ms; the Emulator theme): its screen and its button labels; the LCD
+//       region (at lcd-1x's layout) equals its framebuffer.
 //   (k) the computer keys at the component (keyPressed / keyStateChanged with the key-down probe faked): a press and
 //       its repeats press once; a release the host swallowed is caught by the check; the fallback row (C = FX as
 //       F5) and its hints; two keys of one control; Cmd ignored; focus lost lets go; nothing sticks.
+//   (l) latches (Shift-click): HOME and SEL Shift-clicked stay down on the device after the mouse is up
+//       (build/panel/latched.png); a plain click on a key meanwhile is momentary; a click on HOME lets it go; Esc lets
+//       go of every latch (not OCT-; with none latched Esc is OCT- as before); the focus gone for good, a reboot and a
+//       firmware switch let go; Shift on a knob turns it as a plain drag does, nothing latched.
 // FM1EMU_HOME points at a scratch folder under the build.
 #include <cstdio>
 #include <cstdlib>
@@ -84,6 +88,13 @@ static bool writePng(const juce::Image &img, const juce::File &f)
     juce::FileOutputStream out(f);
     juce::PNGImageFormat png;
     return out.openedOk() && png.writeImageToStream(img, out);
+}
+
+static juce::MouseEvent mouseAt(juce::Component &c, juce::Point<float> p, juce::ModifierKeys mods)
+{
+    const juce::Time now = juce::Time::getCurrentTime();
+    return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(), p, mods, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, &c, &c, now, p,
+                            now, 1, false);
 }
 
 static juce::String fileNameFor(const juce::String &theme)
@@ -350,11 +361,15 @@ int main()
     }
 
     // ---- (e) the other cores: their screen and labels on the panel
-    for (const char *id : {"felucca", "melodee"}) {
+    for (const char *id : {"felucca", "melodee", "loom", "duell", "minitone", "fmini", "skiff", "grimm", "tonitor",
+                           "speak37"}) {
+        if (!built_cores().count(id))
+            continue;                                    // (a build of some cores only)
         FM1Processor p;
         Host h(p, 44100.0, 256);
         const bool ok = p.switchCore(id);
-        h.run_ms(1500);
+        // (past the boot screens: FMini-1's splash 3 s, GR!MM's 3 s)
+        h.run_ms(!std::strcmp(id, "fmini") || !std::strcmp(id, "grimm") ? 3600 : 1500);
         Device *dev = p.deviceForTest();
         const int D4 = 62 - FM1Processor::kNoteBase;
         p.panelKey(D4, true);
@@ -510,6 +525,158 @@ int main()
         down.clear();
         h.run_ms(500);
         check(hal->keys == 0 && hal->buttons == 0, "nothing sticks: no key or button bit left on the device");
+    }
+
+    // ---- (l) latches: Shift-click on the panel, the device's key and button bits after each block
+    {
+        FM1Processor p;
+        Host h(p, 44100.0, 256);
+        h.run_ms(600);
+        PanelComponent panel(p);
+        panel.setButtonNames(p.buttonNames());
+        panel.setBounds(0, 0, 904, 566);
+        panel.setTheme(ThemeStore::preset("Emulator").value_or(Theme{}));
+        render(panel, 1.0f);                      // (a click lands by the last paint's layout)
+        std::set<int> down;
+        panel.setKeyProbe([&](int code) { return down.count(code) != 0; });
+        auto hal = [&] { return p.deviceForTest()->panel(); };
+        auto keyBit = [&](int k) { return ((hal()->keys >> k) & 1u) != 0; };
+        auto btnBit = [&](int b) { return ((hal()->buttons >> hal()->btn_id[b]) & 1u) != 0; };
+        const juce::ModifierKeys shift(juce::ModifierKeys::shiftModifier | juce::ModifierKeys::leftButtonModifier);
+        const juce::ModifierKeys plain(juce::ModifierKeys::leftButtonModifier);
+        // the centre of a button (EMU_B_*: the designer's rows) and key D4's LED slot
+        auto btnPt = [&](int b) {
+            static const float X[6] = {500, 554, 608, 661, 715, 768};
+            return panel.unitToLocal(X[b % 6] + 18, (b < 6 ? 177.f : 231.f) + 18);
+        };
+        const int D4 = 62 - FM1Processor::kNoteBase;
+        const juce::Point<float> d4Pt = panel.keyLedPx(D4).toFloat() / panel.layout().scale;
+        auto click = [&](juce::Point<float> pt, juce::ModifierKeys mods) {
+            panel.mouseDown(mouseAt(panel, pt, mods));
+            h.run_ms(30);
+            panel.mouseUp(mouseAt(panel, pt, juce::ModifierKeys()));
+        };
+
+        click(btnPt(EMU_B_HOME), shift);
+        click(btnPt(EMU_B_SEL), shift);
+        h.run_ms(200);
+        check(btnBit(EMU_B_HOME) && btnBit(EMU_B_SEL) && panel.buttonLatched(EMU_B_HOME) && panel.buttonLatched(EMU_B_SEL) &&
+                  panel.latchCount() == 2,
+              "Shift-click HOME, Shift-click SEL, the mouse up: both stay held on the device (latched)");
+        {
+            const juce::File f = juce::File(FM1_PANEL_OUT).getChildFile("latched.png");
+            check(writePng(render(panel, 2.0f), f), "wrote " + f.getFullPathName().toStdString() + " (HOME and SEL latched)");
+        }
+
+        // a plain click on a key meanwhile: momentary
+        panel.mouseDown(mouseAt(panel, d4Pt, plain));
+        h.run_ms(40);
+        const bool d4Down = keyBit(D4);
+        panel.mouseUp(mouseAt(panel, d4Pt, juce::ModifierKeys()));
+        h.run_ms(40);
+        check(d4Down && !keyBit(D4) && !panel.keyLatched(D4) && btnBit(EMU_B_HOME) && btnBit(EMU_B_SEL),
+              "  ... a plain click on D4 meanwhile: down while the mouse is, up after; HOME and SEL still held");
+
+        // a click on HOME (no Shift) lets it go
+        click(btnPt(EMU_B_HOME), plain);
+        h.run_ms(40);
+        check(!btnBit(EMU_B_HOME) && !panel.buttonLatched(EMU_B_HOME) && btnBit(EMU_B_SEL) && panel.latchCount() == 1,
+              "  ... a plain click on HOME lets it go; SEL stays");
+
+        // Esc lets go of every latch (not OCT-); its repeats and release change nothing
+        click(btnPt(EMU_B_HOME), shift);
+        click(d4Pt, shift);
+        h.run_ms(40);
+        const bool three = btnBit(EMU_B_HOME) && btnBit(EMU_B_SEL) && keyBit(D4) && panel.latchCount() == 3;
+        down.insert(juce::KeyPress::escapeKey);
+        panel.keyStateChanged(true);
+        panel.keyPressed(juce::KeyPress(juce::KeyPress::escapeKey));
+        h.run_ms(40);
+        bool octFree = !btnBit(EMU_B_OCTDN);
+        for (int i = 0; i < 3; i++) {             // (the key repeat)
+            panel.keyPressed(juce::KeyPress(juce::KeyPress::escapeKey));
+            h.run_ms(35);
+            octFree = octFree && !btnBit(EMU_B_OCTDN);
+        }
+        down.erase(juce::KeyPress::escapeKey);
+        panel.keyStateChanged(false);
+        h.run_ms(40);
+        check(three && panel.latchCount() == 0 && hal()->buttons == 0 && hal()->keys == 0 && octFree,
+              "HOME, SEL and D4 latched; Esc (and its repeats): every latch let go, OCT- never pressed");
+        down.insert(juce::KeyPress::escapeKey);   // with none latched, Esc is OCT- as before
+        panel.keyStateChanged(true);
+        panel.keyPressed(juce::KeyPress(juce::KeyPress::escapeKey));
+        h.run_ms(40);
+        const bool escOct = btnBit(EMU_B_OCTDN);
+        down.erase(juce::KeyPress::escapeKey);
+        panel.keyStateChanged(false);
+        h.run_ms(40);
+        check(escOct && !btnBit(EMU_B_OCTDN), "  ... with none latched, Esc presses OCT- and lets go as before");
+        h.run_ms(300);
+        p.deviceForTest()->buttons_tap(1u << EMU_B_OCTUP);   // (back to octave 0)
+        h.run_ms(200);
+
+        // right-click / ctrl-click latch as before (one control each), Shift-click on a latched one lets it go
+        click(btnPt(EMU_B_FX), juce::ModifierKeys(juce::ModifierKeys::rightButtonModifier));
+        click(btnPt(EMU_B_FX), shift);
+        h.run_ms(40);
+        check(panel.latchCount() == 0 && !btnBit(EMU_B_FX), "right-click latches FX, a Shift-click on it lets it go");
+
+        // the focus gone for good: after 1 s, no menu open
+        click(btnPt(EMU_B_HOME), shift);
+        h.run_ms(40);
+        const double t0 = juce::Time::getMillisecondCounterHiRes();
+        panel.focusLost(juce::Component::focusChangedByMouseClick);
+        const bool early = panel.checkFocusGone(t0 + 500);
+        h.run_ms(40);
+        const bool stillLatched = btnBit(EMU_B_HOME) && panel.latchCount() == 1;
+        const bool gone = panel.checkFocusGone(t0 + 1500);
+        h.run_ms(40);
+        check(!early && stillLatched && gone && !btnBit(EMU_B_HOME) && panel.latchCount() == 0,
+              "HOME latched, the focus lost: still held after 0.5 s; gone for 1 s: let go");
+
+        // a reboot (power cycle) and a firmware switch let go
+        click(btnPt(EMU_B_HOME), shift);
+        click(btnPt(EMU_B_SEL), shift);
+        h.run_ms(40);
+        const bool two = btnBit(EMU_B_HOME) && btnBit(EMU_B_SEL);
+        p.powerCycle();
+        panel.refresh();
+        h.run_ms(300);
+        check(two && panel.latchCount() == 0 && hal()->buttons == 0, "HOME and SEL latched, a reboot: both let go");
+        click(btnPt(EMU_B_HOME), shift);
+        h.run_ms(40);
+        const bool one = btnBit(EMU_B_HOME);
+        const bool switched = p.switchCore("felucca");
+        panel.refresh();
+        h.run_ms(600);
+        check(one && switched && panel.latchCount() == 0 && hal()->buttons == 0, "HOME latched, a firmware switch: let go");
+        p.switchCore("choralroot");
+        h.run_ms(600);
+        render(panel, 1.0f);
+
+        // Shift on a knob: the drag turns it as a plain one does; nothing latched
+        auto turnsOf = [&](int role) {
+            h.run_ms(40);
+            PanelView v;
+            p.getPanelView(v);
+            return v.knobs[(size_t)role].turns;
+        };
+        auto drag = [&](juce::ModifierKeys mods) {
+            const juce::Point<float> c = panel.unitToLocal(604, 101);   // KNOB2
+            const int32_t before = turnsOf(EMU_E_K2);
+            panel.mouseDown(mouseAt(panel, c, mods));
+            for (int i = 1; i <= 4; i++)
+                panel.mouseDrag(mouseAt(panel, c.translated(0, -8.0f * (float)i), mods));
+            panel.mouseUp(mouseAt(panel, c.translated(0, -32.0f), juce::ModifierKeys()));
+            return turnsOf(EMU_E_K2) - before;
+        };
+        const int32_t plainTurns = drag(plain), shiftTurns = drag(shift);
+        check(plainTurns == 4 && shiftTurns == 4 && panel.latchCount() == 0,
+              "a drag up 32 points on KNOB2: 4 detents plain, 4 with Shift; nothing latched (" + std::to_string(plainTurns) + ", " +
+                  std::to_string(shiftTurns) + ")");
+        h.run_ms(100);
+        check(hal()->keys == 0 && hal()->buttons == 0, "nothing sticks: no key or button bit left on the device");
     }
 
     // ---- (c) the contrast floors, every preset (and the custom theme)

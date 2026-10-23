@@ -23,7 +23,9 @@
 // none), pushed back and counted from there; an echo of the pushed value quantised (k/23, k/24) makes none; a skipped
 // index is 2; a click into an end of the travel counts; the settle window drops a click; Knob Master stays absolute;
 // switching the mode turns nothing; the state keeps it. Felucca: Knob 1 and Tempo stepped.
+// LOOM-8 (when built: a public build has it since 2026-10-21): a core without a parameter map, every knob a relative turn (Knob 2 its LENGTH).
 // The message loop is not running: the test calls the drain itself. FM1EMU_HOME points under the build.
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -1145,6 +1147,35 @@ int main()
         h.run_ms(700);
         p.drainTier2();
         check(fn(k[0]) == "Voicing" && namesFixed(), "ChoralRoot's view again (" + fn(k[0]) + "), the names unchanged");
+    }
+    // ---- LOOM-8 (a core with no parameter map: every knob a relative turn; in a public build too)
+    if (built_cores().count("loom")) {
+        check(p.switchCore("loom"), "switchCore(\"loom\")");
+        h.run_ms(1500);
+        p.drainTier2();
+        std::printf("        (loom: %s)\n", page().c_str());
+        bool rel = true;
+        for (int r = 1; r < FM1Processor::kKnobs; r++)   // (Knob Master stays absolute)
+            rel = rel && p.knobParam(r)->isRelative() && fn(p.knobParam(r)) == "turn";
+        check(rel && namesFixed(), "no parameter map: Knob Select .. Knob 4 relative (\"turn\"), the names unchanged");
+        // power-on: T1's Steps page, KNOB2 its LENGTH (16): a host turn of Knob 2 0.5 -> 0.75 is 6 detents at the
+        // device and redraws the screen; the spring back makes none
+        const Device *d = p.deviceForTest();
+        const std::vector<uint16_t> before(d->lcd(), d->lcd() + 240 * 240);
+        const int32_t s0 = p.knobDetentsSent(EMU_E_K2);
+        k[1]->setValueNotifyingHost(0.75f);
+        h.run_ms(60);
+        p.drainTier2();
+        const int32_t d1 = p.knobDetentsSent(EMU_E_K2) - s0;
+        const bool redrawn = !std::equal(before.begin(), before.end(), d->lcd());
+        h.run_ms(500);
+        p.drainTier2();
+        check(d1 == 6 && redrawn && k[1]->getValue() == 0.5f && p.knobDetentsSent(EMU_E_K2) - s0 == 6,
+              "host Knob 2 0.5 -> 0.75: " + std::to_string(d1) + " detents at LOOM-8 (LENGTH), the screen redrawn; " +
+                  "re-centred with none");
+        check(p.switchCore("choralroot"), "switchCore(\"choralroot\"): back");
+        h.run_ms(700);
+        p.drainTier2();
     }
 
     p.removeListener(&w);

@@ -11,10 +11,14 @@
 #   - each bundle (VST3, AU, Standalone): its Info.plist version, Contents/Resources/cores holding exactly those cores
 #     and no gated one, every Mach-O in it arm64 only, linking no /opt/homebrew or /usr/local path, built for the
 #     deployment target or older, and the signature valid (codesign --verify --deep --strict)
+#   - the Standalone's microphone: NSMicrophoneUsageDescription in its Info.plist, tools/release/FM1VST-app.entitlements
+#     allowing the audio input (the video recorder), and a hardened-runtime signature carrying it
 #   - libusb: the static library the build linked is built for the deployment target or older, and no binary
 #     references kIOMainPortDefault below macOS 12 (a newer libusb's; it fails to load on macOS 11). A warning only
 #     unless FM1_RELEASE_STRICT=1 (CI): a local build may link Homebrew's newer bottle
 #   - the zip: the three bundles, the public cores in each, no gated core's name anywhere in it
+#   - each core's licences (licences/cores/<id>/): its LICENSE, and every LICENSES/<file> its LICENSING.md names (texts a
+#     firmware's tree lacks are supplied from core-glue/<family>/licences/<id>/: Mini-Tone's)
 #   - no raw preset source in the release (zip, package): no .syx, nothing from a core's assets/cz1-factory or
 #     assets/prophet5-factory, no file whose content is one of the cores' .syx files (ChoralRoot and Melodee ship
 #     those presets compiled into the firmware only)
@@ -112,6 +116,24 @@ check_bundle() {
 }
 for b in "$vst3" "$au" "$app"; do check_bundle "$b"; done
 
+# ---- the Standalone's microphone (the video recorder's mic / line input: plugin/VideoCapture.h): its Info.plist says
+# why (macOS ends an app that asks without it), the entitlements release.yml signs it with allow the input, and a
+# hardened-runtime signature carries them (an ad-hoc build has no hardened runtime: nothing to check there)
+ents="$here/release/FM1VST-app.entitlements"
+micText="$(plutil -extract NSMicrophoneUsageDescription raw -o - "$app/Contents/Info.plist" 2>/dev/null || true)"
+[ -n "$micText" ] || bad "FM1VST.app: no NSMicrophoneUsageDescription in its Info.plist"
+for k in com.apple.security.device.audio-input com.apple.security.cs.allow-jit com.apple.security.cs.disable-library-validation; do
+    [ "$(/usr/libexec/PlistBuddy -c "Print :$k" "$ents" 2>/dev/null || true)" = true ] || bad "$ents: $k is not true"
+done
+if codesign -dv "$app" 2>&1 | grep -q 'flags=.*runtime'; then
+    signed_ents="$(codesign -d --entitlements - --xml "$app" 2>/dev/null || true)"
+    grep -q 'com.apple.security.device.audio-input' <<< "$signed_ents" ||
+        bad "FM1VST.app: signed with the hardened runtime but without com.apple.security.device.audio-input"
+    ok "FM1VST.app: hardened runtime, its entitlements allow the audio input"
+fi
+[ "$fails" = 0 ] || die "$fails check(s) failed"
+ok "FM1VST.app: NSMicrophoneUsageDescription (\"$micText\"); $(basename "$ents") allows the audio input"
+
 libusb="$(info libusb)"
 if [ -z "$libusb" ] || [ ! -f "$libusb" ]; then
     warn_or_bad "no static libusb linked: Remote FM-1 has no vendor bulk (frames over SysEx only)"
@@ -153,7 +175,21 @@ while IFS=$'\t' read -r kind id cver commit clic fam src; do
                                         -o -iname 'NOTICE*' -o -iname 'LICENSING*' -o -iname 'CREDITS*' -o -iname 'ATTRIBUTION*' \) -print) |
         while IFS= read -r f; do mkdir -p "$d/$(dirname "$f")"; cp "$src/$f" "$d/$f"; done
     if [ -d "$src/LICENSES" ]; then ditto "$src/LICENSES" "$d/LICENSES"; fi
+    # the texts a firmware's LICENSING.md names but its tree lacks, supplied by FM1VST (core-glue/<family>/licences/<id>/:
+    # Mini-Tone's MIT and Apache-2.0 texts), beside its own
+    for sup in "$root"/core-glue/*/licences/"$id"; do
+        [ -d "$sup" ] || continue
+        mkdir -p "$d/LICENSES"
+        cp "$sup"/* "$d/LICENSES/"
+        printf 'Supplied by FM1VST (%s): %s\n' "${sup#$root/}" "$(cd "$sup" && ls | tr '\n' ' ')" > "$d/LICENSES/SUPPLIED-BY-FM1VST.txt"
+    done
     [ -f "$d/LICENSE" ] || bad "core $id: no LICENSE in $src"
+    # every LICENSES/<file> its LICENSING.md names is there
+    if [ -f "$src/LICENSING.md" ]; then
+        for f in $(grep -o 'LICENSES/[A-Za-z0-9._-]*[A-Za-z0-9]' "$src/LICENSING.md" | sort -u); do
+            [ -f "$d/$f" ] || bad "core $id: its LICENSING.md names $f, not in $src (supply it: core-glue/<family>/licences/$id/)"
+        done
+    fi
     printf '%s %s (%s): %s, %s at %s\n' "$cname" "$cver" "$id" "$clic" "${url:-?}" "$commit" > "$d/SOURCE.txt"
     core_rows+="$id"$'\t'"$cname"$'\t'"$cver"$'\t'"$clic"$'\t'"$url"$'\t'"$commit"$'\n'
 done < "$manifest"

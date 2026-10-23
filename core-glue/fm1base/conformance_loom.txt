@@ -1,0 +1,32 @@
+# LOOM-8 0.6.1: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the sound: power-on opens T1, a drum kit, on its Steps page (white keys: the pattern's steps, black keys: the kit's
+# sounds), so, as X0X's, four kicks are written and PLAY starts them; the key (D4, step 6) then toggles a step while
+# it plays. (Not a black key: RemoteFM1's copy of this reader takes "#" for a comment)
+sound wait 300
+sound key G3 60
+sound wait 100
+sound key C4 60
+sound wait 100
+sound key G4 60
+sound wait 100
+sound key D5 60
+sound wait 100
+sound btn PLAY 60
+sound wait 100
+sound quit
+# the flash round trip: a white key writes a step into T1's pattern; flash_sync saves the project into its slot (ui.c's
+# autosave, stopped); after the reboot the grid shows the step
+save wait 600
+save key G3 100
+save wait 400
+save quit
+saved wait 1000
+saved quit
+saved-lcd-differs
+# OCT- + OCT+ held 5 s: UBOOT (base/device/main_fm1.c); four failed boots in a row: UBOOT (fm1_cstart)
+reboot-guard 3
+reboot wait 600
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

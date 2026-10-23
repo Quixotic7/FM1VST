@@ -19,10 +19,12 @@
 // and the worst reply time seen, in host blocks (the reply drained after the block that took the request: a request
 // that arrives just after a block waits one more).
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <deque>
+#include <fstream>
 #include <functional>
 #include <memory>
 #include <string>
@@ -222,8 +224,15 @@ struct Session {
     // answers rc, n, items (web/editor.html parse[CMD.BK_LIST]); GET and PUT are the same bytes
     uint8_t bk = 65;
     size_t list_hdr = 2;
+    // DUELL 1.0 (INFO 42 01 caps bit 5, EDITOR_PROTOCOL.md "Patch records in the archive"): the saved patches are
+    // not objects of the plain LIST but records, LIST page 1..rec_pages (32 slots each) after it; GET / PUT name one
+    // as the wire id 40 with its slot as one more byte. Here a record is the object kRec + slot (the web editor's key
+    // 1000 + slot, duellbackup.js)
+    static constexpr uint32_t kRec = 1000;
+    uint8_t rec_pages = 0;
     explicit Session(Link &l) : k(l) {}
     void use_v6() { bk = 34, list_hdr = 1; }
+    static uint8_t wire(uint32_t id) { return (uint8_t)(id >= kRec ? 40u : id); }
 
     bool info(std::string &version, Bytes *raw = nullptr, double limit = 1500)
     {
@@ -258,6 +267,15 @@ struct Session {
         m.clear();
         for (size_t i = 0; i < n; i++)
             m.push_back({a[h + 1 + i * 11], r32(a, h + 1 + i * 11 + 1), r32(a, h + 1 + i * 11 + 6)});
+        for (uint8_t pg = 1; pg <= rec_pages; pg++) {   // (the saved patches' records: slot, size, crc each)
+            if (!k.request(fl(bk, {pg}), fl_reply(bk), r, 3000))
+                return why = "LIST page " + std::to_string(pg) + ": no reply", false;
+            a = fl_args(r);
+            if (a.size() < 3 || a[0] != 1 || a[1] != 0 || a.size() != 3 + (size_t)a[2] * 11)
+                return why = "LIST page " + std::to_string(pg) + ": rc or length", false;
+            for (size_t i = 0; i < a[2]; i++)
+                m.push_back({kRec + a[3 + i * 11], r32(a, 3 + i * 11 + 1), r32(a, 3 + i * 11 + 6)});
+        }
         return true;
     }
     bool get(const Obj &o, Bytes &bytes)        // captureBackup's loop for one object
@@ -265,17 +283,19 @@ struct Session {
         bytes.assign(o.size, 0);
         for (uint32_t off = 0; off < o.size; off += 256) {
             const uint32_t size = std::min<uint32_t>(256, o.size - off);
-            Bytes args = {(uint8_t)o.id};
+            Bytes args = {wire(o.id)};
             u32(args, off);
             args.push_back(size & 127u);
             args.push_back((uint8_t)(size >> 7));
+            if (o.id >= kRec)
+                args.push_back((uint8_t)(o.id - kRec));
             Bytes r, chunk;
             if (!k.request(fl(bk + 1, args), fl_reply(bk + 1), r, 1000))
                 return why = "GET " + std::to_string(o.id) + " @" + std::to_string(off) + ": no reply", false;
             Bytes a = fl_args(r);
             if (a.size() < 9 || a[1])
                 return why = "GET " + std::to_string(o.id) + ": rc " + std::to_string(a.size() > 1 ? a[1] : -1), false;
-            if (a[0] != o.id || r32(a, 2) != off || (a[7] | a[8] << 7) != (int)size || !unpack(a, 9, size, chunk))
+            if (a[0] != wire(o.id) || r32(a, 2) != off || (a[7] | a[8] << 7) != (int)size || !unpack(a, 9, size, chunk))
                 return why = "GET " + std::to_string(o.id) + ": unexpected reply", false;
             std::copy(chunk.begin(), chunk.end(), bytes.begin() + off);
         }
@@ -293,22 +313,25 @@ struct Session {
     }
     int put(uint32_t id, const Bytes &b)        // restoreBackup's begin / data / commit; -> the first nonzero rc
     {
-        Bytes begin = {0, (uint8_t)id};
+        const uint8_t w = wire(id);
+        Bytes begin = {0, w};
         u32(begin, (uint32_t)b.size());
         u32(begin, crc32(b.data(), b.size()));
+        if (id >= kRec)
+            begin.push_back((uint8_t)(id - kRec));
         int rc = put_op(begin);
         if (rc)
             return rc;
         for (uint32_t off = 0; off < b.size(); off += 256) {
-            Bytes d = {1, (uint8_t)id};
+            Bytes d = {1, w};
             u32(d, off);
             const size_t n = std::min<size_t>(256, b.size() - off);
             Bytes pk = pack(b.data() + off, n);
             d.insert(d.end(), pk.begin(), pk.end());
             if ((rc = put_op(d)))
-                return put_op({3, (uint8_t)id}), rc;
+                return put_op({3, w}), rc;
         }
-        return put_op({2, (uint8_t)id}, 5000);
+        return put_op({2, w}, 5000);
     }
 };
 
@@ -466,16 +489,8 @@ ChangeFn panel_change(uint32_t obj, std::function<void(Device &)> act)
 
 // Felucca and its forks: a user preset stored as the web editor stores one (editor.html req.upStore: UP_STORE 19,
 // slot 0, the name "SYSEX", its NUL), found in the backup object it changed (a user preset bank: Felucca's upreset.c
-// up_bank_t, DUELL's 128-slot store), its name's first letter changed in the backup's copy, and restored over PUT
-const Obj *changed_obj(const std::vector<Obj> &was, const std::vector<Obj> &now)
-{
-    for (const Obj &o : now) {
-        const Obj *w = find(was, o.id);
-        if (o.size && (!w || w->size != o.size || w->crc != o.crc))
-            return &o;
-    }
-    return nullptr;
-}
+// up_bank_t; DUELL 1.0: slot 0's patch record, Session::rec_pages), its name's first letter changed in the backup's
+// copy, and restored over PUT
 size_t find_text(const Bytes &b, const char *t)
 {
     const size_t n = std::strlen(t);
@@ -506,14 +521,27 @@ ChangeFn up_store_change(uint8_t store_cmd = 19)
         }
         if (!s.list(man))
             return false;
-        const Obj *o = changed_obj(was, man);
-        if (!o || !s.get(*o, before)) {
+        // the changed object that holds the preset (Mini-Tone: the project's object 0 changes with the store too)
+        const Obj *o = nullptr;
+        size_t at = std::string::npos;
+        for (const Obj &c : man) {
+            const Obj *w = find(was, c.id);
+            if (!c.size || (w && w->size == c.size && w->crc == c.crc))
+                continue;
+            if (!s.get(c, before)) {
+                s.why = "GET after the store " + s.why;
+                return false;
+            }
+            o = &c;
+            if ((at = find_text(before, "SYSEX")) != std::string::npos)
+                break;
+        }
+        if (!o) {
             s.why = "no backup object changed after the store " + s.why;
             return false;
         }
-        const size_t at = find_text(before, "SYSEX");
         if (at == std::string::npos) {
-            s.why = "object " + std::to_string(o->id) + " changed, but holds no preset named SYSEX";
+            s.why = "object " + std::to_string(o->id) + " changed, but no changed object holds a preset named SYSEX";
             return false;
         }
         std::printf("    store: the preset is in object %u at byte %zu\n", o->id, at);
@@ -524,7 +552,7 @@ ChangeFn up_store_change(uint8_t store_cmd = 19)
     };
 }
 // ---- the sloop family ----
-// SLOOP 2.7.1, sloopDX 4.0, ORBIT 0.7.1, No Man Sky FM 0.4: the firmware's own editor.c (web/EDITOR_PROTOCOL.md v12),
+// SLOOP 2.8, sloopDX 4.0, ORBIT 0.7.1, No Man Sky FM 0.5: the firmware's own editor.c (web/EDITOR_PROTOCOL.md v12),
 // their web editors' requests (web/editor.html `req`): INFO 1, the backup BK_LIST / BK_GET / BK_PUT 34 / 35 / 36
 // (256-byte chunks, backupCapture / backupRestore), the user presets UP_STORE 19, sloopDX's DX7 bank BANK_BEGIN /
 // BANK_WRITE / BANK_END / BANK_INFO 37..40 (512-byte chunks, dxbank.upload). No restart command: the reboot is the
@@ -715,11 +743,13 @@ bool reader_hello(Link &k, std::string &name)
 
 // ---- X0X: web/backup/index.html (PB.backup / PB.restore), firmware/src/backup.c ----
 // a backup: 0x42 "X0XB", the device's 0x42 frames (offset + data) to its 0x43 end (length, CRC-32, status, flags)
-bool x0x_backup(Link &k, Bytes &image, std::string &why, uint32_t *frames_out = nullptr)
+// (fm1-base's backup.c is X0X's, from Polly's: the same frames, the request's body the app's magic)
+bool x0x_backup(Link &k, Bytes &image, std::string &why, uint32_t *frames_out = nullptr,
+                const Bytes &magic = {0x58, 0x30, 0x58, 0x42})
 {
     k.frames.clear();
     image.clear();
-    k.put_frame(upd_frame(0x42, {0x58, 0x30, 0x58, 0x42}));
+    k.put_frame(upd_frame(0x42, magic));
     uint32_t frames = 0;
     const uint64_t end = k.blocks + (uint64_t)(20000 / kBlockMs);
     while (k.blocks < end) {
@@ -900,6 +930,383 @@ void x0x_run(const std::string &module, Device &dev, Link &k, Session &s, const 
     k.worst = std::max(k.worst, k2.worst);
 }
 
+std::function<void(const std::string &, Device &, Link &, Session &, const Profile &)>
+installer_run(const char *reader, bool log);
+// ---- LOOM-8: fm1-base's backup page (base/web/backup, base/tools/fm1_backup.py: backup.c, X0X's frames with the
+// app's magic "LM8B" and its 22 objects: the user presets, then the three project slots' 7 each), the user sample
+// bank (app/samples.c, tools/loom_samples.py: 7D 46 4C), the installer (the M-UPGRADE identity) and the screen
+// reader ----
+const Bytes kLoomMagic = {0x4C, 0x4D, 0x38, 0x42};          // APP_BACKUP_MAGIC 0x42384D4C, little-endian
+// backup.c's image: head (magic, u16 version 1, u16 count, u32 flags, CRC-32 of the 12 bytes), the records in
+// APP_BACKUP_OBJS's order (u16 id, u16 length, u32 CRC-32, the payload; length 0: absent), the tail
+bool loom_parse(const Bytes &im, std::string &why, std::string *sizes = nullptr)
+{
+    if (im.size() < 16 + 22 * 8 + 4 || rd32le(im, 0) != 0x42384D4Cu || (im[4] | im[5] << 8) != 1 ||
+        (im[6] | im[7] << 8) != 22 || rd32le(im, 12) != crc32(im.data(), 12))
+        return why = "the image's head", false;
+    size_t pos = 16;
+    for (uint32_t want = 1; want <= 22; want++) {           // OBJ_PRESETS (1), OBJ_PROJ0 + 0..20 (2..22)
+        if (pos + 8 > im.size())
+            return why = "cut short", false;
+        const uint32_t obj = im[pos] | im[pos + 1] << 8, ln = im[pos + 2] | im[pos + 3] << 8, c = rd32le(im, pos + 4);
+        pos += 8;
+        if (obj != want || ln > 3840 || pos + ln + 4 > im.size() || crc32(&im[pos], ln) != c)
+            return why = "record " + std::to_string(want), false;
+        if (sizes && ln)
+            *sizes += " " + std::to_string(obj) + ":" + std::to_string(ln);
+        pos += ln;
+    }
+    if (pos + 4 != im.size() || rd32le(im, pos) != crc32(im.data(), pos))
+        return why = "the tail", false;
+    return true;
+}
+
+// the sample bank's commands: F0 7D 46 4C cmd args F7 -> the reply's args (after the command byte)
+bool sb_req(Link &k, uint8_t cmd, const Bytes &args, Bytes &out, double limit = 3000)
+{
+    Bytes r;
+    if (!k.request(fl(cmd, args), fl_reply(cmd), r, limit))
+        return false;
+    out = fl_args(r);
+    return true;
+}
+Bytes sb_pack7(const uint8_t *p, size_t n)                   // loom_samples.py pack7: each 7 bytes after their top bits
+{
+    Bytes o;
+    for (size_t i = 0; i < n; i += 7) {
+        const size_t g = std::min<size_t>(7, n - i);
+        uint8_t hi = 0;
+        for (size_t j = 0; j < g; j++)
+            hi |= (uint8_t)((p[i + j] >> 7 & 1) << j);
+        o.push_back(hi);
+        for (size_t j = 0; j < g; j++)
+            o.push_back(p[i + j] & 0x7F);
+    }
+    return o;
+}
+// tools/sampleio.py user_bank for one sample (a 440 Hz sine): its checkpoints and IMA ADPCM at virtual 2048, the
+// header (magic "LSMP", version 2, the count, the data's length and CRC-32, the bank's size) and its 40-byte entry
+Bytes loom_bank(const std::string &name, uint32_t n, uint16_t rate)
+{
+    static const int STEP[89] = {7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 21, 23, 25, 28, 31, 34, 37, 41, 45, 50, 55, 60,
+                                 66, 73, 80, 88, 97, 107, 118, 130, 143, 157, 173, 190, 209, 230, 253, 279, 307, 337,
+                                 371, 408, 449, 494, 544, 598, 658, 724, 796, 876, 963, 1060, 1166, 1282, 1411, 1552,
+                                 1707, 1878, 2066, 2272, 2499, 2749, 3024, 3327, 3660, 4026, 4428, 4871, 5358, 5894,
+                                 6484, 7132, 7845, 8630, 9493, 10442, 11487, 12635, 13899, 15289, 16818, 18500, 20350,
+                                 22385, 24623, 27086, 29794, 32767};
+    static const int IDX[8] = {-1, -1, -1, -1, 2, 4, 6, 8};
+    Bytes ck, nib;
+    int pred = 0, idx = 0;
+    for (uint32_t i = 0; i < n; i++) {
+        if (i % 64 == 0) {
+            const Bytes w = le32((uint32_t)(pred & 0xFFFF) | (uint32_t)idx << 16);
+            ck.insert(ck.end(), w.begin(), w.end());
+        }
+        const int x = (int)(12000.0 * std::sin(6.283185307179586 * 440.0 * i / rate));
+        const int step = STEP[idx];
+        int diff = x - pred, code = 0, vd = step >> 3;
+        if (diff < 0)
+            code = 8, diff = -diff;
+        if (diff >= step)
+            code |= 4, diff -= step, vd += step;
+        if (diff >= step >> 1)
+            code |= 2, diff -= step >> 1, vd += step >> 1;
+        if (diff >= step >> 2)
+            code |= 1, vd += step >> 2;
+        pred = code & 8 ? pred - vd : pred + vd;
+        pred = std::max(-32768, std::min(32767, pred));
+        idx = std::max(0, std::min(88, idx + IDX[code & 7]));
+        nib.push_back((uint8_t)code);
+    }
+    if (nib.size() & 1)
+        nib.push_back(0);
+    Bytes data(ck);                                          // the checkpoints at 2048, the ADPCM after them
+    for (size_t i = 0; i < nib.size(); i += 2)
+        data.push_back((uint8_t)(nib[i] | nib[i + 1] << 4));
+    const uint32_t c_off = 2048, a_off = 2048 + (uint32_t)ck.size();
+    Bytes img(2048, 0);
+    Bytes h = le32(0x504D534Cu);
+    h.insert(h.end(), {2, 0, 1, 0});                         // version 2, one sample
+    for (uint32_t v : {(uint32_t)data.size(), crc32(data.data(), data.size()), 0x1B000u + 0x17000u + 0x4000u}) {
+        const Bytes w = le32(v);
+        h.insert(h.end(), w.begin(), w.end());
+    }
+    std::copy(h.begin(), h.end(), img.begin());
+    Bytes e(name.begin(), name.end());
+    e.resize(12, 0);
+    for (uint32_t v : {a_off, c_off, n, 0u, 0u}) {
+        const Bytes w = le32(v);
+        e.insert(e.end(), w.begin(), w.end());
+    }
+    e.insert(e.end(), {69, 0, 0, 0, (uint8_t)rate, (uint8_t)(rate >> 8), 0, 0});   // root A4, no bars, the rate
+    std::copy(e.begin(), e.end(), img.begin() + 64);
+    img.insert(img.end(), data.begin(), data.end());
+    return img;
+}
+// loom_samples.py upload: BEGIN, the data in 256-byte WRITEs, the header in five 320-byte parts, END (each answered,
+// its last byte the rc)
+bool loom_upload(Link &k, const Bytes &img, std::string &why)
+{
+    Bytes r;
+    if (!sb_req(k, 11, {0}, r, 10000) || r.empty() || r.back())
+        return why = "BEGIN", false;
+    for (uint32_t off = 2048; off < img.size(); off += 256) {
+        Bytes a = {0, (uint8_t)(off & 0x7F), (uint8_t)(off >> 7 & 0x7F), (uint8_t)(off >> 14 & 0x7F)};
+        const Bytes d = sb_pack7(&img[off], std::min<size_t>(256, img.size() - off));
+        a.insert(a.end(), d.begin(), d.end());
+        if (!sb_req(k, 12, a, r, 5000) || r.empty() || r.back())
+            return why = "WRITE at " + std::to_string(off) + " rc " + (r.empty() ? "-" : std::to_string(r.back())), false;
+    }
+    for (uint8_t part = 0; part < 5; part++) {
+        Bytes a = {0, part};
+        const Bytes d = sb_pack7(&img[part * 320], 320);
+        a.insert(a.end(), d.begin(), d.end());
+        if (!sb_req(k, 16, a, r) || r.empty() || r.back())
+            return why = "header part " + std::to_string(part), false;
+    }
+    if (!sb_req(k, 13, {0}, r, 20000) || r.empty() || r.back())
+        return why = "END rc " + (r.empty() ? std::string("-") : std::to_string(r.back())), false;
+    return true;
+}
+// SMP_INFO from 0: the count, and the first sample's name, rate and length
+bool loom_bank_info(Link &k, uint32_t &count, std::string &first)
+{
+    Bytes r;
+    if (!sb_req(k, 15, {0}, r) || r.size() < 8 || r[0] != 2)
+        return false;
+    count = r[5];
+    first.clear();
+    if (r[7]) {
+        size_t i = 8;
+        for (; i < r.size() && r[i]; i++)
+            first += (char)r[i];
+        if (i + 6 < r.size())
+            first += " " + std::to_string(r[i + 1] | r[i + 2] << 7 | r[i + 3] << 14) + " Hz " +
+                     std::to_string(r[i + 4] | r[i + 5] << 7 | r[i + 6] << 14);
+    }
+    return true;
+}
+
+void loom_run(const std::string &module, Device &dev, Link &k, Session &s, const Profile &p)
+{
+    std::string v, why, sz, first;
+    installer_run("LOOM-8 ", true)(module, dev, k, s, p);   // the identity, the screen reader, the log, the update keys
+    check(s.info(v) && v.rfind(p.info, 0) == 0, "samples.c INFO: \"" + v + "\"");
+    Bytes r;
+    check(sb_req(k, 25, {}, r) && r.size() == 1 && r[0] == 0, "samples.c PING: 0");
+    uint32_t count = 99;
+    check(loom_bank_info(k, count, first) && count == 0,
+          "SMP_INFO on a fresh unit: " + std::to_string(count) + " user samples");
+    // an upload as tools/loom_samples.py makes it: one 4096-sample sine at 22050 Hz
+    const Bytes bank = loom_bank("SINE", 4096, 22050);
+    const uint32_t dirty0 = dev.flash_dirty();
+    check(loom_upload(k, bank, why), "a user sample uploaded (BEGIN, " + std::to_string((bank.size() - 2048 + 255) / 256) +
+                                         " WRITEs, 5 header parts, END: the data's CRC checked) " + why);
+    check(loom_bank_info(k, count, first) && count == 1 && first == "SINE 22050 Hz 4096",
+          "SMP_INFO after it: " + std::to_string(count) + " sample, \"" + first + "\"; the NOR image written (" +
+              std::to_string(dev.flash_dirty() - dirty0) + " writes)");
+
+    Bytes a0, a, b, c;
+    uint32_t frames = 0;
+    bool ok = x0x_backup(k, a0, why, &frames, kLoomMagic) && loom_parse(a0, why, &sz);
+    check(ok, "backup (0x42 \"LM8B\") of a fresh unit: " + std::to_string(a0.size()) + " bytes in " +
+                  std::to_string(frames) + " frames, 22 records, each its CRC-32 (" + sz + " ) " + why);
+    x0x_turn(dev, k, 2);              // G3: T1's step 2, saved into slot 1 (flash_sync: the autosave's write)
+    sz.clear();
+    ok = x0x_backup(k, a, why, &frames, kLoomMagic) && loom_parse(a, why, &sz);
+    check(ok && a != a0, "backup after a step written on the panel (saved): " + std::to_string(a.size()) +
+                             " bytes in " + std::to_string(frames) + " frames (" + sz + " ) " + why);
+    x0x_turn(dev, k, 4);              // A3: step 3
+    ok = x0x_backup(k, b, why, nullptr, kLoomMagic) && loom_parse(b, why);
+    check(ok && b != a, "another step: the backup differs " + why);
+
+    const uint32_t dirty1 = dev.flash_dirty();
+    int rc = x0x_restore(k, a, why, EMU_B_HOME);
+    check(rc == 11, "restore answered HOME on the FM-1: code " + std::to_string(rc) + " (11, RS_E_NO) " + why);
+    ok = x0x_backup(k, c, why, nullptr, kLoomMagic);
+    check(ok && c == b, "  nothing changed " + why);
+    rc = x0x_restore(k, a, why, EMU_B_SEL);
+    check(rc == 0, "restore of the earlier backup (0x41, SEL on the FM-1): code " + std::to_string(rc) + " " + why);
+    check(dev.flash_dirty() != dirty1, "  the NOR image written (flash_dirty " + std::to_string(dirty1) + " -> " +
+                                           std::to_string(dev.flash_dirty()) + ")");
+    ok = x0x_backup(k, c, why, nullptr, kLoomMagic);
+    check(ok && c == a, "backup after the restore: the restored project " + why);
+
+    const bool alive = update_keys(k, s, p);
+    if (alive) {
+        std::string idd;
+        check(mupg_identity_exact(k, idd) && idd == p.mupg, "  the installer and the backup page still find it");
+    }
+    dev.flash_sync();
+    const Bytes image(dev.flash(), dev.flash() + dev.flash_size());
+    std::unique_ptr<LoadedCore> lc2 = load(module);
+    Device dev2(lc2->core());
+    dev2.boot_from(image.data(), (uint32_t)image.size());
+    Link k2(dev2);
+    k2.run_ms(3000);
+    Bytes d;
+    ok = x0x_backup(k2, d, why, nullptr, kLoomMagic);
+    check(ok && d == a, "rebooted from the flash image: the backup is the restored project " + why);
+    check(loom_bank_info(k2, count, first) && count == 1 && first == "SINE 22050 Hz 4096",
+          "rebooted from the flash image: the user sample is there (" + std::to_string(count) + ", \"" + first + "\")");
+    k.worst = std::max(k.worst, k2.worst);
+}
+
+// ---- Tonitor: the backup page (docs/backup.html, js/fm1backup.js; firmware/src/backup.c): the installer's framing
+// F0 pack7(00 59 cmd len24 body ~sum) F7 with commands of its own: 0x50 LIST (count, then number u16 and length u32
+// each), 0x51 READ number off n (<= 256), 0x52 WRITE number len, 0x53 DATA off bytes, 0x54 COMMIT (a status each:
+// 0 done .. 4 not a whole record). A record goes back whole, only its head's sequence new (bytes 32.. compared, as
+// tests/web/test_backup.mjs). Sessions are saved by hand: SAVE held 0.8 s on a fresh unit offers slot 1, PRESETS YES,
+// SAVE. Then the page's own round trip: session 1 read, a damaged copy refused (4), the copy restored (a record keeps
+// its number in its head), and the reboot from the flash image lists it as restored.
+Bytes tn_frame(uint8_t cmd, const Bytes &body)
+{
+    Bytes m = {0x00, 0x59, cmd, (uint8_t)body.size(), (uint8_t)(body.size() >> 8), (uint8_t)(body.size() >> 16)};
+    uint32_t sum = 0, acc = 0, nb = 0;
+    for (uint8_t b : body)
+        m.push_back(b), sum += b;
+    m.push_back((uint8_t)~sum);
+    Bytes f = {0xF0};
+    for (uint8_t b : m) {                         // fm1ota.js pack7
+        acc |= (uint32_t)b << nb;
+        nb += 8;
+        while (nb >= 7) {
+            f.push_back((uint8_t)(acc & 0x7Fu));
+            acc >>= 7;
+            nb -= 7;
+        }
+    }
+    if (nb)
+        f.push_back((uint8_t)(acc & 0x7Fu));
+    f.push_back(0xF7);
+    return f;
+}
+bool tn_ask(Link &k, uint8_t cmd, const Bytes &body, Bytes &out, double ms = 3000)   // fm1backup.js ask
+{
+    const auto match = [cmd](const Bytes &f) {
+        const Bytes d = mupg_unpack(f);
+        if (f.size() < 4 || f[1] != 0x00 || d.size() < 7 || d[0] || d[1] != 0x59 || d[2] != cmd)
+            return false;
+        const uint32_t n = d[3] | d[4] << 8 | d[5] << 16;
+        if (d.size() < 7 + n)
+            return false;
+        uint32_t s = 0;
+        for (uint32_t i = 0; i < n; i++)
+            s += d[6 + i];
+        return (uint8_t)~s == d[6 + n];
+    };
+    Bytes r;
+    if (!k.request(tn_frame(cmd, body), match, r, ms))
+        return false;
+    const Bytes d = mupg_unpack(r);
+    out.assign(d.begin() + 6, d.begin() + 6 + (d[3] | d[4] << 8 | d[5] << 16));
+    return true;
+}
+void tn_w32(Bytes &a, uint32_t v)
+{
+    for (int i = 0; i < 4; i++)
+        a.push_back((uint8_t)(v >> (8 * i)));
+}
+bool tn_list(Link &k, std::vector<std::pair<uint32_t, uint32_t>> &recs)
+{
+    Bytes b;
+    recs.clear();
+    if (!tn_ask(k, 0x50, {}, b, 1500) || b.empty())
+        return false;
+    for (uint32_t i = 0; i < b[0] && 7 + i * 6 <= b.size(); i++)
+        recs.push_back({b[1 + i * 6] | b[2 + i * 6] << 8,
+                        (uint32_t)(b[3 + i * 6] | b[4 + i * 6] << 8 | b[5 + i * 6] << 16 | (uint32_t)b[6 + i * 6] << 24)});
+    return true;
+}
+bool tn_read(Link &k, uint32_t num, uint32_t len, Bytes &out)
+{
+    out.assign(len, 0);
+    for (uint32_t off = 0; off < len;) {
+        Bytes q = {(uint8_t)num, (uint8_t)(num >> 8)}, b;
+        tn_w32(q, off);
+        q.push_back(0);
+        q.push_back(1);                           // 256
+        if (!tn_ask(k, 0x51, q, b) || b.size() < 8)
+            return false;
+        const uint32_t n = b[6] | b[7] << 8;
+        if (!n || (uint32_t)(b[2] | b[3] << 8 | b[4] << 16 | (uint32_t)b[5] << 24) != off || b.size() < 8 + n)
+            return false;
+        std::copy(b.begin() + 8, b.begin() + 8 + n, out.begin() + off);
+        off += n;
+    }
+    return true;
+}
+int tn_write(Link &k, uint32_t num, const Bytes &bytes)                         // the status, -1 no answer
+{
+    Bytes q = {(uint8_t)num, (uint8_t)(num >> 8)}, b;
+    tn_w32(q, (uint32_t)bytes.size());
+    if (!tn_ask(k, 0x52, q, b, 8000) || b.empty())
+        return -1;
+    if (b[0])
+        return b[0];
+    for (uint32_t off = 0; off < bytes.size(); off += 256) {
+        Bytes d;
+        tn_w32(d, off);
+        d.insert(d.end(), bytes.begin() + off, bytes.begin() + std::min<size_t>(bytes.size(), off + 256));
+        if (!tn_ask(k, 0x53, d, b, 5000) || b.empty())
+            return -1;
+        if (b[0])
+            return b[0];
+    }
+    if (!tn_ask(k, 0x54, {}, b, 5000) || b.empty())
+        return -1;
+    return b[0];
+}
+void tonitor_run(const std::string &module, Device &dev, Link &k, Session &s, const Profile &p)
+{
+    std::string id;
+    check(mupg_identity_exact(k, id) && id == p.mupg, "M-UPGRADE identity: \"" + id + "\" (the package's " + p.mupg + ")");
+    std::vector<std::pair<uint32_t, uint32_t>> recs;
+    check(tn_list(k, recs) && recs.empty(), "backup LIST (0x50) on a fresh unit: " + std::to_string(recs.size()) +
+                                                " records");
+    dev.buttons(1u << EMU_B_SAVE);                // SAVE held 0.8 s: "SAVE NEW?" on slot 1; PRESETS: YES; SAVE
+    k.run_ms(1000);
+    dev.buttons(0);
+    k.run_ms(300);
+    dev.enc(EMU_E_PRESETS, 1);
+    k.run_ms(300);
+    dev.buttons_tap(1u << EMU_B_SAVE);
+    k.run_ms(1500);
+    check(tn_list(k, recs) && recs.size() == 1 && recs[0].first == 1,
+          "a session saved on the panel: LIST " + std::to_string(recs.size()) + " record(s)" +
+              (recs.empty() ? "" : ", number " + std::to_string(recs[0].first) + ", " + std::to_string(recs[0].second) +
+                                       " bytes"));
+    Bytes s1, s2;
+    const bool r1 = !recs.empty() && tn_read(k, recs[0].first, recs[0].second, s1);
+    check(r1, "READ (0x51) session 1 whole, 256 bytes a request: " + std::to_string(s1.size()) + " bytes");
+    if (r1) {
+        Bytes bad = s1;
+        bad.back() ^= 0x55;
+        int rc = tn_write(k, 1, bad);
+        check(rc == 4, "a damaged record written back (WRITE / DATA / COMMIT): refused, status " + std::to_string(rc) +
+                           " (4: not a whole record)");
+        const uint32_t dirty = dev.flash_dirty();
+        rc = tn_write(k, 1, s1);
+        check(rc == 0 && dev.flash_dirty() != dirty, "session 1's record restored (WRITE / DATA / COMMIT): status " +
+                                                          std::to_string(rc) + ", the NOR image written");
+        const bool r2 = tn_list(k, recs) && recs.size() == 1 && tn_read(k, 1, recs[0].second, s2);
+        check(r2 && s2.size() == s1.size() && s2 != s1 && std::equal(s1.begin() + 32, s1.end(), s2.begin() + 32),
+              "LIST / READ after it: one record, session 1 as it was, its head's sequence new");
+    }
+    update_keys(k, s, p);
+    dev.flash_sync();
+    const Bytes image(dev.flash(), dev.flash() + dev.flash_size());
+    std::unique_ptr<LoadedCore> lc2 = load(module);
+    Device dev2(lc2->core());
+    dev2.boot_from(image.data(), (uint32_t)image.size());
+    Link k2(dev2);
+    k2.run_ms(3000);
+    Bytes s3;
+    check(!s2.empty() && tn_list(k2, recs) && recs.size() == 1 && tn_read(k2, 1, recs[0].second, s3) && s3 == s2,
+          "rebooted from the flash image: session 1 listed, as restored");
+    k.worst = std::max(k.worst, k2.worst);
+}
+
 // ---- the installers' firmwares (FiMba, FoMni, Fart Machine One, AMB-1): the hub's installer (fm1ota.js) finds the
 // unit by the M-UPGRADE identity and offers the update (refused: the update key is not taken); AMB-1's installer also
 // reads the log (F0 7D 4C 47 F7: a frame a line, "end" last: its crash report). A screen reader where the firmware has
@@ -997,7 +1404,7 @@ void fm106_run(const std::string &module, Device &dev, Link &k, Session &s, cons
     const bool ok = fm106_dump(k, 128 + 5, u) && u.size() == 40;
     check(ok && std::equal(st.begin() + 5, st.begin() + 23, u.begin() + 5) && fm106_name(u) == name,
           "store (30) to user A 6, dumped back: the sliders, switches and name \"" + (ok ? fm106_name(u) : "") + "\"");
-    // burnToHardwareFlash. FM-106 Beta4's user bank is 16 + 128 x 82 = 10,512 bytes, its flash area 8 KiB:
+    // burnToHardwareFlash. FM-106 Beta5's user bank is 16 + 128 x 82 = 10,512 bytes, its flash area 8 KiB (as Beta4):
     // presets_flash_save refuses it (n > FM106_PRESETS_FLASH_SIZE) on the device as here, yet the ACK goes out
     // (fm106_sysex.h ignores the result). So the commit writes nothing and the stored preset is gone after a power
     // cycle, on a unit too; once a firmware writes it, the reboot below must find it.
@@ -1008,7 +1415,7 @@ void fm106_run(const std::string &module, Device &dev, Link &k, Session &s, cons
                                  2000);
     const bool wrote = dev.flash_dirty() != dirty0;
     check(acked, std::string("commit (35): the ACK; the NOR image ") +
-                     (wrote ? "written" : "unchanged (Beta4: the bank does not fit its 8 KiB, as on the device)"));
+                     (wrote ? "written" : "unchanged (Beta5: the bank does not fit its 8 KiB, as on the device)"));
     update_keys(k, s, p);
     const Bytes image(dev.flash(), dev.flash() + dev.flash_size());
     std::unique_ptr<LoadedCore> lc2 = load(module);
@@ -1024,7 +1431,289 @@ void fm106_run(const std::string &module, Device &dev, Link &k, Session &s, cons
         check(got2 && u2.size() == 24, "rebooted from the flash image: user A 6 blank again (nothing was written)");
     k.worst = std::max(k.worst, k2.worst);
 }
+
+// GR!MM (Dinghy): its own editor mailbox, F0 7D 47 52 <cmd> .. F7 (editor.c, docs/EDITOR_PROTOCOL.md; web/editor.html
+// and tools/fm1_editor_test.py use it): 20 INFO, 21 GET obj off(u35) count(u14) -> obj rc off count pack7, 22 PUT
+// BEGIN (op 0, fmt, len, crc) / DATA (op 1, off, pack7 <= 256 B) / COMMIT (op 2) -> op obj rc. The editor's backup of a
+// user sound: factory sound 1 (object 80, GET only) written into user sound 1 (object 16) as the page writes one, read
+// back, and still there after a reboot from the flash image; INFO's sample slots in use (the four factory samples
+// samples.c writes into an erased area at boot) on both units. The installer finds it by its M-UPGRADE identity.
+Bytes gr(uint8_t cmd, const Bytes &args = {})
+{
+    Bytes f = {0xF0, 0x7D, 0x47, 0x52, cmd};
+    f.insert(f.end(), args.begin(), args.end());
+    f.push_back(0xF7);
+    return f;
+}
+std::function<bool(const Bytes &)> gr_reply(uint8_t cmd)
+{
+    return [cmd](const Bytes &f) { return f.size() >= 6 && f[1] == 0x7D && f[2] == 0x47 && f[3] == 0x52 && f[4] == cmd; };
+}
+// INFO: the version and the sample slots in use
+bool gr_info(Link &k, std::string &ver, uint32_t &smp_used)
+{
+    Bytes r;
+    if (!k.request(gr(20), gr_reply(20), r, 2000))
+        return false;
+    const Bytes a = fl_args(r);
+    size_t i = 2;
+    ver.clear();
+    while (i < a.size() && a[i])
+        ver += (char)a[i++];
+    i++;                                  // (its 0)
+    if (a.size() < 2 || a[0] != 2 || a[1] != 1 || i + 3 + 5 + 5 + 2 != a.size())
+        return false;
+    smp_used = a[i + 3 + 5 + 5 + 1];
+    return true;
+}
+bool gr_get(Link &k, uint32_t obj, uint32_t size, Bytes &out, std::string &why)
+{
+    out.clear();
+    for (uint32_t off = 0; off < size; off += 256) {
+        const uint32_t n = std::min<uint32_t>(256, size - off);
+        Bytes q = {(uint8_t)obj}, r, chunk;
+        u32(q, off);
+        q.push_back((uint8_t)(n & 127u));
+        q.push_back((uint8_t)(n >> 7));
+        if (!k.request(gr(21, q), gr_reply(21), r, 2000)) {
+            why = "(GET " + std::to_string(obj) + ": no reply)";
+            return false;
+        }
+        const Bytes a = fl_args(r);
+        if (a.size() < 9 || a[0] != obj || a[1] != 0 || r32(a, 2) != off || !unpack(a, 9, n, chunk)) {
+            why = "(GET " + std::to_string(obj) + ": rc " + std::to_string(a.size() > 1 ? a[1] : -1) + ")";
+            return false;
+        }
+        out.insert(out.end(), chunk.begin(), chunk.end());
+    }
+    return true;
+}
+int gr_put(Link &k, uint32_t obj, const Bytes &b, std::string &why)   // the last rc (0 ok), -1 no reply
+{
+    auto step = [&](Bytes q) -> int {
+        Bytes r;
+        if (!k.request(gr(22, q), gr_reply(22), r, 3000)) {
+            why = "(PUT op " + std::to_string(q[0]) + ": no reply)";
+            return -1;
+        }
+        const Bytes a = fl_args(r);
+        return a.size() >= 3 && a[0] == q[0] && a[1] == obj ? a[2] : -1;
+    };
+    Bytes begin = {0, (uint8_t)obj, 1};
+    u32(begin, (uint32_t)b.size());
+    u32(begin, crc32(b.data(), b.size()));
+    int rc = step(begin);
+    for (uint32_t off = 0; !rc && off < b.size(); off += 256) {
+        Bytes d = {1, (uint8_t)obj};
+        u32(d, off);
+        const Bytes p = pack(&b[off], std::min<size_t>(256, b.size() - off));
+        d.insert(d.end(), p.begin(), p.end());
+        rc = step(d);
+    }
+    return rc ? rc : step({2, (uint8_t)obj});
+}
+void grimm_run(const std::string &module, Device &dev, Link &k, Session &s, const Profile &p)
+{
+    std::string id, ver, why;
+    uint32_t used = 0;
+    check(mupg_identity_exact(k, id) && id == p.mupg, "M-UPGRADE identity: \"" + id + "\" (the package's " + p.mupg +
+                                                          ", 34 bytes as the installer reads it)");
+    check(gr_info(k, ver, used) && ver == "1.0" && used == 4,
+          "INFO (20): protocol 2, format 1, version \"" + ver + "\", " + std::to_string(used) +
+              " sample slots in use (the four factory samples)");
+    Bytes fac, empty, back;
+    check(gr_get(k, 80, 64, fac, why) && fac.size() == 64 && fac[0] == 0x54,
+          "GET 80 (factory sound 1): 64 bytes, a sound " + why);
+    check(gr_get(k, 16, 64, empty, why) && empty == Bytes(64, 0xFF), "GET 16 (user sound 1): empty on a fresh unit " + why);
+    k.run_ms(2000);                       // (BEGIN and COMMIT want silence: TAPE is not idle until ~4 s after power-on)
+    const uint32_t dirty = dev.flash_dirty();
+    const int rc = gr_put(k, 16, fac, why);
+    check(rc == 0, "PUT 16 (BEGIN, DATA, COMMIT): factory sound 1 into user sound 1: rc " + std::to_string(rc) + " " + why);
+    check(dev.flash_dirty() != dirty, "  the NOR image written (flash_dirty " + std::to_string(dirty) + " -> " +
+                                          std::to_string(dev.flash_dirty()) + ")");
+    check(gr_get(k, 16, 64, back, why) && back == fac, "GET 16 after the PUT: the factory sound's bytes " + why);
+    update_keys(k, s, p);
+    dev.flash_sync();
+    const Bytes image(dev.flash(), dev.flash() + dev.flash_size());
+    std::unique_ptr<LoadedCore> lc2 = load(module);
+    Device dev2(lc2->core());
+    dev2.boot_from(image.data(), (uint32_t)image.size());
+    Link k2(dev2);
+    k2.run_ms(3000);
+    Bytes b2;
+    check(gr_get(k2, 16, 64, b2, why) && b2 == fac, "rebooted from the flash image: user sound 1 is the stored one " + why);
+    used = 0;
+    const size_t smp = image.size() >= 0xDF000u ? (size_t)std::count_if(image.begin() + 0x97000, image.begin() + 0xDF000,
+                                                                       [](uint8_t b) { return b != 0xFF; }) : 0;
+    check(smp > 0 && gr_info(k2, ver, used) && used == 4,
+          "rebooted from the flash image: " + std::to_string(used) + " sample slots in use, read from the image's sample "
+          "area (0x97000: " + std::to_string(smp) + " bytes written)");
+    k.worst = std::max(k.worst, k2.worst);
+}
 // ---- end of plat, fm1base, dinghy ----
+
+// ---- felucca_web: PIGEON's sample bank (cores/pigeon tools/ko_bank.py upload / export, editor.c ko_bank_editor.c:
+// the FL protocol's commands 90 negotiate, 91 begin, 92 data, 93 commit, 94 read, 95 metadata, 96 erase). The bank is
+// tests/fixtures/pigeon/bank.kob (make_bank.py: an MP3 song, four ADPCM pads); it lives in the NOR at the device's
+// extents, so it is part of the flash image and the reboot from that image keeps it.
+Bytes pg_u21(uint32_t v) { return {(uint8_t)(v & 127u), (uint8_t)(v >> 7 & 127u), (uint8_t)(v >> 14 & 127u)}; }
+uint32_t pg_r21(const Bytes &a, size_t p) { return a[p] | a[p + 1] << 7 | (uint32_t)a[p + 2] << 14; }
+constexpr uint32_t kPgSize = 0x7D000, kPgHead = 4096, kPgHeader = 668;
+// 90: the layout ko_bank.py negotiate() insists on (KOB2, capacity, header, the codecs); active: a bank is there
+bool pg_negotiate(Link &k, int &active, std::string &why)
+{
+    Bytes r;
+    if (!sb_req(k, 90, {}, r))
+        return why = "90: no reply", false;
+    if (r.size() != 10 || r[0] != 0x4B || r[1] != 3 || pg_r21(r, 2) != kPgSize || pg_r21(r, 5) != kPgHead || r[9] != 3)
+        return why = "90: not PIGEON's KOB2 layout (" + std::to_string(r.size()) + " bytes)", false;
+    active = r[8];
+    return true;
+}
+bool pg_ok(Link &k, uint8_t cmd, const Bytes &args, std::string &why, double limit = 5000)
+{
+    Bytes r;
+    if (!sb_req(k, cmd, args, r, limit) || r != Bytes{0})
+        return why = std::to_string(cmd) + ": " + (r.empty() ? "no reply" : "rc " + std::to_string(r[0])), false;
+    return true;
+}
+bool pg_upload(Link &k, const Bytes &image, std::string &why)   // ko_bank.py upload()
+{
+    const uint32_t used = image[8] | image[9] << 8 | image[10] << 16 | (uint32_t)image[11] << 24;
+    const uint32_t version = image[4];
+    if (!pg_ok(k, 91, pg_u21(used), why))
+        return false;
+    auto data = [&](uint32_t from, uint32_t to) {
+        for (uint32_t off = from; off < to; off += 256) {
+            Bytes a = pg_u21(off), pk = sb_pack7(image.data() + off, std::min<uint32_t>(256, to - off));
+            a.insert(a.end(), pk.begin(), pk.end());
+            if (!pg_ok(k, 92, a, why))
+                return false;
+        }
+        return true;
+    };
+    if (!data(kPgHead, used) || !data(0, kPgHeader * (version == 3 ? 2 : 1)) || !pg_ok(k, 93, {}, why, 30000))
+        return false;
+    for (uint32_t off = 0; image.size() > used && off < 4096; off += 256) {   // (the chop / compressor metadata)
+        Bytes a = pg_u21(off), pk = sb_pack7(image.data() + used + off, 256);
+        a.insert(a.end(), pk.begin(), pk.end());
+        if (!pg_ok(k, 95, a, why))
+            return false;
+    }
+    return true;
+}
+bool pg_read(Link &k, uint32_t off, uint32_t n, Bytes &out, std::string &why)   // ko_bank.py read(): 94
+{
+    Bytes r = pg_u21(off), d;
+    r.push_back(n & 127u);
+    r.push_back((uint8_t)(n >> 7));
+    Bytes a;
+    if (!sb_req(k, 94, r, a) || a.empty() || a[0] || !unpack(a, 1, n, d))
+        return why = "94 @" + std::to_string(off) + ": " + (a.empty() ? "no reply" : "rc " + std::to_string(a[0])), false;
+    out.insert(out.end(), d.begin(), d.end());
+    return true;
+}
+bool pg_export(Link &k, uint32_t used, Bytes &out, std::string &why)   // ko_bank.py export(): the bank, then its metadata
+{
+    out.clear();
+    for (uint32_t off = 0; off < used; off += 256)
+        if (!pg_read(k, off, std::min<uint32_t>(256, used - off), out, why))
+            return false;
+    for (uint32_t off = 0; off < 4096; off += 256)
+        if (!pg_read(k, kPgSize + off, 256, out, why))
+            return false;
+    return true;
+}
+int pg_peak(Link &k, uint32_t keys, double ms)   // the keys held ms (velocity 100), the output's peak (int16 scale)
+{
+    for (int i = 0; i < 27; i++)
+        if (keys >> i & 1u)
+            k.dev.key_vel(i, 100);
+    k.dev.keys(keys);
+    float pk = 0;
+    for (uint64_t end = k.blocks + (uint64_t)(ms / kBlockMs + 0.999); k.blocks < end;) {
+        k.block();
+        for (uint32_t i = 0; i < kBlock; i++)
+            pk = std::max(pk, std::max(std::fabs(k.L[i]), std::fabs(k.R[i])));
+    }
+    k.dev.keys(0);
+    k.run_ms(300);
+    return (int)(pk * 32768.0f);
+}
+void pigeon_run(const std::string &module, Device &dev, Link &k, Session &s, const Profile &p)
+{
+    std::string v, why, mid;
+    check(s.info(v) && v.rfind(p.info, 0) == 0, "INFO: \"" + v + "\" (starts \"" + p.info + "\")");
+    check(mupg_identity(k, mid) && mid == p.mupg, "M-UPGRADE identity: \"" + mid + "\" (the package's " + p.mupg + ")");
+    std::ifstream f(std::string(FM1_SOURCE_DIR) + "/tests/fixtures/pigeon/bank.kob", std::ios::binary);
+    const Bytes bank((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+    check(bank.size() > kPgHead, "the test bank: tests/fixtures/pigeon/bank.kob, " + std::to_string(bank.size()) + " bytes");
+    if (bank.size() <= kPgHead)
+        return;
+    const uint32_t used = bank[8] | bank[9] << 8 | bank[10] << 16 | (uint32_t)bank[11] << 24;
+    int active = -1;
+    check(pg_negotiate(k, active, why) && active == 0,
+          "90 negotiate on a fresh unit: KOB2, 500 KiB (" + std::to_string(kPgSize) + "), header 4096, codecs IMA + MP3, "
+          "no bank (" + std::to_string(active) + ") " + why);
+    check(pg_peak(k, 1u << 9, 400) == 0, "  a fresh unit is silent: D4 on Song 1 (no factory bank)");
+    const uint32_t dirty0 = dev.flash_dirty();
+    check(pg_upload(k, bank, why), "the bank uploaded as ko_bank.py upload does (91, " +
+                                       std::to_string((used - kPgHead + 255) / 256) + " + 6 x 92, 93 commit) " + why);
+    check(pg_negotiate(k, active, why) && active == 1, "90 after it: the bank is active; the NOR written (" +
+                                                           std::to_string(dev.flash_dirty() - dirty0) + " writes) " + why);
+    Bytes back;
+    check(pg_export(k, used, back, why) && Bytes(back.begin(), back.begin() + std::min<size_t>(used, back.size())) ==
+                                               Bytes(bank.begin(), bank.begin() + used),
+          "94 export (ko_bank.py export): the bank reads back byte for byte (" + std::to_string(used) + " bytes) " + why);
+    int pk = pg_peak(k, 1u << 9, 400);
+    check(pk > 64, "D4 (chop 6 of Song 1, MP3 through libmad) sounds: peak " + std::to_string(pk));
+    Bytes dg;                                     // 97 diagnostics v1: ten 35-bit counters (ko_bank.py diagnostics)
+    auto ctr = [&](int i) { uint64_t v = 0; for (int j = 0; j < 5; j++) v |= (uint64_t)dg[2 + i * 5 + j] << (7 * j); return v; };
+    const bool dok = sb_req(k, 97, {}, dg) && dg.size() == 52 && dg[0] == 0 && dg[1] == 1;
+    check(dok && ctr(3) > 0 && ctr(1) == 0, "97 diagnostics: " + (dok ? std::to_string(ctr(3)) + " MP3 decode calls, " +
+                                                std::to_string(ctr(1)) + " decoder errors, " + std::to_string(ctr(0)) +
+                                                " missing sample reads" : std::string("no reply")));
+    std::vector<Obj> man;
+    check(s.list(man), "backup LIST: " + std::to_string(man.size()) + " objects " + s.why);
+    uint32_t total = 0, nonempty = 0;
+    bool all = true;
+    for (const Obj &o : man) {
+        Bytes b;
+        if (!o.size)
+            continue;
+        nonempty++;
+        total += o.size;
+        if (!s.get(o, b)) {
+            all = false;
+            std::printf("    %s\n", s.why.c_str());
+        }
+    }
+    check(all, "backup GET: every object (" + std::to_string(nonempty) + " not empty, " + std::to_string(total) +
+                   " bytes), each matching LIST's CRC");
+    const bool alive = update_keys(k, s, p);
+
+    dev.flash_sync();
+    const Bytes image(dev.flash(), dev.flash() + dev.flash_size());
+    std::unique_ptr<LoadedCore> lc2 = load(module);
+    Device dev2(lc2->core());
+    dev2.boot_from(image.data(), (uint32_t)image.size());
+    Link k2(dev2);
+    Session s2(k2);
+    k2.run_ms(3500);
+    check(alive && pg_negotiate(k2, active, why) && active == 1,
+          "rebooted from the flash image (" + std::to_string(image.size()) + " bytes): the bank is active " + why);
+    check(pg_export(k2, used, back, why) && Bytes(back.begin(), back.begin() + std::min<size_t>(used, back.size())) ==
+                                                Bytes(bank.begin(), bank.begin() + used),
+          "  it reads back byte for byte " + why);
+    pk = pg_peak(k2, 1u << 9, 400);
+    check(pk > 64, "  D4 sounds: peak " + std::to_string(pk));
+    pk = pg_peak(k2, 1u << 0, 400);
+    check(pk > 64, "  F3 (chop 1) sounds: peak " + std::to_string(pk));
+    check(pg_ok(k2, 96, {}, why) && pg_negotiate(k2, active, why) && active == 0,
+          "96 erase (ko_bank.py erase): the bank is gone " + why);
+    check(pg_peak(k2, 1u << 9, 400) == 0, "  and D4 is silent again");
+    k.worst = std::max(k.worst, k2.worst);
+}
 
 const Profile kProfiles[] = {
     {"choralroot", "ChoralRoot ", true, "FM-1_920", true, fm6_bank_change},
@@ -1037,22 +1726,35 @@ const Profile kProfiles[] = {
     {"jiant", "JIANT v0.9.9", true, "FM-1_900", false, up_store_change()},
     {"ghoulbox", "FELUCCA v1.4.1 GB2.3.2", true, "FM-1_900", false, up_store_change()},
     {"rainbow", "FELUCCA v1.1.5", true, "FM-1_900", false, up_store_change()},
-    {"duell", "FELUCCA DUELL 0.2.20", true, "FM-1_900", false, up_store_change()},
-    {"melodee", "MELODEE v1.4.4", true, "FM-1_900", false, up_store_change(80)},
+    // DUELL 1.0: the stored preset is a patch record (Session::rec_pages; the profile's id is how main() knows)
+    {"duell", "FELUCCA DUELL 1.0", true, "FM-1_900", false, up_store_change()},
+    {"pigeon", "PIGEON v0.4.1", true, "FM-1_900", false, nullptr, false, nullptr, pigeon_run},
+    {"melodee", "MELODEE v1.4.5", true, "FM-1_900", false, up_store_change(80)},
+    // Mini-Tone, FMini-1, Skiff: Felucca's editor.c (their web editors' INFO, BACKUP_LIST / GET / PUT, UP_STORE);
+    // the identity is each build.py --release's (FM-1_9XY; Skiff's FM-1_7XY)
+    {"minitone", "FELUCCA v1.0.1", true, "FM-1_910", false, up_store_change()},
+    {"fmini", "FELUCCA v1.8.0", true, "FM-1_918", false, up_store_change()},
+    {"skiff", "FELUCCA v1.4", true, "FM-1_714", false, up_store_change()},
     // the sloop family: editor.c's v6 backup; the identity is build.py's development FM-1_900 (no --release)
-    {"sloop", "FELUCCA SLOOP 2.7.1", true, "FM-1_900", false, sl_upreset_change, true},
+    {"sloop", "FELUCCA SLOOP 2.8", true, "FM-1_900", false, sl_upreset_change, true},
     {"sloopdx", "FELUCCA sloopDX 4.0", true, "FM-1_900", false, sl_dxbank_change, true, sl_dxbank_kept},
     {"orbit", "FELUCCA ORBIT 0.7.1", true, "FM-1_900", false, sl_upreset_change, true},
-    {"nomansky", "FELUCCA NMS FM 0.4", true, "FM-1_900", false, sl_upreset_change, true},
+    {"nomansky", "FELUCCA NMS FM 0.5", true, "FM-1_900", false, sl_upreset_change, true},
     // plat, fm1base, dinghy
     {"x0x", "X0X ", false, "FM-1_9010100", false, nullptr, false, nullptr, x0x_run},
     {"amb", nullptr, false, "FM-1_7010300", false, nullptr, false, nullptr, installer_run("AMB-1 ", true)},
+    {"loom", "LOOM-8 0.6.1", false, "FM-1_10000601", false, nullptr, false, nullptr, loom_run},
     {"fomni", nullptr, false, "FM-1_8000400", false, nullptr, false, nullptr, installer_run("FoMni-1 ", false)},
     {"fimba", nullptr, false, "FM-1_8000601", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"fartmachine", nullptr, false, "FM-1_701", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"fm106", nullptr, false, "FM-1_907", false, nullptr, false, nullptr, fm106_run},
     {"obervave", nullptr, false, "FM-1_955", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"frodhes", nullptr, false, "FM-1_958", false, nullptr, false, nullptr, installer_run(nullptr, false)},
+    {"grimm", nullptr, false, "FM-1_966", false, nullptr, false, nullptr, grimm_run},
+    {"tonitor", nullptr, false, "FM-1_700", false, nullptr, false, nullptr, tonitor_run},
+    // Speak37 (its own glue): no editor and no backup (speak.c builds neither), the installers' M-UPGRADE identity
+    // only, the v1.0 release package's (build.py --release 1.0: FM-1_5XY)
+    {"speak37", nullptr, false, "FM-1_510", false, nullptr},
 };
 
 const Profile *profile_of(const std::string &id)
@@ -1110,6 +1812,8 @@ int main(int argc, char **argv)
     Session s(k);
     if (p && p->bk_v6)
         s.use_v6();
+    if (id == "duell")
+        s.rec_pages = 4;
     k.run_ms(3000);                         // past the splash
     std::printf("sysex_test %s (%s %s)\n", id.c_str(), lc->core()->name, lc->core()->version);
     if (!p) {
@@ -1204,6 +1908,7 @@ int main(int argc, char **argv)
         Session s2(k2);
         if (p->bk_v6)
             s2.use_v6();
+        s2.rec_pages = s.rec_pages;
         k2.run_ms(3000);
         std::vector<Obj> m3;
         Bytes back;

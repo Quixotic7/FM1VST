@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# FM-106 Beta4 (https://github.com/PatttF/fm-106, tag Beta4): the Dinghy family glue (core-glue/dinghy/) over the
-# unmodified submodule cores/fm-106. Its tests/host.c has fallen behind the app (19 errors at Beta4) and platform.c
-# includes it by a relative path, so clang's -ivfsoverlay maps that path to fm106_host.c (the overlay file is
-# written here, in the build tree). The headers in firmware/gen are committed (NO_GEN); the version is tools/build.py's
-# APP_VER. The .pool section attribute (fm106_fx.h, gfx.c) Mach-O rejects becomes an alignment.
+# FM-106 Beta5 (https://github.com/PatttF/fm-106, tag Beta5): the Dinghy family glue (core-glue/dinghy/) over the
+# unmodified submodule cores/fm-106. Its tests/host.c has fallen behind the app (19 errors at Beta4; the file is
+# unchanged at Beta5) and platform.c includes it by a relative path, so clang's -ivfsoverlay maps that path to
+# fm106_host.c (the overlay file is written here, in the build tree). The headers in firmware/gen are committed
+# (NO_GEN); the version is tools/build.py's APP_VER. The .pool section attribute (fm106_fx.h, gfx.c) Mach-O rejects becomes an alignment.
 #
 # GATED (CORES-PLAN.md 6): its engine is a port of Ultramaster KR-106 (GPL-3.0, compatible), but its 128 factory
 # presets are the Roland Juno-106 factory patches decoded from SysEx (fm106_presets.h; KR-106 ships them from
@@ -15,7 +15,7 @@ file(WRITE ${_fm106_vfs} "{ \"version\": 0, \"case-sensitive\": \"false\", \"roo
 fm1_add_core(fm106 ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_fm106}
              UNIT core_fm106.c DESC core_fm106_desc.c FAMILY dinghy LICENSE GPL-3.0-only
              GATED "the factory presets are Roland Juno-106 factory patch data of unverified rights (via KR-106), and FM-106 carries no KR-106 copyright notice"
-             NO_GEN VERSION Beta4
+             NO_GEN VERSION Beta5
              INCLUDES ${_fm106}/firmware/gen ${CMAKE_CURRENT_LIST_DIR}
              FLAGS "-Dsection(x)=aligned(4)" "-ivfsoverlay" "${_fm106_vfs}")
 if(TARGET core_fm106_obj)
@@ -37,6 +37,6 @@ configure_file(${_fm106_golden_host}.tmp ${_fm106_golden_host} COPYONLY)
 file(WRITE ${_fm106_golden_vfs} "{ \"version\": 0, \"case-sensitive\": \"false\", \"roots\": [ { \"type\": \"file\", \"name\": \"${_fm106}/tests/host.c\", \"external-contents\": \"${_fm106_golden_host}\" } ] }\n")
 # the golden check: the same script on its own host sim (tests/host.c), the screens compared at 3000 ms
 dinghy_golden_check(fm106 SCRIPT golden_fm106.txt AT 3000 SOURCE ${CMAKE_SOURCE_DIR}/cores/fm-106/firmware/src/fm106.c
-                    DEFINES DINGHY_HOST APP_VER="Beta4"
+                    DEFINES DINGHY_HOST APP_VER="Beta5"
                     INCLUDES ${CMAKE_SOURCE_DIR}/cores/fm-106/firmware/src ${CMAKE_SOURCE_DIR}/cores/fm-106/firmware/gen
                     FLAGS "-Dsection(x)=aligned(4)" "-ivfsoverlay" "${_fm106_golden_vfs}")

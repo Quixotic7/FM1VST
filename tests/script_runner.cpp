@@ -10,13 +10,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <iterator>
 #include <sstream>
 
 namespace {
 
 enum { KM_KEY, KM_BTN, KM_OCTBOTH, KM_SELECT, KM_CYCLE, KM_SHIFT, KM_TURN, KM_SHOT, KM_RECORD, KM_DUMP, KM_LCDVIEW };
 enum { OP_DOWN, OP_UP, OP_TURN, OP_SHOT, OP_WINDOW, OP_DUMP, OP_REC, OP_QUIT, OP_MASTER, OP_EXPECT_LED,
-       OP_EXPECT_SND, OP_MIDI };
+       OP_EXPECT_SND, OP_MIDI, OP_SYSEX };
 enum { SRC_SCRIPT = 16, SRC_FINE = 32 };
 
 struct KeyMap {
@@ -215,6 +216,16 @@ bool parse_script_text(const std::string &text, const std::string &name, Script 
             continue;
         }
         if (!std::strcmp(cmd, "master")) { add(cur, OP_MASTER, -1, 0, 0, std::atoi(arg), ""); continue; }
+        if (!std::strcmp(cmd, "sysex")) {         // (the rest of the line: a path longer than a word's 95 chars)
+            std::string path = std::strstr(line, "sysex") + 5;
+            path.erase(0, path.find_first_not_of(" \t"));
+            path.erase(path.find_last_not_of(" \t\r\n") + 1);
+            if (path.empty())
+                bad("sysex: a file of SysEx frames");
+            else
+                add(cur, OP_SYSEX, -1, 0, 0, 0, path);
+            continue;
+        }
         if (!std::strcmp(cmd, "expect")) {
             if (!std::strcmp(arg, "sound") || !std::strcmp(arg, "silence")) {
                 add(cur, OP_EXPECT_SND, -1, 0, 0, !std::strcmp(arg, "sound"), "");
@@ -447,6 +458,48 @@ void ScriptRunner::apply(uint32_t ms)              // emu.c run_script(ms)
             (ok ? expect_ok_ : expect_fail_)++;
             break;
         }
+        case OP_SYSEX: {                           // the frames, as USB-MIDI packets (sysex_test's Link::put_frame)
+            std::string path = e.name;
+            std::ifstream f(path, std::ios::binary);
+#ifdef FM1_SOURCE_DIR
+            if (!f && path[0] != '/') {
+                path = std::string(FM1_SOURCE_DIR) + "/" + e.name;
+                f.open(path, std::ios::binary);
+            }
+#endif
+            const std::vector<uint8_t> b((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+            uint32_t frames = 0;
+            for (size_t i = 0; i < b.size();) {
+                if (b[i] != 0xF0) {
+                    i++;
+                    continue;
+                }
+                size_t j = i;
+                while (j < b.size() && b[j] != 0xF7)
+                    j++;
+                if (j == b.size())
+                    break;                         // (a frame without its F7: left out)
+                const size_t n = j + 1 - i;
+                size_t k = 0;
+                for (; n - k > 3; k += 3)
+                    sx_pend_.push_back(4u | b[i + k] << 8 | b[i + k + 1] << 16 | (uint32_t)b[i + k + 2] << 24);
+                const size_t r = n - k;
+                sx_pend_.push_back((r == 1 ? 5u : r == 2 ? 6u : 7u) | b[i + k] << 8 | (r > 1 ? b[i + k + 1] << 16 : 0u) |
+                                   (r > 2 ? (uint32_t)b[i + k + 2] << 24 : 0u));
+                frames++;
+                i = j + 1;
+            }
+            sx_frames_ += frames;
+            sx_on_ = true;
+            std::snprintf(buf, sizeof buf, "sysex %s at %u ms: %u frames (%u bytes)", e.name.c_str(), (unsigned)ms,
+                          (unsigned)frames, (unsigned)b.size());
+            log_.push_back(buf);
+            if (!frames) {
+                log_.push_back("sysex: no frames read: FAILED");
+                expect_fail_++;
+            }
+            break;
+        }
         case OP_QUIT: quit_ = true; break;
         default: break;                            // shot, window, dump, rec: ignored here
         }
@@ -465,16 +518,48 @@ void ScriptRunner::drain()
     }
 }
 
+// sysex FILE: the core's replies drained (their frames counted), then the packets it takes now
+void ScriptRunner::sysex_ms(uint32_t ms)
+{
+    uint32_t p;
+    while (dev_.midi_out_take(&p)) {
+        const uint32_t cin = p & 15u;
+        if (cin == 4 && (p >> 8 & 255u) == 0xF0)
+            sx_in_frame_ = true;
+        else if (cin >= 5 && cin <= 7 && (sx_in_frame_ || (cin > 5 && (p >> 8 & 255u) == 0xF0))) {
+            sx_in_frame_ = false;
+            sx_replies_++;
+        }
+    }
+    while (sx_at_ < sx_pend_.size() && dev_.midi_in(sx_pend_[sx_at_])) {
+        sx_at_++;
+        sx_last_ms_ = ms;
+    }
+    // done: every packet taken, and every frame answered (or 3 s without a reply since the last one went in)
+    if (sx_at_ == sx_pend_.size() && (sx_replies_ >= sx_frames_ || ms - sx_last_ms_ > 3000u) &&
+        (quit_ || ms >= s_.end_ms)) {
+        char buf[160];
+        const bool ok = sx_frames_ && sx_replies_ >= sx_frames_;
+        std::snprintf(buf, sizeof buf, "sysex at %u ms: %u frames sent, %u replies: %s", (unsigned)ms,
+                      (unsigned)sx_frames_, (unsigned)sx_replies_, ok ? "ok" : "FAILED");
+        log_.push_back(buf);
+        (ok ? expect_ok_ : expect_fail_)++;
+        sx_on_ = false;
+    }
+}
+
 void ScriptRunner::on_ms(uint32_t ms, bool frame)
 {
     if (done_)
         return;
     apply(ms);
+    if (sx_on_)
+        sysex_ms(ms);
     if (frame)
         fine_frame();                              // (emu.c ui_frame: before emu_fw_frame)
     ms_run_++;
-    if (quit_ || ms >= s_.end_ms)                  // emu.c bench: ms 0..end, or the ms of quit is the last
-        done_ = true;
+    if ((quit_ || ms >= s_.end_ms) && !sx_on_)     // emu.c bench: ms 0..end, or the ms of quit is the last (a sysex
+        done_ = true;                              // upload's packets all taken first)
 }
 
 void ScriptRunner::step()

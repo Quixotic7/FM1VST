@@ -242,10 +242,10 @@ juce::String EditorPort::usbProductName(const juce::String &idIn)
     const juce::String id = idIn.toLowerCase();
     static const char *const kTable[][2] = {
         {"choralroot", "ChoralRoot FM-1"}, {"purplemonkey", "ChoralRoot FM-1"}, {"coralflower", "CoralFlower FM-1"},
-        {"melodee", "Melodee"},            {"jiant", "JIANT FM"},               {"duell", "DUELL"},
+        {"melodee", "Melodee FM-1"},       {"jiant", "JIANT FM"},               {"duell", "DUELL"},
         {"x0x", "X0X FM-1"},               {"fomni", "FoMni FM-1"},             {"fartmachine", "FoMni FM-1"},
         {"fart", "FoMni FM-1"},            {"fimba", "FiMba FM-1"},             {"fm106", "FM-106"},
-        {"fm-106", "FM-106"},
+        {"fm-106", "FM-106"},              {"pigeon", "PIGEON"},
         // the Felucca family and its forks keep Felucca's string
         {"felucca", "Felucca"},            {"felucca8", "Felucca"},             {"sloop", "Felucca"},
         {"sloopdx", "Felucca"},            {"floyd", "Felucca"},                {"sloopbanks", "Felucca"},
@@ -254,7 +254,14 @@ juce::String EditorPort::usbProductName(const juce::String &idIn)
         {"frodhes", "Felucca"},            {"dinghy", "Felucca"},               {"amb", "AMB-1 FM-1"},
         {"salt", "Felucca"},               {"jangada", "Felucca"},              {"waveloop", "Felucca"},
         {"gammawave", "Felucca"},          {"fm1quest", "Felucca"},             {"grimm", "Felucca"},
-        {"zp12", "Felucca"},
+        {"zp12", "Felucca"},               {"minitone", "Felucca"},             {"skiff", "Felucca"},
+        {"fmini", "FM-1 Midi"},            // (FMini-1's usb.c STR2: the MIDI / audio device's name)
+        // fm1-base apps: their fm1.toml usb_product
+        {"loom", "LOOM-8 FM-1"},
+        // Tonitor's usb.c STR2 (Felucca's, renamed)
+        {"tonitor", "FM-1 Tonitor"},
+        // Speak37's FM-1 build (usb.c SPEAK_BUILD: "Speak37"; "Speak37 Update" is its loader)
+        {"speak37", "Speak37"},
     };
     for (const auto &e : kTable)
         if (id == e[0])
@@ -276,6 +283,13 @@ juce::String EditorPort::managerUrl(const juce::String &idIn, const juce::String
         {"sloopdx", "https://dx7.designburgapps.com/webapp/editor/"},
         {"choralroot", "https://quixotic7.github.io/ChoralRootFM1/"},
         {"fm106", "https://patttf.github.io/fm-106/Librarian.html"},
+        {"loom", "https://charlesvestal.github.io/fm1-loom/samples/"},
+        {"fmini", "https://ruppert.github.io/fmini-1/editor/"},
+        {"skiff", "https://illuminus5.github.io/skiff/webapp/editor/"},
+        {"grimm", "https://grimmbient.github.io/grimm/editor.html"},
+        {"pigeon", "https://theshrimpblimp.com/pigeon/webapp/pigeon/"},   // (its sample loader: the bank, web/pigeon)
+        {"tonitor", "https://nzimas.github.io/tonitor/backup.html"},   // (no editor: the sessions' backup page)
+        {"speak37", "https://genkigenki.github.io/smk37/"},   // (no editor: its installer, the M-UPGRADE identity)
     };
     for (const auto &e : kTable)
         if (id == e[0])

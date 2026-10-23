@@ -1,4 +1,4 @@
-# Frodhes 0.9.2: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# Frodhes 0.9.4: tests/core_conformance.cpp's script for this core (see its header for the directives)
 # the flash round trip: KNOB 1 on the PERFORM page (TYPE) three detents on, kept in the settings record (2 s after
 # the change, when quiet; flash_sync does it at once); after the reboot the page shows the other TYPE
 save wait 2000
