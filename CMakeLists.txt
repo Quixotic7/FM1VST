@@ -499,6 +499,16 @@ add_dependencies(panel_render_test ${FM1_CORE_TARGETS})
 add_test(NAME panel_render_test COMMAND panel_render_test)
 set_tests_properties(panel_render_test PROPERTIES SKIP_RETURN_CODE 77)   # (a public build: the cores it needs left out)
 
+# FIZZ P1.6g: the panel shows FIZZ's live LABELS (SHIFT held: SELECT reads TRACK), other firmwares their static labels
+add_executable(panel_labels_test tests/panel_labels_test.cpp)
+target_link_libraries(panel_labels_test PRIVATE FM1VST fm1engine)
+target_include_directories(panel_labels_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
+target_compile_definitions(panel_labels_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS> FM1_BUILT_CORES="${FM1_BUILT_CORES}"
+    FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/panel_labels_test_home")
+add_dependencies(panel_labels_test ${FM1_CORE_TARGETS})
+add_test(NAME panel_labels_test COMMAND panel_labels_test)
+set_tests_properties(panel_labels_test PROPERTIES SKIP_RETURN_CODE 77)   # (a build without fizz)
+
 # copy the screen (plugin/ScreenCapture.h), headless: RGB565 -> RGB and the x2 / x4 nearest scaling pixel-exact (a known
 # frame, ChoralRoot's boot frame against what the panel draws), the raw bytes, a PNG round trip, a saved file, and the
 # clipboard writer on a private named pasteboard (never the general one): public.png and public.tiff read back

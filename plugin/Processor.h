@@ -190,6 +190,13 @@ struct PanelView {
         bool operator!=(const Knob &o) const { return !(*this == o); }
     };
     std::array<Knob, EMU_NE - 1> knobs{};
+    // FIZZ P1.6g: the core's live LABELS (its SysEx 20: what every control does now; docs/SYSEX.md in FMToneSeq), in
+    // its order: the 8 knobs (SELECT .. KNOB 4, MASTER), the 14 buttons (EMU_B_* order), W1..W16, B1..B11; ""
+    // none. labelsOn: a FIZZ core is answering (other firmwares: off, the panel's static labels)
+    static constexpr int kNLabels = 49;
+    std::array<std::array<char, 12>, kNLabels> labels{};
+    bool labelsOn = false;
+    uint32_t labelsSeq = 0;
 };
 
 namespace fm1video {
@@ -531,6 +538,8 @@ private:
     void pullEditorMidi();                           // (devLock_ held) the port's whole messages into inRing_
     void pumpImport();                               // (devLock_ held) FIZZ P1.5s: the next STORE into the core
     bool takeImportReply();                          // (devLock_ held) sysexOut_ is FIZZ's STORE reply: counted
+    bool takeLabels();                               // (devLock_ held) FIZZ P1.6g: sysexOut_ is a LABELS reply: kept
+    void subscribeLabels(double ms);                 // (devLock_ held) FIZZ P1.6g: LABELS asked for, every 2 s
     void decodePacket(uint32_t pkt, int samplePos);
     void renderSegment(float *L, float *R, int from, int to);
     void resetAudioState();
@@ -687,6 +696,10 @@ private:
     int viewMaster_ = -1;
     std::array<PanelView::Knob, EMU_NE - 1> viewKnobs_{};
     bool viewRunning_ = false, viewDirty_ = true;
+    std::array<std::array<char, 12>, PanelView::kNLabels> labels_{};   // FIZZ P1.6g: the last LABELS (audio thread)
+    bool labelsOn_ = false;
+    uint32_t labelsSeq_ = 0;
+    double labelsAgeMs_ = 1e9;                       // since the last subscription (a new core: at once)
 
     // audio-thread state
     uint32_t paramKeys_ = 0, midiKeys_ = 0, appliedKeys_ = 0xFFFFFFFFu, appliedButtons_ = 0xFFFFFFFFu;

@@ -106,6 +106,18 @@ public:
     juce::Rectangle<int> knobBoxPx(int role) const;   // a knob's body (EMU_E_* role; physical, in the component)
     float knobAngle(int role) const { return role >= 0 && role < EMU_NE ? knobAngle_[(size_t)role] : 0.f; }
     const juce::Image &lcdImage() const { return lcd240_; }   // the 240 x 240 LCD as last converted
+    // FIZZ P1.6g (tests): what a button's cap, a knob's caption (EMU_E_* role), a key's text read now ("(note)": the
+    // note name, no live labels)
+    juce::String buttonCap(int i) const { return i >= 0 && i < names_.size() ? names_[i] : juce::String(); }
+    juce::String knobCaption(int role) const
+    {
+        return role >= 0 && role < EMU_NE - 1 ? juce::String(view_.knobs[(size_t)role].fn) : juce::String();
+    }
+    juce::String keyText(int k) const
+    {
+        return k < 0 || k >= EMU_NKEY ? juce::String()
+                                       : keyLabelsOn_ ? juce::String(keyLabels_[(size_t)k]) : juce::String("(note)");
+    }
 
     // ---- juce::Component ----
     void paint(juce::Graphics &g) override;
@@ -170,7 +182,12 @@ private:
     const bool mirror_ = false;
     Theme theme_;
     Palette pal_;
-    juce::StringArray names_;
+    juce::StringArray names_;                  // the buttons' caps as drawn: the core's, or FIZZ's live labels
+    juce::StringArray coreNames_;              // the core's own (setButtonNames)
+    std::array<std::string, EMU_NKEY> keyLabels_;   // FIZZ P1.6g: the keys' live labels (keyLabelsOn_: else note names)
+    bool keyLabelsOn_ = false;
+    uint32_t labelsSeen_ = 0xFFFFFFFFu;
+    void applyLabels();                        // FIZZ P1.6g: view_'s LABELS onto the caps, the knobs, the keys
     bool bigLcd_ = false;
 
     // layout and images

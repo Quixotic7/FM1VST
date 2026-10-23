@@ -248,7 +248,7 @@ void drawLatchMark(Canvas &c, R r, float rad, float dotX, float dotY, juce::Colo
     c.circle(dotX, dotY, 2.6f, col);
 }
 
-void drawKey(Canvas &c, const Palette &p, int k, bool held, int lv, bool latched)
+void drawKey(Canvas &c, const Palette &p, int k, bool held, int lv, bool latched, const char *label)
 {
     const R r = geo().key[k];
     const float cx = r.x + KEY_W / 2;
@@ -261,7 +261,10 @@ void drawKey(Canvas &c, const Palette &p, int k, bool held, int lv, bool latched
     c.rrect(R{cx - 4, r.y + 14, 8, 30}, 4, p.ledOff);
     if (lv)
         c.rrect(R{cx - 4, r.y + 14, 8, 30}, 4, p.white, ledAlpha(lv));
-    c.text(cx, r.y + 50, 6.5f, noteName(k).c_str(), p.noteText);
+    if (label)                                    // (FIZZ P1.6g: its live label, fitted; empty: none)
+        c.text(cx, r.y + 50, fitSize(label, 6.5f, KEY_W - 4), label, p.noteText);
+    else
+        c.text(cx, r.y + 50, 6.5f, noteName(k).c_str(), p.noteText);
     const juce::String h = PanelComponent::keymapHintText(PanelComponent::KM_KEY, k);
     if (h.isNotEmpty())
         c.text(cx, r.y + 61, 6.5f, h.toRawUTF8(), p.hint, .9f);
@@ -392,6 +395,7 @@ PanelComponent::PanelComponent(FM1Processor &p, bool mirror) : proc_(p), mirror_
 {
     for (int i = 0; i < EMU_NB; i++)
         names_.add(FM1Processor::kPanelLabels[i]);
+    coreNames_ = names_;
     pal_ = derive(theme_);
     powerOnsSeen_ = p.panelPowerOns();
     lcd240_ = softwareImage(EMU_LCD_W, EMU_LCD_H);
@@ -421,11 +425,40 @@ void PanelComponent::setTheme(const Theme &t)
 
 void PanelComponent::setButtonNames(const juce::StringArray &n)
 {
-    if (n.size() != EMU_NB || n == names_)
+    if (n.size() != EMU_NB || n == coreNames_)
         return;
-    names_ = n;
+    coreNames_ = n;
+    labelsSeen_ = 0xFFFFFFFFu;                   // (the caps again: the core's under any live labels)
+    applyLabels();
     fullRedraw_ = true;
     repaint();
+}
+
+// FIZZ P1.6g: the live LABELS (PanelView::labels, FIZZ's SysEx 20): a button's cap its label (an empty one: the core's
+// name), a knob's caption its label, a key's text its label (empty: none; no live labels: the note name). The key
+// hints stay as they are. Other firmwares send none: the static labels
+void PanelComponent::applyLabels()
+{
+    static const uint8_t BLACK[11] = {1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25};   // (B1..B11; the rest W1..W16)
+    juce::StringArray n;
+    for (int i = 0; i < EMU_NB; i++) {
+        const char *l = view_.labelsOn ? view_.labels[(size_t)(8 + i)].data() : "";
+        n.add(l[0] ? juce::String(l) : coreNames_[i]);
+    }
+    if (n != names_) {
+        names_ = n;
+        fullRedraw_ = true;
+        repaint();
+    }
+    keyLabelsOn_ = view_.labelsOn;
+    {
+        int w = 0, b = 0;
+        for (int k = 0; k < EMU_NKEY; k++) {
+            const bool blk = b < 11 && BLACK[b] == k;
+            const int li = blk ? 38 + b++ : 22 + w++;
+            keyLabels_[(size_t)k] = view_.labelsOn && li < PanelView::kNLabels ? view_.labels[(size_t)li].data() : "";
+        }
+    }
 }
 
 void PanelComponent::setBigLcd(bool on)
@@ -568,6 +601,7 @@ bool PanelComponent::updateControls(bool force)
         d.a = keySrc_[(size_t)k] || ((view_.keys >> k) & 1u);
         d.b = view_.keyLed[(size_t)k];
         d.c = (keySrc_[(size_t)k] & SRC_LATCH) != 0;
+        d.d = keyLabelsOn_ ? fnHash(keyLabels_[(size_t)k].c_str()) : -2;
         if (force || d != keyDrawn_[(size_t)k])
             todo.push_back({0, k, d});
     }
@@ -609,7 +643,8 @@ bool PanelComponent::updateControls(bool force)
         Canvas c(panel_, lay_.k);
         for (const Todo &t : todo) {
             if (t.kind == 0) {
-                drawKey(c, pal_, t.i, t.d.a != 0, t.d.b, t.d.c != 0);
+                drawKey(c, pal_, t.i, t.d.a != 0, t.d.b, t.d.c != 0,
+                        keyLabelsOn_ ? keyLabels_[(size_t)t.i].c_str() : nullptr);
                 keyDrawn_[(size_t)t.i] = t.d;
             } else if (t.kind == 1) {
                 drawButton(c, pal_, t.i, names_[t.i], t.d.a != 0, t.d.b, t.d.c, t.d.d != 0);
@@ -658,6 +693,15 @@ void PanelComponent::rebuildLcdImages()
 void PanelComponent::refresh()
 {
     proc_.getPanelView(view_);
+    if (view_.labelsSeq != labelsSeen_) {        // FIZZ P1.6g: the live labels moved
+        labelsSeen_ = view_.labelsSeq;
+        applyLabels();
+    }
+    if (view_.labelsOn)                          // (the knobs' captions: what each does now)
+        for (int r = 0; r < EMU_NE - 1; r++)
+            if (!view_.knobs[(size_t)r].bound)
+                std::snprintf(view_.knobs[(size_t)r].fn, sizeof view_.knobs[(size_t)r].fn, "%s",
+                              view_.labels[(size_t)r].data());
     if (const uint32_t n = proc_.panelPowerOns(); n != powerOnsSeen_) {   // (a power-on let go of the device's side)
         powerOnsSeen_ = n;
         releaseLatches();

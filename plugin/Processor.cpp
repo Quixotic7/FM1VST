@@ -876,6 +876,10 @@ void FM1Processor::resetAudioState()            // (devLock_ held, processing st
     for (auto &e : panelEnc_)
         e.store(0);
     viewDirty_ = true;                           // (a new device: a fresh snapshot, the LCD included)
+    labelsOn_ = false;                           // (FIZZ P1.6g: the labels asked for again, from nothing)
+    labels_ = {};
+    labelsSeq_++;
+    labelsAgeMs_ = 1e9;
     for (auto &ch : noteKey_)
         ch.fill(-1);
     keyCount_.fill(0);
@@ -1738,6 +1742,9 @@ bool FM1Processor::getPanelView(PanelView &out) const
     out.buttons = view_.buttons;
     out.master = view_.master;
     out.knobs = view_.knobs;
+    out.labels = view_.labels;
+    out.labelsOn = view_.labelsOn;
+    out.labelsSeq = view_.labelsSeq;
     return true;
 }
 
@@ -1933,7 +1940,7 @@ void FM1Processor::snapshotPanel()
     }
     const bool knobsMoved = kv != viewKnobs_;
     if (!viewDirty_ && !lcdMoved && !ledsMoved && !knobsMoved && running == viewRunning_ && keys == viewKeys_ &&
-        buttons == viewButtons_ && (!h || h->master == viewMaster_))
+        buttons == viewButtons_ && (!h || h->master == viewMaster_) && labelsSeq_ == view_.labelsSeq)
         return;
     const juce::SpinLock::ScopedTryLockType l(viewLock_);
     if (!l.isLocked())
@@ -1955,6 +1962,9 @@ void FM1Processor::snapshotPanel()
         viewMaster_ = h->master;
     }
     view_.knobs = viewKnobs_ = kv;
+    view_.labels = labels_;                      // (FIZZ P1.6g)
+    view_.labelsOn = labelsOn_;
+    view_.labelsSeq = labelsSeq_;
     view_.running = viewRunning_ = running;
     view_.keys = viewKeys_ = keys;
     view_.buttons = viewButtons_ = buttons;
@@ -2321,6 +2331,7 @@ void FM1Processor::editorIdleTick(uint32_t ms)
     applyHostParameters();                       // waits for a press on the unit, X0X's restore, gets it while idle)
     pullEditorMidi();
     pumpImport();
+    subscribeLabels(ms);                         // (FIZZ P1.6g)
     for (uint32_t i = 0; i < ms; i++) {
         dev_->run_ms();
         flushMidiIn();
@@ -2552,6 +2563,10 @@ void FM1Processor::decodePacket(uint32_t p, int pos)
             sysexOut_.clear();
             return;
         }
+        if (!sysexOutOverflow_ && takeLabels() && !editorPort_->isOpen()) {   // (FIZZ P1.6g: the panel's labels: ours,
+            sysexOut_.clear();                                                // not the host's; an open port's too)
+            return;
+        }
         if (!sysexOutOverflow_ && sysexOut_.size() >= 2 && sysexOut_.front() == 0xF0 && sysexOut_.back() == 0xF7) {
             if (editorPort_->isOpen())           // (Show to editors: every SysEx of the core to the port, none to the host)
                 editorPort_->sysexFromCore(sysexOut_.data(), (int)sysexOut_.size());
@@ -2612,6 +2627,47 @@ void FM1Processor::pullEditorMidi()
         return;
     while (editorPort_->takeMessage(kInRing - (inW_ - inR_), [this](uint32_t p) { inRing_[inW_++ % kInRing] = p; })) {
     }
+    flushMidiIn();
+}
+
+// ------------------------------------------- FIZZ P1.6g: the panel's live labels ---
+// FIZZ answers LABELS (F0 7D 46 5A 01 20 <flags> <chk> F7; flags bit 0 subscribe) with
+// F0 7D 46 5A 01 60 <count hi> <count lo> <n = 49> { <len> <bytes> } x n <chk> F7, and while subscribed sends it again
+// whenever the set changes. The panel draws them on the knobs, buttons and keys (PanelView::labels). The subscription
+// is asked for again every 2 s (an editor page may have ended it; the answer is the set as it is)
+bool FM1Processor::takeLabels()
+{
+    const auto &b = sysexOut_;
+    if (coreId_ != "fizz" || b.size() < 12 || b[1] != 0x7D || b[2] != 0x46 || b[3] != 0x5A || b[4] != 0x01 || b[5] != 0x60)
+        return false;
+    const int n = b[8];
+    std::array<std::array<char, 12>, PanelView::kNLabels> l{};
+    size_t o = 9;
+    for (int i = 0; i < n && o < b.size() - 2; i++) {
+        const int len = b[o++];
+        if (i < PanelView::kNLabels)
+            for (int k = 0; k < len && k < 11 && o + (size_t)k < b.size() - 2; k++)
+                l[(size_t)i][(size_t)k] = (char)b[o + (size_t)k];
+        o += (size_t)len;
+    }
+    if (!labelsOn_ || l != labels_) {
+        labels_ = l;
+        labelsOn_ = true;
+        labelsSeq_++;
+    }
+    return true;
+}
+
+void FM1Processor::subscribeLabels(double ms)
+{
+    static const uint8_t SUB[9] = {0xF0, 0x7D, 0x46, 0x5A, 0x01, 0x20, 0x01, 0x5F, 0xF7};   // (chk: 0x80 - 0x21)
+    if (coreId_ != "fizz" || isEmulated())
+        return;
+    labelsAgeMs_ += ms;
+    if (labelsAgeMs_ < 2000.0 || kInRing - (inW_ - inR_) < 8)
+        return;
+    labelsAgeMs_ = 0;
+    toUsbPackets(SUB, 9, [this](uint32_t p) { inRing_[inW_++ % kInRing] = p; });
     flushMidiIn();
 }
 
@@ -2756,6 +2812,7 @@ void FM1Processor::renderBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuffe
     applyHostParameters();
     pullEditorMidi();
     pumpImport();                                // (FIZZ P1.5s: a dropped .dnsnd's STORE, one at a time)
+    subscribeLabels(sampleRate_ > 0 ? 1000.0 * n / sampleRate_ : 0);   // (FIZZ P1.6g: the panel's live labels)
 
     float *L = buffer.getWritePointer(0);
     float *R = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : nullptr;
