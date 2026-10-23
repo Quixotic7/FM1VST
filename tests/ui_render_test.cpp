@@ -41,6 +41,7 @@
 #include "Processor.h"
 #include "Sheet.h"
 #include "Theme.h"
+#include "VideoCapture.h"
 
 static int fails = 0;
 static void check(bool c, const std::string &what)
@@ -509,6 +510,101 @@ int main()
             list += " " + t.name.toStdString() + " " + toHex(l.accent()).toStdString() + " (" + juce::String(r, 1).toStdString() + ")";
         }
         check(ok, "every preset's accent reads on the sheet:" + list);
+    }
+
+    // ---- (r) video recording: the Standalone has it; a plugin (VST3, AU) has none of it
+    for (auto type : {juce::AudioProcessor::wrapperType_VST3, juce::AudioProcessor::wrapperType_AudioUnit}) {
+        juce::AudioProcessor::setTypeOfNextNewPlugin(type);
+        FM1Processor q;
+        juce::AudioProcessor::setTypeOfNextNewPlugin(juce::AudioProcessor::wrapperType_Undefined);
+        FM1Editor ed(q);
+        ed.openSettings(false);
+        ed.sheet().scrollToVideo();
+        const bool consumed = ed.keyPressed(juce::KeyPress('R', juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier, 0));
+        bool child = false;
+        for (juce::Component *c : ed.getChildren())
+            child = child || c == &ed.recordButton();
+        const std::string fmt = type == juce::AudioProcessor::wrapperType_VST3 ? "VST3" : "AU";
+        check(q.videoSession() == nullptr && !ed.videoAvailable() && !child && !consumed,
+              fmt + ": no video recording (no session, no record button, Cmd+Shift+R passed on to the host)");
+        if (type == juce::AudioProcessor::wrapperType_VST3)
+            shot(ed, "plugin-sheet-no-video");
+    }
+    {
+        const juce::File movies = scratch.getChildFile("Movies");
+        juce::AudioProcessor::setTypeOfNextNewPlugin(juce::AudioProcessor::wrapperType_Standalone);
+        FM1Processor q;
+        juce::AudioProcessor::setTypeOfNextNewPlugin(juce::AudioProcessor::wrapperType_Undefined);
+        Host hq(q, 48000.0, 480);
+        hq.run_ms(1200);
+        fm1video::Session *vs = q.videoSession();
+        check(vs != nullptr, "the Standalone: a video session");
+        if (vs) {
+            vs->setFolder(movies);
+            fm1video::Settings st = vs->settings();
+            st.view = fm1video::kViewLcd;
+            st.size = 720;
+            st.mic = true;                       // (the sheet's mic rows; no audio device here: the take has no mic)
+            st.monitor = false;
+            vs->setSettings(st);
+            FM1Editor ed(q);
+            check(ed.videoAvailable() && ed.recordButton().isVisible(), "  ... the record button");
+            ed.showChromeNow();
+            ed.panel().refresh();
+            shot(ed, "video-button");
+            // the button never covers a control, idle or recording (the pill as wide as 59:59), at every width
+            bool clear = true, inside = true;
+            std::string worst;
+            for (int big = 0; big < 2; big++) {
+                ed.setBigLcd(big != 0);
+                for (int w = FM1Editor::kMinW; w <= FM1Editor::kMaxW; w += (w < 1600 ? 7 : 61)) {
+                    const int hgt = big ? juce::jlimit(300, 4000, (int)(w * 0.9)) : juce::roundToInt((float)w / PanelComponent::frameAspect(false));
+                    ed.setSize(w, hgt);
+                    ed.panel().refresh();
+                    const juce::Rectangle<float> c = ed.recordCircle();
+                    // (the recording pill: from the circle rightwards, as wide as "59:59" at this size)
+                    const float d = c.getWidth();
+                    const float pw = d * 0.36f + d * 0.4f + 7.0f + Look::textWidth(Look::font(juce::jlimit(11.0f, 13.0f, d * 0.47f), Look::Bold), "88:88") + d * 0.42f;
+                    const juce::Rectangle<float> pill(c.getX(), c.getY(), pw, d);
+                    if (ed.panel().overlapsControl(c) || ed.panel().overlapsControl(pill) || pill.intersects(ed.cornerCircle()))
+                        clear = false, worst = std::to_string(w) + " x " + std::to_string(hgt) + (big ? " (big LCD)" : "");
+                    if (!ed.getLocalBounds().toFloat().contains(pill))
+                        inside = false, worst = std::to_string(w) + " x " + std::to_string(hgt) + " (outside)";
+                }
+            }
+            ed.setBigLcd(false);
+            ed.setSize(1402, 861);
+            render(ed, 1.0f);
+            check(clear && inside, "the record button and its recording pill cover no control, name, hint, the screen or the corner "
+                                   "button, inside the window, at every width 640 .. 5000" +
+                                       (worst.empty() ? std::string() : ": fails at " + worst));
+            // a take: Cmd+Shift+R starts it, the pill pulses with the time, the sheet's Video section
+            const bool started = ed.keyPressed(juce::KeyPress('R', juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier, 0));
+            check(started && vs->recording() && ed.recordButton().state() == RecordButton::kRecording,
+                  "Cmd+Shift+R starts a take: " + vs->currentFile().getFileName().toStdString());
+            hq.run_ms(3200);
+            ed.layoutChrome();
+            ed.toast().setVisible(false);
+            check(ed.recordButton().text() == "0:03", "  ... the pill shows the time (" + ed.recordButton().text().toStdString() + ")");
+            shot(ed, "video-recording");
+            ed.openSettings(false);
+            ed.sheet().scrollToVideo();
+            shot(ed, "sheet-video-recording");
+            ed.sheet().close(false);
+            ed.toggleRecording();
+            const juce::File take = vs->lastFile();
+            check(!vs->recording() && vs->lastResult().ok && take.existsAsFile() && take.getParentDirectory() == movies &&
+                      ed.recordButton().state() == RecordButton::kSaved && ed.toast().text().startsWith("Saved "),
+                  "Stop: " + take.getFileName().toStdString() + ", the toast \"" + ed.toast().text().toStdString() +
+                      "\", the button says Show in Finder");
+            ed.layoutChrome();
+            shot(ed, "video-saved");
+            ed.toast().setVisible(false);
+            ed.openSettings(false);
+            ed.sheet().scrollToVideo();
+            shot(ed, "sheet-video");
+            ed.sheet().close(false);
+        }
     }
 
     std::printf("ui_render_test: %s (%d failure%s)\n", fails ? "FAILED" : "passed", fails, fails == 1 ? "" : "s");

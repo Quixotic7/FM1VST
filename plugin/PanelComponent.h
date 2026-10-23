@@ -51,7 +51,9 @@
 
 class PanelComponent : public juce::Component, private juce::Timer {
 public:
-    explicit PanelComponent(FM1Processor &p);
+    // mirror: a copy for the video recorder (VideoCapture.h): no timer, no input, never on the desktop; its owner calls
+    // refresh() and paints it on its own thread, and destroying it lets go of nothing
+    explicit PanelComponent(FM1Processor &p, bool mirror = false);
     ~PanelComponent() override;
 
     void setTheme(const Theme &t);
@@ -165,6 +167,7 @@ private:
     bool hit(float ux, float uy, int &kind, int &idx) const;
 
     FM1Processor &proc_;
+    const bool mirror_ = false;
     Theme theme_;
     Palette pal_;
     juce::StringArray names_;

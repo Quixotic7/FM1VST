@@ -177,17 +177,26 @@ juce_add_plugin(FM1VST
     EDITOR_WANTS_KEYBOARD_FOCUS TRUE
     VST3_CATEGORIES Instrument Synth
     AU_MAIN_TYPE kAudioUnitType_MusicDevice
+    # (the Standalone's video recorder records a mic / line input when asked: VideoCapture.h. Every bundle's Info.plist
+    # gets the text; only the app uses it, and macOS asks for the permission when the mic is first turned on)
+    MICROPHONE_PERMISSION_ENABLED TRUE
+    MICROPHONE_PERMISSION_TEXT "FM1VST records your microphone or line input into a video only when you turn the mic on in its Video settings."
     COPY_PLUGIN_AFTER_BUILD FALSE
     VST3_COPY_DIR "${FM1_VST3_DIR}"
     AU_COPY_DIR "${FM1_AU_DIR}")
 target_sources(FM1VST PRIVATE plugin/Processor.cpp plugin/Tier2Parameter.cpp plugin/HostRefresh.cpp plugin/Editor.cpp plugin/Theme.cpp
                               plugin/PanelComponent.cpp plugin/RemoteLink.cpp plugin/Look.cpp plugin/Widgets.cpp plugin/Sheet.cpp
                               plugin/StandaloneHooks.cpp plugin/Hub.cpp plugin/EmuClock.cpp plugin/EditorPort.cpp
-                              plugin/ScreenCapture.cpp)
+                              plugin/ScreenCapture.cpp plugin/VideoCapture.cpp)
 # copy the screen (plugin/ScreenCapture.h): the image clipboard is NSPasteboard's (JUCE's is text only)
 if(APPLE)
     target_sources(FM1VST PRIVATE plugin/Clipboard.mm)
     target_link_libraries(FM1VST PRIVATE "-framework AppKit" "-framework CoreGraphics" "-framework ImageIO")
+    # video recording (plugin/VideoRecorder.h): AVAssetWriter, H.264 through VideoToolbox, AAC; in the shared code (the
+    # plug-ins link it too, and leave the feature out at run time: VideoCapture.h)
+    target_sources(FM1VST PRIVATE plugin/VideoRecorder.mm)
+    set_source_files_properties(plugin/VideoRecorder.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+    target_link_libraries(FM1VST PRIVATE "-framework AVFoundation" "-framework CoreMedia" "-framework CoreVideo")
 endif()
 # the theme presets (themes/presets.json), embedded: BinaryData::presets_json; the Hub's fallback list
 # (plugin/hub/fallback-catalog.json, the un-gated firmwares only: plugin/Hub.h), BinaryData::fallbackcatalog_json
@@ -470,6 +479,19 @@ target_compile_definitions(screen_copy_test PRIVATE $<TARGET_PROPERTY:FM1VST,COM
 add_dependencies(screen_copy_test ${FM1_CORE_TARGETS})
 add_test(NAME screen_copy_test COMMAND screen_copy_test)
 set_tests_properties(screen_copy_test PROPERTIES SKIP_RETURN_CODE 77)   # (a build without choralroot)
+
+# video recording (plugin/VideoCapture.h), headless (no window, no audio device, never the real microphone): a simulated
+# device in real time, a synthetic tone as the mic; takes of every view read back with AVAssetReader (duration, tracks,
+# frames, the first frame, the audio levels, Separate / Mix), the A/V sync over 30 s, the error paths, the session and a
+# power cycle ending a take, a recording process killed mid-take (its file still readable)
+add_executable(video_rec_test tests/video_rec_test.cpp)
+target_link_libraries(video_rec_test PRIVATE FM1VST fm1engine)
+target_include_directories(video_rec_test PRIVATE $<TARGET_PROPERTY:FM1VST,INCLUDE_DIRECTORIES>)
+target_compile_definitions(video_rec_test PRIVATE $<TARGET_PROPERTY:FM1VST,COMPILE_DEFINITIONS> FM1_BUILT_CORES="${FM1_BUILT_CORES}"
+    FM1_SCRATCH_DIR="${CMAKE_BINARY_DIR}/video_rec_test_home")
+add_dependencies(video_rec_test ${FM1_CORE_TARGETS})
+add_test(NAME video_rec_test COMMAND video_rec_test)
+set_tests_properties(video_rec_test PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 400 RESOURCE_LOCK fm1_video)
 
 # the editor around the panel, headless: the device and screen views, the corner button (clear of every control at
 # every size), the settings sheet and its pages, right-click, the view state, written to build/panel/ui-*.png

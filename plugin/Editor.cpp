@@ -4,6 +4,7 @@
 
 #include "ScreenCapture.h"
 #include "StandaloneHooks.h"
+#include "VideoCapture.h"
 
 #include <cmath>
 
@@ -39,6 +40,12 @@ Rectangle<float> ScreenView::lcdArea() const { return lcdAreaFor(lastScale_); }
 
 void ScreenView::paint(juce::Graphics &g)
 {
+    paintBody(g);
+    paintLcd(g);
+}
+
+void ScreenView::paintBody(juce::Graphics &g)
+{
     float s = g.getInternalContext().getPhysicalPixelScaleFactor();
     if (!(s > 0))
         s = 1;
@@ -57,7 +64,13 @@ void ScreenView::paint(juce::Graphics &g)
     g.fillPath(bezel);
     g.setColour(p.outline);
     g.strokePath(bezel, juce::PathStrokeType(1.0f));
+}
 
+void ScreenView::paintLcd(juce::Graphics &g)
+{
+    float s = g.getInternalContext().getPhysicalPixelScaleFactor();
+    if (!(s > 0))
+        s = 1;
     // the LCD in physical pixels
     const Rectangle<float> l = lcdAreaFor(s);
     const juce::Graphics::ScopedSaveState save(g);
@@ -161,12 +174,31 @@ void FM1Editor::Constrainer::checkBounds(Rectangle<int> &b, const Rectangle<int>
 }
 
 FM1Editor::FM1Editor(FM1Processor &p)
-    : juce::AudioProcessorEditor(p), proc_(p), store_(FM1Processor::home()), panel_(p), screen_(panel_), corner_(look_), sheet_(*this)
+    : juce::AudioProcessorEditor(p), proc_(p), store_(FM1Processor::home()), panel_(p), screen_(panel_), corner_(look_), video_(p.videoSession()), sheet_(*this)
 {
     setLookAndFeel(&look_);
     addAndMakeVisible(panel_);
     addChildComponent(screen_);
     addAndMakeVisible(corner_);
+    if (video_) {                                // (the Standalone: the recorder, behind the sheet)
+        addAndMakeVisible(rec_);
+        rec_.seconds = [this] { return video_ ? video_->seconds() : 0.0; };
+        rec_.onClick = [this] {
+            if (rec_.state() == RecordButton::kSaved && !video_->recording()) {
+                video_->lastFile().revealToUser();
+                savedUntil_ = 0;
+                rec_.setState(RecordButton::kIdle);
+                layoutChrome();
+            } else {
+                toggleRecording();
+            }
+        };
+        rec_.setTooltip(juce::String::fromUTF8("Record a video of the firmware playing (\xe2\x87\xa7\xe2\x8c\x98" "R)"));
+        video_->onChange = [this] { videoChanged(); };
+        videoSerial_ = video_->serial();
+        if (video_->recording())
+            rec_.setState(RecordButton::kRecording);
+    }
     addChildComponent(sheet_);
 
     panel_.setButtonNames(proc_.buttonNames());
@@ -178,7 +210,6 @@ FM1Editor::FM1Editor(FM1Processor &p)
     panel_.onContextMenu = [this] { openSettings(); };
     panel_.onLcdChanged = [this] {
         if (screen_.isVisible()) {
-            screen_.serial_++;
             screen_.lcdChanged();
         }
     };
@@ -222,6 +253,8 @@ FM1Editor::FM1Editor(FM1Processor &p)
 
 FM1Editor::~FM1Editor()
 {
+    if (video_)
+        video_->onChange = nullptr;
     stopTimer();
     chrome_.stopTimer();
     removeMouseListener(&watcher_);
@@ -366,6 +399,58 @@ void FM1Editor::layoutChrome()
 {
     const Rectangle<float> c = cornerCircle();
     corner_.setBounds(c.expanded((float)CornerButton::kPad).getSmallestIntegerContainer());
+    if (video_) {                                // (the record button: from its circle rightwards)
+        const Rectangle<float> rc = recordCircle();
+        rec_.setDiameter(rc.getWidth());
+        const Rectangle<float> r(rc.getX(), rc.getY(), (float)rec_.preferredWidth(), rc.getHeight());
+        rec_.setBounds(r.expanded((float)RecordButton::kPad).getSmallestIntegerContainer());
+    }
+}
+
+// the record button: the corner button's mirror image (the body's empty top-left corner, units 44, 44: clear of MASTER
+// and its name; ui_render_test checks it, the recording pill too), the window's corner over the big LCD, the bezel's
+// top-left corner in the screen view
+Rectangle<float> FM1Editor::recordCircle() const
+{
+    const Rectangle<float> c = cornerCircle();
+    const float d = c.getWidth();
+    if (mode_ == FM1Processor::kViewScreen || panel_.bigLcd())
+        return c.withX((float)getWidth() - c.getRight());
+    // (above MASTER's name, which starts at y 59: at most 26 units tall, so a small window gets a smaller button)
+    const float dr = juce::jmin(d, 26.0f * panel_.pointsPerUnit());
+    return Rectangle<float>(dr, dr).withCentre(panel_.unitToLocal(44.0f, 44.0f) + panel_.getPosition().toFloat());
+}
+
+void FM1Editor::toggleRecording()
+{
+    if (!video_)
+        return;
+    if (video_->recording()) {
+        video_->stop();
+        return;
+    }
+    if (!video_->start())
+        showToast(video_->lastError());
+}
+
+void FM1Editor::videoChanged()
+{
+    if (!video_ || video_->serial() == videoSerial_)
+        return;
+    videoSerial_ = video_->serial();
+    if (video_->recording()) {
+        rec_.setState(RecordButton::kRecording);
+        showToast("Recording " + video_->currentFile().getFileName());
+    } else {
+        const fm1video::Recorder::Result &r = video_->lastResult();
+        const bool kept = r.file.existsAsFile();
+        rec_.setState(kept ? RecordButton::kSaved : RecordButton::kIdle);
+        savedUntil_ = kept ? juce::Time::getMillisecondCounterHiRes() + 8000.0 : 0.0;
+        showToast(r.error.isNotEmpty() ? r.error : "Saved " + r.file.getFileName() + " (" + fm1video::formatTime(r.seconds) + ")");
+    }
+    layoutChrome();
+    if (sheet_.isOpen())
+        sheet_.refresh();
 }
 
 void FM1Editor::activity()
@@ -382,11 +467,12 @@ void FM1Editor::chromeTick()
     const double now = juce::Time::getMillisecondCounterHiRes();
     const float dt = (float)juce::jlimit(0.0, 100.0, now - lastTick_);
     lastTick_ = now;
-    const bool want = !sheet_.isOpen() && (now - lastMove_ < 1500.0 || corner_.hovered() || corner_.isMouseButtonDown());
+    const bool want = !sheet_.isOpen() && (now - lastMove_ < 1500.0 || corner_.hovered() || corner_.isMouseButtonDown() || rec_.isMouseOver());
     const bool alarm = halted_;
     float f = corner_.fade();
     f = want || alarm ? juce::jmin(1.0f, f + dt / 150.0f) : juce::jmax(0.0f, f - dt / 350.0f);
     corner_.setFade(f);
+    rec_.setFade(f);
     if (f <= 0.0f && !want)
         chrome_.stopTimer();
     else if (f >= 1.0f && (want || alarm) && chrome_.getTimerInterval() < 50)
@@ -429,6 +515,12 @@ void FM1Editor::refreshChrome()
 void FM1Editor::timerCallback()
 {
     refreshChrome();
+    if (savedUntil_ > 0 && juce::Time::getMillisecondCounterHiRes() > savedUntil_) {   // (the take's "Show in Finder" ends)
+        savedUntil_ = 0;
+        if (rec_.state() == RecordButton::kSaved)
+            rec_.setState(RecordButton::kIdle);
+        layoutChrome();
+    }
     if (juce::String(proc_.getCoreInfo().info.id) != lastCore_)   // (a core switch: its button labels)
         coreChanged();
     if (proc_.themeSerial() != themeSerial_) {   // (a state restore set another theme)
@@ -537,13 +629,18 @@ bool FM1Editor::copyScreenRaw()
 
 juce::String FM1Editor::screenFileName(const juce::String &ext) const
 {
+    return fileNameFor(proc_, ext);
+}
+
+juce::String FM1Editor::fileNameFor(const FM1Processor &p, const juce::String &ext)
+{
     juce::String id, version;
-    if (proc_.isEmulated()) {
-        const FM1Processor::EmuFirmware fw = proc_.getEmuFirmware();
+    if (p.isEmulated()) {
+        const FM1Processor::EmuFirmware fw = p.getEmuFirmware();
         id = fw.id;
         version = fw.version;
     } else {
-        const FM1Processor::CoreStatus st = proc_.getCoreInfo();
+        const FM1Processor::CoreStatus st = p.getCoreInfo();
         id = juce::String(st.info.id);
         version = juce::String(st.info.version);
     }
@@ -626,6 +723,10 @@ bool FM1Editor::keyPressed(const juce::KeyPress &k)
     const int c = k.getKeyCode();
     if (m.isCommandDown() && m.isShiftDown() && !m.isAltDown() && (c == 'C' || c == 'c')) {   // Cmd+Shift+C
         copyScreen(copyScale_);
+        return true;
+    }
+    if (m.isCommandDown() && m.isShiftDown() && !m.isAltDown() && (c == 'R' || c == 'r') && video_) {   // Cmd+Shift+R
+        toggleRecording();
         return true;
     }
     return false;

@@ -11,6 +11,8 @@
 #   - each bundle (VST3, AU, Standalone): its Info.plist version, Contents/Resources/cores holding exactly those cores
 #     and no gated one, every Mach-O in it arm64 only, linking no /opt/homebrew or /usr/local path, built for the
 #     deployment target or older, and the signature valid (codesign --verify --deep --strict)
+#   - the Standalone's microphone: NSMicrophoneUsageDescription in its Info.plist, tools/release/FM1VST-app.entitlements
+#     allowing the audio input (the video recorder), and a hardened-runtime signature carrying it
 #   - libusb: the static library the build linked is built for the deployment target or older, and no binary
 #     references kIOMainPortDefault below macOS 12 (a newer libusb's; it fails to load on macOS 11). A warning only
 #     unless FM1_RELEASE_STRICT=1 (CI): a local build may link Homebrew's newer bottle
@@ -113,6 +115,24 @@ check_bundle() {
     ok "$n: version $plist_v, the $ncores cores, $nmacho Mach-O files checked (arm64, no Homebrew links, macOS <= $target), signature valid"
 }
 for b in "$vst3" "$au" "$app"; do check_bundle "$b"; done
+
+# ---- the Standalone's microphone (the video recorder's mic / line input: plugin/VideoCapture.h): its Info.plist says
+# why (macOS ends an app that asks without it), the entitlements release.yml signs it with allow the input, and a
+# hardened-runtime signature carries them (an ad-hoc build has no hardened runtime: nothing to check there)
+ents="$here/release/FM1VST-app.entitlements"
+micText="$(plutil -extract NSMicrophoneUsageDescription raw -o - "$app/Contents/Info.plist" 2>/dev/null || true)"
+[ -n "$micText" ] || bad "FM1VST.app: no NSMicrophoneUsageDescription in its Info.plist"
+for k in com.apple.security.device.audio-input com.apple.security.cs.allow-jit com.apple.security.cs.disable-library-validation; do
+    [ "$(/usr/libexec/PlistBuddy -c "Print :$k" "$ents" 2>/dev/null || true)" = true ] || bad "$ents: $k is not true"
+done
+if codesign -dv "$app" 2>&1 | grep -q 'flags=.*runtime'; then
+    signed_ents="$(codesign -d --entitlements - --xml "$app" 2>/dev/null || true)"
+    grep -q 'com.apple.security.device.audio-input' <<< "$signed_ents" ||
+        bad "FM1VST.app: signed with the hardened runtime but without com.apple.security.device.audio-input"
+    ok "FM1VST.app: hardened runtime, its entitlements allow the audio input"
+fi
+[ "$fails" = 0 ] || die "$fails check(s) failed"
+ok "FM1VST.app: NSMicrophoneUsageDescription (\"$micText\"); $(basename "$ents") allows the audio input"
 
 libusb="$(info libusb)"
 if [ -z "$libusb" ] || [ ! -f "$libusb" ]; then

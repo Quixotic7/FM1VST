@@ -5,6 +5,25 @@ settings sheet); a release is the tag `v<version>` on it (.github/workflows/rele
 
 ## Unreleased
 
+### Video recording (Standalone)
+
+The Standalone app records the firmware playing as a movie: a red record button at the panel's top-left corner (the
+dot pulses while recording, with the take's time), Cmd+Shift+R, or the settings sheet's new **Video** section. Takes go
+to `~/Movies/FM1VST/<firmware>-<version>-<YYYYMMDD-HHMMSS>.mp4`; "Show in Finder" after each. Plug-ins leave it out
+(the DAW records).
+
+- The picture is drawn by FM1VST itself, never a screen capture: no Screen Recording permission, and covering or
+  moving the window changes nothing. The whole FM-1 (as the device view draws it, pressed keys and buttons lit), the
+  screen view, or the LCD alone pixel for pixel (nearest-neighbour, 720 or 1080 square); 720p or 1080p, 30 or 60 fps;
+  H.264 (the hardware encoder) in `.mp4` or `.mov`.
+- The sound is FM1VST's own output, AAC 48 kHz stereo 256 kbps. An optional mic / line input from the audio device
+  (a mono channel or a stereo pair, a gain, as a second audio track or mixed in, an optional monitor): macOS asks for
+  the microphone permission the first time it is turned on, and the input is opened only while recording or
+  monitoring.
+- One clock: the audio's sample count; every video frame is placed on it, so picture and sound stay in sync over any
+  length (measured: under 0.1 ms off over 30 s, no drift). A firmware switch or restart ends the take cleanly; a crash
+  or a full disk keeps what was written up to the last two seconds.
+
 ### LOOM-8, a new core
 
 `loom`: Charles Vestal's [LOOM-8](https://github.com/charlesvestal/fm1-loom) (GPL-3.0-only, on fm1-base and

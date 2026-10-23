@@ -131,6 +131,7 @@
 #include <string>
 #include <vector>
 
+#include "AudioTap.h"
 #include "EditorPort.h"
 #include "EmuClock.h"
 #include "HostRefresh.h"
@@ -189,6 +190,10 @@ struct PanelView {
     };
     std::array<Knob, EMU_NE - 1> knobs{};
 };
+
+namespace fm1video {
+class Session;
+}
 
 class FM1Processor : public juce::AudioProcessor, private juce::AsyncUpdater, private juce::Timer {
 public:
@@ -429,6 +434,11 @@ public:
     void editorIdleTick(uint32_t ms);
     EditorPort *editorPortForTest() { return editorPort_.get(); }
 
+    // ---- video recording (the Standalone app: VideoCapture.h). The output captured in processBlock, after the core
+    // rendered it, while a take runs (lock-free); a power-on or a device restart (prepareToPlay) ends the take first
+    AudioTap &videoTap() { return videoTap_; }
+    fm1video::Session *videoSession();             // (message thread) made on first use; nullptr in a plugin
+
     // ---- for tests (call only between processBlock calls, on the thread that calls them) ----
     Device *deviceForTest() { return dev_.get(); }
     RemoteLink *remoteForTest() { return remote_.get(); }
@@ -495,6 +505,9 @@ private:
     bool backupLocked(const juce::String &why);
 
     // the audio thread
+    void renderBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &);   // (processBlock: this, then the video tap)
+    AudioTap videoTap_;
+    std::unique_ptr<fm1video::Session> video_;
     void applyTier1();
     void pushKeys();
     void handleMidi(const juce::MidiMessage &m);

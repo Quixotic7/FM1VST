@@ -314,3 +314,139 @@ void CornerButton::paint(juce::Graphics &g)
         Look::drawLed(g, c, rad, led_);
     }
 }
+
+// --------------------------------------------------------- RecordButton ---
+RecordButton::RecordButton()
+{
+    setWantsKeyboardFocus(false);
+    setMouseClickGrabsKeyboardFocus(false);
+    setTitle("Record video");
+}
+
+void RecordButton::setState(State s)
+{
+    if (s == state_)
+        return;
+    state_ = s;
+    if (s == kRecording)
+        startTimerHz(30);                         // (the pulse and the time)
+    else
+        stopTimer();
+    shown_ = text();
+    repaint();
+}
+
+void RecordButton::setFade(float a)
+{
+    a = juce::jlimit(0.0f, 1.0f, a);
+    if (std::abs(a - fade_) > 1e-4f) {
+        fade_ = a;
+        if (state_ == kIdle)
+            repaint();
+    }
+}
+
+juce::String RecordButton::text() const
+{
+    if (state_ == kRecording) {
+        const int t = juce::jmax(0, (int)std::floor(seconds ? seconds() : 0.0));
+        return t >= 3600 ? juce::String::formatted("%d:%02d:%02d", t / 3600, (t / 60) % 60, t % 60)
+                         : juce::String::formatted("%d:%02d", t / 60, t % 60);
+    }
+    return state_ == kSaved ? juce::String("Show in Finder") : juce::String();
+}
+
+int RecordButton::preferredWidth() const
+{
+    if (state_ == kIdle)
+        return juce::roundToInt(d_);
+    const float px = juce::jlimit(11.0f, 13.0f, d_ * 0.47f);
+    juce::String t = text();
+    if (state_ == kRecording)                    // (tabular: the width of the widest digits, so it never jitters)
+        t = t.replaceCharacters("0123456789", "8888888888");
+    return juce::roundToInt(d_ * 0.36f + d_ * 0.4f + 7.0f + Look::textWidth(Look::font(px, Look::Bold), t) + d_ * 0.42f);
+}
+
+Rectangle<float> RecordButton::shape() const
+{
+    const Rectangle<float> r = getLocalBounds().toFloat().reduced((float)kPad + 1.0f);
+    return state_ == kIdle ? r.withSizeKeepingCentre(juce::jmin(r.getWidth(), r.getHeight()), juce::jmin(r.getWidth(), r.getHeight()))
+                           : r;
+}
+
+bool RecordButton::hitTest(int x, int y)
+{
+    const float a = state_ == kIdle ? fade_ : 1.0f;
+    return a > 0.5f && shape().expanded(1.0f).contains((float)x, (float)y);
+}
+
+void RecordButton::mouseUp(const juce::MouseEvent &e)
+{
+    if (e.mouseWasClicked() && getLocalBounds().contains(e.getPosition()) && onClick)
+        onClick();
+}
+
+void RecordButton::timerCallback()
+{
+    const juce::String t = text();
+    if (t != shown_) {
+        shown_ = t;
+        if (auto *p = getParentComponent())       // (the pill grows with the time: the editor lays it out again)
+            p->resized();
+    }
+    repaint();
+}
+
+void RecordButton::paint(juce::Graphics &g)
+{
+    const Rectangle<float> r = shape();
+    const float a = state_ == kIdle ? fade_ : 1.0f;
+    if (a <= 0.001f)
+        return;
+    const juce::Colour red = Look::col(Look::C::red), redFill = Look::col(Look::C::redFill);
+    juce::Path p;
+    p.addRoundedRectangle(r, r.getHeight() / 2);
+    juce::DropShadow(juce::Colours::black.withAlpha(0.45f * a), 8, {0, 2}).drawForPath(g, p);
+    juce::Colour bg = Look::col(hover_ ? Look::C::raisedHover : Look::C::raised);
+    juce::Colour edge = Look::col(Look::C::line);
+    if (state_ == kRecording)
+        bg = bg.interpolatedWith(red, 0.12f), edge = red.withAlpha(0.6f);
+    else if (hover_)
+        edge = red.withAlpha(0.45f);
+    g.setColour(bg.withMultipliedAlpha(0.94f * a));
+    g.fillPath(p);
+    g.setColour(edge.withMultipliedAlpha(a));
+    g.drawRoundedRectangle(r.reduced(0.5f), r.getHeight() / 2 - 0.5f, 1.0f);
+
+    // the dot: in the circle's centre (idle), at the pill's left end (recording, saved)
+    const float dr = d_ * 0.2f;
+    const juce::Point<float> c = state_ == kIdle ? r.getCentre() : juce::Point<float>(r.getX() + d_ * 0.36f + dr, r.getCentreY());
+    if (state_ == kSaved) {
+        Look::strokeIcon(g, Look::Check, Rectangle<float>(dr * 2.4f, dr * 2.4f).withCentre(c), Look::col(Look::C::green), 1.8f);
+    } else {
+        float scale = 1.0f, ring = 0.0f;
+        if (state_ == kRecording) {               // (the site's rec-pulse: 1.2 s, ease in-out; a ring grows and fades)
+            const double t = std::fmod(juce::Time::getMillisecondCounterHiRes() / 1200.0, 1.0);
+            const float s = 0.5f - 0.5f * std::cos((float)(t * 2.0 * juce::MathConstants<double>::pi));
+            scale = 1.0f - 0.18f * s;
+            ring = s;
+        }
+        const float rr = dr * scale;
+        if (ring > 0.0f) {
+            g.setColour(red.withAlpha(0.55f * (1.0f - ring)));
+            g.fillEllipse(Rectangle<float>((rr + 5.0f * ring) * 2, (rr + 5.0f * ring) * 2).withCentre(c));
+        }
+        g.setColour((state_ == kRecording ? red : redFill).withMultipliedAlpha(a));
+        g.fillEllipse(Rectangle<float>(rr * 2, rr * 2).withCentre(c));
+        g.setColour(juce::Colours::black.withAlpha(0.25f * a));
+        g.drawEllipse(Rectangle<float>(rr * 2, rr * 2).withCentre(c).reduced(0.5f), 1.0f);
+    }
+    if (state_ != kIdle) {
+        const float px = juce::jlimit(11.0f, 13.0f, d_ * 0.47f);
+        g.setFont(Look::font(px, Look::Bold));
+        g.setColour(state_ == kRecording ? red : Look::col(hover_ ? Look::C::text : Look::C::rowText));
+        const float x = c.x + dr + 7.0f;
+        g.drawText(text(), Rectangle<float>(x, r.getY(), r.getRight() - x - d_ * 0.3f, r.getHeight()), juce::Justification::centredLeft,
+                   false);
+    }
+}

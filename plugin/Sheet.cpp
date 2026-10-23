@@ -5,6 +5,7 @@
 
 #include "Editor.h"
 #include "StandaloneHooks.h"
+#include "VideoCapture.h"
 
 #include <algorithm>
 #include <optional>
@@ -528,8 +529,18 @@ public:
         refresh(false);
         vp_.setViewPosition(0, juce::jmax(0, hEditors_.getY() - 8));
     }
+    void scrollToVideo()                          // (tests: the Video section at the top of the view)
+    {
+        endInline();
+        refresh(false);
+        vp_.setViewPosition(0, juce::jmax(0, hVideo_.getY() - 8));
+    }
 
 private:
+    void refreshVideo();
+    void setVideo(const std::function<void(fm1video::Settings &)> &change);
+    void showInputMenu();
+    String inputLabel() const;
     void refreshPresets();
     void refreshThemes();
     void loadPresetAt(int i);
@@ -607,6 +618,33 @@ private:
     Row big_{look_, "Big LCD above the panel", &bigSw_, Switch::kW, 24};
     ScreenCopyControls screenCtl_{look_};
     Row screen_{look_, "Screen", &screenCtl_, ScreenCopyControls::kW, 30};
+
+    // VIDEO (the Standalone only: VideoCapture.h)
+    fm1video::Session *video_ = nullptr;
+    Heading hVideo_{look_, "Video"};
+    Pill recP_{look_, "Record", Look::Primary};
+    Row record_{look_, "Record", &recP_, 96, 30};
+    Segmented vViewSeg_{look_, {"Device", "Screen", "LCD"}};
+    Row vView_{look_, "View", &vViewSeg_, 200, 30};
+    Segmented vSizeSeg_{look_, {"720p", "1080p"}};
+    Row vSize_{look_, "Size", &vSizeSeg_, 150, 30};
+    Segmented vFpsSeg_{look_, {"30", "60"}};
+    Row vFps_{look_, "Frame rate", &vFpsSeg_, 110, 30};
+    Segmented vFmtSeg_{look_, {"MP4", "MOV"}};
+    Row vFmt_{look_, "Format", &vFmtSeg_, 120, 30};
+    Switch micSw_{look_};
+    Row mic_{look_, "Mic / line input", &micSw_, Switch::kW, 24};
+    Pill inputP_{look_, "Input 1"};
+    Row input_{look_, "Input", &inputP_, 150, 30};
+    Stepper gainSt_{look_, -24, 24, [](int v) { return (v > 0 ? String("+") : String()) + String(v) + " dB"; }};
+    Row gain_{look_, "Mic gain", &gainSt_, Stepper::kW, 28};
+    Segmented trackSeg_{look_, {"Separate", "Mix"}};
+    Row track_{look_, "Mic track", &trackSeg_, 150, 30};
+    Switch monSw_{look_};
+    Row monitor_{look_, "Monitor the input", &monSw_, Switch::kW, 24};
+    Text videoNote_{look_, 11.5f, Look::C::muted};
+    Row lastTake_{look_, "Last take"};
+    String micNote_;
 
     Heading hDevice_{look_, "Device"};
     Pill restartP_{look_, "Restart"};
@@ -826,6 +864,52 @@ Sheet::MainPage::MainPage(Sheet &s, FM1Editor &ed) : ScrollPage(ed.look()), shee
                        "Affinity, Pixelmator, Preview (File > New from Clipboard). Also: right-click the screen.");
     screenCtl_.copy.onClick = [this] { ed_.copyScreen(ed_.copyScale()); };
     screenCtl_.scale.onClick = [this] { showScreenMenu(); };
+
+    // VIDEO (the Standalone; a plugin has none: the DAW records)
+    video_ = ed_.videoAvailable() ? p_.videoSession() : nullptr;
+    for (Widget *w : std::initializer_list<Widget *>{&hVideo_, &record_, &vView_, &vSize_, &vFps_, &vFmt_, &mic_, &input_, &gain_,
+                                                     &track_, &monitor_, &videoNote_, &lastTake_}) {
+        stack_.add(*w);
+        w->setVisible(video_ != nullptr);
+    }
+    record_.setTooltip("A video of the firmware playing, drawn by FM1VST itself (covering or moving the window changes "
+                       "nothing), with FM1VST's own sound and the mic / line input if it is on. Saved to ~/Movies/FM1VST. A "
+                       "firmware switch or restart ends the take.");
+    recP_.onClick = [this] {
+        ed_.toggleRecording();
+        refresh(false);
+    };
+    vView_.setTooltip("Device: the whole FM-1 as the device view draws it. Screen: the LCD in its bezel. LCD: the 240 x 240 "
+                      "screen alone, nearest-neighbour (720: 3x; 1080: 4.5x)");
+    vViewSeg_.onChange = [this](int i) { setVideo([i](fm1video::Settings &st) { st.view = i; }); };
+    vSizeSeg_.onChange = [this](int i) { setVideo([i](fm1video::Settings &st) { st.size = i ? 1080 : 720; }); };
+    vFpsSeg_.onChange = [this](int i) { setVideo([i](fm1video::Settings &st) { st.fps = i ? 60 : 30; }); };
+    vFmtSeg_.onChange = [this](int i) { setVideo([i](fm1video::Settings &st) { st.mov = i == 1; }); };
+    vFmt_.setTooltip("MP4 (H.264, AAC) plays everywhere; MOV for Final Cut and QuickTime. Both keep a take readable up to "
+                     "its last two seconds if the app is stopped mid-take.");
+    mic_.setTooltip("Records a microphone or a line input of the audio interface with the take. The first time, macOS asks "
+                    "for the microphone permission. The input opens only while recording (or monitoring).");
+    micSw_.onChange = [this](bool on) {
+        juce::Component::SafePointer<MainPage> self(this);
+        micNote_.clear();
+        video_->setMic(on, [self](bool, String why) {
+            if (self) {
+                self->micNote_ = why;
+                self->refresh(false);
+            }
+        });
+    };
+    inputP_.onClick = [this] { showInputMenu(); };
+    gainSt_.onChange = [this](int v) { setVideo([v](fm1video::Settings &st) { st.micGainDb = v; }); };
+    track_.setTooltip("Separate: the input is a second audio track of the file (an editor shows both). Mix: it is summed "
+                      "into the main track.");
+    trackSeg_.onChange = [this](int i) { setVideo([i](fm1video::Settings &st) { st.micMix = i == 1; }); };
+    monitor_.setTooltip("Plays the input through the outputs. Use headphones: with speakers a microphone feeds back.");
+    monSw_.onChange = [this](bool on) { setVideo([on](fm1video::Settings &st) { st.monitor = on; }); };
+    lastTake_.onClick = [this] {
+        if (video_ && video_->lastFile().existsAsFile())
+            video_->lastFile().revealToUser();
+    };
 
     // DEVICE
     stack_.add(hDevice_);
@@ -1239,7 +1323,113 @@ void Sheet::MainPage::refresh(bool full)
     bigSw_.setEnabledLook(dev);
     big_.setEnabledLook(dev);
     screenCtl_.scale.setText(String::fromUTF8("\xc3\x97") + String(ed_.copyScale()));
+    refreshVideo();
     relayout();
+}
+
+void Sheet::MainPage::setVideo(const std::function<void(fm1video::Settings &)> &change)
+{
+    if (!video_)
+        return;
+    fm1video::Settings s = video_->settings();
+    change(s);
+    video_->setSettings(s);
+    refresh(false);
+}
+
+String Sheet::MainPage::inputLabel() const
+{
+    const fm1video::Settings &s = video_->settings();
+    const juce::StringArray names = video_->inputChannelNames(video_->inputDevice());
+    auto chName = [&](int c) { return c < names.size() && names[c].isNotEmpty() ? names[c] : String(c + 1); };
+    if (s.inChannels == 2)
+        return String(s.inChannel + 1) + "+" + String(s.inChannel + 2);
+    return names.isEmpty() ? String(s.inChannel + 1) : chName(s.inChannel);
+}
+
+void Sheet::MainPage::showInputMenu()
+{
+    if (!video_)
+        return;
+    juce::PopupMenu m;
+    m.setLookAndFeel(&look_);
+    const juce::StringArray devs = video_->inputDevices();
+    const String cur = video_->inputDevice();
+    const fm1video::Settings &s = video_->settings();
+    // (ids: device index * 1000 + channel * 2 + stereo, + 1)
+    for (int d = 0; d < devs.size(); d++) {
+        const juce::StringArray ch = video_->inputChannelNames(devs[d]);
+        if (ch.isEmpty())
+            continue;
+        m.addSectionHeader(devs[d]);
+        for (int c = 0; c < ch.size(); c++)
+            m.addItem(d * 1000 + c * 2 + 1, String(c + 1) + "  " + ch[c] + String::fromUTF8(" \xc2\xb7 mono"), true,
+                      devs[d] == cur && s.inChannels == 1 && s.inChannel == c);
+        for (int c = 0; c + 1 < ch.size(); c += 2)
+            m.addItem(d * 1000 + c * 2 + 2, String(c + 1) + "+" + String(c + 2) + String::fromUTF8(" \xc2\xb7 stereo"), true,
+                      devs[d] == cur && s.inChannels == 2 && s.inChannel == c);
+    }
+    if (m.getNumItems() == 0)
+        m.addItem(-1, "No audio input found", false, false);
+    juce::Component::SafePointer<MainPage> self(this);
+    m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&inputP_).withMinimumWidth(inputP_.getWidth()),
+                    [self, devs](int r) {
+                        if (!self || r <= 0)
+                            return;
+                        const int id = r - 1, d = id / 1000, c = (id % 1000) / 2, st = (id % 1000) % 2;
+                        self->setVideo([&](fm1video::Settings &v) {
+                            v.inputDevice = d < devs.size() ? devs[d] : String();
+                            v.inChannel = c;
+                            v.inChannels = st ? 2 : 1;
+                        });
+                    });
+}
+
+void Sheet::MainPage::refreshVideo()
+{
+    if (!video_)
+        return;
+    const fm1video::Settings &s = video_->settings();
+    const bool rec = video_->recording();
+    const String dot = String::fromUTF8(" \xc2\xb7 "), times = String::fromUTF8(" \xc3\x97 ");
+    recP_.setText(rec ? "Stop" : "Record");
+    recP_.setKind(rec ? Look::DangerFill : Look::Primary);
+    record_.setCaption(rec ? fm1video::formatTime(video_->seconds()) + dot + video_->currentFile().getFileName()
+                           : String::fromUTF8("\xe2\x87\xa7\xe2\x8c\x98" "R") + dot + "~/Movies/FM1VST",
+                       Look::col(rec ? Look::C::red : Look::C::muted));
+    vViewSeg_.setSelected(s.view);
+    vSizeSeg_.setSelected(s.size >= 1080 ? 1 : 0);
+    const juce::Point<int> fs = s.frameSize();
+    vSize_.setCaption(String(fs.x) + times + String(fs.y) +
+                      (s.view == fm1video::kViewLcd ? dot + (s.size >= 1080 ? "4.5" : "3") + String::fromUTF8("\xc3\x97 nearest") : String()));
+    vFpsSeg_.setSelected(s.fps >= 60 ? 1 : 0);
+    vFmtSeg_.setSelected(s.mov ? 1 : 0);
+    for (Widget *w : std::initializer_list<Widget *>{&vView_, &vViewSeg_, &vSize_, &vSizeSeg_, &vFps_, &vFpsSeg_, &vFmt_, &vFmtSeg_})
+        w->setEnabledLook(!rec);                 // (fixed for a take)
+    const bool dev = video_->hasAudioDevice();
+    micSw_.setOn(s.mic);
+    micSw_.setEnabledLook(!rec && dev);
+    mic_.setEnabledLook(!rec && dev);
+    mic_.setCaption(dev ? (s.mic ? (s.micMix ? "mixed into the main track" : "a second audio track") : "off")
+                        : "no audio device here");
+    inputP_.setText(inputLabel());
+    input_.setControlWidth(juce::jlimit(96, 190, inputP_.preferredWidth()));
+    input_.setCaption(video_->inputDevice());
+    for (Widget *w : std::initializer_list<Widget *>{&input_, &inputP_, &track_, &trackSeg_})
+        w->setEnabledLook(s.mic && !rec && dev);
+    for (Widget *w : std::initializer_list<Widget *>{&gain_, &gainSt_, &monitor_, &monSw_})
+        w->setEnabledLook(s.mic && dev);         // (the gain and the monitor change live)
+    gainSt_.setValue(s.micGainDb);
+    trackSeg_.setSelected(s.micMix ? 1 : 0);
+    monSw_.setOn(s.monitor);
+    monitor_.setCaption("headphones: a microphone feeds back", Look::col(s.monitor ? Look::C::amber : Look::C::muted));
+    const String note = micNote_.isNotEmpty() ? micNote_ : rec ? String() : video_->lastError();
+    videoNote_.setText(note, Look::col(Look::C::amber));
+    videoNote_.setVisible(note.isNotEmpty());
+    const juce::File last = video_->lastFile();
+    lastTake_.setVisible(last.existsAsFile());
+    lastTake_.setValue(last.getFileName());
+    lastTake_.setTooltip("Show in Finder: " + last.getFullPathName());
 }
 
 // ============================================================ firmware ===
@@ -2179,6 +2369,11 @@ void Sheet::scrollToEditors()
 {
     showPage(kMain);
     main_->scrollToEditors();
+}
+void Sheet::scrollToVideo()
+{
+    showPage(kMain);
+    main_->scrollToVideo();
 }
 void Sheet::setBrowserFilter(const String &search, int category)
 {

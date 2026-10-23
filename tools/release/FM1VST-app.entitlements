@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- The Standalone app's hardened-runtime entitlements (.github/workflows/release.yml signs FM1VST.app with them;
+     tools/package_release.sh checks them). The plug-ins run under their host's entitlements.
+     disable-library-validation: the app loads cores a user drops into ~/Library/Application Support/fm1emu/cores.
+     allow-jit: the fm1emu core's JIT maps MAP_JIT memory (without it: its interpreter, about 1x real time).
+     device.audio-input: the video recorder's mic / line input (plugin/VideoCapture.h); macOS still asks the user, with
+     the Info.plist's NSMicrophoneUsageDescription, the first time the mic is turned on. -->
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+	<key>com.apple.security.cs.allow-jit</key>
+	<true/>
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+</dict>
+</plist>

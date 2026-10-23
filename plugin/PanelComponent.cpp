@@ -388,7 +388,7 @@ juce::String PanelComponent::keymapHintText(Kind kind, int idx)
 static int normKey(int code) { return code >= 'a' && code <= 'z' ? code - 32 : code; }
 
 // ============================================================ component ===
-PanelComponent::PanelComponent(FM1Processor &p) : proc_(p)
+PanelComponent::PanelComponent(FM1Processor &p, bool mirror) : proc_(p), mirror_(mirror)
 {
     for (int i = 0; i < EMU_NB; i++)
         names_.add(FM1Processor::kPanelLabels[i]);
@@ -396,15 +396,17 @@ PanelComponent::PanelComponent(FM1Processor &p) : proc_(p)
     powerOnsSeen_ = p.panelPowerOns();
     lcd240_ = softwareImage(EMU_LCD_W, EMU_LCD_H);
     lcd240_.clear(lcd240_.getBounds(), juce::Colours::black);
-    setWantsKeyboardFocus(true);
+    setWantsKeyboardFocus(!mirror);
     setOpaque(true);
-    startTimerHz(60);
+    if (!mirror)                                 // (a mirror is refreshed by its owner, on its own thread)
+        startTimerHz(60);
 }
 
 PanelComponent::~PanelComponent()
 {
     stopTimer();
-    proc_.panelReleaseAll();                     // (no stuck notes when the editor closes)
+    if (!mirror_)
+        proc_.panelReleaseAll();                 // (no stuck notes when the editor closes)
 }
 
 float PanelComponent::frameAspect(bool big) { return VIEW.w / (VIEW.h + (big ? VIEW.w : 0.f)); }

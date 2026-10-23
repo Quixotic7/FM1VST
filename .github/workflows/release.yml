@@ -141,17 +141,14 @@ jobs:
             for c in "$b"/Contents/Resources/cores/*.fm1core; do
               codesign --force --timestamp --options runtime -s "$MACOS_SIGN_IDENTITY" "$c"
             done
-            # (the Standalone loads cores a user drops into ~/Library/Application Support/fm1emu/cores: without
-            # library validation off, the hardened runtime would refuse those. allow-jit: the fm1emu core's JIT maps
-            # MAP_JIT memory, which the hardened runtime refuses without it (the core then falls back to its
-            # interpreter, ~1x real time). The plug-ins run under their host's entitlements.)
+            # (the Standalone's entitlements, tools/release/FM1VST-app.entitlements: library validation off, for the
+            # cores a user drops into ~/Library/Application Support/fm1emu/cores; allow-jit, for the fm1emu core's JIT
+            # (MAP_JIT; without it the core falls back to its interpreter, ~1x real time); device.audio-input, for the
+            # video recorder's mic / line input (without it the hardened runtime gives the app silence). The plug-ins
+            # run under their host's entitlements. tools/package_release.sh checks the signed app has them.)
             ent=()
             if [ "${b##*.}" = app ]; then
-              /usr/libexec/PlistBuddy -c 'Add :com.apple.security.cs.disable-library-validation bool true' \
-                "$RUNNER_TEMP/app.entitlements" > /dev/null
-              /usr/libexec/PlistBuddy -c 'Add :com.apple.security.cs.allow-jit bool true' \
-                "$RUNNER_TEMP/app.entitlements" > /dev/null
-              ent=(--entitlements "$RUNNER_TEMP/app.entitlements")
+              ent=(--entitlements tools/release/FM1VST-app.entitlements)
             fi
             codesign --force --timestamp --options runtime "${ent[@]}" -s "$MACOS_SIGN_IDENTITY" "$b"
             codesign --verify --deep --strict --verbose=2 "$b"

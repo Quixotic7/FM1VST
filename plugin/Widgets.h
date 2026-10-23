@@ -313,3 +313,36 @@ private:
     juce::Colour led_{juce::Colours::transparentBlack};
     bool alarm_ = false, hover_ = false;
 };
+
+// the video recorder's button (the Standalone; VideoCapture.h), opposite the corner button and in its language (the
+// site's recorder): idle, a round button with a red dot that fades with the corner button; recording, a pill with the
+// dot pulsing and the take's running time in red, always shown; after a take, "Show in Finder" for a few seconds
+class RecordButton : public juce::Component, public juce::SettableTooltipClient, private juce::Timer {
+public:
+    RecordButton();
+    enum State { kIdle, kRecording, kSaved };
+    void setState(State s);
+    State state() const { return state_; }
+    void setDiameter(float d) { d_ = d; }
+    float diameter() const { return d_; }
+    void setFade(float a);                        // 0..1 (idle only: recording and saved are always shown)
+    float fade() const { return fade_; }
+    juce::String text() const;                    // what the pill says now ("" idle)
+    int preferredWidth() const;                   // the drawn shape's width at the diameter (logical)
+    std::function<double()> seconds;              // the take's time (recording)
+    std::function<void()> onClick;
+    void paint(juce::Graphics &g) override;
+    bool hitTest(int x, int y) override;
+    void mouseEnter(const juce::MouseEvent &) override { hover_ = true, repaint(); }
+    void mouseExit(const juce::MouseEvent &) override { hover_ = false, repaint(); }
+    void mouseUp(const juce::MouseEvent &e) override;
+    static constexpr int kPad = 7;                // (as the corner button's: room for the shadow and the pulse)
+
+private:
+    void timerCallback() override;
+    juce::Rectangle<float> shape() const;
+    State state_ = kIdle;
+    float d_ = 28, fade_ = 0;
+    bool hover_ = false;
+    juce::String shown_;
+};
