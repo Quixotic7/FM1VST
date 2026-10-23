@@ -3,7 +3,7 @@
 FM1VST's releases. The version is `project(FM1VST VERSION ..)` in CMakeLists.txt (the plugin shows it in its
 settings sheet); a release is the tag `v<version>` on it (.github/workflows/release.yml builds and publishes it).
 
-## Unreleased
+## 0.6.0 (2026-10-23): seven new cores, video recording, Shift-click to hold
 
 ### Video recording (Standalone)
 
