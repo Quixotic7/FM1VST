@@ -35,12 +35,12 @@ fm1_add_core(fizz ${_qd}/core/glue SOURCE ${_qd}
              INCLUDES ${_qd}/core/app ${_qd}/core/ui ${_qd}/core/gfx ${_qd}/core/seq ${_qd}/core/voice
                       ${_qd}/core/voice/quad ${_qd}/core/voice/fx ${_qd}/third_party/plutovg/include ${_qd_pvg}
              DEFINES PLUTOVG_BUILD PLUTOVG_BUILD_STATIC PLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD
-             FAMILY fizz LICENSE GPL-3.0-only
+             FAMILY fizz LICENSE MPL-2.0
              GATED "a prototype, not released (FIZZ Phase 1)"
-             CREDITS "FIZZ, an FM TONE step sequencer for the FM-1: Phase 1 prototype.\nFM TONE, the effects and the output chain: ChoralRoot FM-1 v0.25.1 (GPL-3.0-only, ChoralRoot FM-1 contributors), a fork of Felucca (Leo Kuroshita, Hugelton Instruments).\nDrawn with plutovg (MIT). Portions of this software are copyright (c) 2006 The FreeType Project (www.freetype.org). All rights reserved.\nType: Inter Tight (SIL Open Font License 1.1)."
-             CREDITS_FILES third_party/plutovg/LICENSE assets/fonts/OFL.txt
+             CREDITS "FIZZ, an FM TONE step sequencer for the FM-1: Phase 1 prototype.\nFIZZ is MPL-2.0. FM TONE, the effects and the output chain: ChoralRoot FM-1 v0.25.1, the owner's (relicensed MPL-2.0, its Felucca-derived parts rewritten).\nDrawn with plutovg (MIT, stb: MIT or Unlicense). Portions of this software are copyright (c) 2006 The FreeType Project (www.freetype.org). All rights reserved.\nType: Inter Tight (SIL Open Font License 1.1)."
+             CREDITS_FILES ./LICENSE third_party/plutovg/LICENSE third_party/plutovg/source/FTL.TXT assets/fonts/OFL.txt
              NO_GEN
-             VERSION 0.10.2-p2.1c)
+             VERSION 0.10.3-l1)
 if(TARGET core_fizz_obj)
     # plutovg is vendored (FIZZ P2.1 / P2.1b patch it for the device's strips and arena, each change marked): its own
     # warnings are not ours (ChoralRoot's copies keep theirs off themselves: quad_voice.c and qd_fx.c push their
