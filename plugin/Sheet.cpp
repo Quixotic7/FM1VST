@@ -1394,7 +1394,9 @@ void Sheet::MainPage::refreshVideo()
     const String dot = String::fromUTF8(" \xc2\xb7 "), times = String::fromUTF8(" \xc3\x97 ");
     recP_.setText(rec ? "Stop" : "Record");
     recP_.setKind(rec ? Look::DangerFill : Look::Primary);
-    record_.setCaption(rec ? fm1video::formatTime(video_->seconds()) + dot + video_->currentFile().getFileName()
+    const juce::int64 drops = video_->droppedFrames();
+    record_.setCaption(rec ? fm1video::formatTime(video_->seconds()) + dot +
+                                 (drops > 0 ? String(drops) + " frames dropped" + dot : String()) + video_->currentFile().getFileName()
                            : String::fromUTF8("\xe2\x87\xa7\xe2\x8c\x98" "R") + dot + "~/Movies/FM1VST",
                        Look::col(rec ? Look::C::red : Look::C::muted));
     vViewSeg_.setSelected(s.view);

@@ -69,6 +69,8 @@ public:
 
     // pull the processor's snapshot, redraw what changed (the timer's work; tests call it directly)
     void refresh();
+    // (a mirror) show this snapshot instead of the processor's latest: the video recorder's frame at its instant
+    void showView(const PanelView &v);
 
     // ---- for the editor's chrome (Editor.h): right-click off every control; the LCD changed (the screen view
     // shows lcdImage()); where a point of the drawing (units) is and how big a unit is, in this component's logical
@@ -148,6 +150,7 @@ public:
 private:
     enum { SRC_KEY = 1, SRC_ESC = 2, SRC_MOUSE = 4, SRC_LATCH = 8 };
     void timerCallback() override;
+    void applyView();                          // (refresh, showView) view_ onto the drawing
     Layout computeLayout(float scale) const;  // relayout's geometry, nothing drawn
     void relayout(float scale);
     void drawBase();

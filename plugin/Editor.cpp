@@ -446,7 +446,10 @@ void FM1Editor::videoChanged()
         const bool kept = r.file.existsAsFile();
         rec_.setState(kept ? RecordButton::kSaved : RecordButton::kIdle);
         savedUntil_ = kept ? juce::Time::getMillisecondCounterHiRes() + 8000.0 : 0.0;
-        showToast(r.error.isNotEmpty() ? r.error : "Saved " + r.file.getFileName() + " (" + fm1video::formatTime(r.seconds) + ")");
+        juce::String t = r.error.isNotEmpty() ? r.error : "Saved " + r.file.getFileName() + " (" + fm1video::formatTime(r.seconds) + ")";
+        if (r.dropped > 0)                       // (frames that repeat an earlier picture: drawing fell behind)
+            t << juce::String::fromUTF8(" \xc2\xb7 ") << juce::String(r.dropped) << (r.dropped == 1 ? " frame" : " frames") << " dropped";
+        showToast(t);
     }
     layoutChrome();
     if (sheet_.isOpen())

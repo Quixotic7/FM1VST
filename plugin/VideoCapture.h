@@ -18,14 +18,18 @@
 // (summed into the main track), and an optional monitor through the outputs (off by default: feedback).
 //
 // SYNC: one clock, the main tap's sample counter. A take's timeline starts at the first sample of the first block
-// after arming; audio track times are timeline frames / the device's rate, exactly. The frame clock (Recorder's thread)
-// is slaved to that counter: frame k (shown from k / fps) is due once the timeline has passed k * rate / fps, and is
-// rendered then from the state at that moment (at most one audio block and one render later than its instant). When
-// rendering falls behind, the frames whose instants passed meanwhile repeat the one rendered (duplicated against the
-// clock); none is ever moved in time. So no drift is possible: video and audio count the same samples, and a device
-// whose clock runs fast or slow against the computer's changes both together. The mic's blocks go on the same
-// timeline: its callback runs right after the processor's in the same device cycle, so a block of n frames there is the
-// main tap's last n (pushAt; a cycle the processor skipped is dropped from the mic, a gap filled with silence).
+// after arming; audio track times are timeline frames / the device's rate, exactly. Frame k is shown from k / fps,
+// exactly, and its CONTENT is tied to the same instant: after each block the audio thread copies the panel's snapshot
+// (the LCD frame buffer, the LEDs, the held keys and buttons, the knobs: PanelView) into a ring for every frame whose
+// instant k * rate / fps the block passed (SnapshotRing, lock-free; at most one block after the instant). The
+// recorder's thread draws each frame from its own snapshot however late it gets to it, so a slow or loaded machine
+// delays the drawing, never the picture against the sound. Behind by more than half the ring (64 of its kFrameSlots:
+// about 1 s at 60 fps, 2 s at 30) it drops the oldest snapshots, and a full ring drops the newest: those frames
+// repeat the last picture drawn (counted: Result::dropped, the sheet, the take's toast), never the state of a later
+// moment. No drift is possible: video and audio count the same samples, and a device whose clock runs fast or slow
+// against the computer's changes both together. The mic's blocks go on the same timeline: its callback runs right after
+// the processor's in the same device cycle, so a block of n frames there is the main tap's last n (pushAt; a cycle the
+// processor skipped is dropped from the mic, a gap filled with silence).
 //
 // A TAKE ENDS by Stop (the button, Cmd+Shift+R), and cleanly by itself at a firmware switch or reboot (any power-on:
 // the processor freezes the tap before the new firmware's first sample, like the site's recorder ending a take before
@@ -41,13 +45,13 @@
 #include <memory>
 
 #include "AudioTap.h"
+#include "Processor.h"
 #include "VideoRecorder.h"
-
-class FM1Processor;
 
 namespace fm1video {
 
 enum View { kViewDevice = 0, kViewScreen = 1, kViewLcd = 2 };
+constexpr int kFrameSlots = 128;               // the snapshot ring (115 KB each: the LCD)
 
 struct Settings {
     int view = kViewDevice;
@@ -68,12 +72,12 @@ struct Settings {
     bool operator==(const Settings &o) const { return toJson() == o.toJson(); }
 };
 
-// a view rendered into a frame (ARGB, the frame's size): called on the recorder's thread only. `at`: the timeline frame
-// the picture is first shown at (a view draws the state it has now; a test's synthetic source can draw that instant)
+// a view rendered into a frame (ARGB, the frame's size) from the panel's snapshot taken at the frame's instant (the
+// processor's videoFrames()): called on the recorder's thread only
 class FrameSource {
 public:
     virtual ~FrameSource() = default;
-    virtual void render(juce::Image &frame, int64_t at) = 0;
+    virtual void render(juce::Image &frame, const PanelView &state) = 0;
 };
 // the processor's view (made on the message thread; then the recorder's thread's alone)
 std::unique_ptr<FrameSource> makeViewSource(FM1Processor &p, int view, juce::Point<int> size);
@@ -109,6 +113,7 @@ public:
     struct Config {
         EncoderSpec spec;
         AudioTap *main = nullptr;                // the master clock
+        SnapshotRing<PanelView> *frames = nullptr;   // what each frame shows, captured at its instant
         AudioTap *mic = nullptr;                 // optional
         bool mix = false;                        // the mic summed into track 0 (else track 1)
         std::unique_ptr<FrameSource> source;
@@ -120,6 +125,9 @@ public:
         double seconds = 0;
         int64_t endFrame = 0, videoFrames = 0, duplicated = 0, rendered = 0;
         int maxLagMs = 0;                        // the latest a frame was rendered after its instant (timeline ms)
+        int64_t dropped = 0;                     // frames that repeat an earlier picture: no room in the ring, or drawing fell
+                                                 // more than half a ring behind
+        double renderMsMax = 0, renderMsTotal = 0;   // the view's drawing time (rendered: how many)
     };
     Recorder();
     ~Recorder() override;
@@ -130,22 +138,31 @@ public:
     bool active() const { return started_ && !collected_; }
     bool ended() const { return started_ && !isThreadRunning(); }   // ended by itself: stop() collects the result
     double seconds() const;
+    int64_t droppedFrames() const { return dropped_.load() + (c_.frames ? c_.frames->dropped() : 0); }
     juce::Image firstFrame() const;              // (tests) the first frame rendered
 
 private:
     void run() override;
     bool drainAudio(int64_t upTo, bool final);
-    bool emitFrames(int64_t due, int64_t now);
+    struct Pending {
+        std::vector<float> data;
+        int64_t pos = 0;
+        int k = 0;
+    };
+    Pending pend_[2];
+    bool flushPending(int track, bool final);
+    bool drainFrames(int64_t limit, int64_t now);
     int64_t framesBefore(int64_t timelineFrame) const;   // frames whose instant is before it
 
     Config c_;
     Encoder enc_;
     juce::Image frame_, first_;
     mutable juce::SpinLock firstLock_;
-    std::vector<float> a_, b_;
+    std::vector<float> b_;
     int64_t next_ = 0, micPos_ = 0;
     int sr_ = 48000;
-    bool started_ = false, collected_ = false, micAbsent_ = false;
+    bool started_ = false, collected_ = false, micAbsent_ = false, drawn_ = false;
+    std::atomic<int64_t> dropped_{0};
     std::atomic<int64_t> end_{-1};
     Result res_;
 };
@@ -164,6 +181,7 @@ public:
     void stop();
     bool recording() const { return rec_ != nullptr; }
     double seconds() const { return rec_ ? rec_->seconds() : 0.0; }
+    int64_t droppedFrames() const { return rec_ ? rec_->droppedFrames() : 0; }   // (this take so far)
     juce::File currentFile() const { return file_; }
     juce::File lastFile() const { return last_.file; }
     const Recorder::Result &lastResult() const { return last_; }

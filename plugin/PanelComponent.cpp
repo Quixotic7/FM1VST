@@ -658,6 +658,17 @@ void PanelComponent::rebuildLcdImages()
 void PanelComponent::refresh()
 {
     proc_.getPanelView(view_);
+    applyView();
+}
+
+void PanelComponent::showView(const PanelView &v)
+{
+    view_ = v;
+    applyView();
+}
+
+void PanelComponent::applyView()
+{
     if (const uint32_t n = proc_.panelPowerOns(); n != powerOnsSeen_) {   // (a power-on let go of the device's side)
         powerOnsSeen_ = n;
         releaseLatches();

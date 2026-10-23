@@ -437,6 +437,8 @@ public:
     // ---- video recording (the Standalone app: VideoCapture.h). The output captured in processBlock, after the core
     // rendered it, while a take runs (lock-free); a power-on or a device restart (prepareToPlay) ends the take first
     AudioTap &videoTap() { return videoTap_; }
+    // what the frames show, captured after each block at the frames' instants (the panel's snapshot; lock-free)
+    SnapshotRing<PanelView> &videoFrames() { return videoFrames_; }
     fm1video::Session *videoSession();             // (message thread) made on first use; nullptr in a plugin
 
     // ---- for tests (call only between processBlock calls, on the thread that calls them) ----
@@ -507,6 +509,7 @@ private:
     // the audio thread
     void renderBlock(juce::AudioBuffer<float> &, juce::MidiBuffer &);   // (processBlock: this, then the video tap)
     AudioTap videoTap_;
+    SnapshotRing<PanelView> videoFrames_;
     std::unique_ptr<fm1video::Session> video_;
     void applyTier1();
     void pushKeys();
