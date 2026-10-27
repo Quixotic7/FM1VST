@@ -4,7 +4,7 @@
 // ever opened (every link is checked to be the fake before it is started).
 // (m) the host MIDI filter: the unit's own panel events and RemoteFM1 SysEx, nothing else;
 // (c) discovery's candidates (plugin/RemoteMidi.c): only what can be an FM-1 ever gets HELLO (its USB IDs; a name only
-//     without the USB property; never an updater port);
+//     without the USB property, as for Bluetooth MIDI; never an updater port);
 // (l) the unit lock: two links on one lock file, the second "in use" (touching nothing) until the first lets go, then
 //     it takes over;
 // (p) the processor with Remote on, ChoralRoot booted, paced in real time (the session runs on the wall clock): the
@@ -218,6 +218,8 @@ int main()
             {0, 0, "FM-1", "FM-1 Update", false, "no USB property, an FM-1 updater port"},
             {0, 0, nullptr, nullptr, false, "no USB property, no names"},
             {0, 0, "", "", false, "no USB property, empty names"},
+            {0, 0, "FM-1 7938", "Bluetooth", true, "Bluetooth MIDI \"FM-1 7938\" (RemoteFM1 0.2)"},
+            {0, 0, "WIDI Master", "Bluetooth", false, "Bluetooth MIDI, another device"},
         };
         for (const Ep &e : eps)
             check((fm1_remote_midi_candidate(e.hasUsb, e.usb, e.dev, e.ep) != 0) == e.want,

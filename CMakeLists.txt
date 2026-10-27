@@ -102,7 +102,7 @@ if(NOT EXISTS ${RFM}/host/src/session.c)
 endif()
 file(GLOB RFM_SOURCES ${RFM}/host/src/*.c)
 # The CoreMIDI back end is FM1VST's own, plugin/RemoteMidi.c (RemoteFM1's coremidi.c with discovery limited to what can
-# be an FM-1: USB IDs 1209:0001, else an "FM-1" name; plugin/RemoteCandidates.h), so HELLO never reaches other MIDI
+# be an FM-1: USB IDs 1209:0001, else (and on Bluetooth MIDI) an "FM-1" name; plugin/RemoteCandidates.h), so HELLO never reaches other MIDI
 # hardware. host.c (the glue) and usb.c (libusb: only 1209:0001 with a vendor-class interface) are RemoteFM1's.
 file(GLOB RFM_MAC_SOURCES ${RFM}/host/src/macos/*.c)
 list(FILTER RFM_MAC_SOURCES EXCLUDE REGEX "/coremidi\\.c$")

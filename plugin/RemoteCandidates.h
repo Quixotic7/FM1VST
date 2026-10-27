@@ -5,8 +5,9 @@
  *
  *   - the device (or entity) has kMIDIPropertyUSBVendorProduct: a candidate exactly when it is 0x1209 << 16 | 0x0001
  *     (RemoteFM1's USB IDs, shared with ChoralRoot / TransitFM1 on the same unit);
- *   - only when the property is missing: a candidate when the device's or the endpoint's name contains "FM-1" (any
- *     case; also the stale "ChoralRoot FM-1" CoreMIDI keeps);
+ *   - only when the property is missing (and always on Bluetooth MIDI: RemoteMidi.c passes has_usb 0 there): a
+ *     candidate when the device's or the endpoint's name contains "FM-1" (any case; also the stale "ChoralRoot FM-1"
+ *     CoreMIDI keeps);
  *   - never an updater port (an endpoint name containing "update"). */
 #ifndef FM1_REMOTE_CANDIDATES_H
 #define FM1_REMOTE_CANDIDATES_H

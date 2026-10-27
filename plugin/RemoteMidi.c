@@ -3,8 +3,8 @@
 /* FM1VST's CoreMIDI back end for libremotefm1, built in place of RemoteFM1's host/src/macos/coremidi.c (same
  * interface: mac_priv.h's cm_*). Identical except for discovery: cm_scan offers a real device entity as a candidate only
  * when fm1_remote_midi_candidate() says it can be an FM-1 (its USB IDs 1209:0001, or, without the USB property, an
- * "FM-1" name; RemoteCandidates.h). The session sends HELLO to candidates only, so the owner's other MIDI hardware
- * never gets a message; with no candidate nothing is sent at all.
+ * "FM-1" name; RemoteCandidates.h; a Bluetooth MIDI device by its name only). The session sends HELLO to candidates
+ * only, so the owner's other MIDI hardware never gets a message; with no candidate nothing is sent at all.
  *
  * As there: SysEx out with MIDISend (one MIDIPacket per message), everything in through one input port, the bytes
  * queued as they come (the session's stream parser reassembles them). */
@@ -136,13 +136,17 @@ void cm_close(cm_t *c)
     free(c);
 }
 
+/* 1: a driver whose devices are never candidates (the IAC bus, network sessions); 2: Bluetooth MIDI, a candidate only
+ * by its name (RemoteFM1 0.2 advertises "FM-1 7938" and the Mac names the device so), as RemoteFM1's own host */
 static int skip_driver(MIDIDeviceRef dev)
 {
     CFStringRef s = NULL;
     char drv[128];
     MIDIObjectGetStringProperty(dev, kMIDIPropertyDriverOwner, &s);
     cfstr(s, drv, sizeof drv);
-    return contains_ci(drv, "IAC") || contains_ci(drv, "RTP") || contains_ci(drv, "Bluetooth");
+    if (contains_ci(drv, "Bluetooth"))
+        return 2;
+    return contains_ci(drv, "IAC") || contains_ci(drv, "RTP");
 }
 
 static int is_virtual(MIDIEndpointRef e)
@@ -161,7 +165,8 @@ int cm_scan(cm_t *c, cm_cand_t *out, int max, int allow_devices, const char *vir
         for (i = 0; i < nd && n < max; i++) {
             MIDIDeviceRef dev = MIDIGetDevice(i);
             char devname[64];
-            if (offline(dev) || skip_driver(dev))
+            const int skip = offline(dev) ? 1 : skip_driver(dev);
+            if (skip == 1)
                 continue;
             obj_name(dev, devname, sizeof devname);
             for (k = 0; k < MIDIDeviceGetNumberOfEntities(dev) && n < max; k++) {
@@ -169,7 +174,7 @@ int cm_scan(cm_t *c, cm_cand_t *out, int max, int allow_devices, const char *vir
                 MIDIEndpointRef src, dst;
                 SInt32 uid = 0;
                 int32_t usb = 0;
-                const int has_usb = usb_id_of(dev, ent, &usb);
+                const int has_usb = skip == 2 ? 0 : usb_id_of(dev, ent, &usb);   /* Bluetooth: the name rule */
                 if (MIDIEntityGetNumberOfSources(ent) < 1 || MIDIEntityGetNumberOfDestinations(ent) < 1)
                     continue;
                 src = MIDIEntityGetSource(ent, 0);

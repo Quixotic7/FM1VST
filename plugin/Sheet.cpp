@@ -759,7 +759,7 @@ Sheet::MainPage::MainPage(Sheet &s, FM1Editor &ed) : ScrollPage(ed.look()), shee
     // REMOTE FM-1
     stack_.add(hRemote_);
     stack_.add(remote_);
-    remote_.setTooltip("Remote FM-1: a real FM-1 running the RemoteFM1 firmware, on USB, becomes this panel: its keys, "
+    remote_.setTooltip("Remote FM-1: a real FM-1 running the RemoteFM1 firmware, on USB or Bluetooth MIDI, becomes this panel: its keys, "
                        "buttons, knobs and MASTER play the firmware here, and this screen and its LEDs show on the unit. One "
                        "FM1VST at a time drives the unit (another instance or the Standalone shows \"in use\" and takes over "
                        "when that one lets go). Saved with the set.");
