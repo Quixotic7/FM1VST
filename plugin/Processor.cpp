@@ -1168,7 +1168,9 @@ void FM1Processor::applyEmu(const EmuFirmware &fw, std::vector<uint8_t> pkg)
     {
         const juce::ScopedLock l(devLock_);
         emuPending_.clear();
-        switchEmuLocked(fw, std::move(pkg), std::nullopt);
+        emuError_.clear();
+        if (!switchEmuLocked(fw, std::move(pkg), std::nullopt))
+            emuError_ = message_;                // (the module is missing: the firmware page's status line says why)
     }
     relabelParameters();
     suspendProcessing(false);
