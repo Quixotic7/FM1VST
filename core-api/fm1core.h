@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-3.0-only */
+/* SPDX-License-Identifier: MPL-2.0 */
+/* This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 /* The core ABI (FM1-VST-PLAN.md 4.4, CORES-PLAN.md 3): a firmware built as a loadable module ("core", a *.fm1core
  * file) exports exactly one symbol,
  *

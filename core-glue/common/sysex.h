@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-3.0-only */
+/* SPDX-License-Identifier: MPL-2.0 */
+/* This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 /* The managers' SysEx transport for a core (core-glue/common/README.md "sysex"): what the device's usb.c does around
  * its SysEx service, for a glue whose firmware unit leaves it out (FELUCCA_OTA 0, the web units, the host builds).
  *

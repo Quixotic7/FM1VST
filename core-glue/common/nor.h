@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-3.0-only */
+/* SPDX-License-Identifier: MPL-2.0 */
+/* This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 /* The FM-1's 1 MiB SPI NOR for a core (core-glue/common/README.md "nor"). Two ways to use it:
  *
  * A. The NOR itself (a glue whose HAL has no flash of its own: storage.c's st_read / st_erase / st_prog hooks,

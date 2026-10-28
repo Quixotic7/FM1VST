@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-3.0-only */
+/* SPDX-License-Identifier: MPL-2.0 */
+/* This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 /* What CMake's fm1_add_core passes in (core-glue/common/README.md "version"): every unit of a core is compiled with
  *   FM1CORE_ID="<id>"            FM1CORE_VERSION="<the firmware's version>"   FM1CORE_COMMIT="<the submodule's HEAD>"
  *   FM1CORE_FAMILY="<family>"    FM1CORE_LICENSE="<SPDX>"                     FM1CORE_GATED="<reason>" (only if gated)
