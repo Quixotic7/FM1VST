@@ -3,6 +3,21 @@
 FM1VST's releases. The version is `project(FM1VST VERSION ..)` in CMakeLists.txt (the plugin shows it in its
 settings sheet); a release is the tag `v<version>` on it (.github/workflows/release.yml builds and publishes it).
 
+## 0.6.2 (2026-10-27): Remote FM-1 over Bluetooth MIDI
+
+- **Remote FM-1 over Bluetooth MIDI.** A unit on RemoteFM1 0.2 or later, paired with the Mac over Bluetooth (it shows
+  as "FM-1 ..."), can be the panel too: the plugin finds it by that name, and other Bluetooth MIDI gear never gets a
+  message. The status says *connected (Bluetooth, N fps)*.
+- **Frames paced for the unit** (libremotefm1 from RemoteFM1 0.2.2). Over Bluetooth the plugin sends no more than
+  the unit's radio carries, so the screen no longer updates in random chunks. Changed tiles go in 4 colours first
+  and in their exact colours once the screen has been still for a second.
+- **Changes shown whole, about 6x faster with 0.2.2.** With a unit on RemoteFM1 0.2.2, each screen change appears at
+  once when all of it has arrived, at about 30 KB/s (0.2.2's faster radio) instead of about 5.5 KB/s for older units.
+  Update the unit to 0.2.2 for both.
+- **USB first.** A unit connected by USB and Bluetooth at once is driven over USB.
+- The settings sheet's Remote FM-1 diagnostics count, over Bluetooth, the tiles sent in 4 colours, those made exact,
+  and the frames held for whole changes.
+
 ## 0.6.1 (2026-10-23): the big LCD in Device recordings, Show keyboard shortcuts
 
 - **Video recording: the big LCD in Device takes.** With "Big LCD above the panel" on (the sheet's View, or the `
