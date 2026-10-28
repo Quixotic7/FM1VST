@@ -1276,6 +1276,10 @@ void Sheet::MainPage::refresh(bool full)
     if (st.sessions || st.frames)
         diag << String::formatted("Sessions %u, frames %u (acknowledged %u), panel events %u", st.sessions, st.frames, st.acks,
                                   st.eventsIn);
+    if (st.ble)                                  // (RemoteFM1 0.2.2's pacing: reduced tiles, then exact; changes whole)
+        diag << (diag.isEmpty() ? "" : "\n")
+             << String::formatted("Bluetooth: tiles sent in %u colours %u, then exact %u; held frames %u", st.colors,
+                                  st.reduced, st.refined, st.held);
     if (!st.lastLog.empty() && on)
         diag << (diag.isEmpty() ? "" : "\n") << "Last: " << u8(st.lastLog);
     if (!RemoteLink::hasBulk())

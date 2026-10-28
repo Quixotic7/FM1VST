@@ -13,6 +13,8 @@
 //     parameter follows) injected on the fake reach the core; the host MIDI filter on and off; a core switch resends
 //     the screen whole (Felucca's screen on the unit); a second processor restored from the state is "in use"; the
 //     toggle off ends the session (SESSION 0: the fake back on its waiting screen).
+// (b) Bluetooth MIDI: the fake as a RemoteFM1 0.2.2 unit over Bluetooth: the status says so, a change bigger than a
+//     frame shows whole (HOLD), tiles go reduced to 4 colours, then exact once the screen is still.
 // The message loop is not running: the test calls drainTier2 itself. FM1EMU_HOME points under the build.
 #include <chrono>
 #include <cstdio>
@@ -22,11 +24,13 @@
 #include <map>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "built_cores.h"
 #include "Processor.h"
 #include "RemoteCandidates.h"
 #include "rfm/fake.h"
+#include "rfm/screen.h"
 
 static int fails = 0;
 static void check(bool c, const std::string &what)
@@ -258,6 +262,57 @@ int main()
               "B takes over once A let go (" + b.status().text + ")");
         b.stop();
         check(waitFor([&] { return b.status().state == RemoteLink::kOff; }, 3000), "B off");
+    }
+
+    // ---- (b) Bluetooth MIDI: the fake as a RemoteFM1 0.2.2 unit over Bluetooth (SysEx only, ~6 KB/s, HOLD)
+    {
+        std::printf("(b) Bluetooth MIDI (RemoteFM1 0.2.2)\n");
+        RemoteLink::Options o;
+        o.backend = RemoteLink::Backend::Fake;
+        o.fakeBluetooth = true;
+        o.lockPath = scratch.getChildFile("bletest/remote.lock").getFullPathName().toStdString();
+        RemoteLink l(o);
+        l.start();
+        check(waitFor([&] { return l.status().state == RemoteLink::kConnected; }, 5000),
+              "connected: \"" + l.status().text + "\"");
+        const RemoteLink::Status st0 = l.status();
+        check(st0.ble && !st0.bulk && st0.text.find("Bluetooth") != std::string::npos, "the status says Bluetooth");
+        // a 96 x 96 change (36 tiles of 8 colours, diagonal stripes): more than a Bluetooth frame's budget
+        constexpr uint32_t kX = 32, kY = 32, kN = 96;
+        static const uint16_t pal[8] = {0xF800, 0x07E0, 0x001F, 0xFFE0, 0xF81F, 0x07FF, 0xFFFF, 0x8410};
+        RemoteSnapshot &s = l.back();
+        std::memset(s.lcd, 0, sizeof s.lcd);
+        std::memset(&s.leds, 0, sizeof s.leds);
+        for (uint32_t y = kY; y < kY + kN; y++)
+            for (uint32_t x = kX; x < kX + kN; x++)
+                s.lcd[y * RFM_W + x] = pal[(x + y) % 8];
+        s.seq = 1;
+        std::vector<uint16_t> want(s.lcd, s.lcd + RFM_W * RFM_H);
+        l.publish();
+        // the unit shows the change whole (never some of its tiles and not others), then exact once the screen is still
+        bool partial = false, exact = false;
+        waitFor(
+            [&] {
+                l.withFake([&](rfm_fake_t *f) {
+                    const uint16_t *pn = reinterpret_cast<const uint16_t *>(rfm_fake_panel(f));
+                    uint32_t lit = 0;
+                    for (uint32_t ty = kY; ty < kY + kN; ty += RFM_TILE)
+                        for (uint32_t tx = kX; tx < kX + kN; tx += RFM_TILE)
+                            lit += pn[ty * RFM_W + tx] != 0;
+                    partial |= lit != 0 && lit != (kN / RFM_TILE) * (kN / RFM_TILE);
+                    exact = std::memcmp(pn, want.data(), RFM_W * RFM_H * 2) == 0;
+                });
+                return exact;
+            },
+            10000, [] { sleepMs(5); });
+        const RemoteLink::Status st = l.status();
+        check(exact, "the unit shows the screen exactly (after " + std::to_string(st.frames) + " frames)");
+        check(!partial, "the change was shown whole (held frames " + std::to_string(st.held) + ")");
+        check(st.held > 0 && st.reduced > 0 && st.refined > 0 && st.colors == 4,
+              "tiles reduced to " + std::to_string(st.colors) + " colours " + std::to_string(st.reduced) +
+                  ", then exact " + std::to_string(st.refined) + "; held frames " + std::to_string(st.held));
+        l.stop();
+        check(waitFor([&] { return l.status().state == RemoteLink::kOff; }, 3000), "off");
     }
 
     // ---- (p) the processor with Remote on

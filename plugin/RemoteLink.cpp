@@ -57,6 +57,11 @@ RemoteLink::RemoteLink(const Options &o) : opt_(o), t0_(std::chrono::steady_cloc
         rfm_fake_cfg_default(&fc);
         fc.sx_rate_bps = 300000;                 // the M0 numbers (RemoteFM1 PLAN.md section 10), as fm1remote's
         fc.bk_rate_bps = 830000;
+        if (opt_.fakeBluetooth) {                // (a 0.2.2 unit without RFM_CAP_BLE_FAST: ~6 KB/s, no bulk)
+            fc.ble = 1;
+            fc.has_bulk = 0;
+            fc.sx_rate_bps = 6000;
+        }
         fake_ = rfm_fake_new(&fc);
         loopBuf_.resize(1u << 18);
     }
@@ -337,6 +342,10 @@ void RemoteLink::updateStatus(uint32_t t)
     st_.acks = ss.acks;
     st_.pending = ss.pending;
     st_.inFlight = ss.in_flight;
+    st_.colors = ss.lossy;
+    st_.reduced = ss.reduced;
+    st_.refined = ss.refined;
+    st_.held = ss.held;
     const char *noBulk = hasBulk() ? "" : " (SysEx only: built without libusb)";
     char b[160];
     switch (state) {
@@ -344,7 +353,9 @@ void RemoteLink::updateStatus(uint32_t t)
         const int fl = rfm_session_frame_link(s_);
         st_.state = kConnected;
         st_.bulk = rfm_session_link_kind(s_, fl) == RFM_LINK_BK;
-        std::snprintf(b, sizeof b, "connected (%s, %.0f fps)%s", st_.bulk ? "bulk" : "MIDI", (double)st_.fps, noBulk);
+        st_.ble = !st_.bulk && ss.ble;
+        std::snprintf(b, sizeof b, "connected (%s, %.0f fps)%s", st_.bulk ? "bulk" : st_.ble ? "Bluetooth" : "MIDI",
+                      (double)st_.fps, noBulk);
         break;
     }
     case RFM_S_STARTING:
@@ -363,6 +374,7 @@ void RemoteLink::updateStatus(uint32_t t)
     }
     if (st_.state != kConnected) {
         st_.bulk = false;
+        st_.ble = false;
         st_.fps = 0.0f;
     }
     st_.text = b;

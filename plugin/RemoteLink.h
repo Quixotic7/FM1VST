@@ -65,6 +65,9 @@ public:
         std::string lockPath;                       // the unit lock (FM1Processor: home()/remote.lock)
         uint32_t fps = 20;                          // frames per second to the unit (the session's cap)
         std::string hostName = "FM1VST";            // HELLO's body
+        // (tests) the fake unit as a RemoteFM1 0.2.2 unit over Bluetooth MIDI: SysEx only, its HELLO_R says
+        // Bluetooth, HOLD in its caps, the wire at Bluetooth's rate (the session paces and reduces tiles for it)
+        bool fakeBluetooth = false;
     };
     explicit RemoteLink(const Options &o);
     ~RemoteLink();                                  // stop(), then the thread joined (<= kStopMs + a poll)
@@ -82,9 +85,13 @@ public:
     struct Status {
         State state = kOff;
         bool bulk = false;                          // kConnected: frames on the vendor bulk pipe (else SysEx)
+        bool ble = false;                           // kConnected: frames over Bluetooth MIDI (paced for it)
         float fps = 0.0f;                           // frames sent in the last second
         uint32_t sessions = 0, frames = 0, acks = 0, pending = 0, inFlight = 0, fullResends = 0, eventsIn = 0;
         uint32_t eventsDropped = 0, snapshotsTaken = 0, runs = 0;
+        // Bluetooth (libremotefm1's rfm_session_stats_t): tiles sent reduced to `colors` colours, reduced tiles
+        // sent again exactly once the screen was still, frames sent with HOLD (a screen change shown whole)
+        uint32_t colors = 0, reduced = 0, refined = 0, held = 0;
         std::string text;                           // for the editor: "connected (bulk, 20 fps)" ..
         std::string lastLog;                        // the session's last log line
     };

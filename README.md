@@ -23,7 +23,7 @@ The editor is the FM-1 panel itself (phase 3): LEDs, LCD, mouse and keyboard as 
 | `core-glue/choralroot/` | the ChoralRoot core: `core_choralroot.c` (the submodule's `tools/emu/emu_fw.c`, unmodified, with `exit` / `atexit` redirected so a firmware reboot halts the core instead of the host), `core_choralroot_params.c` (the Tier 2 parameter map and the knobs' targets, included into the same unit so it reaches the firmware's UI code) and `core_choralroot_desc.c` (the descriptor) |
 | `core-glue/felucca/`, `core-glue/melodee/` | the Felucca and Melodee cores, the same three files (`core_<id>.c`, `core_<id>_params.c`, `core_<id>_desc.c`) plus, because these firmwares have no emulator of their own, its equivalent written here: `<id>_fw.c` (the `emu_fw_*` hooks, as ChoralRoot's `emu_fw.c`), `<id>_firmware.h` (the include list, as `emu_firmware.h`) and `<id>_hal.h` (the HAL on the host, as `emu_hal_fw.h`) |
 | `cores/` | the firmwares, git submodules, read-only, pinned (below) |
-| `remote/RemoteFM1` | [RemoteFM1](https://github.com/Quixotic7/RemoteFM1) (submodule, pinned at `acd77af`, read-only): the protocol and libremotefm1, the host library behind Remote FM-1 (below) |
+| `remote/RemoteFM1` | [RemoteFM1](https://github.com/Quixotic7/RemoteFM1) (submodule, pinned at `v0.2.2` (`59a5b52`), read-only): the protocol and libremotefm1, the host library behind Remote FM-1 (below) |
 | `plugin/` | the JUCE plugin: `Processor.{h,cpp}` (`FM1Processor`: the core and its `Device` on the audio thread, parameters and the Tier 2 feedback loop, MIDI, state, presets, the firmware switch; the threading and file layout are in its header comment), `Tier2Parameter.{h,cpp}` (a rebindable host parameter slot, and `KnobParameter`: a physical knob that follows the firmware's screen), `Editor.{h,cpp}` (the device and screen views, the corner button), `Sheet.{h,cpp}` (the settings sheet: firmware browser, presets, Remote FM-1, playing, host control, themes, view, device, about), `Widgets.{h,cpp}` and `Look.{h,cpp}` (the sheet's controls; the palette, the type and the LookAndFeel), `StandaloneHooks.{h,cpp}` (the Standalone app's audio / MIDI settings in the sheet), `fonts/` (Inter Tight, OFL 1.1, and its build step), `PanelComponent.{h,cpp}` (the FM-1 panel: the emulator's drawing, layout, mouse and key map), `Theme.{h,cpp}` (colour themes: the derived palette, the presets, custom theme files) and `RemoteLink.{h,cpp}` (Remote FM-1: the session thread, the unit lock, the event queue and the screen snapshot) |
 | `engine/` | C++17, no JUCE: `cores.{h,cpp}` (find and load modules, one private copy per instance), `device.{h,cpp}` (the single-thread device clock, input, LEDs, LCD, `render` at any host rate), `resampler.h` (4-point Lagrange) |
 | `tests/` | `core_smoke`, `param_test` and `core_conformance` (per core), `common/` (the glue helpers), `replay_test`, `double_load_test`, `halt_test`, `plugin_test`, `tier2_test`, `panel_render_test`, `remote_test`, and `script_runner` (the emulator's script grammar on a `Device`) |
@@ -396,9 +396,9 @@ A real M-VAVE FM-1 can be the panel of the firmware running inside the plugin: i
 play the core, and the core's screen and LEDs show on the unit. It needs:
 
 - **The unit on the RemoteFM1 firmware** ([RemoteFM1](https://github.com/Quixotic7/RemoteFM1), installed with its
-  `fm1_install.py`), on USB. Without a session it shows "REMOTE FM1 / WAITING FOR HOST".
+  `fm1_install.py`), on USB or (RemoteFM1 0.2+) Bluetooth MIDI, paired with the Mac as "FM-1 ...". Without a session it shows "REMOTE FM1 / WAITING FOR HOST".
 - **The toggle:** "Remote FM-1" in the editor's top bar. The status next to it says *searching*, *connected (bulk |
-  MIDI, N fps)*, *unit lost: searching*, or *in use by another instance*. The toggle is saved with the plugin state,
+  MIDI | Bluetooth, N fps)*, *unit lost: searching*, or *in use by another instance*. The toggle is saved with the plugin state,
   so a Live set reopens with it on. Off (or the instance deleted, the plugin unloaded, the host quitting) ends the
   session and the unit goes back to its waiting screen.
 - **One driver at a time:** a lock file (`~/Library/Application Support/fm1emu/remote.lock`) lets exactly one FM1VST
@@ -411,7 +411,10 @@ play the core, and the core's screen and LEDs show on the unit. It needs:
   plays as before. To keep the unit off the track entirely, pick another MIDI input than "All Ins".
 
 Frames go over the unit's vendor bulk interface when it answers (libusb, linked statically: the bundles need no
-Homebrew library), else over SysEx; the panel events always come as plain MIDI. While searching, the plugin sends
+Homebrew library), else over SysEx; the panel events always come as plain MIDI. A unit on USB is used over USB even when it is also
+connected over Bluetooth. Over Bluetooth, libremotefm1 paces the frames for the radio (about 30 KB/s for RemoteFM1
+0.2.2, 5.5 KB/s for older units), sends changed tiles in 4 colours first and their exact colours once the screen has
+been still for a second, and with 0.2.2 shows each screen change whole; the settings sheet counts these. While searching, the plugin sends
 RemoteFM1's HELLO (a SysEx with the non-commercial ID `7D`) once a second, and only to what can be an FM-1: a USB-MIDI
 device whose USB IDs are 1209:0001 (RemoteFM1's, shared with ChoralRoot), or, for a device without the USB property,
 one named "FM-1" (`plugin/RemoteMidi.c`, `plugin/RemoteCandidates.h`). Other MIDI hardware (an audio interface, a
@@ -554,7 +557,9 @@ The tests:
   device is opened): the host MIDI filter (exactly the unit's panel messages and RemoteFM1 SysEx); discovery's
   candidates (a table of endpoints with and without the USB property: only 1209:0001, or an "FM-1" name without the
   property, never an updater port, never the Onyx, a Roto-Control or a stock FM-1); the unit lock
-  (two links on one lock file: the second is *in use* and sends nothing, then takes over when the first stops); the
+  (two links on one lock file: the second is *in use* and sends nothing, then takes over when the first stops);
+  Bluetooth (the fake as a RemoteFM1 0.2.2 unit over Bluetooth MIDI: the status says so, a change larger than a frame
+  shows whole, tiles go in 4 colours, then exact); the
   processor with Remote on, in real time: the session starts on the (fake) bulk pipe, the unit's shadow equals
   the panel's `lcd` once settled, the LEDs are the panel's levels (each in the LEDS plane of its class), a key, a button, an encoder (PRESETS: a device
   turn, reported on Knob Presets inside a gesture, no host detents) and MASTER (the parameter follows) from the
