@@ -1,4 +1,6 @@
-/* SPDX-License-Identifier: GPL-3.0-only */
+/* SPDX-License-Identifier: MPL-2.0 */
+/* This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0. If a copy of the MPL was not
+ * distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/. */
 /* The audio adapter (core-glue/common/README.md "fifo"): a firmware that renders its own block size (SLOOP, the
  * Vestal plat and Dinghy render 256 frames; any size 1..FM1FIFO_MAX), as int16 or int32 (Q15 << shift), mono or
  * stereo, served as the ABI's audio(int16 stereo, a multiple of 128 frames).
