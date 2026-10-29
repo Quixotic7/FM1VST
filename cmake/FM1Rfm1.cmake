@@ -20,9 +20,11 @@
 #       [RUN_ARGS <args..>])        rfm1_run's options in the test ("--sysex <bank.syx>", "--settle 5000")
 #
 # Makes rfm1_<id> (build/rfm1/<id>-<version>.rfm1, also in ALL), appended to rfm1_all, and the test rfm1_<id>
-# (rfm1_check + rfm1_run). The generate step is the core's own (gen_<id>). core-glue/common/coro.c (ucontext) is left
-# out: a core whose glue needs the coroutine (Dinghy, Melodee, Tonitor, plat with its SysEx coroutine) does not link.
-# Gated cores are refused (CORES-PLAN.md 6: an .rfm1 is a published binary).
+# (rfm1_check + rfm1_run). The generate step is the core's own (gen_<id>). The coroutine: core-glue/common/coro.c
+# (ucontext) is left out; a core whose units call fm1coro_* (a main loop that never returns: Dinghy, Melodee, Tonitor,
+# plat with its SysEx coroutine) gets core-glue/common/coro_asyncify.c instead and Binaryen's Asyncify pass at the link
+# (tools/rfm1/rfm1_link.cmake, which tells them apart: the others link exactly as before). Gated cores are refused
+# (CORES-PLAN.md 6: an .rfm1 is a published binary).
 option(FM1_RFM1 "build the .rfm1 files of the cores whose glue calls fm1_add_rfm1 (Emscripten)" OFF)
 set(FM1_RFM1_MEMORY_MIB 8 CACHE STRING "an .rfm1's fixed linear memory in MiB unless its fm1_add_rfm1 says otherwise")
 set(FM1_RFM1_OPT -O3 CACHE STRING "the optimisation flag of the .rfm1 builds")
@@ -32,6 +34,9 @@ get_filename_component(FM1_RFM1_ROOT ${CMAKE_CURRENT_LIST_DIR}/.. ABSOLUTE)
 # the WebAssembly the format allows (its section 6: what wasm3 0.5.0 runs): the MVP, sign extension, non-trapping
 # float-to-int, bulk memory (memory.copy / fill), mutable globals; Emscripten's defaults add reference types and more
 set(FM1_RFM1_FEATURES -mcpu=mvp -msign-ext -mnontrapping-fptoint -mbulk-memory -mmutable-globals)
+# the same features as wasm-opt names them (the coroutine's Asyncify pass: tools/rfm1/rfm1_link.cmake)
+set(FM1_RFM1_WASM_OPT_FEATURES --mvp-features --enable-sign-ext --enable-nontrapping-float-to-int --enable-bulk-memory
+    --enable-mutable-globals)
 # the same sound on every host: no fused multiply-add
 set(FM1_RFM1_CFLAGS -std=gnu11 -ffp-contract=off -fno-common -DFM1CORE_RFM1=1)
 set_property(GLOBAL PROPERTY FM1_RFM1_IDS "")
@@ -54,6 +59,17 @@ if(FM1_RFM1)
                         OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
     endif()
     set(FM1_RFM1_MUSL_COPYRIGHT ${FM1_EMSCRIPTEN_ROOT}/system/lib/libc/musl/COPYRIGHT)
+    # the coroutine's link (tools/rfm1/rfm1_link.cmake): emnm (does a core call fm1coro_*?) and Emscripten's wasm-opt
+    find_program(FM1_EMNM emnm HINTS ${_emdir} ${FM1_EMSCRIPTEN_ROOT} NO_DEFAULT_PATH)
+    set(_binaryen "")
+    if(EXISTS ${_emdir}/em-config)
+        execute_process(COMMAND ${_emdir}/em-config BINARYEN_ROOT OUTPUT_VARIABLE _binaryen
+                        OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    endif()
+    find_program(FM1_WASM_OPT wasm-opt HINTS ${_binaryen}/bin NO_DEFAULT_PATH)
+    if(NOT FM1_EMNM OR NOT FM1_WASM_OPT)
+        message(FATAL_ERROR "FM1_RFM1: emnm or Emscripten's wasm-opt not found (-DFM1_EMNM=.. -DFM1_WASM_OPT=..)")
+    endif()
     if(NOT FM1_EMSCRIPTEN_ROOT OR NOT EXISTS ${FM1_RFM1_MUSL_COPYRIGHT})
         message(WARNING "FM1_RFM1: musl's COPYRIGHT not found in Emscripten's tree (${FM1_EMSCRIPTEN_ROOT}): the "
                         ".rfm1 files will carry Emscripten's notice without musl's")
@@ -164,7 +180,8 @@ function(fm1_add_rfm1 id)
     endforeach()
     list(APPEND _base -I${FM1_COMMON_DIR}/wasm_compat ${_topt} ${A_FLAGS})
 
-    # the units: the core's own, without the coroutine (ucontext), plus the shim
+    # the units: the core's own, without the coroutine (ucontext), plus the shim; the coroutine on Asyncify is its
+    # own object, linked only into a core that calls it (rfm1_link.cmake)
     list(FILTER _srcs EXCLUDE REGEX "/coro\\.c$")
     list(APPEND _srcs ${FM1_COMMON_DIR}/rfm1_shim.c)
     set(_objs "")
@@ -198,13 +215,35 @@ function(fm1_add_rfm1 id)
         list(APPEND _objs ${_o})
     endforeach()
 
-    # the module: a WASI reactor (_initialize), no JS, no file system, fixed memory
+    set(_coro_o ${_wdir}/obj/coro_asyncify.o)
+    add_custom_command(OUTPUT ${_coro_o}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${_wdir}/obj
+        COMMAND ${FM1_EMCC} ${FM1_RFM1_FEATURES} ${FM1_RFM1_OPT} ${FM1_RFM1_CFLAGS} -Wall -Wextra -I${FM1_COMMON_DIR}
+                -MD -MF ${_coro_o}.d -c ${FM1_COMMON_DIR}/coro_asyncify.c -o ${_coro_o}
+        DEPENDS ${FM1_COMMON_DIR}/coro_asyncify.c
+        DEPFILE ${_coro_o}.d
+        COMMENT "rfm1 ${id}: coro_asyncify.c"
+        VERBATIM)
+
+    # the module: a WASI reactor (_initialize), no JS, no file system, fixed memory (tools/rfm1/rfm1_link.cmake: the
+    # coroutine's Asyncify pass when the units call fm1coro_*)
     set(_wasm ${_wdir}/${id}.wasm)
+    set(_link_tail --no-entry -sSTANDALONE_WASM -sFILESYSTEM=0 -sSTACK_SIZE=${_stack} -sINITIAL_MEMORY=${_mem}
+                   -sALLOW_MEMORY_GROWTH=0 -sEXPORTED_FUNCTIONS=[] -Wl,--gc-sections)
+    set(_link_args ${FM1_RFM1_FEATURES} ${FM1_RFM1_OPT})
+    set(_link_conf ${_wdir}/link.cmake)
+    set(_c "")
+    foreach(_v EMCC=FM1_EMCC EMNM=FM1_EMNM WASM_OPT=FM1_WASM_OPT LINK_ARGS=_link_args OBJS=_objs LINK_TAIL=_link_tail
+               CORO_OBJ=_coro_o WASM_OPT_FEATURES=FM1_RFM1_WASM_OPT_FEATURES OPT=FM1_RFM1_OPT OUT=_wasm)
+        string(REPLACE "=" ";" _v "${_v}")
+        list(GET _v 0 _k)
+        list(GET _v 1 _src)
+        string(APPEND _c "set(${_k} \"${${_src}}\")\n")
+    endforeach()
+    file(CONFIGURE OUTPUT ${_link_conf} CONTENT "${_c}" @ONLY)
     add_custom_command(OUTPUT ${_wasm}
-        COMMAND ${FM1_EMCC} ${FM1_RFM1_FEATURES} ${FM1_RFM1_OPT} ${_objs} --no-entry -sSTANDALONE_WASM -sFILESYSTEM=0
-                -sSTACK_SIZE=${_stack} -sINITIAL_MEMORY=${_mem} -sALLOW_MEMORY_GROWTH=0 -sEXPORTED_FUNCTIONS=[]
-                -Wl,--gc-sections -o ${_wasm}
-        DEPENDS ${_objs}
+        COMMAND ${CMAKE_COMMAND} -DCONF=${_link_conf} -P ${FM1_RFM1_TOOLS}/rfm1/rfm1_link.cmake
+        DEPENDS ${_objs} ${_coro_o} ${_link_conf} ${FM1_RFM1_TOOLS}/rfm1/rfm1_link.cmake
         COMMENT "rfm1 ${id}: linking ${id}.wasm"
         VERBATIM)
     # the descriptor as the module itself reports it (rfm1_run --describe), then the manifest and the sections
