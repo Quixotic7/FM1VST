@@ -1,0 +1,14 @@
+# S1Vave 1.0: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the splash stands 2.4 s from power-on (obv_ui.h ui_splash): the key after it
+settle_ms 3000
+# the flash round trip: PRESETS three detents on (program 04), saved in the settings record (2 s after the change,
+# when quiet; flash_sync does it at once); after the reboot the PERFORM page shows program 04, not 01
+save wait 3000
+save knob PRESETS +3
+save wait 3000
+save quit
+saved wait 3500
+saved quit
+saved-lcd-differs
+# the reboot: the host shim has no reset path (UBOOT is a USB request, the boot guard the device branch's)
+reboot none the host build has no reset path (UBOOT over USB, the boot guard in the device branch only)

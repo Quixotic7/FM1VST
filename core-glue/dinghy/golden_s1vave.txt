@@ -1,0 +1,11 @@
+# S1Vave's golden check (dinghy_golden.c), OberVave's script: run by its own host sim (tests/host.c) and by the core;
+# the screens compared at 3000 ms. After the splash (2.4 s): a chord (voices 1-3 lit), PRESETS two programs on, KNOB 1
+# and KNOB 3 turned on the PERFORM page, then SEQ (S1Vave asks where to save the pattern).
+200 keys 0x80
+2500 keys 0x4880
+2600 enc 6 2
+2650 enc 2 5
+2700 enc 4 -3
+2800 btn 9
+3000 shot
+3010 end
