@@ -21,3 +21,8 @@ dinghy_golden_check(s1vave SCRIPT golden_s1vave.txt AT 3000 SOURCE ${CMAKE_SOURC
                     DEFINES OBV_HOST APP_VER="1.0"
                     INCLUDES ${CMAKE_SOURCE_DIR}/cores/s1vave/firmware/src ${CMAKE_SOURCE_DIR}/cores/s1vave/firmware/gen
                     FLAGS "-Dsection(x)=aligned(4)")
+# the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md): the main loop on the coroutine, so Asyncify
+# (tools/rfm1/rfm1_link.cmake). The licence texts: its GPL, its LICENSING.md and the Terminus font's OFL
+fm1_add_rfm1(s1vave AUTHORS "Andrew GG"
+             LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
+                           "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt")
