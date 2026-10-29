@@ -32,6 +32,13 @@ find_library(MATH_LIB m)
 # public builds leave out the cores whose licensing is not settled (fm1_add_core GATED; CORES-PLAN.md 6)
 option(FM1_PUBLIC_BUILD "leave out the cores marked GATED (a build to publish)" OFF)
 include(cmake/FM1Cores.cmake)
+# .rfm1 files (cmake/FM1Rfm1.cmake, docs/RFM1.md): -DFM1_RFM1=ON builds those of the cores whose glue calls
+# fm1_add_rfm1; -DFM1_RFM1_ONLY=ON also stops after the cores (no engine, plugin, JUCE or Remote FM-1: a firmware's CI)
+option(FM1_RFM1_ONLY "configure only the cores and their .rfm1 files (sets FM1_RFM1)" OFF)
+if(FM1_RFM1_ONLY)
+    set(FM1_RFM1 ON CACHE BOOL "build the .rfm1 files of the cores whose glue calls fm1_add_rfm1 (Emscripten)" FORCE)
+endif()
+include(cmake/FM1Rfm1.cmake)
 # (a core built otherwise than by fm1_add_core, e.g. core-glue/fm1emu's Rust module, appends its id, its build target
 # and its module file to these: it is bundled and listed with the others, but not run by the per-core tests)
 set(FM1_EXTRA_CORE_IDS "")
@@ -41,14 +48,17 @@ file(GLOB FM1_CORE_CMAKES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/core-glu
                                             ${CMAKE_CURRENT_SOURCE_DIR}/core-glue/*/core_*.cmake)
 list(SORT FM1_CORE_CMAKES)
 # a build of only some cores (a work tree whose other cores' submodules are not checked out): their glue folders'
-# names, e.g. -DFM1_ONLY_CORES=choralroot or "felucca_web;melodee". Empty (the default): every core.
-set(FM1_ONLY_CORES "" CACHE STRING "build only the cores of these core-glue/<folder> names (empty: every core)")
+# names, e.g. -DFM1_ONLY_CORES=choralroot or "felucca_web;melodee", or single cores by their glue file's name,
+# core_<name>.cmake ("felucca": core-glue/felucca_web/core_felucca.cmake alone). Empty (the default): every core.
+set(FM1_ONLY_CORES "" CACHE STRING "build only the cores of these core-glue/<folder> or core_<name>.cmake names (empty: every core)")
 if(FM1_ONLY_CORES)
     set(_kept "")
     foreach(_f IN LISTS FM1_CORE_CMAKES)
         get_filename_component(_dir ${_f} DIRECTORY)
         get_filename_component(_dir ${_dir} NAME)
-        if(_dir IN_LIST FM1_ONLY_CORES)
+        get_filename_component(_stem ${_f} NAME_WE)
+        string(REGEX REPLACE "^core_" "" _stem "${_stem}")
+        if(_dir IN_LIST FM1_ONLY_CORES OR _stem IN_LIST FM1_ONLY_CORES)
             list(APPEND _kept ${_f})
         endif()
     endforeach()
@@ -59,6 +69,12 @@ foreach(_f IN LISTS FM1_CORE_CMAKES)
     include(${_f})
 endforeach()
 message(STATUS "cores: ${FM1_CORE_IDS}; built otherwise: ${FM1_EXTRA_CORE_IDS}")
+enable_testing()
+fm1_rfm1_finish()   # (rfm1_run, rfm1_all, the rfm1_<id> tests)
+if(FM1_RFM1_ONLY)
+    message(STATUS "FM1_RFM1_ONLY: the cores and their .rfm1 files only")
+    return()
+endif()
 # ChoralRoot's tree: the reference emulator and the replay tests below are its own. They need the choralroot core,
 # which a public build leaves out (gated): then they are not built, and the tests that need it skip (77, saying so).
 set(CR ${CMAKE_CURRENT_SOURCE_DIR}/cores/ChoralRootFM1)

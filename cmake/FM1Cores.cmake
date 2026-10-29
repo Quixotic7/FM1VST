@@ -48,7 +48,8 @@
 # the glue folder, family and licence as the global properties FM1_CORE_GLUE_<id>, FM1_CORE_FAMILY_<id>,
 # FM1_CORE_LICENSE_<id> (the conformance test reads <glue>/conformance.txt), and FM1_CORE_VERSION_<id>,
 # FM1_CORE_COMMIT_<id>, FM1_CORE_SOURCE_<id> (the release manifest, CMakeLists.txt); a gated core a public build
-# leaves out is appended to FM1_CORES_LEFT_OUT.
+# leaves out is appended to FM1_CORES_LEFT_OUT. FM1_CORE_UNIT_<id>, FM1_CORE_GATED_<id>, FM1_CORE_GEN_TARGET_<id> and
+# FM1_CORE_GEN_HEADERS_<id> are for fm1_add_rfm1 (cmake/FM1Rfm1.cmake: the core as an .rfm1, the same units in Wasm).
 set(FM1_COMMON_DIR ${CMAKE_CURRENT_LIST_DIR}/../core-glue/common)
 get_filename_component(FM1_COMMON_DIR ${FM1_COMMON_DIR} ABSOLUTE)
 set(FM1_COMMON_SOURCES ${FM1_COMMON_DIR}/nor.c ${FM1_COMMON_DIR}/fifo.c ${FM1_COMMON_DIR}/coro.c)
@@ -302,5 +303,12 @@ function(fm1_add_core id glue)
     set_property(GLOBAL PROPERTY FM1_CORE_VERSION_${id} "${ver}")
     set_property(GLOBAL PROPERTY FM1_CORE_COMMIT_${id} "${commit}")
     set_property(GLOBAL PROPERTY FM1_CORE_SOURCE_${id} "${src}")
+    # (for fm1_add_rfm1, cmake/FM1Rfm1.cmake: the same units, built again for Wasm)
+    set_property(GLOBAL PROPERTY FM1_CORE_UNIT_${id} "${glue}/${A_UNIT}")
+    set_property(GLOBAL PROPERTY FM1_CORE_GATED_${id} "${A_GATED}")
+    set_property(GLOBAL PROPERTY FM1_CORE_GEN_HEADERS_${id} "${gen_headers}")
+    if(NOT A_NO_GEN)
+        set_property(GLOBAL PROPERTY FM1_CORE_GEN_TARGET_${id} ${gen_target})
+    endif()
     set(FM1_CORE_IDS ${FM1_CORE_IDS} ${id} PARENT_SCOPE)
 endfunction()
