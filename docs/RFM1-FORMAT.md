@@ -1,4 +1,4 @@
-<!-- A copy: the original is RemoteFM1IOS's docs/RFM1-FORMAT.md (github.com/Quixotic7/RemoteFM1IOS, at 0781d5b).
+<!-- A copy: the original is RemoteFM1IOS's docs/RFM1-FORMAT.md (github.com/Quixotic7/RemoteFM1IOS, at 72b9d13).
      Keep the text identical; change the original first. -->
 # The .rfm1 firmware file (version 1)
 
@@ -6,7 +6,7 @@ An `.rfm1` file is an FM-1 firmware built to run in a host app (RemoteFM1 for iO
 firmware's host build (the fm1core ABI, as FM1VST's core glue makes it) compiled to **WebAssembly**. The host runs it in
 an interpreter, so the same file runs on any platform, and each instance gets its own memory.
 
-A firmware author can add an `.rfm1` build to their releases (FM1VST's `fm1_add_rfm1`, see its README). Users download
+A firmware author can add an `.rfm1` build to their releases (FM1VST's `fm1_add_rfm1`: its `docs/RFM1.md`). Users download
 the file and put it in the app's firmware folder.
 
 ## 1. The file
@@ -17,7 +17,8 @@ A WebAssembly binary module (it starts with `\0asm`, version 1) with:
   `.rfm1`.
 - **Optional custom sections `rfm1.credits`** (UTF-8 text: the credits a host shows in its About screen) **and
   `rfm1.license.<n>`** (n = 0, 1, …: licence texts, UTF-8, the first line the licence's name).
-- The exports of section 2, the imports of section 3, and nothing else that a host must provide.
+- The exports of section 2, the imports of section 3, and nothing else that a host must provide. Hosts ignore
+  exports this spec doesn't list (a toolchain's own, e.g. Emscripten's `emscripten_stack_*`, `__indirect_function_table`).
 
 File name: `<id>-<version>.rfm1` (e.g. `felucca-1.6.1.rfm1`). Hosts don't rely on the name.
 
@@ -82,6 +83,7 @@ No file system, no network, no randomness, no threads.
   "license": "GPL-3.0-only",
   "source_url": "https://github.com/hugelton/Felucca@<commit>",
   "authors": ["Leo Kuroshita (Hügelton Instruments)"],
+  "glue_url": "https://github.com/Quixotic7/FM1VST/tree/<commit>",
   "built_by": "FM1VST <version> fm1_add_rfm1, emcc <version>",
   "memory_mib": 8
 }
@@ -89,7 +91,8 @@ No file system, no network, no randomness, no threads.
 
 - `rfm1`, `abi`, `id`, `name`, `version`, `license`, `source_url` are required. `id` is `[a-z0-9_]{1,31}` and
   matches the descriptor's. `license` is an SPDX expression. `source_url` points at the exact source the file was
-  built from (a commit), so a user can get the source their licence promises them.
+  built from (a commit), so a user can get the source their licence promises them. `glue_url` (optional) points at the
+  exact build glue (FM1VST at a commit): for a GPL firmware it is part of the corresponding source too.
 - The host shows `name`, `version`, `license`, `authors`, `source_url` and the `rfm1.credits` text.
 - A host may refuse a module whose manifest and descriptor disagree on `id`, `name` or `version`.
 
@@ -105,9 +108,10 @@ Index → value: 0 `sizeof(fm1panel_t)`; 1–16 the offsets of `fm1panel_t`'s `k
 
 - One memory, exported, **fixed size** (initial = maximum, no `memory.grow`): the host keeps pointers into it. At most
   32 MiB; 8 MiB is typical.
-- Features: the MVP plus sign-extension, non-trapping float-to-int, bulk memory, mutable globals, multi-value. **Not**:
-  SIMD, threads/atomics, reference types, tail calls, exception handling, memory64 (wasm3 0.5.0, the interpreter on
-  iOS, doesn't run them).
+- Features: the MVP plus sign-extension, non-trapping float-to-int, mutable globals, multi-value, and of bulk memory
+  only `memory.copy` and `memory.fill`. **Not**: `memory.init`, `data.drop`, `table.*`, passive data segments, SIMD,
+  threads/atomics, reference types, tail calls, exception handling, memory64 (wasm3 0.5.0, the interpreter on iOS,
+  doesn't run them). Data segments are active, in memory 0.
 - Floating point: build with `-ffp-contract=off` so the sound is the same on every host.
 
 ## 7. How a host uses it
@@ -116,8 +120,11 @@ Index → value: 0 `sizeof(fm1panel_t)`; 1–16 the offsets of `fm1panel_t`'s `k
 2. Instantiate it (one instance per firmware instance: an AU instance, the app's player). Call `_initialize` if
    exported.
 3. `rfm1_get(6)`; check `rfm1_layout`; read the descriptor's data.
-4. Drive it exactly as a native core: `options`, `boot_options`, `flash_stage`, `init`, then `tick` / `audio` /
-   `frame` / `idle` on the native ABI's clock, panel reads and writes in linear memory.
+4. Boot. From a fresh flash: `rfm1_flash_stage(0, 0)`; `rfm1_options(p, 0, 0, 1)` with `p` the string
+   `"fm1core:staged"` placed in memory with `rfm1_alloc`; `rfm1_boot_options(-1, 0, -1)`; the panel's `ready` = 2;
+   `rfm1_init(0)`. From a saved flash: stage its bytes with `rfm1_flash_stage` instead of (0, 0). Then drive it exactly
+   as a native core: `tick` / `audio` / `frame` / `idle` on the native ABI's clock, panel reads and writes in linear
+   memory.
 5. Saved state (an AU's `fullState`): the firmware's id, version and the file's SHA-256, plus the flash image as for a
    native core. Restoring with a different file of the same id: the host warns and boots the flash anyway; the
    firmware decides what its flash means.
