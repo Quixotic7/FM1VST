@@ -163,7 +163,8 @@ static int runFake()
                  {"fimba", "FiMba FM-1"},           {"fomni", "FoMni FM-1"},             {"obervave", "Felucca"},
                  {"loom", "LOOM-8 FM-1"},           {"minitone", "Felucca"},             {"fmini", "FM-1 Midi"},
                  {"skiff", "Felucca"},              {"grimm", "Felucca"},                {"pigeon", "PIGEON"},
-                 {"tonitor", "FM-1 Tonitor"},       {"speak37", "Speak37"},              {"unknown-fw", "FM-1"}};
+                 {"tonitor", "FM-1 Tonitor"},       {"speak37", "Speak37"},              {"s1vave", "Felucca"},
+                 {"unknown-fw", "FM-1"}};
     bool all = true;
     for (auto &t : table)
         all = all && EditorPort::usbProductName(t.id) == t.usb;

@@ -18,8 +18,9 @@ DUELL un-gated (section 6). 2026-10-22 (branch cores-pigeon): PIGEON 0.4.1 (The 
 (`research/cores-2026-10-22/SURVEY.md`). 2026-10-22 (branch cores-speak37): Speak37's FM-1 build
 joined on a glue of its own (core-glue/speak37), public (research/cores-2026-10-22/SURVEY.md section 10).
 2026-10-22 (branch bump-oct23): LOOM-8 0.6.1, DUELL 1.0, CoralFlower 0.5 and Tonitor 0.55 (a240bc1, the Hub's
-2026.10.22 package), each its latest release.
-That makes 29 cores, 21 of them public (section 6). The per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
+2026.10.22 package), each its latest release. 2026-10-29 (branch s1vave): S1Vave 1.0 (Andrew GG's fork of OberVave,
+commit 9730337: no tag) joined the dinghy glue, public.
+That makes 30 cores, 22 of them public (section 6). The per-firmware research is in `research/hub-2026-10-18/<id>.md`; this file is its summary.
 
 ## 1. What the survey found
 
@@ -56,6 +57,7 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | Frodhes 0.9.4 | GPL-3.0 | Dinghy | native + wasm | E |
 | FM-106 Beta5 | GPL-3.0 (KR-106 port: **provenance unchecked**) | Dinghy + a second core | native (needs a shim) | E |
 | GR!MM 1.0 (added 2026-10-22) | GPL-3.0-only | Dinghy | native `tests/host.c` + wasm (`web/fm1_web.c`) | E |
+| S1Vave 1.0 (9730337, no tags; added 2026-10-29) | GPL-3.0-only (its branding CC BY 4.0, Terminus OFL-1.1) | Dinghy (OberVave's fork) | native `tests/host.c` + wasm | E |
 | Melodee 1.4.5 | GPL-3.0 (+ BSD-3 uPD933) | Felucca 1.0 + x0x 909 + Prophet / SID / CZ | native (`hostsim`, `ui_test`) | F |
 | PIGEON 0.4.1 (added 2026-10-22) | GPL-3.0-only (+ libmad GPL-2.0-or-later) | Felucca 1.5.1 | native + wasm (felucca_web) | A |
 
@@ -156,6 +158,7 @@ so these need an answer first:
 | Mini-Tone | its LICENSING.md names MIT / Apache-2.0 / OFL texts its tree lacks (only GPL-2.0-reSID.txt is there) | public (the owner's call, 2026-10-22): FM1VST supplies the texts (core-glue/felucca_web/licences/minitone/, in its credits; tools/package_release.sh copies them and checks every named file is there) |
 | FMini-1 | a few factory patch names name artists or marks (EMERSON, NUMAN, MOOG BASS ..): names only, the author's own patches | public (the owner's call, 2026-10-22) |
 | Skiff | SLICE's BREAK and FUNK loops are AI-generated (the YuE2 model, published under YuE2's permission for creators) | public (the owner's call, 2026-10-22); the credits say they are AI-generated |
+| S1Vave | its 64 factory programs are modelled on the Roland S-1's (compiled-in C arrays, no preset files); its branding is CC BY 4.0 (credited, with the licence's URL) | public (the owner's call, 2026-10-29): the credits name Andrew GG, zvenson, Leo Kuroshita / Hügelton with isod89, M. Geisler, and carry the Terminus font's OFL |
 | GR!MM | none: its LICENSING.md leaves out Felucca's DX7-like FM patches and Dinghy's logo itself | public (2026-10-22) |
 | No Man Sky FM | credit request | credited in the About box (the descriptor's credits, ABI 6) |
 | X0X | 909 hi-hat / ride / crash samples "ER-99 via 9W9", GPL-3.0 | gated until ER-99's author confirms they are not TR-909 ROM recordings |
@@ -166,10 +169,10 @@ so these need an answer first:
 
 Gated today (left out of FM1_PUBLIC_BUILD): fm106 (Juno-106 patch data), rainbow (character
 look-alikes), fartmachine (recordings), orbit (OP-1 material, the Hugelton atlas), sloop and sloopdx (the Hugelton
-atlas), nomansky (game art), x0x (the cymbal samples). A public build bundles the other twenty-one: choralroot
+atlas), nomansky (game art), x0x (the cymbal samples). A public build bundles the other twenty-two: choralroot
 (the default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee, fomni, fimba, amb, obervave, frodhes,
 loom (un-gated 2026-10-21), duell (un-gated 2026-10-22), minitone, fmini, skiff, grimm, pigeon, tonitor, speak37
-(added public 2026-10-22), and the fm1emu engine.
+(added public 2026-10-22), s1vave (added public 2026-10-29), and the fm1emu engine.
 
 ## 7. Rules
 

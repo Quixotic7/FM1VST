@@ -1749,6 +1749,8 @@ const Profile kProfiles[] = {
     {"fartmachine", nullptr, false, "FM-1_701", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"fm106", nullptr, false, "FM-1_907", false, nullptr, false, nullptr, fm106_run},
     {"obervave", nullptr, false, "FM-1_955", false, nullptr, false, nullptr, installer_run(nullptr, false)},
+    // S1Vave: OberVave's fork, its README's release build (build.py --release 1.0: FM-1_950)
+    {"s1vave", nullptr, false, "FM-1_950", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"frodhes", nullptr, false, "FM-1_958", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"grimm", nullptr, false, "FM-1_966", false, nullptr, false, nullptr, grimm_run},
     {"tonitor", nullptr, false, "FM-1_700", false, nullptr, false, nullptr, tonitor_run},

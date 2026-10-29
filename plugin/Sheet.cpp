@@ -38,6 +38,7 @@ FirmwareMeta FirmwareMeta::of(const String &id, const String &sourceUrl)
         {"ghoulbox", "Synth", "Dungeon synth", "J. Persinger"},
         {"duell", "Synth", "Bitimbral synth", "OSCILL/R"},
         {"obervave", "Synth", "8-voice poly synth", "zvenson"},
+        {"s1vave", "Synth", "8-voice analog tweak synth", "Andrew GG"},
         {"frodhes", "Synth", "Electric piano", "L. Mirabal"},
         {"fm106", "Synth", "Juno-106 style poly", "PatttF"},
         {"fimba", "Synth", "Kalimba", "J. Sowers"},

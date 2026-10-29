@@ -94,7 +94,7 @@ a package by its SHA-256. What the public cores answer (`tests/sysex_test.cpp` c
 | `loom` | LOOM-8 FM-1 | its samples page | the sample bank, fm1-base's backup, identity FM-1_10000601 |
 | `grimm` | Felucca | GR!MM's editor | its editor (sounds, slots, settings, samples), identity FM-1_966 |
 | `tonitor` | FM-1 Tonitor | its backup page | sessions and presets (LIST, READ, WRITE), identity FM-1_700 |
-| `amb`, `fomni`, `fimba`, `obervave`, `frodhes` | AMB-1 FM-1, FoMni FM-1, FiMba FM-1, Felucca | | the installer's identity |
+| `amb`, `fomni`, `fimba`, `obervave`, `frodhes`, `s1vave` | AMB-1 FM-1, FoMni FM-1, FiMba FM-1, Felucca | | the installer's identity |
 | `speak37` | Speak37 | its installer page | identity FM-1_510 only (no editor) |
 
 **Adding a core.** A firmware becomes a core with its glue folder `core-glue/<family>/` and a `core.cmake` there

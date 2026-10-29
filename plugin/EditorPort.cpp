@@ -252,6 +252,7 @@ juce::String EditorPort::usbProductName(const juce::String &idIn)
         {"orbit", "Felucca"},              {"ghoulbox", "Felucca"},             {"rainbow", "Felucca"},
         {"nomansky", "Felucca"},           {"nmsfm", "Felucca"},                {"obervave", "Felucca"},
         {"frodhes", "Felucca"},            {"dinghy", "Felucca"},               {"amb", "AMB-1 FM-1"},
+        {"s1vave", "Felucca"},
         {"salt", "Felucca"},               {"jangada", "Felucca"},              {"waveloop", "Felucca"},
         {"gammawave", "Felucca"},          {"fm1quest", "Felucca"},             {"grimm", "Felucca"},
         {"zp12", "Felucca"},               {"minitone", "Felucca"},             {"skiff", "Felucca"},
