@@ -31,3 +31,5 @@ fm1_add_core(choralroot ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_cr} UNIT core_choral
 # top-level reference_emu: tools/emu/build.sh at the pinned tree, the replay tests' ground truth)
 crf_golden(choralroot SCRIPT ${_cr}/tools/emu/scripts/cr_dmaj.txt REF ${_cr}/build/host/emu REF_TARGET reference_emu
            AUDIO)
+# the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
+fm1_add_rfm1(choralroot AUTHORS "Quixotic7")

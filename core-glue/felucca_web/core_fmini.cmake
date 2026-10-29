@@ -11,3 +11,5 @@ fm1_add_core(fmini ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/fm
              GEN ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h felucca_tables.h felucca_fm6.h felucca_samples.h
              VERSION 1.8.0 DEFINES FELUCCA_VERSION="v1.8.0")
 fw_golden(fmini ${CMAKE_SOURCE_DIR}/cores/fmini-1 web/emu/felucca_web.c FELUCCA_VERSION="v1.8.0")
+# the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
+fm1_add_rfm1(fmini AUTHORS "ruppert")

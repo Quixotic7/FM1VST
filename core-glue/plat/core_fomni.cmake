@@ -13,3 +13,5 @@ include(${CMAKE_CURRENT_LIST_DIR}/plat_golden.cmake)
 plat_golden(fomni GEN_TARGET gen_fomni SOURCES ${_fomni}/host/omni_host.c ${_fomni}/firmware/src/dsp/omni.c
             DEFINES OM_HOST INCLUDES ${_fomni}/firmware/src ${_fomni}/firmware/src/dsp ${_fomni}/build/gen
             SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden_fomni.txt)
+# the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
+fm1_add_rfm1(fomni AUTHORS "Charles Vestal")

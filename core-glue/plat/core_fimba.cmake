@@ -13,3 +13,5 @@ include(${CMAKE_CURRENT_LIST_DIR}/plat_golden.cmake)
 plat_golden(fimba GEN_TARGET gen_fimba SOURCES ${_fimba}/host/kalimba_host.c ${_fimba}/firmware/src/dsp/kalimba.c
             DEFINES OM_HOST INCLUDES ${_fimba}/firmware/src ${_fimba}/firmware/src/dsp ${_fimba}/build/gen
             SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden_fimba.txt)
+# the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
+fm1_add_rfm1(fimba AUTHORS "jadamsowers")

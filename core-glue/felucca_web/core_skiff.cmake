@@ -14,3 +14,5 @@ fm1_add_core(skiff ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/sk
              VERSION_FILE firmware/src/felucca.c VERSION_REGEX "^#define FELUCCA_VERSION \"v?([^\"]*)\""
              DEFINES FELUCCA_VERSION="v1.4")
 fw_golden(skiff ${CMAKE_SOURCE_DIR}/cores/skiff web/emu/felucca_web.c FELUCCA_VERSION="v1.4")
+# the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
+fm1_add_rfm1(skiff AUTHORS "illuminus5")

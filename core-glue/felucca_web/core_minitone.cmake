@@ -17,3 +17,5 @@ fm1_add_core(minitone ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores
              GEN ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h felucca_tables.h felucca_fm6.h felucca_transients.h
              VERSION 1.0.1 DEFINES FELUCCA_VERSION="v1.0.1")
 fw_golden(minitone ${CMAKE_SOURCE_DIR}/cores/Mini-Tone web/emu/felucca_web.c FELUCCA_VERSION="v1.0.1")
+# the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
+fm1_add_rfm1(minitone AUTHORS "eldontyrellcorp")

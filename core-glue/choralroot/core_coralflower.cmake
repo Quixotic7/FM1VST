@@ -18,3 +18,5 @@ fm1_add_core(coralflower ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_cf} UNIT core_coral
 # CR_VERSION=0.5 so that its splash reads as the core's ("CoralFlower 0.5")
 crf_golden(coralflower SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden/coralflower.txt REF ${_cf}/build/host/emu
            BUILD env CR_VERSION=0.5 sh tools/emu/build.sh BUILD_DEPENDS gen_coralflower AUDIO)
+# the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
+fm1_add_rfm1(coralflower AUTHORS "FicusFicusov")

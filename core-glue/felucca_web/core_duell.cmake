@@ -22,3 +22,5 @@ fm1_add_core(duell ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/DU
              INCLUDES ${CMAKE_SOURCE_DIR}/cores/DUELL/felucca-base/firmware/src
              VERSION 1.0)
 fw_golden(duell ${CMAKE_SOURCE_DIR}/cores/DUELL/felucca-base web/emu/felucca_web.c)
+# the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
+fm1_add_rfm1(duell AUTHORS "oscillr")

@@ -10,3 +10,5 @@ fm1_add_core(jiant ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/JI
                  felucca_fm6.h ui_font_x.h gen_drum_maps.h dice_bars.h gen_bass.h
              VERSION 0.9.9 DEFINES FELUCCA_VERSION="v0.9.9")
 fw_golden(jiant ${CMAKE_SOURCE_DIR}/cores/JIANT web/emu/felucca_web.c FELUCCA_VERSION="v0.9.9")
+# the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
+fm1_add_rfm1(jiant AUTHORS "juanjiant-bit")

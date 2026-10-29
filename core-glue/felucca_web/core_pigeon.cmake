@@ -38,3 +38,6 @@ if(TARGET fw_golden_pigeon)
     set_tests_properties(fw_golden_pigeon PROPERTIES ENVIRONMENT
         "FM1EMU_HOME=${CMAKE_BINARY_DIR}/conformance/home;FW_GOLDEN_SYSEX=${CMAKE_SOURCE_DIR}/tests/fixtures/pigeon/bank.syx;FW_GOLDEN_DELAY_MS=2000")
 endif()
+# the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
+fm1_add_rfm1(pigeon AUTHORS "TheShrimpBlimp"
+             RUN_ARGS --sysex ${CMAKE_SOURCE_DIR}/tests/fixtures/pigeon/bank.syx)   # (its sample bank, as conformance_pigeon.txt)
