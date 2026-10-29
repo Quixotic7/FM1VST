@@ -12,8 +12,8 @@ licence, the source URL with its commit, authors), your credits, the licence tex
 
 - Your firmware as a core in FM1VST: a glue folder in `core-glue/` with its `fm1_add_core` call (see
   `core-glue/common/README.md`, "Adding a core"). If FM1VST already builds your firmware, this is done.
-- [Emscripten](https://emscripten.org) (`emcc`; tested with 6.0.13), CMake 3.22 or newer, and the Python 3 your
-  generate step uses (Pillow and fontTools for the Felucca-family generators).
+- [Emscripten](https://emscripten.org) (`emcc`, and its `emnm` and `wasm-opt`; tested with 6.0.13), CMake 3.22 or
+  newer, and the Python 3 your generate step uses (Pillow and fontTools for the Felucca-family generators).
 
 ## Build one
 
@@ -57,9 +57,18 @@ To try a core without editing its glue: `-DFM1_RFM1_EXTRA_CORES=<id>` (or `all`)
 The module runs on one thread, has no file system, and may only use the WebAssembly that wasm3 0.5.0 runs (no SIMD,
 threads, reference types, tail calls or exceptions; the build sets the feature flags). So:
 
-- A glue that needs `core-glue/common/coro.c` (a firmware main loop that never returns, on `ucontext`: Dinghy,
-  Melodee, Tonitor, LOOM-8's fm1base glue) does not link: `undefined symbol: fm1coro_new`. Such a core needs a
-  glue that returns from each tick instead.
+- A glue on the coroutine (`core-glue/common/coro.h`: a firmware main loop that never returns, as Dinghy's, Melodee's,
+  Tonitor's and LOOM-8's fm1base glue run it) builds too, with nothing to add to the glue. Natively the coroutine is
+  `coro.c` (`ucontext`); in an .rfm1 it is `core-glue/common/coro_asyncify.c`, the same API on Binaryen's Asyncify,
+  driven from inside the module (no JavaScript, no import). The link (`tools/rfm1/rfm1_link.cmake`) tells the two
+  kinds of core apart by their objects (`emnm`: does a unit call `fm1coro_*`?). A core that does not links exactly as
+  before. A core that does gets `coro_asyncify.c` and a names section, then Emscripten's `wasm-opt` with
+  `--asyncify` (only the functions that can reach the yield are instrumented; the resumer, `fm1coro_rfm1_switch`, is
+  in the removelist), the build's features, the Asyncify exports removed, `-O3` and the names stripped. A warning
+  from `wasm-opt` (a removelist name that is not there) or anything named `asyncify` left in the module fails the
+  build. The coroutine's C stack (512 KiB) and its Asyncify buffer (64 KiB) are allocated inside the fixed memory.
+  (S1Vave, and OberVave, Frodhes and GR!MM tried this way: 6.5-7x real time in `rfm1_run` on an M5 Mac. S1Vave's
+  .rfm1 plays the same samples as its native core, bit for bit, over `rfm1_run`'s whole run.)
 - A native-only header your firmware's host build includes can get a stand-in in `core-glue/common/wasm_compat/`
   (on the include path of .rfm1 builds only). ChoralRoot's `<os/lock.h>` is there.
 - `FM1CORE_RFM1` is defined (to 1) in .rfm1 builds, and `__EMSCRIPTEN__` as always with emcc, if your glue needs to
