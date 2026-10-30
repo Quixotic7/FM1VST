@@ -400,6 +400,34 @@ int main()
             p.setRemoteIgnoreMidi(true);
             h.runMs(100);
         }
+        // the unit's TRS MIDI in (RemoteFM1 MIDI_IN, RFM_CAP_MIDI_IN): split into messages, played as host MIDI
+        {
+            const uint32_t in0 = rl->status().midiIn;
+            const uint8_t on[] = {0x90, 62, 100};
+            rl->withFake([&](rfm_fake_t *f) { rfm_fake_trs(f, on, sizeof on); });
+            check(h.until([&] { return (H->keys >> 9) & 1u; }, 1000), "TRS MIDI in: note 62 on ch 1 plays key 9");
+            const uint8_t off[] = {0x80, 62, 0};
+            rl->withFake([&](rfm_fake_t *f) { rfm_fake_trs(f, off, sizeof off); });
+            check(h.until([&] { return !((H->keys >> 9) & 1u); }, 1000), "  ... its note-off releases key 9");
+            // ch 16 is the unit's own panel channel on its USB port, but the jack's MIDI is never filtered
+            const uint8_t on16[] = {0x9F, 62, 90};
+            rl->withFake([&](rfm_fake_t *f) { rfm_fake_trs(f, on16, sizeof on16); });
+            check(h.until([&] { return (H->keys >> 9) & 1u; }, 1000), "  ... note 62 on ch 16 from the jack plays key 9 too");
+            const uint8_t off16[] = {0x8F, 62, 0};
+            rl->withFake([&](rfm_fake_t *f) { rfm_fake_trs(f, off16, sizeof off16); });
+            check(h.until([&] { return !((H->keys >> 9) & 1u); }, 1000), "  ... released");
+            // more than one MIDI_IN (> 64 bytes): Start, 40 clocks, a CC, Stop -> 43 messages, every one through
+            std::vector<uint8_t> rt{0xFA};
+            for (int i = 0; i < 40; i++)
+                rt.push_back(0xF8);
+            rt.insert(rt.end(), {0xB0, 74, 64, 0xFC});
+            rl->withFake([&](rfm_fake_t *f) { rfm_fake_trs(f, rt.data(), (uint32_t)rt.size()); });
+            check(h.until([&] { return rl->status().midiIn - in0 == 4 + 43; }, 1000),
+                  "  ... clock / start / stop and a CC across two MIDI_INs: " +
+                      std::to_string(rl->status().midiIn - in0) + " of 47 messages");
+            h.runMs(50);
+            check(rl->status().midiDropped == 0, "  ... none dropped");
+        }
         // a core switch: the unit's screen resent whole, Felucca on the unit
         {
             const uint32_t before = rl->status().fullResends;

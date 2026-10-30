@@ -11,7 +11,8 @@
 //   audio thread     (the processor, devLock_ held) pops panel events (popEvent) and publishes the LCD + LEDs
 //                    (back() .. publish()). Both are lock-free, allocation-free and bounded.
 //   message thread   start / stop / status / options (the editor, the state).
-// Session -> audio: a single-producer single-consumer queue of rfm_event_t (matrix ids, as the unit sends them).
+// Session -> audio: a single-producer single-consumer queue of rfm_event_t (matrix ids, as the unit sends them), and
+// another of the unit's TRS MIDI in (MIDI_IN, RFM_CAP_MIDI_IN: whole messages, split by the session thread).
 // Audio -> session: a triple buffer of RemoteSnapshot (the newest wins; the session thread gives it to
 // rfm_session_set_frame / set_leds, which diff it against the unit's shadow and send what differs).
 //
@@ -85,6 +86,7 @@ public:
         float fps = 0.0f;                           // frames sent in the last second
         uint32_t sessions = 0, frames = 0, acks = 0, pending = 0, inFlight = 0, fullResends = 0, eventsIn = 0;
         uint32_t eventsDropped = 0, snapshotsTaken = 0, runs = 0;
+        uint32_t midiIn = 0, midiDropped = 0;       // TRS MIDI messages from the unit, and those the queue had no room for
         std::string text;                           // for the editor: "connected (bulk, 20 fps)" ..
         std::string lastLog;                        // the session's last log line
     };
@@ -98,6 +100,13 @@ public:
     // unit held is up (the session ended or the unit was lost)
     static constexpr uint8_t kEvRelease = 0x80;
     bool popEvent(rfm_event_t &e) { return q_.pop(e); }
+    // one MIDI message from the unit's TRS jack (MIDI_IN), whole with its status: a channel message (2-3 bytes) or real
+    // time (F8 FA FB FC, 1 byte); n == 0 (kMidiRelease): the session ended, whatever the jack held is up
+    struct MidiMsg {
+        uint8_t b[3];
+        uint8_t n;
+    };
+    bool popMidi(MidiMsg &m) { return mq_.pop(m); }
     // true once after a run started or invalidateScreen(): publish now, whatever changed
     bool takeFullRequest() { return fullReq_.exchange(false, std::memory_order_acq_rel); }
     void requestFull() { fullReq_.store(true, std::memory_order_release); }   // (any thread: the next block publishes)
@@ -120,9 +129,9 @@ public:
 
 private:
     // single producer (the session thread), single consumer (the audio thread)
-    template <uint32_t N> class EventQueue {
+    template <typename T, uint32_t N> class EventQueue {
     public:
-        bool push(const rfm_event_t &e)
+        bool push(const T &e)
         {
             const uint32_t w = w_.load(std::memory_order_relaxed);
             if (w - r_.load(std::memory_order_acquire) >= N)
@@ -131,7 +140,7 @@ private:
             w_.store(w + 1, std::memory_order_release);
             return true;
         }
-        bool pop(rfm_event_t &e)
+        bool pop(T &e)
         {
             const uint32_t r = r_.load(std::memory_order_relaxed);
             if (r == w_.load(std::memory_order_acquire))
@@ -142,7 +151,7 @@ private:
         }
 
     private:
-        std::array<rfm_event_t, N> buf_{};
+        std::array<T, N> buf_{};
         std::atomic<uint32_t> w_{0}, r_{0};
     };
     // one writer (the audio thread), one reader (the session thread); the reader gets the newest published buffer
@@ -188,6 +197,7 @@ private:
     static void cbState(void *ctx, int st, const char *why);
     static void cbRescan(void *ctx);
     static void cbLog(void *ctx, const char *m);
+    static void cbMidiIn(void *ctx, const uint8_t *msgs, uint32_t n);
     static int loopWrite(void *ctx, const uint8_t *p, uint32_t n);
 
     Options opt_;
@@ -195,7 +205,8 @@ private:
     std::mutex mu_;                                 // want_ / quit_ changes, the condition variable
     std::condition_variable cv_;
     std::atomic<bool> want_{false}, quit_{false}, engaged_{false}, fullReq_{false}, invalidate_{false};
-    EventQueue<4096> q_;
+    EventQueue<rfm_event_t, 4096> q_;
+    EventQueue<MidiMsg, 2048> mq_;
     TripleBuffer tb_;
     // the session thread's own
     rfm_session *s_ = nullptr;
@@ -212,5 +223,6 @@ private:
     // the status (the session thread writes, anyone reads)
     mutable std::mutex stMu_;
     Status st_;
-    std::atomic<uint32_t> eventsIn_{0}, eventsDropped_{0}, snapshotsTaken_{0}, fullResends_{0}, runs_{0};
+    std::atomic<uint32_t> eventsIn_{0}, eventsDropped_{0}, snapshotsTaken_{0}, fullResends_{0}, runs_{0},
+        midiIn_{0}, midiDropped_{0};
 };

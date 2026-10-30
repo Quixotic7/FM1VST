@@ -503,6 +503,7 @@ private:
     void renderSegment(float *L, float *R, int from, int to);
     void resetAudioState();
     void applyRemote(uint32_t &keyTaps, uint32_t &btnTaps);   // the unit's events (block start)
+    void applyRemoteMidi();                      // the unit's TRS MIDI in (block start, as the host's MIDI at 0)
     void applyMaster();
     void publishRemote();                            // the LCD + LEDs to the unit (block end)
     static void remoteLeds(const fm1panel_t *h, rfm_leds_t &l);   // the panel's LED levels as the LEDS planes
@@ -678,6 +679,7 @@ private:
     // the audio thread's side: what the unit holds (keys; buttons as label bits), its MASTER until the parameter
     // follows, what was last published
     uint32_t remoteKeys_ = 0, remoteButtons_ = 0;
+    uint16_t remoteMidiChans_ = 0;               // channels the unit's TRS jack sent note-ons on (the release: CC 123)
     int remoteMaster_ = -1;
     bool remoteMasterAwait_ = false;
     uint32_t remoteMasterMs_ = 0;

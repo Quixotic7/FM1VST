@@ -109,6 +109,8 @@ RemoteLink::Status RemoteLink::status() const
     }
     s.eventsIn = eventsIn_.load();
     s.eventsDropped = eventsDropped_.load();
+    s.midiIn = midiIn_.load();
+    s.midiDropped = midiDropped_.load();
     s.snapshotsTaken = snapshotsTaken_.load();
     s.fullResends = fullResends_.load();
     s.runs = runs_.load();
@@ -220,7 +222,7 @@ void RemoteLink::runOnce()
     sc.fps = opt_.fps;
     sc.host_name = opt_.hostName.c_str();
     sc.transport = RFM_T_AUTO;
-    const rfm_session_cb_t cb{this, cbEvent, cbState, cbRescan, cbLog};
+    const rfm_session_cb_t cb{this, cbEvent, cbState, cbRescan, cbLog, cbMidiIn};
     lastState_ = -1;
     wasConnected_ = false;
     statFrames_ = 0;
@@ -402,6 +404,8 @@ void RemoteLink::releasePanel()
     e.type = kEvRelease;
     if (!q_.push(e))
         eventsDropped_.fetch_add(1);
+    if (!mq_.push(MidiMsg{}))                    // (n == 0: the TRS jack's held notes are up too)
+        midiDropped_.fetch_add(1);
 }
 
 // ------------------------------------------------------------------ callbacks (the session thread) ---
@@ -411,6 +415,26 @@ void RemoteLink::cbEvent(void *ctx, const rfm_event_t *e)
     self->eventsIn_.fetch_add(1);
     if (!self->q_.push(*e))
         self->eventsDropped_.fetch_add(1);
+}
+
+// the unit's TRS MIDI in (MIDI_IN): rfm_session checked it (rfm_parse_midi_in: whole messages, 1..64 bytes); split
+// here, one MidiMsg each, for the audio thread's next block
+void RemoteLink::cbMidiIn(void *ctx, const uint8_t *msgs, uint32_t n)
+{
+    RemoteLink *self = static_cast<RemoteLink *>(ctx);
+    for (uint32_t k = 0; k < n;) {
+        const uint32_t len = rfm_midi_msg_len(msgs[k]);
+        if (!len || k + len > n)
+            break;
+        MidiMsg m{};
+        for (uint32_t i = 0; i < len; i++)
+            m.b[i] = msgs[k + i];
+        m.n = (uint8_t)len;
+        self->midiIn_.fetch_add(1);
+        if (!self->mq_.push(m))
+            self->midiDropped_.fetch_add(1);
+        k += len;
+    }
 }
 
 void RemoteLink::cbState(void *ctx, int st, const char *why)

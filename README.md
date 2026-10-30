@@ -370,6 +370,11 @@ play the core, and the core's screen and LEDs show on the unit. It needs:
   the track, the plugin would see each key twice; "Ignore the FM-1's own MIDI" (the ▾ menu next to the toggle, on by
   default) drops exactly those messages (and RemoteFM1's SysEx) while this instance drives the unit. Any other input
   plays as before. To keep the unit off the track entirely, pick another MIDI input than "All Ins".
+- **The unit's TRS MIDI in:** a unit whose RemoteFM1 forwards its jack (MIDI_IN, HELLO_R caps bit 9; RemoteFM1's
+  `docs/TRS-MIDI-HOSTS.md`) sends what arrives on the jack during the session; the plugin plays it exactly as MIDI the
+  host sent at the start of the next block (notes, CCs, bend, aftertouch, program change; clock, start, continue,
+  stop to the core's MIDI in). It is never filtered as the unit's own panel MIDI. When the session ends, each channel
+  the jack played notes on gets All Notes Off.
 
 Frames go over the unit's vendor bulk interface when it answers (libusb, linked statically: the bundles need no
 Homebrew library), else over SysEx; the panel events always come as plain MIDI. While searching, the plugin sends

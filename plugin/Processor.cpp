@@ -2509,6 +2509,26 @@ void FM1Processor::handleMidi(const juce::MidiMessage &m)
         forwardMidi(m);
 }
 
+// block start (devLock_ held): the unit's TRS MIDI in (RemoteFM1's MIDI_IN), in the order it came, as MIDI the host
+// sent at the block's first sample (handleMidi: notes may play the keys, everything else to the core's midi_in; real
+// time F8 FA FB FC too). The session ending (n == 0): All Notes Off on each channel the jack played notes on.
+void FM1Processor::applyRemoteMidi()
+{
+    RemoteLink::MidiMsg m;
+    for (int k = 0; k < 2048 && remote_->popMidi(m); k++) {
+        if (m.n == 0) {
+            for (int ch = 0; ch < 16; ch++)
+                if (remoteMidiChans_ & (1u << ch))
+                    handleMidi(juce::MidiMessage::allNotesOff(ch + 1));
+            remoteMidiChans_ = 0;
+            continue;
+        }
+        if ((m.b[0] & 0xF0) == 0x90)
+            remoteMidiChans_ |= (uint16_t)(1u << (m.b[0] & 15));
+        handleMidi(juce::MidiMessage(m.b, (int)m.n));
+    }
+}
+
 // one MIDI message -> USB-MIDI event packets (cable 0) for the core's midi_in (toUsbPackets, EditorPort.h)
 void FM1Processor::forwardMidi(const juce::MidiMessage &m)
 {
@@ -2643,6 +2663,7 @@ void FM1Processor::processBlock(juce::AudioBuffer<float> &buffer, juce::MidiBuff
     applyTier1();
     applyHostParameters();
     pullEditorMidi();
+    applyRemoteMidi();
 
     float *L = buffer.getWritePointer(0);
     float *R = buffer.getNumChannels() > 1 ? buffer.getWritePointer(1) : nullptr;

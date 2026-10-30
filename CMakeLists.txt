@@ -92,7 +92,7 @@ target_compile_options(fm1engine PRIVATE -Wall -Wextra)
 target_link_libraries(fm1engine PUBLIC ${CMAKE_DL_LIBS})
 
 # ---- Remote FM-1 (RemoteFM1 M3, plugin/RemoteLink): libremotefm1 from the RemoteFM1 submodule (remote/RemoteFM1,
-# unmodified), its portable sources (host/src/*.c) and its macOS back ends (host/src/macos/*.c: CoreMIDI, libusb)
+# unmodified; since the TRS MIDI in (MIDI_IN) at RemoteFM1's branch standalone, fa97a90), its portable sources (host/src/*.c) and its macOS back ends (host/src/macos/*.c: CoreMIDI, libusb)
 # compiled here into one static library. (Not add_subdirectory(host): that CMake builds fm1remote and its tests.)
 # libusb is linked STATICALLY (Homebrew's libusb-1.0.a), so the bundles depend on no Homebrew dylib. Without it the
 # vendor bulk transport is left out (RFM_NO_LIBUSB) and frames go over SysEx; the editor says so.
