@@ -7,8 +7,8 @@
  * host.c logs its saves and its MIDI out with printf ("settings saved (n B)", "blob i saved", "programs i saved",
  * "MIDI out st d1 d2"): sim.c turns printf off; here it goes to fm1core_obv_printf, which takes those lines as the
  * events they report: a save copies the RAM record into the NOR image in platform.c's sector format at the device's
- * offsets (settings 0xFC000, the 8 pattern blobs 0xF4000.., the 2 program sectors 0x97000..), a MIDI out line becomes
- * a USB-MIDI packet. Before the boot the image's records are read back into host.c's arrays.
+ * offsets (settings 0xFC000, the 8 pattern blobs 0xF4000.., the 2 program sectors 0x97000..; 3.0's 8 pattern slots of
+ * four sectors 0x99000.., in slot_save's format), a MIDI out line becomes a USB-MIDI packet. Before the boot the image's records are read back into host.c's arrays.
  * The .pool section attribute (gfx.c, obv_fx.h, obervave.c) Mach-O rejects: core_obervave.cmake's FLAGS. */
 #define OBV_HOST 1
 #define OBV_WASM 1
@@ -26,6 +26,8 @@ static int fm1core_obv_printf(const char *fmt, ...);
 #define FM1CORE_OBV_SETTINGS_AT 0x000FC000u
 #define FM1CORE_OBV_BLOBS_AT 0x000F4000u
 #define FM1CORE_OBV_PSECT_AT 0x00097000u
+#define FM1CORE_OBV_SLOTS_AT 0x00099000u
+#define FM1CORE_OBV_SLOT_MAGIC 0x544F4C53u   /* "SLOT" */
 
 /* the poll (host.c declares it under OBV_WASM: sim.c's, a millisecond of the page's clock) */
 static void platform_poll(void) { fm1core_dg_poll(); }
@@ -53,6 +55,36 @@ static void fm1core_obv_saved(uint32_t kind, uint32_t i, uint32_t n)
     if (r && r[0] == 1u && n <= SETTINGS_MAX)
         fm1core_dg_sector_save(at, r + 4, n);
 }
+/* a pattern slot (host_slot: [0] used, [4..7] a's length, [8..11] b's, the bytes from 16) in platform.c's slot format:
+ * {magic, na, nb, crc32 of a then b}, then a and b, over SLOT_SECT sectors */
+static void fm1core_obv_slot_saved(uint32_t i)
+{
+    uint32_t h[4] = {FM1CORE_OBV_SLOT_MAGIC, 0, 0, 0}, at = FM1CORE_OBV_SLOTS_AT + i * SLOT_SECT * 0x1000u, k;
+    if (i >= NBLOB || !host_slot[i][0])
+        return;
+    memcpy(&h[1], host_slot[i] + 4, 8);
+    if (h[1] + h[2] > SLOT_MAX)
+        return;
+    h[3] = fm1core_dg_crc32(host_slot[i] + 16, h[1] + h[2]);
+    for (k = 0; k < SLOT_SECT; k++)
+        fm1nor_erase(at + k * 0x1000u);
+    fm1nor_prog_span(at + sizeof h, host_slot[i] + 16, h[1] + h[2]);
+    fm1nor_prog_span(at, h, sizeof h);
+}
+static void fm1core_obv_slots_load(void)
+{
+    uint32_t i, h[4], at;
+    for (i = 0; i < NBLOB; i++) {
+        at = FM1CORE_OBV_SLOTS_AT + i * SLOT_SECT * 0x1000u;
+        memset(host_slot[i], 0, sizeof host_slot[i]);
+        if (fm1nor_read(at, h, sizeof h) || h[0] != FM1CORE_OBV_SLOT_MAGIC || h[1] + h[2] > SLOT_MAX ||
+            fm1core_dg_crc32(fm1nor_image + at + sizeof h, h[1] + h[2]) != h[3])
+            continue;
+        host_slot[i][0] = 1;
+        memcpy(host_slot[i] + 4, &h[1], 8);
+        memcpy(host_slot[i] + 16, fm1nor_image + at + sizeof h, h[1] + h[2]);
+    }
+}
 static int fm1core_obv_printf(const char *fmt, ...)
 {
     va_list a;
@@ -78,6 +110,9 @@ static int fm1core_obv_printf(const char *fmt, ...)
         x = va_arg(a, unsigned);
         y = va_arg(a, unsigned);
         fm1core_obv_saved(2, x, y);
+    } else if (strstr(fmt, "pattern slot %u saved")) {
+        x = va_arg(a, unsigned);
+        fm1core_obv_slot_saved(x);
     }
     va_end(a);
     return 0;
@@ -122,6 +157,7 @@ static void fm1core_dg_stores_load(void)
             if (!fm1core_dg_sector_read(at, r + 4, SETTINGS_MAX, &n))
                 r[0] = 1;
         }
+    fm1core_obv_slots_load();
 }
 static void fm1core_dg_stores_poll(void) {}   /* (each save is copied when host.c reports it) */
 static int fm1core_dg_sync(void)
@@ -140,10 +176,10 @@ static int fm1core_dg_sync(void)
     /* a pattern save the app has queued (it runs when stopped and quiet): not yet */
     return !(pat_dirty || pend_slot || copy_to);
 }
-static void fm1core_dg_info(char *buf, uint32_t n) { snprintf(buf, n, "page %u, program %u", (unsigned)page, (unsigned)prog + 1u); }
+static void fm1core_dg_info(char *buf, uint32_t n) { snprintf(buf, n, "page %u, program %u", (unsigned)page, (unsigned)set.prog + 1u); }
 
 /* the installer's M-UPGRADE identity: the device's platform_poll runs ota_service every pass (dinghy_glue.h) */
-#define FELUCCA_ID "FM-1_955"             /* the hub's 1.5.3 package (95N: OberVave build N) */
+#define FELUCCA_ID "FM-1_9533"            /* the 3.3 release package (tools/build.py: 95XY for X.Y) */
 #define FM1CORE_DG_OTA_C "../../cores/obervave/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
 
