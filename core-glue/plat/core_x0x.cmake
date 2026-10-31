@@ -25,3 +25,10 @@ list(TRANSFORM _u APPEND .c)
 plat_golden(x0x GEN_TARGET gen_x0x SOURCES ${_x0x}/host/x0x_host.c ${_u} DEFINES X0X_HOST
             INCLUDES ${_x0x}/firmware/src ${_x0x}/firmware/src/dsp ${_x0x}/build/gen
             SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden_x0x.txt)
+# the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The second core needs nothing more: the unit runs
+# plat_cpu2_run's job at once on the one thread (fm1_cpu1_run), as natively. Not built while the core is gated.
+# The licence texts: its GPL, its LICENSING.md and the two fonts' OFL (Barlow, Terminus)
+fm1_add_rfm1(x0x AUTHORS "Charles Vestal"
+             LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
+                           "OFL-1.1 (the Barlow font in {name})=assets/fonts/Barlow-OFL.txt"
+                           "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt")
