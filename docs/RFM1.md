@@ -160,4 +160,10 @@ An .rfm1 is a binary of your firmware, so your licence's rules for binaries appl
   licence (the glue), and the notices of the Emscripten runtime compiled into it (MIT: Emscripten, musl libc). Your
   descriptor's credits (`fm1_add_core CREDITS` / `CREDITS_FILES`) go into the `rfm1.credits` section, which the app
   shows in its About screen.
-- A core FM1VST marks `GATED` (rights not settled: CORES-PLAN.md 6) is never built as an .rfm1.
+- A core FM1VST marks `GATED` (rights not settled: CORES-PLAN.md 6) is not built as an .rfm1, unless its
+  `fm1_add_rfm1` says `HOSTED_DESPITE_GATE "<reason>"`: then the file is built to be hosted (RemoteFM1FW) and
+  downloaded, never bundled in an app or a public native build (FM1_PUBLIC_BUILD=ON still leaves the core out). The
+  owner's decisions of 2026-10-31: SLOOP and Clipper (the Hügelton icon atlas), in their words: "I would build them as
+  the original authors intended and we only host the compiled .RFM1 at https://github.com/Quixotic7/RemoteFM1FW they
+  are not distributed inside the app, the app just downloads and runs them."; and X0X: "Include X0X" (its 909
+  cymbal-sample question left open, hosted only).

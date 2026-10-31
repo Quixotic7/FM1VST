@@ -11,12 +11,13 @@ fm1_add_core(clipper ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/
                  felucca_wavetables.h sloop_logo.h
              PYTHON_NEEDS numpy
              VERSION_FILE firmware/src/ui.c VERSION_REGEX "#define FELUCCA_VERSION \"CLIPPER ([0-9.]+)\"")
-# the .rfm1 (cmake/FM1Rfm1.cmake; docs/RFM1.md; not built while gated): its GPL, msfa's Apache-2.0, its LICENSING.md
+# the .rfm1 (cmake/FM1Rfm1.cmake; docs/RFM1.md; gated, built as a hosted file: HOSTED_DESPITE_GATE): its GPL, msfa's Apache-2.0, its LICENSING.md
 # and the Terminus font's OFL (the screen font, compiled in by gen_font.py). The data needs 16 MiB.
 fm1_add_rfm1(clipper AUTHORS "isod89" MEMORY_MIB 16
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "Apache-2.0 (msfa in {name})=LICENSES/Apache-2.0-msfa.txt"
                            "LICENSING.md ({name})=LICENSING.md"
-                           "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt")
+                           "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt"
+             HOSTED_DESPITE_GATE "the owner's call, 2026-10-31: built as its author intended, hosted on RemoteFM1FW, not in the app")
 
 # the golden check: Clipper's own tests/ui_pages_test.c (the real UI on its test doubles) writes its pages; the core
 # runs golden_clipper.txt to the same state (SLOOP's script and comparison: the status corner differs, the HAL's USB

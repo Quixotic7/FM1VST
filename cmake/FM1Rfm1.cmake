@@ -17,14 +17,18 @@
 #                                   each file in its LICENSES/ and its LICENSING.md, found at the firmware's root
 #       [SOURCE_URL <url>]          the manifest's source_url (default: the descriptor's, "<repo>@<commit>")
 #       [DEFINES <d..>] [FLAGS <f..>] [INCLUDES <dirs..>]   more, for the Wasm build only
-#       [RUN_ARGS <args..>])        rfm1_run's options in the test ("--sysex <bank.syx>", "--settle 5000")
+#       [RUN_ARGS <args..>]         rfm1_run's options in the test ("--sysex <bank.syx>", "--settle 5000")
+#       [HOSTED_DESPITE_GATE "<reason>"])  a GATED core still built as an .rfm1, to be hosted (RemoteFM1FW) and
+#                                   downloaded, never bundled in an app or a public native build (CORES-PLAN.md 6)
 #
 # Makes rfm1_<id> (build/rfm1/<id>-<version>.rfm1, also in ALL), appended to rfm1_all, and the test rfm1_<id>
 # (rfm1_check + rfm1_run). The generate step is the core's own (gen_<id>). The coroutine: core-glue/common/coro.c
 # (ucontext) is left out; a core whose units call fm1coro_* (a main loop that never returns: Dinghy, Melodee, Tonitor,
 # plat with its SysEx coroutine) gets core-glue/common/coro_asyncify.c instead and Binaryen's Asyncify pass at the link
 # (tools/rfm1/rfm1_link.cmake, which tells them apart: the others link exactly as before). Gated cores are refused
-# (CORES-PLAN.md 6: an .rfm1 is a published binary).
+# (CORES-PLAN.md 6: an .rfm1 is a published binary) unless the call says HOSTED_DESPITE_GATE (the owner's decision of
+# 2026-10-31 for SLOOP and Clipper: built as their authors intended, the .rfm1 hosted, not distributed in the app).
+# (A public build, FM1_PUBLIC_BUILD=ON, still leaves the gated core out altogether: build hosted files without it.)
 option(FM1_RFM1 "build the .rfm1 files of the cores whose glue calls fm1_add_rfm1 (Emscripten)" OFF)
 set(FM1_RFM1_MEMORY_MIB 8 CACHE STRING "an .rfm1's fixed linear memory in MiB unless its fm1_add_rfm1 says otherwise")
 set(FM1_RFM1_OPT -O3 CACHE STRING "the optimisation flag of the .rfm1 builds")
@@ -121,7 +125,7 @@ function(fm1_rfm1_license_files id src license out)
 endfunction()
 
 function(fm1_add_rfm1 id)
-    cmake_parse_arguments(A "" "MEMORY_MIB;STACK_KIB;SOURCE_URL" "AUTHORS;LICENSE_FILES;DEFINES;FLAGS;INCLUDES;RUN_ARGS"
+    cmake_parse_arguments(A "" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE" "AUTHORS;LICENSE_FILES;DEFINES;FLAGS;INCLUDES;RUN_ARGS"
                           ${ARGN})
     if(A_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR "fm1_add_rfm1(${id}): unknown arguments ${A_UNPARSED_ARGUMENTS}")
@@ -134,7 +138,9 @@ function(fm1_add_rfm1 id)
         return()   # (left out of this build: a public build's gated core, FM1_ONLY_CORES)
     endif()
     get_property(_gated GLOBAL PROPERTY FM1_CORE_GATED_${id})
-    if(_gated)
+    if(_gated AND A_HOSTED_DESPITE_GATE)
+        message(STATUS "${id} rfm1: gated (${_gated}), built as a hosted file: ${A_HOSTED_DESPITE_GATE}")
+    elseif(_gated)
         message(WARNING "${id} rfm1: not built: the core is gated (${_gated})")
         return()
     endif()

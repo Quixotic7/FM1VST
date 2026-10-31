@@ -255,10 +255,11 @@ static int fm1_cpu1_start(void)
 }
 static void fm1_cpu1_hold(void) { fm1_c1_on = 0; }
 #ifdef FM1CORE_SL_C1_BAR
-/* (SLOOP 2.8.3's fm1_cpu1.h, Clipper 1.2+: main.c's crash screen bars the second core and prints its refused jobs) */
+/* (SLOOP 2.8.3+'s fm1_cpu1.h, Clipper 1.2+: main.c's crash screen bars the second core and prints its refused jobs) */
 static struct {
-    uint32_t bad;
+    uint32_t bad, bad_fn;                         /* (SLOOP 2.8.4's console.c reads bad_fn too) */
 } fm1_c1_mb;
+static uint8_t fm1_c1_gave_up __attribute__((unused));   /* (SLOOP 2.8.4's console.c: never set here) */
 static void fm1_cpu1_bar(void) { fm1_c1_on = 0; }
 static void fm1_cpu1_halt(void) { fm1_c1_on = 0; }   /* (fm1_sys.h: main.c fm1_cstart, compiled, never run) */
 #endif

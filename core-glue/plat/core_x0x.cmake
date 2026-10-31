@@ -31,4 +31,5 @@ plat_golden(x0x GEN_TARGET gen_x0x SOURCES ${_x0x}/host/x0x_host.c ${_u} DEFINES
 fm1_add_rfm1(x0x AUTHORS "Charles Vestal"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
                            "OFL-1.1 (the Barlow font in {name})=assets/fonts/Barlow-OFL.txt"
-                           "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt")
+                           "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt"
+             HOSTED_DESPITE_GATE "the owner's call, 2026-10-31 (Include X0X): hosted on RemoteFM1FW only, the cymbal-sample question stays open")
