@@ -12,6 +12,8 @@
 # of OSCILL/R and are not part of the GPL licence", against NOTICE.md's "the splash graphic as shipped in the
 # firmware are GPL-3.0-only" (CORES-PLAN.md 6). The credits carry both files. 1.0's generate list adds
 # midi_map_defaults.h (gen_midi_map.py).
+# KEY SENSE (DUELL_VELO 1, as the release's device build): core_duell.c turns the panel's key_vel / key_lean into the
+# converter readings sense.c reads on the unit (velocity with MENU > CONTROL > KEY VELOCITY ON, aftertouch with AFTERTOUCH).
 include(${CMAKE_CURRENT_LIST_DIR}/fw_common.cmake)
 fm1_add_core(duell ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/DUELL UNIT core_duell.c
              DESC core_duell_desc.c FAMILY felucca_web LICENSE GPL-3.0-only GEN_ROOT felucca-base
