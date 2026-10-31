@@ -207,7 +207,7 @@ static void fm1core_sl_master_pot(void)           /* main.c: the battery and MAS
         uint32_t k10;
         fm1core_sl_knob += (a * 16 - fm1core_sl_knob) / 8;
         k10 = (uint32_t)(fm1core_sl_knob / 16);
-#if FM1CORE_SL_FW != FM1CORE_SL_ORBIT && !defined(FM1CORE_SL_NO_ED_MASTER)
+#if FM1CORE_SL_FW != FM1CORE_SL_ORBIT && FM1CORE_SL_FW != FM1CORE_SL_KARMA && !defined(FM1CORE_SL_NO_ED_MASTER)
         if (ed_master) {                          /* (2.7) the LIVE page's level, until the knob turns */
             if (ed_master_k == 0xFFFFu)
                 ed_master_k = (uint16_t)k10;
@@ -217,7 +217,17 @@ static void fm1core_sl_master_pot(void)           /* main.c: the battery and MAS
                 k10 = (ed_master - 1u) * 1023u / 126u;
         }
 #endif
+#if FM1CORE_SL_FW == FM1CORE_SL_KARMA
+        {   /* (KARMA main.c) applied only when the pot moved: a MIDI controller's MASTER holds until it turns */
+            static int32_t applied = -100;
+            if ((int32_t)k10 - applied > 6 || applied - (int32_t)k10 > 6) {
+                applied = (int32_t)k10;
+                song.master_q12 = (k10 * k10) >> 8;
+            }
+        }
+#else
         song.master_q12 = (k10 * k10) >> 8;
+#endif
     }
 }
 

@@ -100,3 +100,6 @@
 [submodule "cores/clipper-fm1"]
 	path = cores/clipper-fm1
 	url = https://github.com/isod89/clipper-fm1
+[submodule "cores/karma-fm1"]
+	path = cores/karma-fm1
+	url = https://github.com/eatyourgreensstudio-dotcom/karma-fm1

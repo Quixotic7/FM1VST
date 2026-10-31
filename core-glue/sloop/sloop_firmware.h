@@ -23,10 +23,15 @@
 #define FM1CORE_SL_DX 2
 #define FM1CORE_SL_ORBIT 3
 #define FM1CORE_SL_NMS 4
+#define FM1CORE_SL_KARMA 5                         /* KARMA 3.0 (SLOOP 2.6's line): no cpu1.c (KARMA_DUAL_CORE 0: its
+                                                    * audio worker's jobs run inline), ui_op.c, Plaits / Elements (C++) */
 #ifndef FM1CORE_SL_FW
 #error "FM1CORE_SL_FW: which SLOOP-family firmware (core_<id>.c)"
 #endif
-#define FM1CORE_SL_HAS_CPU1 (FM1CORE_SL_FW != FM1CORE_SL_ORBIT)
+#define FM1CORE_SL_HAS_CPU1 (FM1CORE_SL_FW != FM1CORE_SL_ORBIT && FM1CORE_SL_FW != FM1CORE_SL_KARMA)
+#if FM1CORE_SL_FW == FM1CORE_SL_KARMA
+#define KARMA_DUAL_CORE 0                          /* (one core: fx.c renders every part itself) */
+#endif
 
 /* ------------------------------------------------------------- the HAL --- */
 #define __attribute__(x)                           /* (.pool / .noinit / .lowram sections, alignment: the host) */
@@ -72,6 +77,9 @@
 #include "ui_song.c"
 #endif
 #include "ui_studio.c"
+#if FM1CORE_SL_FW == FM1CORE_SL_KARMA
+#include "ui_op.c"
+#endif
 #if FM1CORE_SL_FW == FM1CORE_SL_DX
 #include "ui_voice.c"
 #endif
@@ -79,7 +87,7 @@
 #include "icons.c"
 #endif
 #include "ui_draw.c"
-#if FM1CORE_SL_FW == FM1CORE_SL_SLOOP || FM1CORE_SL_FW == FM1CORE_SL_ORBIT
+#if FM1CORE_SL_FW == FM1CORE_SL_SLOOP || FM1CORE_SL_FW == FM1CORE_SL_ORBIT || FM1CORE_SL_FW == FM1CORE_SL_KARMA
 #include "ui_vis.c"
 #endif
 #include "ui_layers.c"

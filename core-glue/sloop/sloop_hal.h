@@ -224,8 +224,15 @@ static uint8_t fm1_audio_pending(void) { return FM1_AUDIO_HALF; }
 static void fm1_audio_ack_aux(uint8_t p) { (void)p; }
 static uint32_t fm1_audio_free_half(void) { return fm1core_sl_half; }
 static void fm1_audio_ack_half(void) {}
+#if FM1CORE_SL_FW == FM1CORE_SL_KARMA
+static void fm1_audio_init(int32_t *b, uint32_t n, void (*isr)(void), uint32_t prio, int32_t *rx)
+#else
 static void fm1_audio_init(int32_t *b, uint32_t n, void (*isr)(void), uint32_t prio)
+#endif
 {
+#if FM1CORE_SL_FW == FM1CORE_SL_KARMA
+    (void)rx;                                      /* (KARMA: FM1_AUDIO_RX_CLOCK's receive buffer, 0 here) */
+#endif
     (void)b;
     (void)n;
     (void)isr;
@@ -234,6 +241,10 @@ static void fm1_audio_init(int32_t *b, uint32_t n, void (*isr)(void), uint32_t p
 static uint8_t fm1core_sl_audio_stopped;
 static void fm1_audio_stop(void) { fm1core_sl_audio_stopped = 1; }
 void isr_alnk0(void) {}
+
+#if FM1CORE_SL_FW == FM1CORE_SL_KARMA
+static void fm1_core1_stop(void) {}               /* (hal/fm1_multicore.h; main.c fm1_cstart, compiled, never run) */
+#endif
 
 /* ------------------------------------------- the second core (fm1_cpu1.h) --- */
 /* hal/fm1_cpu1.h's job hand-over for cpu1.c (built: its boot, self-test and state are the firmware's), on one
