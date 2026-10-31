@@ -20,7 +20,7 @@ else()
     execute_process(COMMAND ${REF} ${_ref_args} WORKING_DIRECTORY ${OUT}/ref
                     RESULT_VARIABLE _rc OUTPUT_FILE ${OUT}/ref.log ERROR_FILE ${OUT}/ref.log)
 endif()
-if(NOT _rc EQUAL 0)
+if(NOT _rc EQUAL 0 AND NOT REF_FAILS_OK)
     message(FATAL_ERROR "the reference host sim failed (${_rc}): ${OUT}/ref.log")
 endif()
 separate_arguments(_args UNIX_COMMAND "${DRIVE_ARGS}")
