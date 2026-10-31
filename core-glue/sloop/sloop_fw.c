@@ -207,7 +207,7 @@ static void fm1core_sl_master_pot(void)           /* main.c: the battery and MAS
         uint32_t k10;
         fm1core_sl_knob += (a * 16 - fm1core_sl_knob) / 8;
         k10 = (uint32_t)(fm1core_sl_knob / 16);
-#if FM1CORE_SL_FW != FM1CORE_SL_ORBIT
+#if FM1CORE_SL_FW != FM1CORE_SL_ORBIT && !defined(FM1CORE_SL_NO_ED_MASTER)
         if (ed_master) {                          /* (2.7) the LIVE page's level, until the knob turns */
             if (ed_master_k == 0xFFFFu)
                 ed_master_k = (uint16_t)k10;

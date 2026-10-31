@@ -97,3 +97,6 @@
 [submodule "cores/s1vave"]
 	path = cores/s1vave
 	url = https://github.com/AndrewGG88/S1Vave.git
+[submodule "cores/clipper-fm1"]
+	path = cores/clipper-fm1
+	url = https://github.com/isod89/clipper-fm1

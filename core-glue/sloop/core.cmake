@@ -20,14 +20,15 @@ function(fm1_sloop_ref name src root gen)
     endif()
     add_dependencies(${name} ${gen})
 endfunction()
-#   fm1_sloop_golden(<id> REF <target> [REF_ARGS <args..>] [REF_STDIN <file>] SCRIPT <file> DRIVE_ARGS <args..>)
+#   fm1_sloop_golden(<id> REF <target> [REF_ARGS <args..>] [REF_STDIN <file>] SCRIPT <file> DRIVE_ARGS <args..>
+#                    [REF_FAILS_OK]: the reference's own checks may fail, its screens are still written)
 #   (in REF_ARGS / DRIVE_ARGS, %REF% is the reference's output folder)
 function(fm1_sloop_golden id)
-    cmake_parse_arguments(G "" "REF;REF_STDIN;SCRIPT" "REF_ARGS;DRIVE_ARGS" ${ARGN})
+    cmake_parse_arguments(G "REF_FAILS_OK" "REF;REF_STDIN;SCRIPT" "REF_ARGS;DRIVE_ARGS" ${ARGN})
     string(JOIN " " _ra ${G_REF_ARGS})
     string(JOIN " " _da ${G_DRIVE_ARGS})
     add_test(NAME golden_${id}
-             COMMAND ${CMAKE_COMMAND} -DREF=$<TARGET_FILE:${G_REF}> "-DREF_ARGS=${_ra}" "-DREF_STDIN=${G_REF_STDIN}"
+             COMMAND ${CMAKE_COMMAND} -DREF=$<TARGET_FILE:${G_REF}> "-DREF_ARGS=${_ra}" "-DREF_STDIN=${G_REF_STDIN}" -DREF_FAILS_OK=${G_REF_FAILS_OK}
                      -DDRIVE=$<TARGET_FILE:sloop_drive> -DCORE=$<TARGET_FILE:${id}_core> -DSCRIPT=${G_SCRIPT}
                      -DOUT=${CMAKE_BINARY_DIR}/golden/${id} "-DDRIVE_ARGS=${_da}"
                      -P ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/golden.cmake)
