@@ -6,7 +6,9 @@
  *   rfm1_run [options] <file.rfm1>
  *     --seconds S    the chord held for S device seconds (default 5)
  *     --settle MS    device ms after init before the chord (default 4000)
- *     --keys K,K,..  the chord's key numbers (default 9,13,16: D4 F#4 A4, as core_bench / core_conformance), velocity 100
+ *     --keys K,K,..  the chord's key numbers (default 9,13,16: D4 F#4 A4, as core_bench / core_conformance)
+ *     --vel V        the chord's velocity, key_vel (default 100; 0: none given, the core's default)
+ *     --lean L       the chord's aftertouch, key_lean 0..100 % (default 0)
  *     --sysex FILE   a .syx file sent over midi_in from settle - 800 ms (a sample bank, a preset); the chord waits
  *                    until it is all in, then 300 ms
  *     --wav FILE     the whole run's audio as a 44.1 kHz 16-bit stereo WAV
@@ -402,7 +404,8 @@ static uint8_t *read_file(const char *path, size_t *n)
 
 static void usage(void)
 {
-    fputs("usage: rfm1_run [--seconds S] [--settle MS] [--keys K,K,..] [--sysex FILE] [--wav FILE] [--min-rms X]\n"
+    fputs("usage: rfm1_run [--seconds S] [--settle MS] [--keys K,K,..] [--vel V] [--lean L] [--sysex FILE] [--wav FILE]\n"
+          "                [--min-rms X]\n"
           "                [--verbose] [--describe [--out FILE]] <file.rfm1>\n", stderr);
 }
 
@@ -412,7 +415,7 @@ int main(int argc, char **argv)
     uint32_t settle_ms = 4000;
     int describe = 0;
     const char *out_path = NULL, *wav_path = NULL, *sysex_path = NULL, *path = NULL;
-    int keys[FM1P_NKEY], nkeys = 0;
+    int keys[FM1P_NKEY], nkeys = 0, vel = 100, lean = 0;
     for (int i = 1; i < argc; i++) {
         const char *a = argv[i];
         const int more = i + 1 < argc;
@@ -420,6 +423,8 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--settle") && more) settle_ms = (uint32_t)strtoul(argv[++i], NULL, 10);
         else if (!strcmp(a, "--min-rms") && more) min_rms = atof(argv[++i]);
         else if (!strcmp(a, "--wav") && more) wav_path = argv[++i];
+        else if (!strcmp(a, "--vel") && more) vel = atoi(argv[++i]);
+        else if (!strcmp(a, "--lean") && more) lean = atoi(argv[++i]);
         else if (!strcmp(a, "--sysex") && more) sysex_path = argv[++i];
         else if (!strcmp(a, "--out") && more) out_path = argv[++i];
         else if (!strcmp(a, "--describe")) describe = 1;
@@ -443,7 +448,7 @@ int main(int argc, char **argv)
         } else
             path = a;
     }
-    if (!path) {
+    if (!path || vel < 0 || vel > 127 || lean < 0 || lean > 100) {
         usage();
         return 2;
     }
@@ -677,7 +682,10 @@ int main(int argc, char **argv)
         if (!chord_on && !chord_done && ms >= chord_at && (!sx || (!pending_pkt && sx_at >= sx_n))) {
             /* the chord down (Device::keys: taps for the new keys) */
             for (int k = 0; k < nkeys; k++)
-                wr8(P(key_vel) + (uint32_t)keys[k], 100);
+            {
+                wr8(P(key_vel) + (uint32_t)keys[k], (uint8_t)vel);
+                wr8(P(key_lean) + (uint32_t)keys[k], (uint8_t)lean);
+            }
             const uint32_t held = rd32(P(keys));
             wr32(P(keys_tap), rd32(P(keys_tap)) | (chord_mask & ~held));
             wr32(P(keys), chord_mask);
@@ -687,6 +695,8 @@ int main(int argc, char **argv)
         }
         if (chord_on && ms == chord_at + chord_ms) {   /* and up; 200 ms more */
             wr32(P(keys), 0);
+            for (int k = 0; k < nkeys; k++)
+                wr8(P(key_lean) + (uint32_t)keys[k], 0);
             wall_chord = now_s() - t_chord;
             chord_on = 0;
             chord_done = 1;

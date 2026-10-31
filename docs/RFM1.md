@@ -88,8 +88,8 @@ finds SIMD, atomics and the rest). The build runs it on every file it makes.
 
 `rfm1_run` runs the file in wasm3 as an app would: a fresh flash, `init`, then the device clock for 4 s, then D4 F#4 A4
 (velocity 100) held for 5 s. It prints the chord's RMS, the LCD writes and how many times faster than real time it ran,
-and fails if the module trapped, halted, stayed silent or never drew. `--wav out.wav` saves what it played; `--help`
-has the rest. Interpreted, a core runs 10-25 times slower than native (FM1VST's own cores: 8-50x real time on an M5
+and fails if the module trapped, halted, stayed silent or never drew. `--wav out.wav` saves what it played, `--vel V`
+and `--lean L` play the chord at another velocity and aftertouch; `--help` has the rest. Interpreted, a core runs 10-25 times slower than native (FM1VST's own cores: 8-50x real time on an M5
 Mac with wasm3).
 
 ## Attach it to your releases (GitHub Actions)
