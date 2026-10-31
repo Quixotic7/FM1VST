@@ -1,21 +1,23 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The firmware the Melodee core runs: the ONE include list (included once, by melodee_fw.c), from the unmodified
- * submodule cores/melodee (v1.4.5). It follows firmware/src/melodee.c (the device's unit), as Melodee's own host
+ * submodule cores/melodee (v1.5.1). It follows firmware/src/melodee.c (the device's unit), as Melodee's own host
  * builds do (tests/ui_test.c): the sound side through tests/hostsim.c (libc.c, the engines with Prophet, FM6, CZ-1,
  * SID and the x0x 909, voices, mod, FX, usb.c's MIDI queues, TRS MIDI's parser, the song chain, the pattern banks
  * and seq.c; hostsim's main() is renamed and never called), then the core's HAL (melodee_hal.h), the audio ISR
  * (audio.c), then the UI as melodee.c orders it, then the flash storage, the user presets, the projects and the
  * FM6 / CZ-1 stores (MELODEE_FLASH 1: storage.c on melodee_hal.h's NOR hooks instead of storage_hw.c's SPI driver).
  *
- * The build options are the release workflow's (.github/workflows/release.yml: DUAL_CORE 1, RAM_AUDIO 1), except:
- *   MELODEE_CORE1_FALLBACK 1  (release: 0, which traps on a CPU1 failure; the inline worker below never fails, and
- *                              1 renders alone instead of trapping if it ever did)
- *   MELODEE_CACHE_RAM 0       (the data cache as RAM is hardware; with RAM_AUDIO and CACHE_RAM the undo keeps one
- *                              SRAM level until the cache self-test passes and then eight in the cache: 0 keeps
- *                              the eight in SRAM, the device's result)
+ * The build options are the 1.5.1 release's (BUILD_INFO.json of the release, .github/workflows/release.yml: DUAL_CORE
+ * 1, CORE1_FALLBACK 0, RAM_AUDIO 1, CACHE_RAM 1, ADMISSION 0, and performance_options.h's *_FAST / MOD_CACHE /
+ * FX_DORMANT / RECORD_INDEX all 1, their defaults). CACHE_RAM on the host: resources.c's cache bank is
+ * resource_host_cache (melodee_fw.c sets resource_host_cache_enabled, the device's result once its cache self-test
+ * passes: the eight undo levels in the cache bank). CORE1_FALLBACK 0: a CPU1 failure traps, as on the device; the
+ * inline worker below never fails. MELODEE_UART 1 as released: TRS MIDI IN's parser (midi_uart.c) and the SYSTEM
+ * page's TRS column; there is no UART here, so nothing arrives on it.
  * Built out (they need the hardware), as the host tests build them: MELODEE_USB_AUDIO (usb_audio.c, "Melodee Out /
- * In": the UAC1 functions), MELODEE_OTA (usb.c's SysEx plumbing and the update entry), MELODEE_CDC (the serial
- * console), the TRS UART's poll (its parser is in, unused). The hook bodies are in melodee_fw.c.
+ * In": the UAC1 functions), MELODEE_USB_HOST (usb_host.c: the port as a USB MIDI host, the menu's USB HOST),
+ * MELODEE_OTA (usb.c's SysEx plumbing and the update entry), MELODEE_CDC (the serial console). The hook bodies are
+ * in melodee_fw.c.
  *
  * THE MANAGERS' SYSEX (research/managers-2026-10-19/MANAGERS.md). What MELODEE_OTA 1 compiles for them is here on the
  * glue's transport instead of usb.c's (core-glue/common/sysex.h): the firmware's own editor.c (the web editor's FL
@@ -27,7 +29,7 @@
  * fm1_wdt_feed in a loop) yield on the coroutine as every other wait here. The DX7 / CZ dumps OUT (fm6_store.c,
  * cz_store.c: their sends are #if MELODEE_OTA in the firmware) stay built out: requests for them get no reply.
  *
- * DUAL CORE, INLINE. Melodee 1.4 renders FM6 / Prophet pairs, the batch of voice jobs and the FX bus / reverb on
+ * DUAL CORE, INLINE. Melodee 1.4 / 1.5 render FM6 / Prophet pairs, the batch of voice jobs and the FX bus / reverb on
  * CPU1 (audio_worker.h: a one-job mailbox, CPU0 submits, CPU1 runs, CPU0 joins before it uses the result). The
  * core has one thread (the ABI's threading contract), so the worker runs INLINE: audio_worker.h is included first
  * with the host's atomics, the worker is online (as fm1_multicore_start leaves it on the device), and every
@@ -42,10 +44,13 @@
 #define MELODEE_OTA 0                                 /* (melodee.c's defaults are 1: hardware) */
 #define MELODEE_USB_AUDIO 0
 #define MELODEE_CDC 0
+#define MELODEE_USB_HOST 0
+#define MELODEE_UART 1                                /* (as released: TRS MIDI IN, its parser; no UART here) */
+#define MELODEE_ADMISSION 0
 #define MELODEE_DUAL_CORE 1                           /* (build_options.h's default; hostsim alone builds it 0) */
-#define MELODEE_CORE1_FALLBACK 1
+#define MELODEE_CORE1_FALLBACK 0                      /* (the release: a CPU1 failure traps) */
 #define MELODEE_RAM_AUDIO 1                           /* the release profile: VBUDGET 18 (core.h) */
-#define MELODEE_CACHE_RAM 0
+#define MELODEE_CACHE_RAM 1                           /* (the release; melodee_fw.c enables the host bank) */
 
 /* ------------------------------------------------------ the clock --- */
 /* the firmware's clock is TIMER4 at 24 MHz (hal/fm1_time.h; audio.c's DAC_TICKS, the hold times), and melodee.c
@@ -89,7 +94,7 @@ static int fm1core_me_aw_join(void)                   /* run the pending job her
 /* --------------------------------------------------------------------- UI --- */
 #define MELODEE_FLASH 1                               /* storage.c on the NOR image: settings, projects, presets */
 #ifndef MELODEE_VERSION
-#define MELODEE_VERSION "v1.4.5"                      /* melodee.c's default */
+#define MELODEE_VERSION "v1.5.1"                      /* melodee.c's default */
 #endif
 /* panel_setup (ui_input.c: Calibration, from the menu or OCT- + OCT+ at power-on) waits in loops of its own for the
  * buttons and knobs; melodee_fw.c runs the main loop on a coroutine, and these loops yield there (fm1_wdt_feed) */

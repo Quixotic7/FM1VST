@@ -1729,7 +1729,7 @@ const Profile kProfiles[] = {
     // DUELL 1.0: the stored preset is a patch record (Session::rec_pages; the profile's id is how main() knows)
     {"duell", "FELUCCA DUELL 1.0", true, "FM-1_900", false, up_store_change()},
     {"pigeon", "PIGEON v0.4.1", true, "FM-1_900", false, nullptr, false, nullptr, pigeon_run},
-    {"melodee", "MELODEE v1.4.5", true, "FM-1_900", false, up_store_change(80)},
+    {"melodee", "MELODEE v1.5.1", true, "FM-1_900", false, up_store_change(80)},
     // Mini-Tone, FMini-1, Skiff: Felucca's editor.c (their web editors' INFO, BACKUP_LIST / GET / PUT, UP_STORE);
     // the identity is each build.py --release's (FM-1_9XY; Skiff's FM-1_7XY)
     {"minitone", "FELUCCA v1.0.1", true, "FM-1_910", false, up_store_change()},

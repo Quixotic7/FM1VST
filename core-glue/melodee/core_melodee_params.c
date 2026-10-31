@@ -81,6 +81,68 @@ static void me_fmt(const param_desc_t *d, int32_t v, char *b, uint32_t n)
     snprintf(b, n, unit && unit[0] ? "%s %s" : "%s", val, unit ? unit : "");
 }
 
+/* THE EFFECT TYPES (1.5): the effects' names hold aliases a knob never lands on: the shared rack's TYPE (N_AUDIO_FX)
+ * steps through params.c FX_ORDER (the effects in their families' order, DRIVE's four shapes one place: its SHAPE
+ * picks them), the per-part NOTE FX (N_NOTE_FX) holds only OFF, NOTE TAIL, NOTE ECHO. The host sees those choices
+ * as a plain enum 0..n-1 (the values a knob reaches, in the knob's order); get maps the stored type to its place
+ * (a stored drive shape: DRIVE's), set the place to the type, as the knob stores it */
+typedef struct {
+    uint8_t n;
+    int16_t val[24];
+    const char *names[24];
+} me_remap_t;
+static me_remap_t me_rm_tp[3], me_rm_gp[3];       /* P_FXTYPE, P_FX2TYPE, P_FX3TYPE; G_MFXTYPE, 2, 3 */
+static me_remap_t *me_remap_of(const param_desc_t *d)
+{
+    uint32_t k;
+    for (k = 0; k < 3u; k++) {
+        if (d == &TP[P_FXTYPE + k * (P_FX2TYPE - P_FXTYPE)])
+            return &me_rm_tp[k];
+        if (d == &GP[G_MFXTYPE + k * (G_MFX2TYPE - G_MFXTYPE)])
+            return &me_rm_gp[k];
+    }
+    return 0;
+}
+static void me_remap_build(const param_desc_t *d, me_remap_t *m)
+{
+    int32_t v;
+    m->n = 0;
+    if (fx_names(d)) {
+        for (v = 0; v < (int32_t)fx_order_n(d) && m->n < 24u; v++) {
+            m->val[m->n] = FX_ORDER[v];
+            m->names[m->n++] = d->names[FX_ORDER[v]];
+        }
+        return;
+    }
+    for (v = d->min; v <= d->max && m->n < 24u; v++)
+        if (d->names[v][0]) {
+            m->val[m->n] = (int16_t)v;
+            m->names[m->n++] = d->names[v];
+        }
+}
+static int32_t me_remap_get(const param_desc_t *d, int32_t type)   /* the stored type -> its place */
+{
+    const me_remap_t *m = me_remap_of(d);
+    uint32_t k;
+    if (!m)
+        return type;
+    if (fx_names(d))
+        return (int32_t)fx_rank(type);
+    for (k = 0; k < m->n; k++)
+        if (m->val[k] == type)
+            return (int32_t)k;
+    return 0;
+}
+static int32_t me_remap_set(const param_desc_t *d, int32_t place)  /* a place -> the type the knob stores */
+{
+    const me_remap_t *m = me_remap_of(d);
+    return m ? m->val[me_clamp(place, 0, (int32_t)m->n - 1)] : place;
+}
+static void me_fmt_rm(const param_desc_t *d, int32_t v, char *b, uint32_t n)
+{
+    me_fmt(d, me_remap_of(d) ? me_remap_set(d, v) : v, b, n);
+}
+
 static int me_in_trk(const int16_t *vp) { return vp >= TSEL->p && vp < TSEL->p + P_COUNT; }
 /* edit_param's tail after the value is stored, for a part's value (vp in TSEL->p) on a page of scope sc */
 static void me_track_written(const int16_t *vp, uint32_t sc)
@@ -96,7 +158,7 @@ static void me_track_written(const int16_t *vp, uint32_t sc)
 }
 
 /* ---- a parameter of the selected part (TP id, or P_E0.. through the engine's descriptor) */
-static int32_t me_tget(uint32_t id) { return TSEL->p[id % P_COUNT]; }
+static int32_t me_tget(uint32_t id) { return me_remap_get(&TP[id % P_COUNT], TSEL->p[id % P_COUNT]); }
 static void me_tset(uint32_t id, int32_t v)
 {
     track_t *t = TSEL;
@@ -107,14 +169,23 @@ static void me_tset(uint32_t id, int32_t v)
         return;                                   /* (an empty column: "-") */
     if (chain_busy() && id >= P_SLEN && id <= P_SGATE)
         return;                                   /* the knob: "STOP TO EDIT" (PATTERN, GR_STEPS) */
+    if (me_remap_of(d)) {                         /* (an effect type: its place, the knob's value there) */
+        t->p[id] = (int16_t)me_remap_set(d, v);
+        me_track_written(&t->p[id], SC_TRACK);
+        return;
+    }
     t->p[id] = (int16_t)enum_step(d, t->p[id], me_clamp(v, d->min, d->max));
     me_track_written(&t->p[id], id >= P_E0 ? SC_ENGINE : SC_TRACK);
 }
 /* ---- a song parameter (GP id: the TEMPO / GLOBAL pages, the shared FX rack; none of GLO's device settings) */
-static int32_t me_gget(uint32_t id) { return song.g[id % G_COUNT]; }
+static int32_t me_gget(uint32_t id) { return me_remap_get(&GP[id % G_COUNT], song.g[id % G_COUNT]); }
 static void me_gset(uint32_t id, int32_t v)
 {
     const param_desc_t *d = global_desc(id % G_COUNT);
+    if (me_remap_of(&GP[id % G_COUNT])) {         /* (an effect type: its place, the knob's value there) */
+        song.g[id % G_COUNT] = (int16_t)me_remap_set(&GP[id % G_COUNT], v);
+        return;
+    }
     if (d->max > d->min)
         song.g[id % G_COUNT] = (int16_t)enum_step(d, song.g[id % G_COUNT], me_clamp(v, d->min, d->max));
 }
@@ -122,11 +193,11 @@ static void me_gset(uint32_t id, int32_t v)
 #define ME_TP_FN(id) \
     static int32_t me_g_##id(void) { return me_tget(id); } \
     static void me_s_##id(int32_t v) { me_tset(id, v); } \
-    static void me_t_##id(int32_t v, char *b, uint32_t n) { me_fmt(&TP[id], v, b, n); }
+    static void me_t_##id(int32_t v, char *b, uint32_t n) { me_fmt_rm(&TP[id], v, b, n); }
 #define ME_GP_FN(id) \
     static int32_t me_g_##id(void) { return me_gget(id); } \
     static void me_s_##id(int32_t v) { me_gset(id, v); } \
-    static void me_t_##id(int32_t v, char *b, uint32_t n) { me_fmt(&GP[id], v, b, n); }
+    static void me_t_##id(int32_t v, char *b, uint32_t n) { me_fmt_rm(&GP[id], v, b, n); }
 ME_TP_FN(P_LEVEL) ME_TP_FN(P_ATK) ME_TP_FN(P_DEC) ME_TP_FN(P_SUS) ME_TP_FN(P_REL)
 ME_TP_FN(P_ED_FLT) ME_TP_FN(P_ED_PIT) ME_TP_FN(P_ED_SHP)
 ME_TP_FN(P_LRATE) ME_TP_FN(P_LWAVE) ME_TP_FN(P_LPHASE) ME_TP_FN(P_LFADE)
@@ -146,9 +217,11 @@ ME_GP_FN(G_FXMODE) ME_GP_FN(G_FXRETURN)
 ME_GP_FN(G_MFXTYPE) ME_GP_FN(G_MFXMIX) ME_GP_FN(G_MFX2TYPE) ME_GP_FN(G_MFX2MIX) ME_GP_FN(G_MFX3TYPE) ME_GP_FN(G_MFX3MIX)
 
 /* ---- the part selection (ui.c track_select: the ALGORITHM knob's, the editor's; the tracks in use) */
-static const char *const ME_PARTS[NTRK] = {"1", "2", "3", "4"};
+/* (1.5: eight tracks, the four synth parts then four MIDI tracks a project adds on the device; the entry reaches the
+ * four parts, the tracks every project has) */
+static const char *const ME_PARTS[NPART] = {"1", "2", "3", "4"};
 static int32_t me_g_part(void) { return song.sel; }
-static void me_s_part(int32_t v) { track_select((uint32_t)me_clamp(v, 0, (int32_t)trk_n() - 1)); }
+static void me_s_part(int32_t v) { track_select((uint32_t)me_clamp(v, 0, (int32_t)(trk_n() < NPART ? trk_n() : NPART) - 1)); }
 static void me_t_part(int32_t v, char *b, uint32_t n) { snprintf(b, n, "Part %d", (int)me_clamp(v, 0, NTRK - 1) + 1); }
 
 /* ---- the engine entries E1..E8: a snapshot of the selected part's engine descriptors (double-buffered for text) */
@@ -426,7 +499,7 @@ static void me_params_init(void)
         case MEK_GP: d = &GP[a]; break;
         case MEK_LIT:                             /* Part */
             p->min = 0;
-            p->max = NTRK - 1;
+            p->max = NPART - 1;
             p->def = 0;
             p->names = ME_PARTS;
             p->flags |= FM1P_ENUM;
@@ -448,7 +521,15 @@ static void me_params_init(void)
             break;
         default: break;
         }
-        if (d) {
+        if (d && me_remap_of(d)) {                /* (an effect type: the places, me_remap_t) */
+            me_remap_t *m = me_remap_of(d);
+            me_remap_build(d, m);
+            p->min = 0;
+            p->max = m->n - 1;
+            p->def = me_remap_get(d, d->def);
+            p->names = m->names;
+            p->flags |= FM1P_ENUM;
+        } else if (d) {
             p->min = d->min;
             p->max = d->max;
             p->def = d->def;
@@ -459,7 +540,7 @@ static void me_params_init(void)
         }
     }
     for (k = 0; k < 8u; k++) {                    /* part 1's power-on engine (engines.c TRK_DEF) */
-        me_ed[0][k] = ENGINES[TRK_DEF[0][0]]->edit[k];
+        me_ed[0][k] = ENGINES[trk_def_engine(0)]->edit[k];
         snprintf(me_ednm[0][k], sizeof me_ednm[0][k], "E%u %s", (unsigned)k + 1u,
                  me_ed[0][k].label ? me_ed[0][k].label : "-");
     }

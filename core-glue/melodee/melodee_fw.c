@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The firmware side of the Melodee core: the firmware sources (melodee_firmware.h) and the hooks of ChoralRoot's
  * tools/emu/emu_hooks.h (the ABI's emu_fw_* entry points). Melodee has no emulator: this is the equivalent of
- * ChoralRoot's tools/emu/emu_fw.c, written against Melodee 1.4.3's own power-on and main loop (firmware/src/main.c
+ * ChoralRoot's tools/emu/emu_fw.c, written against Melodee 1.5.1's own power-on and main loop (firmware/src/main.c
  * fm1_cstart / fm1_main), with nothing of the firmware changed.
  *
  * THE MAIN LOOP RUNS ON A COROUTINE (core-glue/common/coro.h). main.c's fm1_main never returns and waits in places:
@@ -87,10 +87,13 @@ static void emu_fw_exit(void)
 }
 
 /* main.c melodee_init (static there; main.c itself is the device's boot and cannot be built on the host): the parts
- * with their default sounds (TRK_DEF), the sequencers empty. Verbatim (1.4.3). */
+ * with their default sounds (TRK_DEF), the sequencers empty. Verbatim (1.5.1). */
 static void emu_melodee_init(void)
 {
     uint32_t i;
+    trk_voices_bind();
+    midi_insert_init();
+    punch_reset();
     chain_defaults(&chain_config);
     pattern_init();
     for (i = 0; i < G_COUNT; i++)
@@ -101,8 +104,8 @@ static void emu_melodee_init(void)
     for (i = 0; i < NTRK; i++) {
         track_t *t = &trk[i];
         track_defaults(t);
-        set_engine_of(t, TRK_DEF[i][0]);
-        apply_preset_to(t, TRK_DEF[i][1]);    /* with its sends */
+        set_engine_of(t, trk_def_engine(i));
+        apply_preset_to(t, trk_def_preset(i));    /* with its sends */
         t->engine = t->eng_req;
         track_defaults_steps(t);              /* (a sound load never touches them) */
         pat_sig[i] = steps_sig(t);            /* (empty: not the user's) */
@@ -139,7 +142,7 @@ static void me_uboot(const char *what, const char *log)   /* main.c: the UBOOT s
 
 /* main.c fm1_main from the timer's start: the waits, Calibration if OCT- + OCT+ are held, the GLO values as last
  * used and the BOOT project, the splash's end, then the loop. Its body in main.c's order; built out with the
- * hardware: usb_retry (usb.up is always 1 here: usb_start is the SIE), ua_off_apply (USB audio), ota_session (the
+ * hardware: uh_task (the USB host), usb_retry (usb.up is always 1 here: usb_start is the SIE), ua_off_apply (USB audio), ota_session (the
  * update; ed_service and ota_service are in), cdc_task; the battery ADC (song.batt_raw stays 0: usb.config shows
  * external power, ui_draw.c batt_shown) */
 static void me_main(void *arg)
@@ -159,6 +162,7 @@ static void me_main(void *arg)
 
     for (;;) {
         uint32_t m = fm1_ms;
+        wire_release();                           /* last turn's jobs are done with the scratch */
         pattern_poll();
         if (fm1_ms > 30000u && bootguard.pending) {   /* a crash or hang in the first 30 s counts */
             bootguard.pending = 0;
@@ -170,7 +174,7 @@ static void me_main(void *arg)
             a = a < 0 ? 0 : a > 1023 ? 1023 : a;
             knob += (a * 16 - knob) / 8;
             k10 = (uint32_t)(knob / 16);
-            song.master_q12 = (k10 * k10) >> 8;   /* 0 .. ~4096 */
+            midi_master_physical((k10 * k10) >> 8);   /* physical pot, then MIDI master attenuation */
         }
         {   /* OCT- + OCT+ held 5 s: UBOOT; the countdown shows from 2 s, letting go cancels it */
             static uint32_t t0;
@@ -244,6 +248,8 @@ void emu_fw_init(int demo)
      * the parts, CPU1, the audio, USB. (dsp_tables_init: hostsim.c's constructor ran it when the module loaded.) */
     if (emu_boot_guard())
         return;
+    resource_host_cache_enabled = 1;              /* MELODEE_CACHE_RAM: fm1_cache_init passed (resources.c's cache
+                                                   * bank, the host's resource_host_cache: melodee_firmware.h) */
     fm1nor_open();                                /* (common/nor.c: erased, then the stage or the file) */
     settings_init();                              /* a readable default palette before loading flash */
     lcd_fill(0, 0, 240, 240, T_BG);

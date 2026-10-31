@@ -24,9 +24,16 @@ fm1_add_core(melodee ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/
 set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/core_melodee.c PROPERTIES COMPILE_OPTIONS
     "-Wall;-Wextra;-Werror=array-bounds;-Wno-unused-function;-Wno-unused-parameter;-Wno-missing-field-initializers;-Wno-sign-compare;-Wno-int-to-pointer-cast;-Wno-macro-redefined;-Wno-unused-but-set-variable;-Wno-unused-but-set-parameter")
 
+# the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md): Melodee 1.5.1 as its release builds it (the tag's
+# commit, the release's options: melodee_firmware.h), the hardware's parts left out (USB audio, the USB host, the
+# serial console, the update). Its licence texts are the default set: LICENSE (GPL-3.0-only), each file of LICENSES/
+# (Apache-2.0 msfa and JieLi, BSD-3 uPD933, MIT DaisySP / Rings / Fukiai / m-bootloader, MPL-2.0, OFL Rubik / Inter
+# Tight) and LICENSING.md (with its notes on the CZ-1 and Prophet factory data compiled in; no raw .syx in the file)
+fm1_add_rfm1(melodee AUTHORS "Kerem Kilic (Ellic Studio)" MEMORY_MIB 16)   # (source_url: the descriptor's, melodee@6a608ba)
+
 # The golden check (golden/me_golden.c): the core's screen against Melodee's own host renderer, tests/ui_render.c,
 # built from the submodule as its tests/run_tests.sh builds it (-O1 -w -DMELODEE_USB_AUDIO=1)
-if(TARGET melodee_core)
+if(TARGET melodee_core AND NOT FM1_RFM1_ONLY)
     set(_me_src ${CMAKE_SOURCE_DIR}/cores/melodee)
     add_executable(melodee_ui_render ${_me_src}/tests/ui_render.c)
     target_include_directories(melodee_ui_render PRIVATE ${_me_src}/build/gen ${_me_src}/firmware/src ${_me_src}/tests)
