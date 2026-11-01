@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Mini-Tone 1.0.1 (https://github.com/eldontyrellcorp/Mini-Tone, tag minitone-1.0.1): the felucca_web family's core
+# Mini-Tone 1.0.5 (https://github.com/eldontyrellcorp/Mini-Tone, tag minitone-1.0.5): the felucca_web family's core
 # (fw_core.h over the firmware's own web/emu/felucca_web.c, unmodified; cmake/FM1Cores.cmake fm1_add_core). The golden
 # check: fw_common.cmake. Public (the owner's call, 2026-10-22).
 # THE LICENCE TEXTS: Mini-Tone's LICENSING.md names LICENSES/ files its tree does not carry (it has only
@@ -15,7 +15,7 @@ fm1_add_core(minitone ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores
              CREDITS_FILES ${_mt_lic}/MIT-Braids.txt ${_mt_lic}/MIT-DaisySP.txt ${_mt_lic}/MIT-Rings.txt
                            ${_mt_lic}/MIT-Fukiai.txt ${_mt_lic}/Apache-2.0-msfa.txt
              GEN ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h felucca_tables.h felucca_fm6.h felucca_transients.h
-             VERSION 1.0.1 DEFINES FELUCCA_VERSION="v1.0.1")
-fw_golden(minitone ${CMAKE_SOURCE_DIR}/cores/Mini-Tone web/emu/felucca_web.c FELUCCA_VERSION="v1.0.1")
+             VERSION 1.0.5 DEFINES FELUCCA_VERSION="v1.0.5")
+fw_golden(minitone ${CMAKE_SOURCE_DIR}/cores/Mini-Tone web/emu/felucca_web.c FELUCCA_VERSION="v1.0.5")
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
 fm1_add_rfm1(minitone AUTHORS "eldontyrellcorp")
