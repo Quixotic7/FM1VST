@@ -106,3 +106,6 @@
 [submodule "mutable-dreams"]
 	path = cores/mutable-dreams
 	url = https://github.com/kidbee85-beep/mutable-dreams
+[submodule "zen-1"]
+	path = cores/zen-1
+	url = https://github.com/aceyprime/zen-1
