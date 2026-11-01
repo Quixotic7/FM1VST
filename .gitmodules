@@ -118,3 +118,6 @@
 [submodule "niagara-drift"]
 	path = cores/niagara-drift
 	url = https://github.com/evanyerburgh/niagara-drift
+[submodule "caravel"]
+	path = cores/caravel
+	url = https://github.com/bonszaimusic/caravel
