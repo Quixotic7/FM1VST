@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Skiff 1.4 (https://github.com/illuminus5/skiff, tag v1.4): the felucca_web family's core (fw_core.h over the
+# Skiff 2.1.1 (https://github.com/illuminus5/skiff, tag v2.1.1): the felucca_web family's core (fw_core.h over the
 # firmware's own web/emu/felucca_web.c, unmodified; cmake/FM1Cores.cmake fm1_add_core), the FM-1 board (build.py's
 # default; the SMK-37 Pro build, BOARD_SMK37, is left out). The golden check: fw_common.cmake. Public (the owner's
 # call, 2026-10-22): SLICE's two built-in loops, BREAK and FUNK (assets/breaks/), are cut from drum takes generated
@@ -12,7 +12,7 @@ fm1_add_core(skiff ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/sk
              GEN ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h ui_pixfont.h felucca_tables.h felucca_fm6.h
                  felucca_samples.h
              VERSION_FILE firmware/src/felucca.c VERSION_REGEX "^#define FELUCCA_VERSION \"v?([^\"]*)\""
-             DEFINES FELUCCA_VERSION="v1.4")
-fw_golden(skiff ${CMAKE_SOURCE_DIR}/cores/skiff web/emu/felucca_web.c FELUCCA_VERSION="v1.4")
+             DEFINES FELUCCA_VERSION="v2.1.1")
+fw_golden(skiff ${CMAKE_SOURCE_DIR}/cores/skiff web/emu/felucca_web.c FELUCCA_VERSION="v2.1.1")
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
 fm1_add_rfm1(skiff AUTHORS "illuminus5")
