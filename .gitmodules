@@ -127,3 +127,6 @@
 [submodule "cores/fm1-ripple"]
 	path = cores/fm1-ripple
 	url = https://github.com/charlesvestal/fm1-ripple
+[submodule "AURORA"]
+	path = cores/AURORA
+	url = https://github.com/twochannels/AURORA
