@@ -144,7 +144,7 @@ static int fm1core_dg_sync(void)
 static void fm1core_dg_info(char *buf, uint32_t n) { snprintf(buf, n, "page %u, program %u", (unsigned)page, (unsigned)prog + 1u); }
 
 /* the installer's M-UPGRADE identity: the device's platform_poll runs ota_service every pass (dinghy_glue.h) */
-#define FELUCCA_ID "FM-1_950"             /* tools/build.py --release 1.0: FM-1_95 + the minor version */
+#define FELUCCA_ID "FM-1_950"             /* tools/build.py --release 1.11: FM-1_95 + the minor version */
 #define FM1CORE_DG_OTA_C "../../cores/s1vave/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
 
