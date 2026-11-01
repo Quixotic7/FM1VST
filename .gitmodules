@@ -121,3 +121,6 @@
 [submodule "caravel"]
 	path = cores/caravel
 	url = https://github.com/bonszaimusic/caravel
+[submodule "hortator"]
+	path = cores/hortator
+	url = https://github.com/deadactive/hortator
