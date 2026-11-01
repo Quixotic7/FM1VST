@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# CoralFlower 0.5 (https://github.com/FicusFicusov/CoralFlower, tag v0.5): its emulator's unit, tools/emu/emu_fw.c,
+# CoralFlower 0.6.1 (https://github.com/FicusFicusov/CoralFlower, tag v0.6.1): its emulator's unit, tools/emu/emu_fw.c,
 # through core_coralflower.c and the family's glue (crf_glue.h)
 include(${CMAKE_CURRENT_LIST_DIR}/crf.cmake)
 set(_cf ${CMAKE_SOURCE_DIR}/cores/CoralFlower)
@@ -12,7 +12,7 @@ fm1_add_core(coralflower ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_cf} UNIT core_coral
              GEN ui_fonts.h cf_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h felucca_tables.h felucca_fm6.h
                  felucca_samples.h
              PYTHON_NEEDS raqm
-             VERSION 0.5
+             VERSION 0.6.1
              INCLUDES ${_cf}/tools/emu)
 # the golden check: the family's CoralFlower script against its own emulator (tools/emu/build.sh -> emu), built with
 # CR_VERSION=0.5 so that its splash reads as the core's ("CoralFlower 0.5")
