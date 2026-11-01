@@ -8,7 +8,10 @@
  *                 web_yield is the coroutine's (fm1core_dg_poll). Its two imports are defined below (their wasm
  *                 import attributes neutralised while the firmware is compiled)
  *   the audio     the shim's own rendering in platform_poll is kept out (web_owed reset each tick): the glue's ISR
- *                 renders app_audio's 256-frame blocks with the device's MASTER curve, as for every Dinghy core
+ *                 renders app_audio's 256-frame blocks (FM1CORE_DG_RENDER, below). GR!MM 2 applies MASTER itself
+ *                 (grimm.c out_stage asks fm1_master: the shim's web_master_q12, set to the device's MASTER curve
+ *                 before each block) and writes the DAC's 24-bit words (Q15 << 7): the app's own out_usb16 makes
+ *                 them Q15, rounded, as the device's USB audio
  *   the input     into the shim's fm1_in, edges (web_pressed / web_released / web_notes_pressed) and encoder steps
  *   MIDI / glow   the shim drops MIDI out and the keys' glow: grimm_hook/analog_tables.h points midi_send and
  *                 fm1_led_glow at the glue
@@ -196,8 +199,17 @@ static void fm1core_dg_info(char *buf, uint32_t n)
              grain_idle() ? "" : ", grain");
 }
 
+/* ---- the output stage (dinghy_glue.h FM1CORE_DG_RENDER): MASTER into the app, its 24-bit words as Q15 */
+static void fm1core_grm_render(int32_t *o, uint32_t frames, int32_t master_q12)
+{
+    web_master_q12 = master_q12;
+    app_audio(o, frames);
+    out_usb16(o, o, 2u * frames);         /* (in place: each word read before it is written) */
+}
+#define FM1CORE_DG_RENDER(o, n, q12) fm1core_grm_render((o), (n), (q12))
+
 /* the M-UPGRADE identity and the app's mailbox: platform.c's platform_poll split (above) */
-#define FELUCCA_ID "FM-1_966"             /* platform.c: GR!MM 1.x */
+#define FELUCCA_ID "FM-1_966"             /* platform.c: GR!MM 1.x and 2.x */
 #define FM1CORE_DG_OTA_C "../../cores/grimm/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_grm_sx_in((p), (n))
 #define FM1CORE_DG_SYSEX_READY() fm1core_grm_sx_ready()
