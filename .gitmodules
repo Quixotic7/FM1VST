@@ -112,3 +112,6 @@
 [submodule "cores/fm1-HYP1"]
 	path = cores/fm1-HYP1
 	url = https://github.com/RustyPawz/fm1-HYP1
+[submodule "cores/frasil"]
+	path = cores/frasil
+	url = https://github.com/styvesgoupil/frasil
