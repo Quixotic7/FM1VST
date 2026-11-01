@@ -10,7 +10,7 @@
 #define FM1CORE_FW_WEB_C "../../cores/Felucca/web/emu/felucca_web.c"
 #define FM1CORE_FW_ANIM_IDLE 1
 #define FM1CORE_FW_EDITOR_C "../../cores/Felucca/firmware/src/editor.c"   /* the web editor's SysEx */
-#define FM1CORE_FW_OTA_C "../../cores/Felucca/firmware/src/ota.c"         /* the M-UPGRADE identity */
+#define FM1CORE_FW_OTA_C "../../cores/Felucca/firmware/bsp/chip/ota.c"    /* the M-UPGRADE identity (felucca-bsp's, 1.8) */
 #define FELUCCA_ID "FM-1_900"                                             /* (felucca.c) */
 #include "fw_core.h"
 
