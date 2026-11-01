@@ -9,6 +9,8 @@
  *     --keys K,K,..  the chord's key numbers (default 9,13,16: D4 F#4 A4, as core_bench / core_conformance)
  *     --vel V        the chord's velocity, key_vel (default 100; 0: none given, the core's default)
  *     --lean L       the chord's aftertouch, key_lean 0..100 % (default 0)
+ *     --tap B,B,..   buttons tapped 1 s before the chord, by label (fm1core.h FM1P_B_*: PLAY 10): a firmware that
+ *                    starts silent until PLAY (Niagara Drift's drones)
  *     --sysex FILE   a .syx file sent over midi_in from settle - 800 ms (a sample bank, a preset); the chord waits
  *                    until it is all in, then 300 ms
  *     --wav FILE     the whole run's audio as a 44.1 kHz 16-bit stereo WAV
@@ -202,6 +204,7 @@ static void wr32(uint32_t off, uint32_t v)
     if (in_mem(off, 4))
         memcpy(mem(NULL) + off, &v, 4);
 }
+static uint8_t rd8(uint32_t off) { return in_mem(off, 1) ? mem(NULL)[off] : 0; }
 static void wr8(uint32_t off, uint8_t v)
 {
     if (in_mem(off, 1))
@@ -404,7 +407,7 @@ static uint8_t *read_file(const char *path, size_t *n)
 
 static void usage(void)
 {
-    fputs("usage: rfm1_run [--seconds S] [--settle MS] [--keys K,K,..] [--vel V] [--lean L] [--sysex FILE] [--wav FILE]\n"
+    fputs("usage: rfm1_run [--seconds S] [--settle MS] [--keys K,K,..] [--vel V] [--lean L] [--tap B,..] [--sysex FILE] [--wav FILE]\n"
           "                [--min-rms X]\n"
           "                [--verbose] [--describe [--out FILE]] <file.rfm1>\n", stderr);
 }
@@ -416,6 +419,7 @@ int main(int argc, char **argv)
     int describe = 0;
     const char *out_path = NULL, *wav_path = NULL, *sysex_path = NULL, *path = NULL;
     int keys[FM1P_NKEY], nkeys = 0, vel = 100, lean = 0;
+    uint32_t taps = 0;                           /* (label bits: --tap) */
     for (int i = 1; i < argc; i++) {
         const char *a = argv[i];
         const int more = i + 1 < argc;
@@ -429,7 +433,19 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--out") && more) out_path = argv[++i];
         else if (!strcmp(a, "--describe")) describe = 1;
         else if (!strcmp(a, "--verbose")) g_verbose = 1;
-        else if (!strcmp(a, "--keys") && more) {
+        else if (!strcmp(a, "--tap") && more) {
+            char *s = argv[++i];
+            while (*s) {
+                const long b = strtol(s, &s, 10);
+                if (b < 0 || b >= FM1P_NB) {
+                    usage();
+                    return 2;
+                }
+                taps |= 1u << b;
+                while (*s == ',' || *s == ' ')
+                    s++;
+            }
+        } else if (!strcmp(a, "--keys") && more) {
             char *s = argv[++i];
             nkeys = 0;
             while (*s && nkeys < FM1P_NKEY) {
@@ -678,6 +694,14 @@ int main(int argc, char **argv)
                 if (chord_at < ms + 300u)
                     chord_at = ms + 300u;
             }
+        }
+        if (taps && !chord_on && !chord_done && ms + 1000u >= chord_at) {   /* --tap: the buttons, by their matrix ids */
+            uint32_t m = 0;
+            for (int b = 0; b < FM1P_NB; b++)
+                if (taps >> b & 1u)
+                    m |= 1u << rd8(P(btn_id) + (uint32_t)b);
+            wr32(P(buttons_tap), rd32(P(buttons_tap)) | m);
+            taps = 0;
         }
         if (!chord_on && !chord_done && ms >= chord_at && (!sx || (!pending_pkt && sx_at >= sx_n))) {
             /* the chord down (Device::keys: taps for the new keys) */

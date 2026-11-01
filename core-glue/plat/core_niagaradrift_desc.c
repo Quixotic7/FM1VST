@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The FoMni core's descriptor (plat_desc.h) */
-#define FM1CORE_PL_TITLE "FoMni-1"
+/* The Niagara Drift core's descriptor (plat_desc.h) */
+#define FM1CORE_PL_TITLE "Niagara Drift"
 #define FM1CORE_PL_REPO "https://github.com/evanyerburgh/niagara-drift"
 /* app/panel.c B_NAME: the printed labels */
 #define FM1CORE_PL_BUTTONS                                                                                     \
