@@ -89,6 +89,8 @@ static uint32_t midi_in_q[MQ];
 static volatile uint32_t mi_w, mi_r;
 static uint32_t fm1core_pl_mo_q[MQ];
 static volatile uint32_t fm1core_pl_mo_w, fm1core_pl_mo_r;
+#define mo_w fm1core_pl_mo_w                      /* usb.c's names for the out ring (X0X 1.2's plat_midi_out_room) */
+#define mo_r fm1core_pl_mo_r
 static void midi_out_event(uint32_t pkt)          /* a host is always there: every packet is queued (full: dropped) */
 {
     if (fm1core_pl_mo_w - fm1core_pl_mo_r < MQ)
