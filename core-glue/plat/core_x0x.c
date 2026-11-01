@@ -39,7 +39,7 @@
 
 #define X0X_HOST 1                        /* the device's .pool section off (plat.h X0X_POOL), the host's checks in */
 #define X0X_VERSION FM1CORE_VERSION
-#define FELUCCA_ID "FM-1_9010100"         /* the package identity: tools/build.py --release 1.1.0 (FM-1_9 01 01 00) */
+#define FELUCCA_ID "FM-1_9010200"         /* the package identity: tools/build.py --release 1.2.0 (FM-1_9 01 01 00) */
 #define FM1CORE_PL_SX 1                   /* the managers' SysEx (plat_sx.h) */
 #define FM1CORE_PL_SX_CORO 1              /* (a restore waits for the host and for SEL: the service's coroutine) */
 #include "plat_hal.h"
