@@ -7,12 +7,13 @@
  *     (conformance_fmini.txt settle_ms);
  *   - the UI is fmini_app.c's (UI_INPUT / UI_LEDS / UI_DRAW), track 1 the instrument (fa_init);
  *   - the device's second core (FELUCCA_CPU2) is built off by the web unit, as Felucca's.
- * Version and identity as tools/build.py --release 1.8.0 builds them: FELUCCA_VERSION "v1.8.0" (core_fmini.cmake;
- * fmini_app.c's own FMINI_VERSION says the same on its screen), FELUCCA_ID FM-1_918 (release builds are FM-1_9XY). */
+ * Version and identity as its releases build them (since 1.14 a plain ./build.sh, no --release: build.py's --release
+ * takes one digit per part): FELUCCA_VERSION felucca.c's default "v1.6.1" (core_fmini.cmake), FELUCCA_ID build.py's
+ * PRODUCT FM-1_900; its screen shows core.h's FMINI_VERSION. */
 #define FM1CORE_FW_P fm
 #define FM1CORE_FW_WEB_C "../../cores/fmini-1/web/emu/felucca_web.c"
 #define FM1CORE_FW_ANIM_IDLE 1
 #define FM1CORE_FW_EDITOR_C "../../cores/fmini-1/firmware/src/editor.c"   /* the web editors' SysEx */
 #define FM1CORE_FW_OTA_C "../../cores/fmini-1/firmware/src/ota.c"         /* the M-UPGRADE identity */
-#define FELUCCA_ID "FM-1_918"                                             /* (build.py --release 1.8.0) */
+#define FELUCCA_ID "FM-1_900"                                             /* (build.py's PRODUCT, ./build.sh) */
 #include "fw_core.h"
