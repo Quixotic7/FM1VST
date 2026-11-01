@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The CoralFlower core (0.5): the firmware unit of CoralFlower's emulator, tools/emu/emu_fw.c (ChoralRoot 0.22's
+/* The CoralFlower core (0.6.1): the firmware unit of CoralFlower's emulator, tools/emu/emu_fw.c (ChoralRoot 0.22's
  * emulator with CoralFlower's instrument: emu_firmware.h's include list, cf_*.c, flora/), compiled here as is from
  * the unmodified, pinned submodule, behind the family's shared glue (crf_glue.h).
  *
@@ -10,9 +10,9 @@
  * exit(): emu_fw.c's boot guard (BOOT_UBOOT: exit(3)) and the update gesture's leaving (OCT- + OCT+ + HOME held 5 s:
  * cf_shim.c cr_update_poll through emu_firmware.h's CRB_STUB_GO / CRB_UBOOT_GO, exit(0)), each a plain statement
  * followed by ordinary code: common/exit.h records it and halts the core (see core_choralroot.c). Its atexit handler
- * is empty. The environment: common/env.h (EMU_MASTER, EMU_STUB read as unset). The version: the tag's 0.5
- * (coralflower.c still says "CoralFlower 0.1"; tools/emu/build.sh takes web/releases.json's newest, at the tag still
- * 0.4.2); the splash here reads "CoralFlower 0.5". */
+ * is empty. The environment: common/env.h (EMU_MASTER, EMU_STUB read as unset). The version: the tag's 0.6.1
+ * (coralflower.c still says "CoralFlower 0.1"; tools/emu/build.sh takes web/releases.json's newest, at the tag
+ * 0.6); the splash here reads "CoralFlower 0.6.1". */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
