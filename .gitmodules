@@ -103,3 +103,6 @@
 [submodule "cores/karma-fm1"]
 	path = cores/karma-fm1
 	url = https://github.com/eatyourgreensstudio-dotcom/karma-fm1
+[submodule "mutable-dreams"]
+	path = cores/mutable-dreams
+	url = https://github.com/kidbee85-beep/mutable-dreams

@@ -4,6 +4,7 @@
 |---|---|---|---|
 | `amb` | AMB-1 1.3 | `cores/fm1-amb` @ v1.3, with `base` = fm1-base @ 15dff6d, `base/bsp` = felucca-bsp @ 6b087c2 | MPL-2.0 |
 | `loom` | LOOM-8 0.6.1 | `cores/fm1-loom` @ v0.6.1 (3f41391), with `base` = fm1-base @ 71128a3, `base/bsp` = felucca-bsp @ 33cac69 | GPL-3.0-only (fm1-base MPL-2.0); un-gated 2026-10-21 (the owner's call: the 909 hi-hat) |
+| `mutabledreams` | Mutable Dreams 1.4 | `cores/mutable-dreams` @ v1.4 (0321551), fm1-base and felucca-bsp vendored in it (no submodules) | GPL-3.0-only combined (app also MIT; Mutable Instruments code MIT; fm1-base MPL-2.0) |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
@@ -79,6 +80,32 @@ NOR image, unity.c's stand-ins for the screen mirror); AMB-1 compiles it unused.
   samples (ER-99), the question that gated LOOM-8 with X0X. The owner decided to ship it unchanged: "ship the original,
   it is from the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal made"; the credits name
   that origin. X0X stays gated (its own question, CORES-PLAN.md 6).
+
+## Mutable Dreams
+
+Mutable Dreams (Kid Bunka / Christoph Link: six synth tracks or a Lo-Fi kit on Plaits, Rings and Elements models,
+Biomes, granular effects, User Banks) is pinned at v1.4 (2026-10-31). fm1-base and felucca-bsp are copies inside the
+repository, not submodules. `core_mutabledreams.c` follows `core_loom.c` (fm1.toml `backup = true`, the same newer
+fm1-base: plat_fm1.c's host reads need chip/ota.c before it), with the platform's screens in `FONT_S`
+(`draw_text_box`, no `sys_text.c` in this fm1-base).
+
+- **The engine is C++** (fm1.toml `o2`: `app/dsp/dreams.cpp` and twelve Mutable Instruments units). They are
+  `EXTRA_SOURCES` straight from the submodule, as KARMA's are, with build.py's and `tools/build_local.py`'s flags:
+  `-std=c++11 -fno-exceptions -fno-rtti -fno-threadsafe-statics -DTEST`, `app/compat` first (its freestanding
+  `<cmath>`, `<algorithm>`, `<new>`: no C++ library in the module), and `PLAT_HOST`, as fm1-base's host and browser
+  builds give the o2 units (dreams.cpp's `.pool` section off).
+- **The managers' SysEx:** sysex_dispatch.h's order: the screen reader, the log readout, the app's own (`app_sysex`,
+  7D 4D 44: the diagnostics and the live editor's transfer), then, only for a frame none of them took, ota_service and
+  usb_cmd (backup 0x42, restore 0x41 with RESTORE FROM USB? SEL / HOME).
+- **Saving:** only SAVE (the Biome and the prefs) and the bank page (User Banks) write; `flash_sync` has nothing pending.
+- **Not built:** the overload hook (`APP_OVERLOAD`: no audio timing on the host, the ECO step never fires), the splash
+  and the boot chime's screen (the plat glue skips the splash; the chime plays), the update itself, Bluetooth / WiFi
+  (fm1.toml has neither), USB audio in.
+- Version and identity: build.py --release 1.4.0's, "1.4.0" and FM-1_710010400 (DEVICE-TEST-REPORT-1.4.txt).
+- Licence texts in the .rfm1: its LICENSE (GPL-3.0), LICENSING-GPL.txt, LICENSE-MIT.txt, Mutable Instruments' MIT
+  notice (`mutabledreams_mi_mit.txt`: the files' own header, gathered), fm1-base's and felucca-bsp's MPL-2.0 with
+  LICENSING.md / NOTICE, the Barlow and Nunito OFL. `presets/` (JSON catalogs) is already compiled into
+  `app/dsp/preset_bank.inc` upstream; nothing of it is shipped as a file.
 
 ## A next fm1-base app
 

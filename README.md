@@ -92,6 +92,7 @@ a package by its SHA-256. What the public cores answer (`tests/sysex_test.cpp` c
 | `fmini` | FM-1 Midi | FMini-1's editor | the web editor, identity FM-1_918 |
 | `pigeon` | PIGEON | its sample loader | the bank (upload, export, erase), backup, identity FM-1_900 |
 | `loom` | LOOM-8 FM-1 | its samples page | the sample bank, fm1-base's backup, identity FM-1_10000601 |
+| `mutabledreams` | Mutable Dreams FM-1 | its browser editor | the live editor and diagnostics (7D 4D 44), fm1-base's backup (.mddb), identity FM-1_710010400 |
 | `grimm` | Felucca | GR!MM's editor | its editor (sounds, slots, settings, samples), identity FM-1_966 |
 | `tonitor` | FM-1 Tonitor | its backup page | sessions and presets (LIST, READ, WRITE), identity FM-1_700 |
 | `amb`, `fomni`, `fimba`, `obervave`, `frodhes`, `s1vave` | AMB-1 FM-1, FoMni FM-1, FiMba FM-1, Felucca | | the installer's identity |
