@@ -1,10 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The Felucca core's descriptor: the family's (fw_desc.h), with the Tier 2 map (core_caravel_params.c) */
-#define FM1CORE_FW_P fe
-#define FM1CORE_FW_NAME "Felucca"
+/* The Caravel core's descriptor: the family's (fw_desc.h) */
+#define FM1CORE_FW_P cv
+#define FM1CORE_FW_NAME "Caravel"
 #define FM1CORE_FW_REPO "https://github.com/bonszaimusic/caravel"
-#define FM1CORE_FW_PARAMS 1
-/* the second button keeps the name the Felucca core always had, SEL (panel.c's B_NAME says SCL, the scale layer): the
- * plugin's button parameters are named after it, and saved automation maps by name */
-#define FM1CORE_FW_SCL "SEL"
 #include "fw_desc.h"
