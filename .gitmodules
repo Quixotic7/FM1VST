@@ -115,3 +115,6 @@
 [submodule "cores/frasil"]
 	path = cores/frasil
 	url = https://github.com/styvesgoupil/frasil
+[submodule "niagara-drift"]
+	path = cores/niagara-drift
+	url = https://github.com/evanyerburgh/niagara-drift
