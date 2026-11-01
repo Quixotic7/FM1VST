@@ -1,0 +1,53 @@
+# Ripple 0.4: tests/core_conformance.cpp's script for this core (see its header for the directives). NOT RUN YET:
+# written with the .rfm1 (rfm1_run drives the same steps); the native plugin build was not made for it
+# the sound: power-on shows the droplets' list (silent, no folder natively: the built-in droplets); OCT+ eleven
+# times selects poly (arp awake beat bells chords drone euclid life loop midi monk poly), PLAY starts it; the key
+# (D4) then plays its voice through the delay
+sound wait 600
+sound btn OCT+ 60
+sound wait 60
+sound btn OCT+ 60
+sound wait 60
+sound btn OCT+ 60
+sound wait 60
+sound btn OCT+ 60
+sound wait 60
+sound btn OCT+ 60
+sound wait 60
+sound btn OCT+ 60
+sound wait 60
+sound btn OCT+ 60
+sound wait 60
+sound btn OCT+ 60
+sound wait 60
+sound btn OCT+ 60
+sound wait 60
+sound btn OCT+ 60
+sound wait 60
+sound btn OCT+ 60
+sound wait 60
+sound btn PLAY 60
+sound wait 300
+sound quit
+# the flash round trip: starting a droplet stores it as the last one (app.c start: plat_store_save); after the
+# reboot the list's selection is on it (bells), not on the first
+save wait 600
+save btn OCT+ 60
+save wait 60
+save btn OCT+ 60
+save wait 60
+save btn OCT+ 60
+save wait 60
+save btn PLAY 60
+save wait 400
+save quit
+saved wait 1000
+saved quit
+saved-lcd-differs
+# OCT- + OCT+ held 5 s: UBOOT (plat_glue.h); four failed boots in a row: UBOOT
+reboot-guard 3
+reboot wait 600
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

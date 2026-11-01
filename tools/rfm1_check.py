@@ -12,6 +12,11 @@ the module uses: every function body is decoded, so an instruction outside the f
 reference types, tail calls, exceptions, memory.init / data.drop / table.*, which wasm3 0.5.0 does not run) is found,
 as are passive data segments, non-MVP element segments, and LLVM's target_features section when present.
 
+A Fantasy CFW (docs/VIRTUAL-CARTS.md: the manifest says "virtual": true) is checked against that document's rules,
+automatically: the rfm1_host_1 imports allowed with their exact signatures (and "fs1" in "needs" when it imports
+them), "needs" and "folders" well formed, the memory up to 512 MiB, the file under 16 MiB. Any other module that
+imports rfm1_host_1 fails.
+
 Prints each problem ("error:" or "warning:") and a summary line; exits 1 if any file has an error, 2 on a usage or
 file error. Python 3 standard library only. Running the module is rfm1_run's job (tools/rfm1_run).
 """
@@ -21,6 +26,8 @@ import sys
 
 MAGIC = b"\0asm\x01\0\0\0"
 MAX_MEMORY = 32 * 1048576
+MAX_MEMORY_VIRTUAL = 512 * 1048576                 # docs/VIRTUAL-CARTS.md section 2
+MAX_FILE_VIRTUAL = 16 * 1048576
 I32, I64, F32, F64, V128, FUNCREF, EXTERNREF = 0x7F, 0x7E, 0x7D, 0x7C, 0x7B, 0x70, 0x6F
 VT_NAME = {I32: "i32", I64: "i64", F32: "f32", F64: "f64", V128: "v128", FUNCREF: "funcref", EXTERNREF: "externref"}
 
@@ -33,6 +40,15 @@ IMPORTS = {
     "clock_time_get": ((I32, I64, I32), (I32,)),
     "proc_exit": ((I32,), ()),
 }
+# docs/VIRTUAL-CARTS.md section 4: the host's file API (capability fs1), a virtual cart's only other imports
+HOST_MODULE = "rfm1_host_1"
+HOST_IMPORTS = {
+    "fs_request": ((I32, I32, I32, I64, I32, I32), (I32,)),
+    "fs_poll": ((I32,), (I32,)),
+    "fs_cancel": ((I32,), ()),
+    "fs_changed": ((), (I32,)),
+}
+KNOWN_NEEDS = {"fs1"}
 # section 2: the exports, (params, results); all i32
 EXPORTS = {
     "rfm1_version": (0, 1), "rfm1_get": (1, 1), "rfm1_layout": (1, 1), "rfm1_alloc": (1, 1), "rfm1_free": (1, 0),
@@ -299,6 +315,7 @@ class Check:
     def module(self, b):
         r = R(b, 8)
         types, funcs, imports_f = [], [], []
+        func_imports = []
         exports = {}
         memories = []
         custom = {}
@@ -334,11 +351,7 @@ class Check:
                     if kind == 0:
                         ti = sr.u32()
                         imports_f.append(ti)
-                        if mod != "wasi_snapshot_preview1" or nm not in IMPORTS:
-                            self.err("imports %s: not in the format's list (section 3)" % what)
-                        elif ti < len(types) and types[ti] != IMPORTS[nm]:
-                            self.err("imports %s with the signature %s, not %s" % (
-                                what, sig(types[ti]), sig(IMPORTS[nm])))
+                        func_imports.append((mod, nm, ti))      # (checked after the manifest: virtual or not)
                     elif kind == 1:
                         sr.byte(), self.limits(sr)
                         self.err("imports a table %s (the module must import functions only)" % what)
@@ -440,8 +453,6 @@ class Check:
                 self.err("the memory has no maximum (fixed: initial = maximum)")
             elif mx != initial:
                 self.err("the memory's maximum (%d pages) is not its initial size (%d pages)" % (mx, initial))
-            if initial * 65536 > MAX_MEMORY:
-                self.err("the memory is %.1f MiB (at most 32)" % (initial * 65536 / 1048576))
             self.info["memory"] = initial * 65536
         # the exports (section 2)
         nimp = len(imports_f)
@@ -495,6 +506,7 @@ class Check:
         for n in custom:
             if n.startswith("rfm1.") and n != "rfm1.credits" and not re.fullmatch(r"rfm1\.license\.\d+", n):
                 self.warn("an unknown section %s" % n)
+        self.virtual_rules(func_imports, types)
         if "target_features" in custom:
             tf = R(custom["target_features"])
             try:
@@ -505,6 +517,67 @@ class Check:
                         self.err("target_features: %s%s (outside the format's feature set)" % (prefix, feat))
             except Bad:
                 self.warn("target_features: unreadable")
+
+    def virtual_rules(self, func_imports, types):
+        """the imports, the memory and the file's size: the format's limits, or a Fantasy CFW's (docs/VIRTUAL-CARTS.md)
+        when the manifest says "virtual": true"""
+        m = self.info.get("manifest", {})
+        virtual = m.get("virtual") is True
+        self.info["virtual"] = virtual
+        if "virtual" in m and not isinstance(m["virtual"], bool):
+            self.err("the manifest's virtual is not true or false")
+        needs = m.get("needs", [])
+        if "needs" in m:
+            if not virtual:
+                self.err("the manifest has \"needs\" but is not virtual")
+            if not isinstance(needs, list) or not all(isinstance(n, str) for n in needs):
+                self.err("the manifest's needs is not a list of names")
+                needs = []
+            for n in needs:
+                if n not in KNOWN_NEEDS:
+                    self.warn("the manifest needs %r, a capability this checker does not know" % n)
+        if "folders" in m:
+            f = m["folders"]
+            if not virtual:
+                self.err("the manifest has \"folders\" but is not virtual")
+            if not isinstance(f, dict):
+                self.err("the manifest's folders is not an object")
+            else:
+                for k, v in f.items():
+                    if k not in ("audio", "code", "data"):
+                        self.err("the manifest's folders: %r is not audio, code or data" % k)
+                    elif v not in ("r", "rw") or (k != "data" and v != "r"):
+                        self.err("the manifest's folders: %s %r (audio and code: \"r\"; data: \"r\" or \"rw\")" % (k, v))
+        host = False
+        for mod, nm, ti in func_imports:
+            what = "%s.%s" % (mod, nm)
+            t = types[ti] if ti < len(types) else None
+            if mod == "wasi_snapshot_preview1" and nm in IMPORTS:
+                want = IMPORTS[nm]
+            elif mod == HOST_MODULE and nm in HOST_IMPORTS:
+                if not virtual:
+                    self.err("imports %s: the host's file API, but the manifest is not virtual (docs/VIRTUAL-CARTS.md)"
+                             % what)
+                    continue
+                host = True
+                want = HOST_IMPORTS[nm]
+            else:
+                self.err("imports %s: not in the format's list (section 3)%s" % (
+                    what, " or rfm1_host_1's (docs/VIRTUAL-CARTS.md 4)" if virtual else ""))
+                continue
+            if t is not None and t != want:
+                self.err("imports %s with the signature %s, not %s" % (what, sig(t), sig(want)))
+        if host and "fs1" not in needs:
+            self.err("imports rfm1_host_1 but the manifest's needs has no \"fs1\"")
+        self.info["host_imports"] = host
+        mem = self.info.get("memory", 0)
+        if virtual:
+            if mem > MAX_MEMORY_VIRTUAL:
+                self.err("the memory is %.1f MiB (a Fantasy CFW: at most 512)" % (mem / 1048576))
+            if self.size >= MAX_FILE_VIRTUAL:
+                self.err("the file is %.1f MiB (a Fantasy CFW: under 16)" % (self.size / 1048576))
+        elif mem > MAX_MEMORY:
+            self.err("the memory is %.1f MiB (at most 32)" % (mem / 1048576))
 
     def manifest(self, raw):
         try:
@@ -575,9 +648,12 @@ def main(argv):
             print("%s: FAILED (%d errors)" % (p, len(c.errors)))
         elif not quiet:
             m = c.info.get("manifest", {})
-            print("%s: ok: %s %s (%s), %d bytes, %g MiB memory, %d exports, %d licence texts%s" % (
-                p, m.get("id"), m.get("version"), m.get("license"), c.size, c.info.get("memory", 0) / 1048576,
-                c.info.get("exports", 0), c.info.get("licenses", 0),
+            print("%s: ok: %s %s (%s)%s, %d bytes, %g MiB memory, %d exports, %d licence texts%s" % (
+                p, m.get("id"), m.get("version"), m.get("license"),
+                ", virtual (Fantasy CFW, needs %s%s)" % (",".join(m.get("needs", [])) or "nothing",
+                                                        ", imports rfm1_host_1" if c.info.get("host_imports") else "")
+                if c.info.get("virtual") else "",
+                c.size, c.info.get("memory", 0) / 1048576, c.info.get("exports", 0), c.info.get("licenses", 0),
                 ", %d warnings" % len(c.warnings) if c.warnings else ""))
     return 1 if bad else 0
 

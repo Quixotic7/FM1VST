@@ -13,6 +13,9 @@ The manifest's id, name, version, licence and source_url come from the descripto
         --author "Leo Kuroshita (Hügelton Instruments)" \\
         --license-file "GPL-3.0-only ({name})=cores/Felucca/LICENSE" --built-by "FM1VST 0.6.2 fm1_add_rfm1, emcc 6.0.13"
 
+--virtual [--needs CAP].. [--folder NAME=r|rw]..: a Fantasy CFW (docs/VIRTUAL-CARTS.md): the manifest's "virtual": true,
+"needs" and "folders".
+
 --license-file NAME=PATH: NAME is the section's first line ("{name}" is replaced by the firmware's name); texts that are
 the same (whitespace aside) are carried once, under their names joined by "; ".
 """
@@ -100,6 +103,10 @@ def main():
     ap.add_argument("--license-file", action="append", default=[], metavar="NAME=PATH")
     ap.add_argument("--credits-file", help="the credits text (default: the descriptor's credits)")
     ap.add_argument("--built-by", default="")
+    ap.add_argument("--virtual", action="store_true", help="a Fantasy CFW (docs/VIRTUAL-CARTS.md)")
+    ap.add_argument("--needs", action="append", default=[], help="(--virtual) a host capability it uses: fs1")
+    ap.add_argument("--folder", action="append", default=[], metavar="NAME=r|rw",
+                    help="(--virtual) a part of the shared folder it uses: audio=r, code=r, data=rw")
     for k in ("id", "name", "version", "license", "source-url"):
         ap.add_argument("--" + k, help="override the descriptor's " + k)
     a = ap.parse_args()
@@ -137,6 +144,19 @@ def main():
     if a.built_by:
         man["built_by"] = a.built_by
     man["memory_mib"] = mem / 1048576 if mem % 1048576 else mem // 1048576
+    if a.virtual:
+        man["virtual"] = True
+        man["needs"] = a.needs
+        folders = {}
+        for f in a.folder:
+            k, _, v = f.partition("=")
+            if k not in ("audio", "code", "data") or v not in ("r", "rw"):
+                sys.exit("rfm1_pack: --folder %r: audio|code|data = r|rw" % f)
+            folders[k] = v
+        if folders:
+            man["folders"] = folders
+    elif a.needs or a.folder:
+        sys.exit("rfm1_pack: --needs and --folder are for a --virtual cart")
     if not re.fullmatch(r"[a-z0-9_]{1,31}", man["id"]):
         sys.exit("rfm1_pack: the id %r is not [a-z0-9_]{1,31}" % man["id"])
     for k in ("license", "source_url"):

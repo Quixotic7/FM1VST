@@ -49,6 +49,8 @@ your descriptor, so they always match. Its options (cmake/FM1Rfm1.cmake has them
 | `SOURCE_URL <url>` | instead of the descriptor's `source_url` |
 | `DEFINES`, `FLAGS`, `INCLUDES` | more, for the Wasm build only |
 | `RUN_ARGS <args..>` | options for the test's `rfm1_run` (`--sysex bank.syx`, `--settle 5000`) |
+| `VIRTUAL` | a Fantasy CFW, host-only ([VIRTUAL-CARTS.md](VIRTUAL-CARTS.md)): the manifest says `"virtual": true`; `MEMORY_MIB` up to 512, the file under 16 MiB, the `rfm1_host_1` imports allowed |
+| `NEEDS <cap..>`, `FOLDERS <name=r\|rw..>` | (with `VIRTUAL`) the manifest's `needs` (`fs1`: the shared folder's files) and `folders` (`code=r data=rw`) |
 
 To try a core without editing its glue: `-DFM1_RFM1_EXTRA_CORES=<id>` (or `all`).
 
@@ -69,6 +71,10 @@ threads, reference types, tail calls or exceptions; the build sets the feature f
   build. The coroutine's C stack (512 KiB) and its Asyncify buffer (64 KiB) are allocated inside the fixed memory.
   (S1Vave, and OberVave, Frodhes and GR!MM tried this way: 6.5-7x real time in `rfm1_run` on an M5 Mac. S1Vave's
   .rfm1 plays the same samples as its native core, bit for bit, over `rfm1_run`'s whole run.)
+- Lua's errors (`setjmp`/`longjmp`, which would need wasm exceptions) can run on the same Asyncify pass, unwind only:
+  a Lua port's configuration includes `core-glue/common/lj_asyncify.h` in .rfm1 builds (`LUAI_THROW`/`LUAI_TRY`),
+  and the link, seeing a unit call `lj_throw`, adds `core-glue/common/lj_asyncify.c` with `lj_try_impl` in the
+  removelist (Ripple: `core-glue/ripple/`). Nothing may yield an `fm1coro` while Lua frames are on the stack.
 - A native-only header your firmware's host build includes can get a stand-in in `core-glue/common/wasm_compat/`
   (on the include path of .rfm1 builds only). ChoralRoot's `<os/lock.h>` is there.
 - `FM1CORE_RFM1` is defined (to 1) in .rfm1 builds, and `__EMSCRIPTEN__` as always with emcc, if your glue needs to
@@ -84,12 +90,19 @@ ctest --test-dir build-rfm1 -R rfm1_                                # both, for 
 
 `rfm1_check` (Python 3, standard library only) reads the whole module: the manifest's fields, the imports (only the
 format's WASI list), the exports and their signatures, the memory (fixed, at most 32 MiB), and every instruction (it
-finds SIMD, atomics and the rest). The build runs it on every file it makes.
+finds SIMD, atomics and the rest). The build runs it on every file it makes. A manifest that says `"virtual": true` is
+checked against [VIRTUAL-CARTS.md](VIRTUAL-CARTS.md)'s rules instead, by itself: the `rfm1_host_1` imports with their
+exact signatures (and `fs1` in `needs` when it imports them), up to 512 MiB of memory, a file under 16 MiB. Any other
+module that imports `rfm1_host_1` fails.
 
 `rfm1_run` runs the file in wasm3 as an app would: a fresh flash, `init`, then the device clock for 4 s, then D4 F#4 A4
 (velocity 100) held for 5 s. It prints the chord's RMS, the LCD writes and how many times faster than real time it ran,
 and fails if the module trapped, halted, stayed silent or never drew. `--wav out.wav` saves what it played, `--vel V`
-and `--lean L` play the chord at another velocity and aftertouch; `--help` has the rest. Interpreted, a core runs 10-25 times slower than native (FM1VST's own cores: 8-50x real time on an M5
+and `--lean L` play the chord at another velocity and aftertouch; `--help` has the rest. For a Fantasy CFW,
+`--folder DIR` serves `rfm1_host_1` from a RemoteFM1 folder (`DIR/code/<id>`, `DIR/data/<id>`, `DIR/audio`: sandboxed,
+as the manifest's `folders` allow, each request completed one device ms later); `--press PLAY@3000` presses a button by
+its label, `--info-at MS` and `--expect-ui TEXT` print and check `ui_info`, `--flash-in` / `--flash-out` boot from and
+save the flash image, `--screen out.ppm` saves the screen. Interpreted, a core runs 10-25 times slower than native (FM1VST's own cores: 8-50x real time on an M5
 Mac with wasm3).
 
 ## Attach it to your releases (GitHub Actions)

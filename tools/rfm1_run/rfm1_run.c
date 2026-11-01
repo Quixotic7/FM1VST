@@ -16,13 +16,28 @@
  *     --wav FILE     the whole run's audio as a 44.1 kHz 16-bit stereo WAV
  *     --min-rms X    the chord's RMS below this (full scale 1.0) fails as silent (default 0.0005)
  *     --verbose      the firmware's stdout / stderr through
+ *     --folder DIR   a Fantasy CFW's shared folder (docs/VIRTUAL-CARTS.md 3-4): rfm1_host_1 served from DIR, a RemoteFM1
+ *                    root (/audio -> DIR/audio, /code -> DIR/code/<id>, /data -> DIR/data/<id>), as the manifest's
+ *                    "folders" allow; "..", absolute escapes and symlinks out refused, writes only in /data; each
+ *                    request completed one device ms later (between two calls, as a host does: the cart polls).
+ *                    Without it the imports answer FS_ENOFOLDER
+ *     --press B@MS[+D]  button B (its label: PLAY, OCT+, HOME ..) held from device ms MS for D ms (default 60);
+ *                    repeat for more
+ *     --info-at MS   ui_info printed at device ms MS (repeat)
+ *     --expect-ui S  fail unless the final ui_info contains S (repeat)
+ *     --flash-in F   boot from this flash image (a save) instead of a fresh flash
+ *     --flash-out F  the flash image after the run (flash_sync first): a save
+ *     --screen F     the screen at the end as a PPM image
  *     --describe     no run: the descriptor as JSON (stdout, or --out FILE); works on a bare module (no manifest):
  *                    fm1_add_rfm1 makes the manifest from it
  *
  * Prints one line: id version, the chord's RMS and peak, LCD writes, x real time, load and boot times. Exits 0 when
  * the module loaded, its layout and manifest agree, it booted, drew and sounded, and never trapped or halted; 1 on a
  * failure (said on stderr), 2 on a usage or file error. */
+#include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
 #include <math.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -31,6 +46,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "fm1core.h"
 #include "wasm3.h"
@@ -154,6 +171,310 @@ static m3ApiRawFunction(w_proc_exit)       /* the instance halts (halted = 0x100
     (void)runtime; (void)_ctx; (void)_mem;
     g_exit_code = (int)(code & 0xFFu);
     m3ApiTrap(m3Err_trapExit);
+}
+
+/* ------------------------------------------------------------------------------------------- the folder (fs1) --- */
+/* docs/VIRTUAL-CARTS.md section 4: rfm1_host_1, served from --folder. A request is checked when made (its path, the
+ * access the manifest's "folders" gives, its buffer) and done one device ms later, before that ms's tick: between two
+ * calls into the module, so the cart's polling is exercised. */
+enum { FS_STAT = 1, FS_LIST, FS_READ, FS_WRITE, FS_DELETE, FS_MKDIR };
+enum { FS_PENDING = -1, FS_ENOENT = -2, FS_EACCES = -3, FS_EIO = -4, FS_ENOSPC = -5, FS_EBUSY = -6, FS_ECANCELED = -7,
+       FS_ENOFOLDER = -8 };
+#define FS_INFLIGHT 32
+#define FS_MAXLEN (1024 * 1024)
+static struct {
+    char root[PATH_MAX];               /* the folder (realpath), "" none */
+    char id[64];                       /* the cart's id: code/<id>, data/<id> */
+    char access[3][4];                 /* audio, code, data: "r", "rw" or "" (the manifest's "folders") */
+    uint32_t now_ms;                   /* the device ms (requests made now are done at now + 1) */
+    int32_t next_id;
+    uint32_t served, refused, changed;
+    struct {
+        int32_t id, op, done, result;
+        char path[PATH_MAX];           /* the host path */
+        int area;
+        int64_t off;
+        uint32_t buf, len, due;
+    } q[FS_INFLIGHT];
+} g_fs;
+
+static int32_t fs_errno(int e)
+{
+    return e == ENOENT || e == ENOTDIR ? FS_ENOENT : e == EACCES || e == EPERM || e == ELOOP ? FS_EACCES
+         : e == ENOSPC ? FS_ENOSPC : FS_EIO;
+}
+
+/* the host path of a virtual one (UTF-8, not NUL-terminated); its area (0 audio, 1 code, 2 data); 0, or an error */
+static int32_t fs_map(const uint8_t *v, uint32_t n, char *out, int *area)
+{
+    static const char *const AREA[3] = {"audio", "code", "data"};
+    char seg[256];
+    uint32_t i = 0, k;
+    int a = -1;
+    size_t at;
+    if (!n || n >= 1024 || v[0] != '/')
+        return FS_ENOENT;
+    for (k = 0; k < n; k++)
+        if (!v[k] || v[k] == '\\')
+            return FS_EACCES;
+    /* the first segment: the area */
+    i = 1;
+    for (k = 0; i < n && v[i] != '/' && k < sizeof seg - 1; i++)
+        seg[k++] = (char)v[i];
+    seg[k] = 0;
+    for (int j = 0; j < 3; j++)
+        if (!strcmp(seg, AREA[j]))
+            a = j;
+    if (a < 0)
+        return FS_EACCES;
+    if (a == 0)
+        at = (size_t)snprintf(out, PATH_MAX, "%s/audio", g_fs.root);
+    else
+        at = (size_t)snprintf(out, PATH_MAX, "%s/%s/%s", g_fs.root, AREA[a], g_fs.id);
+    /* the rest, segment by segment: no "..", no ".", no empty segment (a trailing '/' aside) */
+    while (i < n) {
+        i++;                                       /* (the '/') */
+        if (i >= n)
+            break;
+        for (k = 0; i < n && v[i] != '/'; i++) {
+            if (k >= sizeof seg - 1)
+                return FS_EACCES;
+            seg[k++] = (char)v[i];
+        }
+        seg[k] = 0;
+        if (!k || !strcmp(seg, ".") || !strcmp(seg, ".."))
+            return FS_EACCES;
+        if (at + 1 + k >= PATH_MAX)
+            return FS_EIO;
+        at += (size_t)snprintf(out + at, PATH_MAX - at, "/%s", seg);
+    }
+    *area = a;
+    return 0;
+}
+
+/* the path (or, for one that does not exist yet, its folder) resolves inside the area's base: no symlink out */
+static int fs_inside(const char *path, int area)
+{
+    char base[PATH_MAX], rb[PATH_MAX], rp[PATH_MAX], tmp[PATH_MAX];
+    if (area == 0)
+        snprintf(base, sizeof base, "%s/audio", g_fs.root);
+    else
+        snprintf(base, sizeof base, "%s/%s/%s", g_fs.root, area == 1 ? "code" : "data", g_fs.id);
+    if (!realpath(base, rb))
+        return 0;
+    {   /* the base itself inside the folder (a symlinked code/<id> pointing out is refused too) */
+        size_t rl = strlen(g_fs.root);
+        if (strncmp(rb, g_fs.root, rl) || (rb[rl] && rb[rl] != '/'))
+            return 0;
+    }
+    snprintf(tmp, sizeof tmp, "%s", path);
+    while (!realpath(tmp, rp)) {
+        char *sl = strrchr(tmp, '/');
+        if (errno != ENOENT || !sl || sl == tmp)
+            return 0;
+        *sl = 0;                                   /* (not there yet: its folder) */
+    }
+    size_t bl = strlen(rb);
+    return !strncmp(rp, rb, bl) && (rp[bl] == 0 || rp[bl] == '/');
+}
+
+static int name_cmp(const void *a, const void *b) { return strcmp(*(char *const *)a, *(char *const *)b); }
+
+/* the request done: its result, its bytes in the module's memory */
+static int32_t fs_do(int op, const char *path, int area, int64_t off, uint32_t buf, uint32_t len)
+{
+    uint32_t msize = 0;
+    uint8_t *m = mem(&msize);
+    struct stat st;
+    if (!fs_inside(path, area))
+        return FS_EACCES;
+    if ((uint64_t)buf + len > msize)
+        return FS_EIO;
+    switch (op) {
+    case FS_STAT: {
+        if (stat(path, &st))
+            return fs_errno(errno);
+        const uint64_t size = S_ISDIR(st.st_mode) ? 0 : (uint64_t)st.st_size;
+        const uint32_t mt = (uint32_t)st.st_mtime, dir = S_ISDIR(st.st_mode) ? 1u : 0u;
+        memcpy(m + buf, &size, 8);
+        memcpy(m + buf + 8, &mt, 4);
+        memcpy(m + buf + 12, &dir, 4);
+        return 16;
+    }
+    case FS_LIST: {
+        DIR *d = opendir(path);
+        struct dirent *e;
+        char **names = NULL;
+        size_t nn = 0, cap = 0;
+        int32_t written = 0;
+        uint32_t at = 0;
+        if (!d)
+            return fs_errno(errno);
+        while ((e = readdir(d))) {
+            if (e->d_name[0] == '.' || strlen(e->d_name) > 255)
+                continue;                          /* (hidden files are not listed) */
+            if (nn == cap) {
+                cap = cap ? cap * 2 : 64;
+                names = realloc(names, cap * sizeof *names);
+            }
+            names[nn++] = strdup(e->d_name);
+        }
+        closedir(d);
+        qsort(names, nn, sizeof *names, name_cmp);
+        for (size_t i = off < 0 ? nn : (size_t)off; i < nn; i++) {
+            char full[PATH_MAX];
+            const size_t nl = strlen(names[i]);
+            if (at + 2u + nl > len)
+                break;                             /* (an entry is never split) */
+            snprintf(full, sizeof full, "%s/%s", path, names[i]);
+            m[buf + at] = (uint8_t)(!stat(full, &st) && S_ISDIR(st.st_mode));
+            m[buf + at + 1] = (uint8_t)nl;
+            memcpy(m + buf + at + 2, names[i], nl);
+            at += 2u + (uint32_t)nl;
+            written++;
+        }
+        for (size_t i = 0; i < nn; i++)
+            free(names[i]);
+        free(names);
+        return written;
+    }
+    case FS_READ: {
+        int fd = open(path, O_RDONLY);
+        if (fd < 0)
+            return fs_errno(errno);
+        if (fstat(fd, &st) == 0 && S_ISDIR(st.st_mode)) {
+            close(fd);
+            return FS_EIO;
+        }
+        const ssize_t r = pread(fd, m + buf, len, off < 0 ? 0 : (off_t)off);
+        const int e = errno;
+        close(fd);
+        return r < 0 ? fs_errno(e) : (int32_t)r;
+    }
+    case FS_WRITE: {
+        char base[PATH_MAX];
+        snprintf(base, sizeof base, "%s/data", g_fs.root);
+        mkdir(base, 0755);
+        snprintf(base, sizeof base, "%s/data/%s", g_fs.root, g_fs.id);
+        mkdir(base, 0755);                         /* (the cart's own data folder, made at its first write) */
+        int fd = open(path, O_WRONLY | O_CREAT | (off < 0 ? O_TRUNC : 0), 0644);
+        if (fd < 0)
+            return fs_errno(errno);
+        const ssize_t w = pwrite(fd, m + buf, len, off < 0 ? 0 : (off_t)off);
+        const int e = errno;
+        close(fd);
+        return w < 0 ? fs_errno(e) : (int32_t)w;
+    }
+    case FS_DELETE:
+        if (stat(path, &st))
+            return fs_errno(errno);
+        if (S_ISDIR(st.st_mode) ? rmdir(path) : unlink(path))
+            return fs_errno(errno);
+        return 0;
+    case FS_MKDIR:
+        if (mkdir(path, 0755) && !(errno == EEXIST && !stat(path, &st) && S_ISDIR(st.st_mode)))
+            return fs_errno(errno);
+        return 0;
+    }
+    return FS_EIO;
+}
+
+static m3ApiRawFunction(w_fs_request)     /* [i32 i32 i32 i64 i32 i32] -> [i32] */
+{
+    m3ApiReturnType(int32_t);
+    m3ApiGetArg(int32_t, op);
+    m3ApiGetArg(uint32_t, path);
+    m3ApiGetArg(int32_t, path_len);
+    m3ApiGetArg(int64_t, off);
+    m3ApiGetArg(uint32_t, buf);
+    m3ApiGetArg(int32_t, len);
+    (void)_ctx;
+    const uint32_t size = m3_GetMemorySize(runtime);
+    if (!g_fs.root[0])
+        m3ApiReturn(FS_ENOFOLDER);
+    int slot = -1, area = 0;
+    for (int i = 0; i < FS_INFLIGHT; i++)
+        if (!g_fs.q[i].id) {
+            slot = i;
+            break;
+        }
+    if (slot < 0) {
+        g_fs.refused++;
+        m3ApiReturn(FS_EBUSY);
+    }
+    if (op < FS_STAT || op > FS_MKDIR || path_len <= 0 || len < 0 || len > FS_MAXLEN ||
+        (uint64_t)path + (uint32_t)path_len > size || (uint64_t)buf + (uint32_t)len > size ||
+        (op == FS_STAT && len < 16)) {
+        g_fs.refused++;
+        m3ApiReturn(FS_EIO);
+    }
+    char host[PATH_MAX];
+    int32_t rc = fs_map((const uint8_t *)_mem + path, (uint32_t)path_len, host, &area);
+    if (!rc) {                                     /* the manifest's "folders": read where it says r, write where rw */
+        const char *acc = g_fs.access[area];
+        const int writes = op == FS_WRITE || op == FS_DELETE || op == FS_MKDIR;
+        if (!acc[0] || (writes && (area != 2 || strcmp(acc, "rw"))))
+            rc = FS_EACCES;
+    }
+    if (rc) {
+        g_fs.refused++;
+        m3ApiReturn(rc);
+    }
+    if (++g_fs.next_id <= 0)
+        g_fs.next_id = 1;
+    g_fs.q[slot].id = g_fs.next_id;
+    g_fs.q[slot].op = op;
+    g_fs.q[slot].done = 0;
+    g_fs.q[slot].area = area;
+    g_fs.q[slot].off = off;
+    g_fs.q[slot].buf = buf;
+    g_fs.q[slot].len = (uint32_t)len;
+    g_fs.q[slot].due = g_fs.now_ms + 1u;
+    snprintf(g_fs.q[slot].path, sizeof g_fs.q[slot].path, "%s", host);
+    m3ApiReturn(g_fs.next_id);
+}
+static m3ApiRawFunction(w_fs_poll)        /* [i32] -> [i32] */
+{
+    m3ApiReturnType(int32_t);
+    m3ApiGetArg(int32_t, id);
+    (void)runtime; (void)_ctx; (void)_mem;
+    for (int i = 0; i < FS_INFLIGHT; i++)
+        if (id > 0 && g_fs.q[i].id == id) {
+            if (!g_fs.q[i].done)
+                m3ApiReturn(FS_PENDING);
+            g_fs.q[i].id = 0;                      /* (the result once: the id is free) */
+            m3ApiReturn(g_fs.q[i].result);
+        }
+    m3ApiReturn(g_fs.root[0] ? FS_EIO : FS_ENOFOLDER);
+}
+static m3ApiRawFunction(w_fs_cancel)      /* [i32] -> [] */
+{
+    m3ApiGetArg(int32_t, id);
+    (void)runtime; (void)_ctx; (void)_mem;
+    for (int i = 0; i < FS_INFLIGHT; i++)
+        if (id > 0 && g_fs.q[i].id == id && !g_fs.q[i].done) {
+            g_fs.q[i].done = 1;
+            g_fs.q[i].result = FS_ECANCELED;
+        }
+    m3ApiSuccess();
+}
+static m3ApiRawFunction(w_fs_changed)     /* [] -> [i32] */
+{
+    m3ApiReturnType(int32_t);
+    (void)runtime; (void)_ctx; (void)_mem;
+    m3ApiReturn((int32_t)g_fs.changed);
+}
+/* between two calls: the requests due by device ms `ms` done */
+static void fs_complete(uint32_t ms)
+{
+    g_fs.now_ms = ms;
+    for (int i = 0; i < FS_INFLIGHT; i++)
+        if (g_fs.q[i].id && !g_fs.q[i].done && g_fs.q[i].due <= ms) {
+            g_fs.q[i].result = fs_do(g_fs.q[i].op, g_fs.q[i].path, g_fs.q[i].area, g_fs.q[i].off, g_fs.q[i].buf,
+                                     g_fs.q[i].len);
+            g_fs.q[i].done = 1;
+            g_fs.served++;
+        }
 }
 
 /* ------------------------------------------------------------------------------------------------ calls --------- */
@@ -408,7 +729,8 @@ static uint8_t *read_file(const char *path, size_t *n)
 static void usage(void)
 {
     fputs("usage: rfm1_run [--seconds S] [--settle MS] [--keys K,K,..] [--vel V] [--lean L] [--tap B,..] [--sysex FILE] [--wav FILE]\n"
-          "                [--min-rms X]\n"
+          "                [--min-rms X] [--folder DIR] [--press B@MS[+D]].. [--info-at MS].. [--expect-ui S]..\n"
+          "                [--flash-in FILE] [--flash-out FILE] [--screen FILE.ppm]\n"
           "                [--verbose] [--describe [--out FILE]] <file.rfm1>\n", stderr);
 }
 
@@ -420,6 +742,12 @@ int main(int argc, char **argv)
     const char *out_path = NULL, *wav_path = NULL, *sysex_path = NULL, *path = NULL;
     int keys[FM1P_NKEY], nkeys = 0, vel = 100, lean = 0;
     uint32_t taps = 0;                           /* (label bits: --tap) */
+    static const char *const LABEL[FM1P_NB] = {"FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ",
+                                               "PLAY", "REC", "OCT-", "OCT+"};
+    struct { int b; uint32_t at, dur; } press[256];
+    int npress = 0, ninfo = 0, nexpect = 0;
+    uint32_t info_at[64];
+    const char *expect[16], *folder = NULL, *flash_in = NULL, *flash_out = NULL, *screen = NULL;
     for (int i = 1; i < argc; i++) {
         const char *a = argv[i];
         const int more = i + 1 < argc;
@@ -433,6 +761,33 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--out") && more) out_path = argv[++i];
         else if (!strcmp(a, "--describe")) describe = 1;
         else if (!strcmp(a, "--verbose")) g_verbose = 1;
+        else if (!strcmp(a, "--folder") && more) folder = argv[++i];
+        else if (!strcmp(a, "--flash-in") && more) flash_in = argv[++i];
+        else if (!strcmp(a, "--flash-out") && more) flash_out = argv[++i];
+        else if (!strcmp(a, "--screen") && more) screen = argv[++i];
+        else if (!strcmp(a, "--info-at") && more && ninfo < 64) info_at[ninfo++] = (uint32_t)strtoul(argv[++i], NULL, 10);
+        else if (!strcmp(a, "--expect-ui") && more && nexpect < 16) expect[nexpect++] = argv[++i];
+        else if (!strcmp(a, "--press") && more && npress < 256) {
+            char lab[16], *at = strchr(argv[++i], '@');
+            const size_t ln = at ? (size_t)(at - argv[i]) : 0;
+            int b = -1;
+            if (at && ln < sizeof lab) {
+                memcpy(lab, argv[i], ln);
+                lab[ln] = 0;
+                for (int k = 0; k < FM1P_NB; k++)
+                    if (!strcmp(LABEL[k], lab))
+                        b = k;
+            }
+            if (b < 0) {
+                usage();
+                return 2;
+            }
+            char *e;
+            press[npress].b = b;
+            press[npress].at = (uint32_t)strtoul(at + 1, &e, 10);
+            press[npress].dur = *e == '+' ? (uint32_t)strtoul(e + 1, NULL, 10) : 60u;
+            npress++;
+        }
         else if (!strcmp(a, "--tap") && more) {
             char *s = argv[++i];
             while (*s) {
@@ -521,6 +876,20 @@ int main(int argc, char **argv)
         if (r && r != m3Err_functionLookupFailed)
             return fail("import %s: %s", imp[i].name, r);
     }
+    {   /* docs/VIRTUAL-CARTS.md 4: the host's file API (served from --folder, else FS_ENOFOLDER) */
+        static const struct {
+            const char *name, *sig;
+            M3RawCall f;
+        } hi[] = {
+            {"fs_request", "i(iiiIii)", w_fs_request}, {"fs_poll", "i(i)", w_fs_poll},
+            {"fs_cancel", "v(i)", w_fs_cancel},         {"fs_changed", "i()", w_fs_changed},
+        };
+        for (size_t i = 0; i < sizeof hi / sizeof hi[0]; i++) {
+            r = m3_LinkRawFunction(mod, "rfm1_host_1", hi[i].name, hi[i].sig, hi[i].f);
+            if (r && r != m3Err_functionLookupFailed)
+                return fail("import rfm1_host_1.%s: %s", hi[i].name, r);
+        }
+    }
     r = m3_CompileModule(mod);
     if (r)
         return fail("compile: %s (an import outside the format's list, or an instruction wasm3 0.5.0 lacks)", r);
@@ -605,14 +974,42 @@ int main(int argc, char **argv)
         return fail("the manifest (%s, %s, %s) and the descriptor (%s, %s, %s) disagree", m_id, m_name, m_version,
                     id, name, version);
 
-    /* boot from a fresh flash (FM1CORE_FLASH_STAGED with no bytes), as Device::boot_from */
+    /* --folder: the RemoteFM1 root, the cart's id, the manifest's "folders" */
+    if (folder) {
+        if (!realpath(folder, g_fs.root))
+            return fail("--folder %s: %s", folder, strerror(errno));
+        snprintf(g_fs.id, sizeof g_fs.id, "%s", id);
+        const char *f = man ? strstr((const char *)man, "\"folders\"") : NULL;
+        const char *fe = f ? memchr(f, '}', mlen - (size_t)(f - (const char *)man)) : NULL;
+        if (f && fe) {
+            static const char *const AREA[3] = {"audio", "code", "data"};
+            for (int a = 0; a < 3; a++)
+                json_get_str(f, (size_t)(fe - f), AREA[a], g_fs.access[a], sizeof g_fs.access[a]);
+        }
+        g_fs.changed = 1;
+        fprintf(stderr, "rfm1_run: folder %s for %s: audio \"%s\", code \"%s\", data \"%s\"\n", g_fs.root, id,
+                g_fs.access[0], g_fs.access[1], g_fs.access[2]);
+    }
+
+    /* boot from a fresh flash (FM1CORE_FLASH_STAGED with no bytes), as Device::boot_from; or --flash-in's */
     const uint32_t scr = C1(F_ALLOC, 8192);
     if (!scr || !in_mem(scr, 8192))
         return fail("rfm1_alloc(8192) = %u%s%s", scr, g_err[0] ? ": " : "", g_err);
     const uint32_t s_str = scr, s_audio = scr + 1024, s_words = scr + 4096;
     const uint32_t lcd0 = rd32(P(lcd_writes));   /* (init's first screen counts) */
     const double t_boot = now_s();
-    C2(F_FLASH_STAGE, 0, 0);
+    if (flash_in) {
+        size_t fn = 0;
+        uint8_t *fb = read_file(flash_in, &fn);
+        const uint32_t at = fb ? C1(F_ALLOC, (uint32_t)fn) : 0;
+        if (!fb || !at || !in_mem(at, (uint32_t)fn))
+            return fail("--flash-in %s: not read or no room", flash_in);
+        memcpy(mem(NULL) + at, fb, fn);
+        if (!C2(F_FLASH_STAGE, at, (uint32_t)fn))
+            return fail("--flash-in %s: flash_stage refused it", flash_in);
+        free(fb);
+    } else
+        C2(F_FLASH_STAGE, 0, 0);
     memcpy(mem(NULL) + s_str, FM1CORE_FLASH_STAGED, sizeof FM1CORE_FLASH_STAGED);
     call(F_OPTIONS, s_str, 0, 0, 1);
     call(F_BOOT_OPTIONS, (uint32_t)-1, 0, (uint32_t)-1, 0);
@@ -726,6 +1123,21 @@ int main(int argc, char **argv)
             chord_done = 1;
             end_ms = ms + 200u;
         }
+        fs_complete(ms);                         /* (between two calls: the folder's requests due now) */
+        for (int k = 0; k < npress; k++) {       /* --press: held from at, let go after dur */
+            const uint32_t m = 1u << rd8(P(btn_id) + (uint32_t)press[k].b);
+            if (ms == press[k].at) {
+                wr32(P(buttons), rd32(P(buttons)) | m);
+                wr32(P(buttons_tap), rd32(P(buttons_tap)) | m);
+            } else if (ms == press[k].at + press[k].dur)
+                wr32(P(buttons), rd32(P(buttons)) & ~m);
+        }
+        for (int k = 0; k < ninfo; k++)
+            if (ms == info_at[k]) {
+                C2(F_UI_INFO, s_str, 1024);
+                const char *ui = str(s_str);
+                printf("ui@%u: %s\n", ms, ui ? ui : "");
+            }
         C1(F_TICK, ms);
         if (ms == 0 || ms - last_frame >= 15u) {
             last_frame = ms;
@@ -769,13 +1181,36 @@ int main(int argc, char **argv)
         wav_header(wav, (uint32_t)wav_frames);
         fclose(wav);
     }
-    char info[256] = "";
+    char info[1024] = "";
     if (!g_err[0]) {
         C2(F_UI_INFO, s_str, sizeof info);
         const char *ui = str(s_str);
         if (ui)
             snprintf(info, sizeof info, "%s", ui);
         C2(F_STATS, s_words, s_words + 4);
+        if (flash_out) {                         /* a save: the lazy writes done, then the image */
+            C0(F_FLASH_SYNC);
+            const uint32_t fl = C0(F_FLASH);
+            FILE *o = fopen(flash_out, "wb");
+            if (!o || !in_mem(fl, flash_size) || fwrite(mem(NULL) + fl, 1, flash_size, o) != flash_size)
+                fprintf(stderr, "rfm1_run: --flash-out %s: not written\n", flash_out);
+            if (o)
+                fclose(o);
+        }
+        if (screen && in_mem(P(lcd), FM1P_LCD_W * FM1P_LCD_H * 2u)) {   /* RGB565 high byte first -> PPM */
+            FILE *o = fopen(screen, "wb");
+            if (o) {
+                const uint8_t *px = mem(NULL) + P(lcd);
+                fprintf(o, "P6\n%d %d\n255\n", FM1P_LCD_W, FM1P_LCD_H);
+                for (int i = 0; i < FM1P_LCD_W * FM1P_LCD_H; i++) {
+                    const unsigned v = (unsigned)px[2 * i] << 8 | px[2 * i + 1];
+                    const uint8_t rgb[3] = {(uint8_t)((v >> 11) * 255 / 31), (uint8_t)(((v >> 5) & 63) * 255 / 63),
+                                            (uint8_t)((v & 31) * 255 / 31)};
+                    fwrite(rgb, 1, 3, o);
+                }
+                fclose(o);
+            }
+        }
         C0(F_SHUTDOWN);
     }
 
@@ -794,6 +1229,11 @@ int main(int argc, char **argv)
     }
     if (halted)
         bad |= fail("halted (0x%x) during the run", (unsigned)halted);
+    if (g_fs.root[0])
+        fprintf(stderr, "rfm1_run: folder: %u requests served, %u refused\n", g_fs.served, g_fs.refused);
+    for (int k = 0; k < nexpect; k++)
+        if (!strstr(info, expect[k]))
+            bad |= fail("ui_info has no \"%s\"", expect[k]);
     if (!bad && rms < min_rms)
         bad |= fail("silent: the chord's RMS %.6f is under %.6f", rms, min_rms);
     if (!bad && !lcd_writes)

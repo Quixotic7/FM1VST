@@ -18,8 +18,13 @@
 #       [SOURCE_URL <url>]          the manifest's source_url (default: the descriptor's, "<repo>@<commit>")
 #       [DEFINES <d..>] [FLAGS <f..>] [INCLUDES <dirs..>]   more, for the Wasm build only
 #       [RUN_ARGS <args..>]         rfm1_run's options in the test ("--sysex <bank.syx>", "--settle 5000")
-#       [HOSTED_DESPITE_GATE "<reason>"])  a GATED core still built as an .rfm1, to be hosted (RemoteFM1FW) and
+#       [HOSTED_DESPITE_GATE "<reason>"]  a GATED core still built as an .rfm1, to be hosted (RemoteFM1FW) and
 #                                   downloaded, never bundled in an app or a public native build (CORES-PLAN.md 6)
+#       [VIRTUAL]                   a Fantasy CFW (docs/VIRTUAL-CARTS.md): host-only, the manifest says "virtual":
+#                                   true; MEMORY_MIB up to 512, the file under 16 MiB, the rfm1_host_1 imports allowed
+#       [NEEDS <cap..>]             (VIRTUAL) the host capabilities it uses, the manifest's "needs" ("fs1": the files)
+#       [FOLDERS <name=r|rw..>])    (VIRTUAL) the shared folder's parts it uses, the manifest's "folders"
+#                                   ("audio=r" "code=r" "data=rw")
 #
 # Makes rfm1_<id> (build/rfm1/<id>-<version>.rfm1, also in ALL), appended to rfm1_all, and the test rfm1_<id>
 # (rfm1_check + rfm1_run). The generate step is the core's own (gen_<id>). The coroutine: core-glue/common/coro.c
@@ -29,6 +34,8 @@
 # (CORES-PLAN.md 6: an .rfm1 is a published binary) unless the call says HOSTED_DESPITE_GATE (the owner's decision of
 # 2026-10-31 for SLOOP and Clipper: built as their authors intended, the .rfm1 hosted, not distributed in the app).
 # (A public build, FM1_PUBLIC_BUILD=ON, still leaves the gated core out altogether: build hosted files without it.)
+# Lua: a core whose units call lj_throw (a Lua port whose errors use core-glue/common/lj_asyncify.h: Ripple) gets
+# core-glue/common/lj_asyncify.c and the same Asyncify pass, lj_try_impl in the removelist.
 option(FM1_RFM1 "build the .rfm1 files of the cores whose glue calls fm1_add_rfm1 (Emscripten)" OFF)
 set(FM1_RFM1_MEMORY_MIB 8 CACHE STRING "an .rfm1's fixed linear memory in MiB unless its fm1_add_rfm1 says otherwise")
 set(FM1_RFM1_OPT -O3 CACHE STRING "the optimisation flag of the .rfm1 builds")
@@ -125,8 +132,8 @@ function(fm1_rfm1_license_files id src license out)
 endfunction()
 
 function(fm1_add_rfm1 id)
-    cmake_parse_arguments(A "" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE" "AUTHORS;LICENSE_FILES;DEFINES;FLAGS;INCLUDES;RUN_ARGS"
-                          ${ARGN})
+    cmake_parse_arguments(A "VIRTUAL" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE"
+                          "AUTHORS;LICENSE_FILES;DEFINES;FLAGS;INCLUDES;RUN_ARGS;NEEDS;FOLDERS" ${ARGN})
     if(A_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR "fm1_add_rfm1(${id}): unknown arguments ${A_UNPARSED_ARGUMENTS}")
     endif()
@@ -150,9 +157,23 @@ function(fm1_add_rfm1 id)
     if(NOT A_MEMORY_MIB)
         set(A_MEMORY_MIB ${FM1_RFM1_MEMORY_MIB})
     endif()
-    if(A_MEMORY_MIB GREATER 32 OR A_MEMORY_MIB LESS 1)
-        message(FATAL_ERROR "fm1_add_rfm1(${id}): MEMORY_MIB ${A_MEMORY_MIB}: 1 .. 32 (docs/RFM1-FORMAT.md 6)")
+    if(A_VIRTUAL)                 # a Fantasy CFW: docs/VIRTUAL-CARTS.md section 2
+        set(_maxmem 512)
+    else()
+        set(_maxmem 32)
+        if(A_NEEDS OR A_FOLDERS)
+            message(FATAL_ERROR "fm1_add_rfm1(${id}): NEEDS and FOLDERS are for a VIRTUAL cart (docs/VIRTUAL-CARTS.md)")
+        endif()
     endif()
+    if(A_MEMORY_MIB GREATER _maxmem OR A_MEMORY_MIB LESS 1)
+        message(FATAL_ERROR "fm1_add_rfm1(${id}): MEMORY_MIB ${A_MEMORY_MIB}: 1 .. ${_maxmem} (docs/RFM1-FORMAT.md 6, "
+                            "docs/VIRTUAL-CARTS.md 2)")
+    endif()
+    foreach(_f IN LISTS A_FOLDERS)
+        if(NOT _f MATCHES "^(audio|code|data)=(r|rw)$")
+            message(FATAL_ERROR "fm1_add_rfm1(${id}): FOLDERS \"${_f}\": audio|code|data = r|rw")
+        endif()
+    endforeach()
     if(NOT A_STACK_KIB)
         set(A_STACK_KIB 1024)
     endif()
@@ -224,6 +245,16 @@ function(fm1_add_rfm1 id)
         list(APPEND _objs ${_o})
     endforeach()
 
+    # Lua's errors on Asyncify (lj_asyncify.c): its own object too, linked only into a core that calls lj_throw
+    set(_lj_o ${_wdir}/obj/lj_asyncify.o)
+    add_custom_command(OUTPUT ${_lj_o}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${_wdir}/obj
+        COMMAND ${FM1_EMCC} ${FM1_RFM1_FEATURES} ${FM1_RFM1_OPT} ${FM1_RFM1_CFLAGS} -Wall -Wextra -I${FM1_COMMON_DIR}
+                -MD -MF ${_lj_o}.d -c ${FM1_COMMON_DIR}/lj_asyncify.c -o ${_lj_o}
+        DEPENDS ${FM1_COMMON_DIR}/lj_asyncify.c ${FM1_COMMON_DIR}/lj_asyncify.h
+        DEPFILE ${_lj_o}.d
+        COMMENT "rfm1 ${id}: lj_asyncify.c"
+        VERBATIM)
     set(_coro_o ${_wdir}/obj/coro_asyncify.o)
     add_custom_command(OUTPUT ${_coro_o}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${_wdir}/obj
@@ -243,7 +274,7 @@ function(fm1_add_rfm1 id)
     set(_link_conf ${_wdir}/link.cmake)
     set(_c "")
     foreach(_v EMCC=FM1_EMCC EMNM=FM1_EMNM WASM_OPT=FM1_WASM_OPT LINK_ARGS=_link_args OBJS=_objs LINK_TAIL=_link_tail
-               CORO_OBJ=_coro_o WASM_OPT_FEATURES=FM1_RFM1_WASM_OPT_FEATURES OPT=FM1_RFM1_OPT OUT=_wasm)
+               CORO_OBJ=_coro_o LJ_OBJ=_lj_o WASM_OPT_FEATURES=FM1_RFM1_WASM_OPT_FEATURES OPT=FM1_RFM1_OPT OUT=_wasm)
         string(REPLACE "=" ";" _v "${_v}")
         list(GET _v 0 _k)
         list(GET _v 1 _src)
@@ -252,7 +283,7 @@ function(fm1_add_rfm1 id)
     file(CONFIGURE OUTPUT ${_link_conf} CONTENT "${_c}" @ONLY)
     add_custom_command(OUTPUT ${_wasm}
         COMMAND ${CMAKE_COMMAND} -DCONF=${_link_conf} -P ${FM1_RFM1_TOOLS}/rfm1/rfm1_link.cmake
-        DEPENDS ${_objs} ${_coro_o} ${_link_conf} ${FM1_RFM1_TOOLS}/rfm1/rfm1_link.cmake
+        DEPENDS ${_objs} ${_coro_o} ${_lj_o} ${_link_conf} ${FM1_RFM1_TOOLS}/rfm1/rfm1_link.cmake
         COMMENT "rfm1 ${id}: linking ${id}.wasm"
         VERBATIM)
     # the descriptor as the module itself reports it (rfm1_run --describe), then the manifest and the sections
@@ -302,6 +333,15 @@ function(fm1_add_rfm1 id)
     if(A_SOURCE_URL)
         list(APPEND _pack_args --source-url "${A_SOURCE_URL}")
     endif()
+    if(A_VIRTUAL)                 # the manifest's "virtual", "needs", "folders" (rfm1_check then applies section 2)
+        list(APPEND _pack_args --virtual)
+        foreach(_n IN LISTS A_NEEDS)
+            list(APPEND _pack_args --needs ${_n})
+        endforeach()
+        foreach(_f IN LISTS A_FOLDERS)
+            list(APPEND _pack_args --folder ${_f})
+        endforeach()
+    endif()
     add_custom_command(OUTPUT ${_out}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${FM1_RFM1_DIR}
         COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1_pack.py ${_pack_args}
@@ -316,7 +356,11 @@ function(fm1_add_rfm1 id)
     set_property(GLOBAL APPEND PROPERTY FM1_RFM1_IDS ${id})
     set_property(GLOBAL PROPERTY FM1_RFM1_FILE_${id} ${_out})
     set_property(GLOBAL PROPERTY FM1_RFM1_RUN_ARGS_${id} "${A_RUN_ARGS}")
-    message(STATUS "${id} rfm1: ${id}-${_fver}.rfm1, ${A_MEMORY_MIB} MiB")
+    set(_v "")
+    if(A_VIRTUAL)
+        set(_v ", virtual (Fantasy CFW): needs ${A_NEEDS}, folders ${A_FOLDERS}")
+    endif()
+    message(STATUS "${id} rfm1: ${id}-${_fver}.rfm1, ${A_MEMORY_MIB} MiB${_v}")
 endfunction()
 
 # after every glue file: the tools (rfm1_run, on wasm3), rfm1_all and the tests
