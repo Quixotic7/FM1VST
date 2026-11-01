@@ -30,7 +30,8 @@
  *   static void fm1core_dg_stores_poll(void);                  the RAM stores -> the image (after each pass)
  *   static int fm1core_dg_sync(void);                          flash_sync: the app's deferred saves now; 1 current
  *   static void fm1core_dg_info(char *buf, uint32_t n);        ui_info: the page, the program
- * and may define FM1CORE_DG_LED_BG(col) (a packed row-bit backlight plane, FM1P_LED_FAINT) and
+ * and may define FM1CORE_DG_RENDER(o, frames, master_q12) (the block rendered, MASTER and the output stage the unit's
+ * own: for an app whose app_audio applies MASTER itself and writes the DAC's 24-bit words, GR!MM 2), FM1CORE_DG_LED_BG(col) (a packed row-bit backlight plane, FM1P_LED_FAINT) and
  * FM1CORE_DG_SYSEX_IN(p, n) (a received SysEx message, the 7-bit bytes between F0 and F7, handled before the next
  * pass as the device's platform_poll does) with FM1CORE_DG_SYSEX_READY() (optional: 0 while the app still holds the
  * last frame, as GR!MM's mailbox does; the next waits for a later tick), and FM1CORE_DG_OTA_C with FELUCCA_ID (the
@@ -188,10 +189,15 @@ static void fm1core_dg_out(void)
     }
 }
 
-/* the ISR: one 256-frame block, MASTER and the clip as platform.c's fm1_alnk0_irq */
+/* the ISR: one 256-frame block, MASTER and the clip as platform.c's fm1_alnk0_irq (or the unit's own output stage,
+ * FM1CORE_DG_RENDER(o, frames, master_q12): an app that applies MASTER itself, as GR!MM 2's) */
 static void fm1core_dg_render(void *ctx, void *buf, uint32_t frames)
 {
     int32_t *o = (int32_t *)buf;
+#ifdef FM1CORE_DG_RENDER
+    (void)ctx;
+    FM1CORE_DG_RENDER(o, frames, fm1core_dg_q12);
+#else
     uint32_t i;
     (void)ctx;
     app_audio(o, frames);
@@ -199,6 +205,7 @@ static void fm1core_dg_render(void *ctx, void *buf, uint32_t frames)
         const int32_t v = (int32_t)(((int64_t)o[i] * fm1core_dg_q12) >> 12);
         o[i] = v > 32767 ? 32767 : v < -32767 ? -32767 : v;
     }
+#endif
 }
 
 static int fm1core_dg_running(void) { return fm1core_dg_booted && !fm1core_halted() && !fm1coro_done(fm1core_dg_co); }
