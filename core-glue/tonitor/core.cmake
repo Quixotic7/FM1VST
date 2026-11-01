@@ -45,3 +45,14 @@ if(TARGET tonitor_core)
                      -P ${CMAKE_CURRENT_LIST_DIR}/golden.cmake)
     set_tests_properties(golden_tonitor PROPERTIES TIMEOUT 300)
 endif()
+# the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md), enabled by RFM1Manager. The licence texts: the
+# firmware's own (its LICENSE, LICENSES/, LICENSING.md, the fonts')
+fm1_add_rfm1(tonitor AUTHORS "Nuno Zimas"
+             LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
+                           "LICENSING.md ({name})=LICENSING.md"
+                           "Apache-2.0 (msfa in {name})=LICENSES/Apache-2.0-msfa.txt"
+                           "BSD ({name})=LICENSES/BSD-LIRA-8.txt"
+                           "MIT (rings in {name})=LICENSES/MIT-rings.txt"
+                           "MIT ({name})=LICENSES/MIT.txt"
+                           "OFL-1.1 (the AtkinsonHyperlegible font in {name})=assets/fonts/AtkinsonHyperlegible-OFL.txt"
+                           "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt")
