@@ -7,11 +7,11 @@
  *   - no idle LED animation (1.2's: not in Skiff), so ANIM_IDLE stays 0;
  *   - MENU > CPU CLOCK 320 MHZ is refused (no PLL), the second core built off, as in the browser.
  * Version and identity as tools/build.py --release 2.1.1 builds them: FELUCCA_VERSION "v2.1.1" (felucca.c's own default),
- * FELUCCA_ID FM-1_714 (Skiff's release builds are FM-1_7XY; the Hub's package). */
+ * FELUCCA_ID FM-1_721 (Skiff's release builds are FM-1_7XY; the Hub's package). */
 #define FM1CORE_FW_P sk
 #define FM1CORE_FW_WEB_C "../../cores/skiff/web/emu/felucca_web.c"
 #define FM1CORE_FW_ANIM_IDLE 0
 #define FM1CORE_FW_EDITOR_C "../../cores/skiff/firmware/src/editor.c"   /* the web editor's SysEx */
 #define FM1CORE_FW_OTA_C "../../cores/skiff/firmware/src/ota.c"         /* the M-UPGRADE identity */
-#define FELUCCA_ID "FM-1_714"                                           /* (build.py --release 2.1.1) */
+#define FELUCCA_ID "FM-1_721"                                           /* (build.py --release 2.1.1) */
 #include "fw_core.h"
