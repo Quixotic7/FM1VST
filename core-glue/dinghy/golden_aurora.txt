@@ -1,0 +1,10 @@
+# AURORA's golden check (dinghy_golden.c): the script in tests/host.c's format, run by its own host sim and by the
+# core; the screens compared at 3000 ms (one of host.c's fixed SHOT times). A chord on HOME, PRESETS two presets on,
+# EDIT (the TONE page) and its KNOB 1 turned, KNOB 3 back, the chord still held, its live graphics drawing.
+200 keys 0x4880
+600 enc 6 2
+900 btn 6
+1200 enc 2 5
+1400 enc 4 -3
+2000 keys 0x4890
+3010 end
