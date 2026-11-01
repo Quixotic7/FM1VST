@@ -109,3 +109,6 @@
 [submodule "zen-1"]
 	path = cores/zen-1
 	url = https://github.com/aceyprime/zen-1
+[submodule "cores/fm1-HYP1"]
+	path = cores/fm1-HYP1
+	url = https://github.com/RustyPawz/fm1-HYP1
