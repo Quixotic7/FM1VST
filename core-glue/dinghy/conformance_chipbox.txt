@@ -1,0 +1,15 @@
+# Chipbox 1.3.3: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the power-on screen stands up to 3 s (boot.c, the next of the 14 each boot): the key after it
+settle_ms 3500
+# the flash round trip: CC 105 = 1 opens project 2 (the console symphony; the demos are never saved into, the open
+# project is the settings record's: saved 2 s after the change, when quiet); after the reboot the rack shows it, not
+# project 1 (Korobeiniki)
+save wait 3500
+save midi B0 69 01
+save wait 3000
+save quit
+saved wait 4500
+saved quit
+saved-lcd-differs
+# the reboot: the host mode has no reset path (UBOOT is a USB request, the boot guard the device branch's)
+reboot none the host build has no reset path (UBOOT over USB, the boot guard in the device branch only)

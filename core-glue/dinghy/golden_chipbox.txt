@@ -1,0 +1,13 @@
+# Chipbox's golden check (dinghy_golden.c): the script in tests/host.c's format, run by its own host sim and by the
+# core; the screens compared at 6000 ms. After the power-on screen of a fresh flash (the second of the 14, 3 s; the
+# host sim with BOOT_DEMO=1): on the rack of the demo (Korobeiniki, stopped), C4 written on the step under the
+# cursor, SELECT two steps on, E4 written there, KNOB 1 (the tempo) up. Keys and knobs only: host.c's "btn" sets the
+# edge alone, never the held bit or the release (PLAY in the rack acts on its release or a hold).
+3500 keys 0x80
+3600 keys 0
+3800 enc 0 2
+4000 keys 0x800
+4100 keys 0
+4500 enc 2 5
+6000 shot
+6010 end
