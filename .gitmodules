@@ -223,3 +223,6 @@
 [submodule "Golana"]
 	path = cores/Golana
 	url = https://github.com/Gadlele/Golana
+[submodule "Vector37"]
+	path = cores/Vector37
+	url = https://github.com/genkigenki/Vector37
