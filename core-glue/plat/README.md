@@ -8,6 +8,7 @@
 | `fartmachine` | Fart Machine One 1.0.0 | `cores/Fart-Machine-One` @ V1.0.0 | GPL-3.0-only, **GATED** (the recordings) |
 | `ravel` | Ravel 1.5.0 (De-Pattern) | `cores/Ravel_FM1` @ v1.5.0 | GPL-3.0-only |
 | `trax` | FM1-TRAX 0.9.3 (jartificer) | `cores/fm1-trax` @ v0.9.3 | GPL-3.0-only (Terminus font: OFL-1.1) |
+| `carnacos` | Carnac OS 0.9.6 (OrbVorgis) | `cores/carnac-os` @ v0.9.6 (X0X in its own `x0x-firmware/`) | GPL-3.0-only (Barlow, Terminus fonts: OFL-1.1) |
 
 Ravel keeps its own portable platform (`firmware/app/plat.h`) over X0X's Felucca layer, adapted (`firmware/fm1`): the
 unit is its device platform unit (`ravel_fm1.c`: `storage.c`, `ota.c`, `panel.c`, `plat_fm1.c` with `projstore.c`'s
@@ -20,6 +21,15 @@ FM1-TRAX (a Mega Drive tracker on FM1-GM's platform, FoMni's layout) is its devi
 `settings.c`'s song slots and instrument library in `storage.c`'s chunk store, `link.c`) on the HAL half, with
 `libc.c`'s string helpers (its memset / memcpy / memcmp renamed away); the chips and the tracker (`dsp/`, `trk/`) are
 their own units (`trax_*.c`).
+
+Carnac OS (a wavetable synth) replaces X0X's app with its own (`src/hardware/synth_main_fm1.c`: build_fm1.py cuts
+X0X's `x0x.c` at its app) and carries X0X as a submodule of its own: the unit (`core_carnacos.c`) is X0X's platform
+pieces (`storage.c`, `ota.c`, `slots.c`, `panel.c`, `plat_fm1.c`), the UI and screens, and `synth_panel.c` (the panel,
+the settings and the preset store: the file the firmware's own browser emulator also runs); the DSP its own unit
+(`carnacos_dsp.c`). Its PCM waves and the Foundations bank live in the store flash on a unit (uploaded by the
+installer): a flash image without them gets the release's own at power-on (`carnacos_images.c`), then they are read in
+place, as through XIP (which needs `common/nor.c`'s image 4-byte aligned). The 1.5 s splash is kept, as the device
+and its browser emulator show it. Power-on always plays the factory's performance 0; a saved one loads from PRESETS.
 
 The fm1-base cores (`core-glue/fm1base`, AMB-1) use the same HAL half and shared core.
 
@@ -73,6 +83,7 @@ before the frame), with the firmware's own handlers compiled from the submodule:
 | `x0x` | `web/backup/index.html` (backup / restore), the break-loop page, a screen reader | `ota.c` (identity `FM-1_9010100`), `backup.c` (with `main_fm1.c`'s hooks redone in `core_x0x.c`), `editor.c` (INFO, PING, the sample slots), `announce.c` |
 | `fomni` | the installer, a screen reader | `ota.c` (`FM-1_8000400`, via `common/sysex_ota.h`), `announce.c` |
 | `fimba`, `fartmachine` | the installer | `ota.c` (`FM-1_8000601`, `FM-1_701`) |
+| `carnacos` | the installer (`web/site/installer.html`: INFO, the PCM waves' PCM_ID / upload) | `ota.c` (`FM-1_900`), the editor (7D 46 4C) redone from `synth_main_fm1.c` with `pcm_store_fm1.c`, `wt_store_fm1.c` |
 | `trax` | the web editor (`web/editor.html`: songs and library banks), the installer | `link.c` (F0 7D 46 44: HELLO, LIST, READ, WRITE / DATA, DELETE), `ota.c` (`FM-1_601000903`) |
 
 X0X's restore waits as the device does (`ota.c` read requests to the host, then RESTORE FROM USB? with SEL / HOME):
