@@ -169,3 +169,6 @@
 [submodule "fm1-sidj"]
 	path = cores/fm1-sidj
 	url = https://github.com/thomasj/fm1-sidj
+[submodule "Penumbra"]
+	path = cores/Penumbra
+	url = https://github.com/MadMooneyham/Penumbra

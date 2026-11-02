@@ -9,6 +9,7 @@
 | `ravel` | Ravel 1.5.0 (De-Pattern) | `cores/Ravel_FM1` @ v1.5.0 | GPL-3.0-only |
 | `trax` | FM1-TRAX 0.9.3 (jartificer) | `cores/fm1-trax` @ v0.9.3 | GPL-3.0-only (Terminus font: OFL-1.1) |
 | `sidj` | SiDJ 1.3.0 (Thomas Jansson) | `cores/fm1-sidj` @ v1.3.0 | GPL-3.0-only (the SID engine GPL-2.0-or-later, the fonts OFL-1.1) |
+| `penumbra` | Penumbra 1.0 (Lunar Eclipse Forge) | `cores/Penumbra` @ v1.0 | GPL-3.0-only (Barlow, Terminus fonts: OFL-1.1) |
 
 Ravel keeps its own portable platform (`firmware/app/plat.h`) over X0X's Felucca layer, adapted (`firmware/fm1`): the
 unit is its device platform unit (`ravel_fm1.c`: `storage.c`, `ota.c`, `panel.c`, `plat_fm1.c` with `projstore.c`'s
@@ -29,6 +30,11 @@ and the engine are their own units (`sidj_*.c`). Its MIDI clock in is timed by a
 into its own ring, never queued, as its usb.c does), its clock out leaves at the frame it was rendered for
 (`FM1CORE_PL_TICK_HOOK`). Left out: USB audio (the five-channel stream), the TRS jack. The flash starts with no songs
 (silent): the run test sends one first, `sidj_test_tune.syx` (`make_test_tune.py`: a tiny PSID written for the test).
+Penumbra (a space-drone instrument, a fork of X0X) is its device unity build (`penumbra.c`: the UI, `settings.c`'s
+settings, journeys and loop in `storage.c`'s objects) on the HAL half, X0X's second-core and guard stubs, the DSP, the
+clock, the journey, the looper and the engine their own units (`penumbra_*.c`, tools/build.py's O2_UNITS). Its gfx.c
+has one palette (`palette_set` stubbed in the unit). The journey plays at power-on and never falls silent, so the
+device's AUTOSAVE (a second of silence) would never write: `flash_sync` does what SAVE does (written at once).
 
 The fm1-base cores (`core-glue/fm1base`, AMB-1) use the same HAL half and shared core.
 
@@ -81,6 +87,7 @@ before the frame), with the firmware's own handlers compiled from the submodule:
 |---|---|---|
 | `x0x` | `web/backup/index.html` (backup / restore), the break-loop page, a screen reader | `ota.c` (identity `FM-1_9010100`), `backup.c` (with `main_fm1.c`'s hooks redone in `core_x0x.c`), `editor.c` (INFO, PING, the sample slots), `announce.c` |
 | `fomni` | the installer, a screen reader | `ota.c` (`FM-1_8000400`, via `common/sysex_ota.h`), `announce.c` |
+| `penumbra` | the installer, a screen reader | `ota.c` (`FM-1_73010000`, via `common/sysex_ota.h`), `announce.c` |
 | `fimba`, `fartmachine` | the installer | `ota.c` (`FM-1_8000601`, `FM-1_701`) |
 | `trax` | the web editor (`web/editor.html`: songs and library banks), the installer | `link.c` (F0 7D 46 44: HELLO, LIST, READ, WRITE / DATA, DELETE), `ota.c` (`FM-1_601000903`) |
 | `sidj` | the songs page (`web/site/index.html#songs`, `fm1songs.js`: list, add, fetch, delete, play), `tools/fm1_sid.py`, the installer | `songs.c` (F0 7D 53 cmd: INFO, ENTRY, PUT_BEGIN / DATA / END, GET, DELETE, WIPE, PLAY, STATS, OUTPUT, RX, USB), `ota.c` (`FM-1_64010300`) |
