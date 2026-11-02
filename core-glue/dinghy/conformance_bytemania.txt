@@ -1,0 +1,13 @@
+# Bytemania 1.2.0: tests/core_conformance.cpp's script for this core (see its header for the directives)
+settle_ms 500
+# the flash round trip: PRESETS three detents on (patch 04), kept in the settings record (saved 2 s after the change
+# when silent; flash_sync does it at once); after the reboot the main screen shows patch 04, not 01
+save wait 500
+save knob PRESETS +3
+save wait 3000
+save quit
+saved wait 1000
+saved quit
+saved-lcd-differs
+# the reboot: the host build has no reset path (UBOOT is a USB request, the boot guard the device branch's)
+reboot none the host build has no reset path (UBOOT over USB, the boot guard in the device branch only)

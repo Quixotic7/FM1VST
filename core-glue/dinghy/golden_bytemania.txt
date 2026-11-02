@@ -1,0 +1,9 @@
+# Bytemania's golden check (dinghy_golden.c): the script in tests/host.c's format, run by its own host sim and by the
+# core; the screens compared at 3000 ms. C4 held, PRESETS one on (FORTY-TWO), KNOB1 up three, FX (the scope view).
+# Only taps of buttons that act on the press (host.c's "btn" sets the edge alone).
+200 keys 0x80
+1000 enc 6 1
+1500 enc 2 3
+2000 btn 2
+3000 shot
+3010 end

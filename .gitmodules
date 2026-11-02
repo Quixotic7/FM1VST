@@ -139,3 +139,6 @@
 [submodule "fm1-trax"]
 	path = cores/fm1-trax
 	url = https://github.com/jartificer/fm1-trax
+[submodule "bytemania"]
+	path = cores/bytemania
+	url = https://github.com/llozd/bytemania
