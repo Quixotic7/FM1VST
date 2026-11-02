@@ -1,0 +1,15 @@
+# Matryoshka 1.8.2: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: the quick start (help_ui.c, over the first page after the ~4.5 s loading screen) turned off for
+# good with HOME held + SAVE (panel.c, D-247: the settings record, slotstore.c); after the reboot the first page shows
+# without it (checked with rfm1_run --flash-out / --flash-in)
+save wait 5000
+save btn HOME down
+save wait 300
+save btn SAVE 100
+save wait 500
+save btn HOME up
+save wait 800
+save quit
+saved wait 5800
+saved quit
+saved-lcd-differs
