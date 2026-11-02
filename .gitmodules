@@ -208,3 +208,6 @@
 [submodule "MODELAR"]
 	path = cores/MODELAR
 	url = https://github.com/hirakos999/MODELAR
+[submodule "fm1-ctl"]
+	path = cores/fm1-ctl
+	url = https://github.com/charlesvestal/fm1-ctl
