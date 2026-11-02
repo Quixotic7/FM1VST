@@ -36,6 +36,7 @@ endforeach()
 fm1_add_core(vesper ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_vs} UNIT core_vesper.c DESC core_vesper_desc.c
              EXTRA_SOURCES ${_vs_o2_rel}
              FAMILY fm1base LICENSE GPL-3.0-only
+             GATED "compiles in a voice (PIANO 1) of M-VAVE's V15 factory DX7 bank, from M-VAVE's recovery image: its Apache-2.0 grant is VESPER's reading, unverified"
              CREDITS "VESPER by Fat Cat Studios (GPL-3.0-only with the FM1 SDK linking exception). Its engine started from M-VAVE's FM1 Open (FM1 modifications (c) 2026 M-VAVE). Open303 by Robin Schmidt, DaisySP by Electrosmith (with Plaits models by Emilie Gillet), stmlib by Emilie Gillet, emu2149 by Mitsutaka Okazaki and SEA by Dani Biró (MIT). MSFA by Google Inc. and Dexed's msfa by Pascal Gauthier (Apache-2.0). A voice of M-VAVE's V15 factory DX7 bank (Apache-2.0). Piano, marimba and glockenspiel samples: Versilian Studios VSCO-2 Community Edition (CC0). Built on fm1-base by Charles Vestal and felucca-bsp by Leo Kuroshita (Hügelton Instruments), MPL-2.0. Font: Barlow Semi Condensed (The Barlow Project Authors), SIL OFL 1.1."
              GEN felucca_font.h ann_words.h GEN_ROOT app GEN_PYTHON "${_vs_gen}" PYTHON_NEEDS raqm
              SUBMODULES_RECURSIVE
@@ -63,6 +64,7 @@ endif()
 # plays from PLAY, and VESPER loads scene 1 four seconds after power-on (screen.c, "launched"; input before then skips
 # the start-up screen): PLAY at 5 s, the chord at 6 s, played over the running scene
 fm1_add_rfm1(vesper AUTHORS "Fat Cat Studios"
+             HOSTED_DESPITE_GATE "M-VAVE's V15 factory voice PIANO 1 is compiled in: built as the author ships it, hosted on RemoteFM1FW only, the owner call of 2026-11-02"
              LICENSE_FILES "GPL-3.0-only with the FM1 SDK linking exception ({name}, LICENSE.md)=LICENSE.md"
                            "Third-party notices ({name}, THIRD_PARTY.md)=THIRD_PARTY.md"
                            "Sample credits ({name}, SAMPLE-CREDITS.md: VSCO-2 CE, CC0)=SAMPLE-CREDITS.md"
