@@ -166,3 +166,6 @@
 [submodule "Arctic-scream-FM-1"]
 	path = cores/Arctic-scream-FM-1
 	url = https://github.com/PolarPatch/Arctic-scream-FM-1
+[submodule "fm1-sidj"]
+	path = cores/fm1-sidj
+	url = https://github.com/thomasj/fm1-sidj
