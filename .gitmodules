@@ -139,3 +139,6 @@
 [submodule "fm1-trax"]
 	path = cores/fm1-trax
 	url = https://github.com/jartificer/fm1-trax
+[submodule "Penumbra"]
+	path = cores/Penumbra
+	url = https://github.com/MadMooneyham/Penumbra
