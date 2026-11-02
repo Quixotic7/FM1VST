@@ -172,3 +172,6 @@
 [submodule "Penumbra"]
 	path = cores/Penumbra
 	url = https://github.com/MadMooneyham/Penumbra
+[submodule "mope-1"]
+	path = cores/mope-1
+	url = https://github.com/slothpallas/mope-1

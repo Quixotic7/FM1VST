@@ -10,6 +10,7 @@
 | `trax` | FM1-TRAX 0.9.3 (jartificer) | `cores/fm1-trax` @ v0.9.3 | GPL-3.0-only (Terminus font: OFL-1.1) |
 | `sidj` | SiDJ 1.3.0 (Thomas Jansson) | `cores/fm1-sidj` @ v1.3.0 | GPL-3.0-only (the SID engine GPL-2.0-or-later, the fonts OFL-1.1) |
 | `penumbra` | Penumbra 1.0 (Lunar Eclipse Forge) | `cores/Penumbra` @ v1.0 | GPL-3.0-only (Barlow, Terminus fonts: OFL-1.1) |
+| `mope1` | MOPE-1 0.3.0 (slothpallas) | `cores/mope-1` @ v0.3.0 | GPL-3.0-only (Barlow font: OFL-1.1) |
 
 Ravel keeps its own portable platform (`firmware/app/plat.h`) over X0X's Felucca layer, adapted (`firmware/fm1`): the
 unit is its device platform unit (`ravel_fm1.c`: `storage.c`, `ota.c`, `panel.c`, `plat_fm1.c` with `projstore.c`'s
@@ -35,6 +36,9 @@ settings, journeys and loop in `storage.c`'s objects) on the HAL half, X0X's sec
 clock, the journey, the looper and the engine their own units (`penumbra_*.c`, tools/build.py's O2_UNITS). Its gfx.c
 has one palette (`palette_set` stubbed in the unit). The journey plays at power-on and never falls silent, so the
 device's AUTOSAVE (a second of silence) would never write: `flash_sync` does what SAVE does (written at once).
+MOPE-1 (a wavetable synth with a backing band, a FiMba-1 fork) is FiMba's glue over its own files: the device unity
+build (`main.c`: the UI with `px.c` and `blob.c`) on the HAL half, the instrument (`dsp/synth.c`) its own unit
+(`mope1_synth.c`). The band playing defers `flash_sync` (the device never autosaves under it).
 
 The fm1-base cores (`core-glue/fm1base`, AMB-1) use the same HAL half and shared core.
 
@@ -91,6 +95,7 @@ before the frame), with the firmware's own handlers compiled from the submodule:
 | `fimba`, `fartmachine` | the installer | `ota.c` (`FM-1_8000601`, `FM-1_701`) |
 | `trax` | the web editor (`web/editor.html`: songs and library banks), the installer | `link.c` (F0 7D 46 44: HELLO, LIST, READ, WRITE / DATA, DELETE), `ota.c` (`FM-1_601000903`) |
 | `sidj` | the songs page (`web/site/index.html#songs`, `fm1songs.js`: list, add, fetch, delete, play), `tools/fm1_sid.py`, the installer | `songs.c` (F0 7D 53 cmd: INFO, ENTRY, PUT_BEGIN / DATA / END, GET, DELETE, WIPE, PLAY, STATS, OUTPUT, RX, USB), `ota.c` (`FM-1_64010300`) |
+| `mope1` | the installer | `ota.c` (`FM-1_6673000300`; its load and crash replies, cmd 0x12 / 0x13, left out) |
 
 X0X's restore waits as the device does (`ota.c` read requests to the host, then RESTORE FROM USB? with SEL / HOME):
 its service runs on a coroutine (`common/coro.h`, `FM1CORE_PL_SX_CORO`) that yields at `fm1_wdt_feed`; while it waits
