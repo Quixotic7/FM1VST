@@ -145,3 +145,6 @@
 [submodule "ETCH"]
 	path = cores/ETCH
 	url = https://github.com/SikkenWorks/ETCH
+[submodule "smileyface"]
+	path = cores/smileyface
+	url = https://github.com/pbarilla/smileyface
