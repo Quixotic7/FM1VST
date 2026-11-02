@@ -23,5 +23,5 @@
     } while (0)
 #define FM1CORE_FW_EDITOR_C "../../cores/JIANT/firmware/src/editor.c"   /* the web editor's SysEx */
 #define FM1CORE_FW_OTA_C "../../cores/JIANT/firmware/src/ota.c"         /* the M-UPGRADE identity */
-#define FELUCCA_ID "FM-1_900"                                             /* (felucca.c) */
+#define FELUCCA_ID "FM-1_909"       /* tools/build.py PRODUCT, JIANT's packages (the Hub's jiant V10.x) */
 #include "fw_core.h"

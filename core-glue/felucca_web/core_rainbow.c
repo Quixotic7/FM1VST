@@ -10,5 +10,5 @@
 #define FM1CORE_FW_WEB_C "../../cores/felucca-rainbow/web/emu/felucca_web.c"
 #define FM1CORE_FW_EDITOR_C "../../cores/felucca-rainbow/firmware/src/editor.c"   /* the web editor's SysEx */
 #define FM1CORE_FW_OTA_C "../../cores/felucca-rainbow/firmware/src/ota.c"         /* the M-UPGRADE identity */
-#define FELUCCA_ID "FM-1_900"                                             /* (felucca.c) */
+#define FELUCCA_ID "FM-1_911"       /* tools/build.py --release 1.1 (FM-1_9XY; the Hub's rainbow 1.1.5-rb package) */
 #include "fw_core.h"

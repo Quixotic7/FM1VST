@@ -11,7 +11,7 @@
 #define FM1CORE_FW_ANIM_IDLE 1
 #define FM1CORE_FW_EDITOR_C "../../cores/Felucca/firmware/src/editor.c"   /* the web editor's SysEx */
 #define FM1CORE_FW_OTA_C "../../cores/Felucca/firmware/bsp/chip/ota.c"    /* the M-UPGRADE identity (felucca-bsp's, 1.8) */
-#define FELUCCA_ID "FM-1_900"                                             /* (felucca.c) */
+#define FELUCCA_ID "FM-1_918"       /* tools/build.py --release 1.8 (FM-1_9XY; the Hub's felucca 1.8.x package) */
 #include "fw_core.h"
 
 /* ---- the Tier 2 parameter map (in this unit: it reaches the firmware's statics) ---- */

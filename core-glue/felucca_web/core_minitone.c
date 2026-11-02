@@ -10,5 +10,5 @@
 #define FM1CORE_FW_ANIM_IDLE 1
 #define FM1CORE_FW_EDITOR_C "../../cores/Mini-Tone/firmware/src/editor.c"   /* the web editor's SysEx */
 #define FM1CORE_FW_OTA_C "../../cores/Mini-Tone/firmware/src/ota.c"         /* the M-UPGRADE identity */
-#define FELUCCA_ID "FM-1_910"                                               /* (build.py --release 1.0.5) */
+#define FELUCCA_ID "FM-1_900"       /* the Hub's minitone 1.0.5 package: build.py PRODUCT (not a --release build) */
 #include "fw_core.h"
