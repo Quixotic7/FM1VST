@@ -11,6 +11,7 @@
 | `sidj` | SiDJ 1.3.0 (Thomas Jansson) | `cores/fm1-sidj` @ v1.3.0 | GPL-3.0-only (the SID engine GPL-2.0-or-later, the fonts OFL-1.1) |
 | `penumbra` | Penumbra 1.0 (Lunar Eclipse Forge) | `cores/Penumbra` @ v1.0 | GPL-3.0-only (Barlow, Terminus fonts: OFL-1.1) |
 | `mope1` | MOPE-1 0.3.0 (slothpallas) | `cores/mope-1` @ v0.3.0 | GPL-3.0-only (Barlow font: OFL-1.1) |
+| `perf1` | PERF-1 0.16.0 (deamonSLINKY) | `cores/PERF-1` @ v0.16.0 | GPL-3.0-only (fonts: OFL-1.1) |
 
 Ravel keeps its own portable platform (`firmware/app/plat.h`) over X0X's Felucca layer, adapted (`firmware/fm1`): the
 unit is its device platform unit (`ravel_fm1.c`: `storage.c`, `ota.c`, `panel.c`, `plat_fm1.c` with `projstore.c`'s
@@ -39,6 +40,15 @@ device's AUTOSAVE (a second of silence) would never write: `flash_sync` does wha
 MOPE-1 (a wavetable synth with a backing band, a FiMba-1 fork) is FiMba's glue over its own files: the device unity
 build (`main.c`: the UI with `px.c` and `blob.c`) on the HAL half, the instrument (`dsp/synth.c`) its own unit
 (`mope1_synth.c`). The band playing defers `flash_sync` (the device never autosaves under it).
+PERF-1 (a fork of HYP-1, itself of AMB-1, on FoMni's layout) is its device unity build (`main.c` without the hardware:
+UI, project, `plat_fm1.c`) on the HAL half, the instrument with Melodee's FM6 engine (`dsp/amb.c`) its own unit
+(`perf1_amb.c`). Its second core (`EN_CORE2`) and USB MIDI host (`PERF_USB_HOST`) are built out (the reverb runs
+inline); its sliced erase keeps the audio going through a write (`plat_store_seamless`), so the NOR image's erase
+stall is 0 ms; the keys' second dim plane (`fm1_led_dim2`) is plat_glue.h's optional `FM1CORE_PL_DIM2_PLANE`. Its
+SysEx (the web editor, the player's DX7 voices, BACKUP AND RESTORE: F0 7D 50 ..) is usb.c's `px_end` / `dx_end` and
+main_fm1.c's `dx_service` / `px_service`, copied unchanged into `core_perf1.c`, on `plat_sx.h`'s transport; a pass
+that hands a voice to the engine draws no frame (the engine takes it a render later, and autosave would store the
+voices without it).
 
 The fm1-base cores (`core-glue/fm1base`, AMB-1) use the same HAL half and shared core.
 
@@ -96,6 +106,7 @@ before the frame), with the firmware's own handlers compiled from the submodule:
 | `trax` | the web editor (`web/editor.html`: songs and library banks), the installer | `link.c` (F0 7D 46 44: HELLO, LIST, READ, WRITE / DATA, DELETE), `ota.c` (`FM-1_601000903`) |
 | `sidj` | the songs page (`web/site/index.html#songs`, `fm1songs.js`: list, add, fetch, delete, play), `tools/fm1_sid.py`, the installer | `songs.c` (F0 7D 53 cmd: INFO, ENTRY, PUT_BEGIN / DATA / END, GET, DELETE, WIPE, PLAY, STATS, OUTPUT, RX, USB), `ota.c` (`FM-1_64010300`) |
 | `mope1` | the installer | `ota.c` (`FM-1_6673000300`; its load and crash replies, cmd 0x12 / 0x13, left out) |
+| `perf1` | the web editor (`web/editor`: parameters, DX7 voices), the installer (identity, BACKUP AND RESTORE) | `px_end` / `dx_end`, `dx_service` / `px_service` (F0 7D 50 ..; DX7 bulk / single voice), `ota.c` (`FM-1_7001600`) |
 
 X0X's restore waits as the device does (`ota.c` read requests to the host, then RESTORE FROM USB? with SEL / HOME):
 its service runs on a coroutine (`common/coro.h`, `FM1CORE_PL_SX_CORO`) that yields at `fm1_wdt_feed`; while it waits

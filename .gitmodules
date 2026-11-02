@@ -175,3 +175,6 @@
 [submodule "mope-1"]
 	path = cores/mope-1
 	url = https://github.com/slothpallas/mope-1
+[submodule "PERF-1"]
+	path = cores/PERF-1
+	url = https://github.com/deamonSLINKY/PERF-1
