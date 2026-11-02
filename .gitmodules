@@ -163,3 +163,6 @@
 [submodule "sid-1"]
 	path = cores/sid-1
 	url = https://github.com/putchdev/sid-1
+[submodule "Arctic-scream-FM-1"]
+	path = cores/Arctic-scream-FM-1
+	url = https://github.com/PolarPatch/Arctic-scream-FM-1
