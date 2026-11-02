@@ -220,3 +220,6 @@
 [submodule "drift-fm1"]
 	path = cores/drift-fm1
 	url = https://github.com/FBNFRTG/drift-fm1
+[submodule "Golana"]
+	path = cores/Golana
+	url = https://github.com/Gadlele/Golana
