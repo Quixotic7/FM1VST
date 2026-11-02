@@ -139,3 +139,6 @@
 [submodule "fm1-trax"]
 	path = cores/fm1-trax
 	url = https://github.com/jartificer/fm1-trax
+[submodule "vesper-fm1"]
+	path = cores/vesper-fm1
+	url = https://github.com/fatcatstudios-hub/vesper-fm1

@@ -6,6 +6,7 @@
 | `loom` | LOOM-8 0.6.1 | `cores/fm1-loom` @ v0.6.1 (3f41391), with `base` = fm1-base @ 71128a3, `base/bsp` = felucca-bsp @ 33cac69 | GPL-3.0-only (fm1-base MPL-2.0); un-gated 2026-10-21 (the owner's call: the 909 hi-hat) |
 | `mutabledreams` | Mutable Dreams 1.4 | `cores/mutable-dreams` @ v1.4 (0321551), fm1-base and felucca-bsp vendored in it (no submodules) | GPL-3.0-only combined (app also MIT; Mutable Instruments code MIT; fm1-base MPL-2.0) |
 | `remotefm1` | RemoteFM1 0.3.1 (Quixotic7) | `cores/RemoteFM1` @ v0.3.1 (e6fa19d), with `base` = fm1-base @ 934e40d, `base/bsp` = felucca-bsp @ 2cd696a, both patched at build time | MPL-2.0; FM6's MSFA parts Apache-2.0; Yamaha's DX7 ROM voices compiled in from the builder's .syx files |
+| `vesper` | VESPER 2.0.1 (Fat Cat Studios) | `cores/vesper-fm1` @ vesper-2.0.1 (f50977b), with `base` = fm1-base @ d8ff8f4, `base/bsp` = felucca-bsp @ 305c372 | GPL-3.0-only with the FM1 SDK linking exception (fm1-base MPL-2.0); MIT / Apache-2.0 DSP; CC0 samples |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
@@ -134,6 +135,36 @@ screens.
   RemoteFM1 out with a warning. `core_remotefm1.c` does not compile against a header without the eight cartridges,
   so an INIT VOICE-only build is never made. The `.syx` files and the header are never committed here.
 - Version and identity: build.py --release 0.3.1's, "0.3.1" and FM-1_52000301. Not gated.
+
+## VESPER
+
+VESPER (Fat Cat Studios: an ambient worship synth, 16 scenes of four LUSH voices around a major key, a global effects
+chain) is pinned at vesper-2.0.1 (f50977b). Its fm1-base (d8ff8f4) is newer than Mutable Dreams'; `core_vesper.c`
+follows `core_mutabledreams.c` without backup.c (fm1.toml has no `backup`), with `sys_text.c` (this fm1-base's
+platform screens) and two stand-ins: usb.c's `midi_usb_lost` (0: the link never drops) and lcd.c's `lcd_cmd` /
+`lcd_data` (app.c's panel_tune, the ST7789 gamma at the splash, which is not run here).
+
+- **VESPER's code is fm1.toml's `o2` units** (app/vesper/: port.c, the screens, the scenes, LUSH, the open FM1 engine,
+  the third-party DSP), `EXTRA_SOURCES` straight from the submodule with build.py's o2 flags: its `o2_cflags`
+  (`FM1_HOST_TEST`, `FM1_OPEN_WEB`, `VESPER_FMB`, `-fwrapv`), `-include vesper/prefix.h` (VESPER's own heap), its
+  include list in its order (two `engine.h`: web/engine's first), and `PLAT_HOST`, as its host simulator and browser
+  build compile them. The device-only parts stay out: the IR pass (`mul64_outline.py`, a CPU erratum), `vesper/libc`
+  (`device_include`), the `.pool` section. The proprietary SDK library (`libfm1_engine.a`) is not in the repository and
+  nothing links it.
+- **The managers' SysEx:** main_fm1.c's order: the screen reader, the log readout, the remote control (this fm1-base's,
+  no lease: op 5 is taken unanswered), the app's own (`app_sysex`: VESPER's project transfers F0 7D 'F' 'M' 02, MMC, a
+  DX7 single voice; transfer.c answers INFO, cmd 0), then `ota_service`. The accept filter sees four bytes of a frame
+  (`FM1SX_PREFIX`): VESPER's frames are taken by their first four, `vesper_sysex` checks the rest.
+- **Saving:** VESPER keeps its projects, settings, DX7 banks and session in the data area itself (vesper/port.c maps
+  its 1.x flash partition to 0x97000..; the sample bank is its built-in WORSHIP bank, read only); the store holds only
+  the panel calibration. `flash_sync` has nothing pending.
+- **RUN_ARGS:** VESPER loads scene 1 four seconds after power-on (screen.c, unless input came first) and the scene plays
+  from PLAY: PLAY at 5 s, the chord at 6 s.
+- Version and identity: build.py --release 2.0.1's with tools/identity.patch (fm1.toml `id_digits = 3`): "2.0.1" and
+  FM-1_8837201. USB product (fm1.toml `usb_product`): "VESPER FM-1".
+- Licence texts in the .rfm1: LICENSE.md (GPL-3.0 with the linking exception), THIRD_PARTY.md (Open303, DaisySP,
+  stmlib, emu2149, SEA: MIT; MSFA / Dexed and M-VAVE's V15 factory DX7 voice: Apache-2.0), SAMPLE-CREDITS.md (VSCO-2
+  CE, CC0), fm1-base's and felucca-bsp's MPL-2.0 with their notes, the Barlow OFL. Not gated.
 
 ## A next fm1-base app
 
