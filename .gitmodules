@@ -151,3 +151,6 @@
 [submodule "chipbox"]
 	path = cores/chipbox
 	url = https://github.com/pbarilla/chipbox
+[submodule "bytemania"]
+	path = cores/bytemania
+	url = https://github.com/llozd/bytemania
