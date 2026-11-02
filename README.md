@@ -97,6 +97,7 @@ a package by its SHA-256. What the public cores answer (`tests/sysex_test.cpp` c
 | `tonitor` | FM-1 Tonitor | its backup page | sessions and presets (LIST, READ, WRITE), identity FM-1_700 |
 | `amb`, `fomni`, `fimba`, `obervave`, `frodhes`, `s1vave` | AMB-1 FM-1, FoMni FM-1, FiMba FM-1, Felucca | | the installer's identity |
 | `speak37` | Speak37 | its installer page | identity FM-1_510 only (no editor) |
+| `vector37` | Vector37 | its installer page | identity FM-1_700 only (no editor) |
 
 **Adding a core.** A firmware becomes a core with its glue folder `core-glue/<family>/` and a `core.cmake` there
 (found by the top-level glob: no shared file is edited):

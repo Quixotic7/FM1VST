@@ -1,0 +1,14 @@
+# Vector37 0.3.2: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the sound: the power-on sound (ui_init: FACTORY 1) plays a key at velocity 100; it runs from power-on, under the
+# boot animation too, as on the device
+# the flash: the FM-1 build keeps no store of its own (scenes.c persist_boot returns after the JEDEC probe)
+flash none the FM-1 build of Vector37 saves nothing (no store of its own on the FM-1)
+# the boot guard (fm1_cstart, bootguard.h): this reset counts the run before it, and a second failed boot in a row is
+# the rescue mode, which a core has not: UBOOT (exit(3))
+reboot-guard 1
+# OCT- + OCT+ held 5 s: UBOOT (mk_main's countdown from 2 s; core_vector37.c), after the 3 s boot animation
+reboot wait 3500
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

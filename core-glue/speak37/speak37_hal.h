@@ -17,7 +17,9 @@
  *     fm1_audio_free_half names the half it renders;
  *   - the flash: core-glue/common/nor.c's 1 MiB image under the device's storage_hw.c (fl_read_ram, fl_erase4k_ram,
  *     fl_write: hal/fm1_flash.h's RAM driver), the flash map's guards (hal/fm1_flash_map.h, macros only) kept.
- * Every name here is the firmware's own (the device HAL's); glue-only names carry fm1core_sp_ / FM1CORE_SP_. */
+ * Every name here is the firmware's own (the device HAL's); glue-only names carry fm1core_sp_ / FM1CORE_SP_.
+ * The Vector37 core (vector37_firmware.h, core_vector37.c) runs on this header too: the same author's board layer,
+ * the same hal/fm1_*.h; it adds the glow plane fm1_led_dim and leaves sp_main.c's ISR out (audio.c has its own). */
 
 /* ------------------------------------------------------- fm1_time.h --- */
 #define FM1_TICKS_PER_US 24u                       /* TIMER4 at 24 MHz */

@@ -50,6 +50,7 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | Mutable Dreams 1.4 (added 2026-11-01, .rfm1) | GPL-3.0-only (app also MIT; Plaits / Rings / Elements / stmlib MIT; fm1-base MPL-2.0; fonts OFL) | fm1-base (vendored) on felucca-bsp, C++ engine | native (`base/host/plat_host.c`) + wasm | C' |
 | Tonitor 0.55 (a240bc1, no tags: the Hub package's commit; added 2026-10-22) | GPL-3.0-only (msfa Apache-2.0, Rings MIT, LIRA-8 BSD-3) | Felucca / SLOOP's HAL, its own unity build | a render / screen harness (`tests/host/host.c`), no main loop; no wasm | G (its own: tonitor) |
 | Speak37 1.0, the FM-1 build (added 2026-10-22) | GPL-3.0-only (+ MAME's TMS5220 tables BSD-3, FM1 Open's 808 MIT) | the Felucca platform (`speak.c`, not Felucca's UI) | native test (`tests/sp_screen.c -DT_FM1=1`); its web emu is plain Felucca | own glue (speak37) |
+| Vector37 0.3.2, the FM-1 build (added 2026-11-02, .rfm1) | GPL-3.0-only (Terminus OFL) | SLOOP / Felucca's board layer (`vector37.c`, its own UI) | native test (`tests/fm1_panel.c`); its web sim is the SMK-37's | Speak37's glue (speak37_hal.h) |
 | SLOOP 2.8 | GPL-3.0 + Hügelton icons (§7) | early Felucca | native tests (`hostsim`, `ui_pages_test`) | D |
 | sloopDX 4.0 (tag v4.0) | GPL-3.0 | SLOOP 2.7 | native tests | D |
 | ORBIT 0.7.1 | GPL-3.0 + **OP-1 material** | SLOOP / Felucca | native preview + hostsim | D |
