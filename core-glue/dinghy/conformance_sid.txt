@@ -1,0 +1,16 @@
+# FM-1 SID 0.3: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the sound: the player starts on Dojo (the pack's first song), playing
+# the flash round trip: SEQ opens the GoatTracker editor on Dojo, SAVE writes it to the first free slot of the song
+# store (firmware/store.c, from 0x60000 here: core_sid.c); after the reboot the player's list has 11 tunes ("1/11"
+# on the screen, not "1/10")
+save wait 1500
+save btn SEQ
+save wait 1000
+save btn SAVE
+save wait 1500
+save quit
+saved wait 1500
+saved quit
+saved-lcd-differs
+# the reboot: the host branch has no reset path (UBOOT and the rescue are core_sid.c's screens, HOME goes back)
+reboot none the host build has no reset path (the rescue and UBOOT show a screen, HOME goes back)
