@@ -38,6 +38,6 @@ endif()
 fm1_add_rfm1(elasticat VIRTUAL NEEDS fs1 FOLDERS audio=r data=rw MEMORY_MIB 128 AUTHORS "Quixotic7"
              RUN_ARGS --folder ${CMAKE_CURRENT_LIST_DIR}/test_folder
                       --flash-in ${CMAKE_CURRENT_LIST_DIR}/test_project.flash --settle 3000 --seconds 4
-                      --press PLAY@1500 --keys 26 --min-rms 0.02 --expect-ui ec0.1.0 --expect-ui play:1
+                      --press PLAY@1500 --keys 26 --min-rms 0.02 --expect-ui ec0.2.0 --expect-ui play:1
                       --expect-ui file:testloop_bpm120.wav --expect-ui ready:1 --expect-ui missing:0
                       --expect-ui seq:on)

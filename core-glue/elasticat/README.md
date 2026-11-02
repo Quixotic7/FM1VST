@@ -2,7 +2,7 @@
 
 | core | firmware | submodule | licence |
 |---|---|---|---|
-| `elasticat` | Elasticat FM-1 0.1.0 (E1 + E2, Quixotic7) | `cores/elasticatfm1` (github.com/Quixotic7/elasticatfm1, `main`) | GPL-3.0-only |
+| `elasticat` | Elasticat FM-1 0.2.0 (E1-E5, Quixotic7) | `cores/elasticatfm1` (github.com/Quixotic7/elasticatfm1, `main`) | GPL-3.0-only |
 
 Elasticat, the norns sample-mangling sequencer by Quixotic7, rewritten in C for the FM-1 as a host-only `.rfm1`
 ([docs/VIRTUAL-CARTS.md](../../docs/VIRTUAL-CARTS.md)): `fm1_add_rfm1(elasticat VIRTUAL NEEDS fs1 FOLDERS audio=r
@@ -15,14 +15,17 @@ allowed).
   empty placeholders (fm1_add_core wants a unit and a descriptor file). Natively the file API is
   `../common/rfm1_host.c` (no folder: the core plays its built-in loop); in the `.rfm1` it is the `rfm1_host_1` imports.
 - **Version:** `src/plat/ec_version.h` (`EC_VERSION`).
-- **Memory:** 128 MiB, most of it the sample store's static arena (`EC_SS_ARENA_MIB` 96, int16 stereo).
+- **Memory:** 128 MiB, most of it the sample store's static arena (`EC_SS_ARENA_MIB` 96, int16 stereo, ~9.5 min);
+  the engine 16.7 MiB (`EC_DSP_MEM_MAX` 18 MiB), the app + its memorize copy 4.8 MiB; 4.9 MiB stay free.
 - **The test** (`ctest -R rfm1_elasticat`): `test_folder/audio/testloop_bpm120.wav` (4 s, two bars of a synthesized
   drum loop, written by the repo's `host/make_testloop.py`) and `test_project.flash`, a saved project (7 KiB: the
   flash header + the project record; the core pads the rest) built through panel input by the repo's
   `host/glue_project.txt` + `host/trim_flash.py`: four tracks on the test loop (loop with trigs, p-locks and a region
   lock; granular; slice poly; chopped with a ratchet). PLAY at 1.5 s; the chord's RMS must be >= 0.02 and `ui_info`
-  must say `ec0.1.0 play:1 file:testloop_bpm120.wav ready:1 missing:0 seq:on` (trigs fired).
-- **Speed** (wasm3, M-series Mac): ~8x real time with the E1 demo's four tracks (granular and 8-voice slices included).
+  must say `ec0.2.0 play:1 file:testloop_bpm120.wav ready:1 missing:0 seq:on` (trigs fired).
+- **Speed** (wasm3, M-series Mac): 2.1x real time while playing the worst case (the repo's `ec_make_heavy`: six busy
+  tracks across the E3 warp modes and R.POLY, an insert on every track, both sends, master COMP, LFOs everywhere);
+  5.9x with the repo's v020 demo project.
 
 ## Building
 
