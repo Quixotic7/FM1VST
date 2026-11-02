@@ -229,3 +229,6 @@
 [submodule "fmel-1"]
 	path = cores/fmel-1
 	url = https://github.com/AntonioAltea/fmel-1
+[submodule "guitchordi"]
+	path = cores/guitchordi
+	url = https://github.com/stoogs/guitchordi
