@@ -187,3 +187,6 @@
 [submodule "hawk-chua"]
 	path = cores/hawk-chua
 	url = https://github.com/Plieuw/hawk-chua
+[submodule "mnm1"]
+	path = cores/mnm1
+	url = https://github.com/galfaroth/mnm1
