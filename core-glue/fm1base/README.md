@@ -6,6 +6,7 @@
 | `loom` | LOOM-8 0.6.1 | `cores/fm1-loom` @ v0.6.1 (3f41391), with `base` = fm1-base @ 71128a3, `base/bsp` = felucca-bsp @ 33cac69 | GPL-3.0-only (fm1-base MPL-2.0); un-gated 2026-10-21 (the owner's call: the 909 hi-hat) |
 | `mutabledreams` | Mutable Dreams 1.4 | `cores/mutable-dreams` @ v1.4 (0321551), fm1-base and felucca-bsp vendored in it (no submodules) | GPL-3.0-only combined (app also MIT; Mutable Instruments code MIT; fm1-base MPL-2.0) |
 | `remotefm1` | RemoteFM1 0.3.1 (Quixotic7) | `cores/RemoteFM1` @ v0.3.1 (e6fa19d), with `base` = fm1-base @ 934e40d, `base/bsp` = felucca-bsp @ 2cd696a, both patched at build time | MPL-2.0; FM6's MSFA parts Apache-2.0; Yamaha's DX7 ROM voices compiled in from the builder's .syx files |
+| `berlinan` | Berlinan 0.5.1 (Jiří Píša) | `cores/fm1-berlinan` @ v0.5.1 (afe2d93), with `base` = fm1-base @ 15dff6d, `base/bsp` = felucca-bsp @ 6b087c2 (AMB-1's) | GPL-2.0-or-later; Berkeley SoftFloat 3e BSD-3-Clause; fm1-base MPL-2.0 |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
@@ -134,6 +135,28 @@ screens.
   RemoteFM1 out with a warning. `core_remotefm1.c` does not compile against a header without the eight cartridges,
   so an INIT VOICE-only build is never made. The `.syx` files and the header are never committed here.
 - Version and identity: build.py --release 0.3.1's, "0.3.1" and FM-1_52000301. Not gated.
+
+## Berlinan
+
+Berlinan (Jiří Píša: a generative Berlin School MIDI sequencer, the C translation of Berlinan for macOS) is pinned at
+v0.5.1 (afe2d93). Its fm1-base and felucca-bsp are AMB-1's (15dff6d, 6b087c2), so `core_berlinan.c` follows
+`core_amb.c`.
+
+- **It makes no sound.** `app_render` writes silence; the sequencer (app/runtime.c, from the 1 kHz `app_tick` and
+  `app_loop`) sends its notes, CC, the MIDI clock, Start and Stop through `plat_midi_out` to the USB-MIDI out ring, and
+  follows an incoming clock (EXT) from the host's MIDI in. rfm1_run's chord RMS is therefore 0: `RUN_ARGS --press
+  PLAY@2000 --min-rms 0`, and `--midi-out` shows the Demo trio playing on channels 1-3.
+- **The engine** (fm1.toml `o2`: app/engine/*.c and Berkeley SoftFloat 3e, app/engine/softfloat/*.c) is
+  `EXTRA_SOURCES` straight from the submodule, with build.py's host flags (`-std=c99 -w -DPLAT_HOST`, each file's own
+  directory, app/engine).
+- **One file read from the glue:** app.c includes `app/libc/libc.c` (the device's memmove, strcmp, abs and 64-bit
+  divides for the freestanding toolchain) when `PLAT_HOST` is off; a clang VFS overlay reads `berlinan_nolibc.c`
+  (empty) in its place.
+- **The managers' SysEx:** main_fm1.c's order: the screen reader, the log readout, the remote control (no lease in
+  this fm1-base); no `app_sysex`; then ota_service (the M-UPGRADE identity) for a frame none of them took.
+- **Saving:** only SAVE writes (pressed while playing, at the stop); `flash_sync` waits while a SAVE is pending.
+- Version and identity: build.py --release 0.5.1's, "0.5.1" and FM-1_23000501. USB product (fm1.toml
+  `usb_product`): "FM-Berlinan". Not gated: GPL-2.0-or-later; SoftFloat BSD-3-Clause; the Barlow OFL.
 
 ## A next fm1-base app
 
