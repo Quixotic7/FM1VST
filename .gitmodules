@@ -139,3 +139,7 @@
 [submodule "fm1-trax"]
 	path = cores/fm1-trax
 	url = https://github.com/jartificer/fm1-trax
+[submodule "cores/elasticatfm1"]
+	path = cores/elasticatfm1
+	url = https://github.com/Quixotic7/elasticatfm1
+	branch = main
