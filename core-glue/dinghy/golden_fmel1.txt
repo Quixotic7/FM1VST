@@ -1,0 +1,9 @@
+# FMEL-1's golden check (dinghy_golden.c): the script in tests/host.c's format, run by its own host sim and by the
+# core; the screens compared at 5000 ms (one of host.c's fixed SHOT times). A FLUTE: a C major chord, PRESETS one on
+# (B CHOIR), an A minor chord held, KNOB 1 (TONE) turned: the choir on the stage, its tapes running.
+200 keys 0x4880
+2000 keys 0
+4000 enc 6 1
+4100 keys 0x890
+4400 enc 2 3
+5010 end
