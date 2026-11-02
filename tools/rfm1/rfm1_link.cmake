@@ -16,7 +16,26 @@
 #   --remove-exports=asyncify_*   the API the pass exports (the module calls it itself: nothing outside may)
 # then OPT and --strip-debug (the names). A warning of wasm-opt (a removelist name that does not exist:
 # the resumer inlined or renamed) fails the link, and so does any "asyncify" left in the module.
+# POST_OPT (FM1_RFM1_POST_OPT, "-O3" ..): wasm-opt again on every module, after the link (and after Asyncify).
+# NAMES (FM1_RFM1_NAMES): the function names kept (no --strip-debug), for rfm1_run --fprofile.
 include(${CONF})
+set(_strip_names --strip-debug)
+if(NAMES)
+    set(_strip_names "")
+endif()
+
+# wasm-opt POST_OPT on OUT, in place (nothing when POST_OPT is empty)
+function(rfm1_post_opt)
+    if(NOT POST_OPT)
+        return()
+    endif()
+    execute_process(COMMAND ${WASM_OPT} ${OUT} ${WASM_OPT_FEATURES} ${POST_OPT} ${_strip_names} -o ${OUT}.post.wasm
+                    RESULT_VARIABLE rc ERROR_VARIABLE _err)
+    if(NOT rc EQUAL 0)
+        message(FATAL_ERROR "rfm1 link: wasm-opt ${POST_OPT} failed (${rc}): ${_err}")
+    endif()
+    file(RENAME ${OUT}.post.wasm ${OUT})
+endfunction()
 
 execute_process(COMMAND ${EMNM} --undefined-only ${OBJS} OUTPUT_VARIABLE _nm ERROR_VARIABLE _nm_err RESULT_VARIABLE rc)
 if(NOT rc EQUAL 0)
@@ -39,6 +58,7 @@ if(NOT _extra)
     if(NOT rc EQUAL 0)
         message(FATAL_ERROR "rfm1 link: emcc failed (${rc})")
     endif()
+    rfm1_post_opt()
     return()
 endif()
 
@@ -53,7 +73,7 @@ execute_process(COMMAND ${WASM_OPT} ${_pre} ${WASM_OPT_FEATURES}
                         --asyncify --pass-arg=asyncify-ignore-imports
                         --pass-arg=asyncify-removelist@${_remove}
                         --remove-exports=asyncify_*
-                        ${OPT} --strip-debug -o ${OUT}
+                        ${OPT} ${_strip_names} -o ${OUT}
                 RESULT_VARIABLE rc OUTPUT_VARIABLE _out ERROR_VARIABLE _err)
 if(NOT rc EQUAL 0 OR _out MATCHES "[Ww]arning" OR _err MATCHES "[Ww]arning")
     file(REMOVE ${OUT})
@@ -65,3 +85,4 @@ if(_left)
     message(FATAL_ERROR "rfm1 link: \"asyncify\" still in ${OUT} (an import or export the pass left): ${_left}")
 endif()
 file(REMOVE ${_pre})
+rfm1_post_opt()
