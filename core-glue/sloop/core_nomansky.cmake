@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
+# no tag: pinned at the commit of v0.5, the Firmware Hub's latest (the owner's call, 2026-11-02)
 # No Man Sky FM 0.5 (https://github.com/hericdk/nomanskyFM): no tags or releases, the submodule is pinned at main
 # 32e7f4c, the v0.5 commit (2026-10-20; its README: "Current version v0.5", no beta mark; release/nmsfm-0.5.fwsc).
 # v0.5 saves projects as format 7 (the FX lane and the arp; format 6 projects still load).
@@ -21,12 +22,23 @@ fm1_add_core(nomansky ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores
                  nms_nave_decola.h nms_anao.h nms_nebulosa.h nms_nave_lado.h nms_cabine.h
              PYTHON_NEEDS numpy
              VERSION 0.5)
+# the .rfm1 (cmake/FM1Rfm1.cmake; docs/RFM1.md), as SLOOP's: its GPL, msfa's Apache-2.0, its LICENSING.md (the CC0
+# samples' terms) and the Terminus font's OFL (the screen font, gen_font.py; Pixelify Sans is the site's only). The
+# core id stays nomansky (the Hub's id nmsfm maps to it: plugin/Hub.cpp). Gated (the sprite art): not built until the
+# owner adds HOSTED_DESPITE_GATE "<the owner's call>" here (CORES-PLAN.md 6)
+fm1_add_rfm1(nomansky AUTHORS "Hericdk" MEMORY_MIB 16
+             LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "Apache-2.0 (msfa in {name})=LICENSES/Apache-2.0-msfa.txt"
+                           "LICENSING.md ({name})=LICENSING.md"
+                           "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt")
 
 # the golden check: No Man Sky's own simulator unit (firmware/wasm/nms_wasm.c, built natively by nms_golden.c with
 # its UI frames on our 15 ms clock) and the core run the same input (EDIT tapped at 2000 ms): the EDIT page at 2600 ms
 # is the same outside its live areas, the parameter bars (x 0..119, y 40..140) and the two scopes (y 85..102 right,
 # y 178..196), which follow the sound and the simulator's sample-driven clock (fm1_ms from rendered frames; one core:
 # FELUCCA_CPU1 0); up to 64 more pixels may differ (~30 background sparkles do, for the same reason)
+if(TARGET nomansky_core AND NOT COMMAND fm1_sloop_golden)   # (FM1_ONLY_CORES=nomansky: the family's core.cmake)
+    include(${CMAKE_CURRENT_LIST_DIR}/core.cmake)
+endif()
 if(TARGET nomansky_core)
     fm1_sloop_ref(nomansky_ref_sim ${CMAKE_CURRENT_LIST_DIR}/nms_golden.c ${CMAKE_SOURCE_DIR}/cores/nomanskyFM/firmware
                   gen_nomansky FLAGS -ffreestanding -fno-builtin
