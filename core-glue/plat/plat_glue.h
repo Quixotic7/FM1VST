@@ -36,7 +36,9 @@
  *                                        label / FM1P_E_* role (default: the same number)
  * Optional: FM1CORE_PL_SX (1: the managers' SysEx, plat_sx.h included before the firmware's sources: see
  * there), FM1CORE_PL_TICK_HOOK() (each device ms, after the input: fm1-base's app_tick), FM1CORE_PL_KEY_HOOK(down,
- * up, held) (the note keys that went down / up this ms, and those held now: fm1-base's velocity and pressure), FM1CORE_PL_DEFAULT_MASTER (the pot's position
+ * up, held) (the note keys that went down / up this ms, and those held now: fm1-base's velocity and pressure),
+ * FM1CORE_PL_MIDI_IN_HOOK(pkt) (a USB-MIDI packet before the app's queue, after the SysEx: 1 taken, never queued;
+ * SiDJ's usb.c times the clock bytes into its own ring), FM1CORE_PL_DEFAULT_MASTER (the pot's position
  * when the host gives none, 0..1023: the firmware's own default MASTER), FM1CORE_PL_PALETTE (the palette set at
  * power-on, default 1).
  *
@@ -431,6 +433,10 @@ int fm1core_pl_midi_in(uint32_t pkt)            /* usb.c: into midi_in_q (the re
         if (cin >= 4u && cin <= 7u)
             return fm1sx_in_pkt(&fm1core_pl_sxi, pkt);
     }
+#endif
+#ifdef FM1CORE_PL_MIDI_IN_HOOK
+    if (FM1CORE_PL_MIDI_IN_HOOK(pkt))
+        return 1;
 #endif
     if (MQ - (mi_w - mi_r) < 8u)                 /* (room kept for the TRS jack, as usb.c's ep1_take) */
         return 0;

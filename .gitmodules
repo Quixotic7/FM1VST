@@ -139,3 +139,6 @@
 [submodule "fm1-trax"]
 	path = cores/fm1-trax
 	url = https://github.com/jartificer/fm1-trax
+[submodule "fm1-sidj"]
+	path = cores/fm1-sidj
+	url = https://github.com/thomasj/fm1-sidj
