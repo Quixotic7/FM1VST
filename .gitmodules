@@ -139,3 +139,6 @@
 [submodule "fm1-trax"]
 	path = cores/fm1-trax
 	url = https://github.com/jartificer/fm1-trax
+[submodule "sid-1"]
+	path = cores/sid-1
+	url = https://github.com/putchdev/sid-1

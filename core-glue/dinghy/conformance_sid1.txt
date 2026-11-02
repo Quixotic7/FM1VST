@@ -1,0 +1,15 @@
+# SID-1 1.0.0: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: PRESETS three patches on, then SAVE (the patch over its slot and the parts, the edited
+# part's slot among them, written at once: sid1.c store_save / parts_save); after the reboot HOME shows that
+# patch, not the first. (The version message stands 2 s from power-on.)
+save wait 500
+save knob PRESETS +3
+save wait 300
+save btn SAVE
+save wait 1000
+save quit
+saved wait 3000
+saved quit
+saved-lcd-differs
+# the reboot: the host mode has no reset path (UBOOT is a USB request, the boot guard the device branch's)
+reboot none the host build has no reset path (UBOOT over USB, the boot guard in the device branch only)
