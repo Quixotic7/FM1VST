@@ -24,9 +24,9 @@ fm1_add_core(nomansky ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores
              VERSION 0.5)
 # the .rfm1 (cmake/FM1Rfm1.cmake; docs/RFM1.md), as SLOOP's: its GPL, msfa's Apache-2.0, its LICENSING.md (the CC0
 # samples' terms) and the Terminus font's OFL (the screen font, gen_font.py; Pixelify Sans is the site's only). The
-# core id stays nomansky (the Hub's id nmsfm maps to it: plugin/Hub.cpp). Gated (the sprite art): not built until the
-# owner adds HOSTED_DESPITE_GATE "<the owner's call>" here (CORES-PLAN.md 6)
+# core id stays nomansky (the Hub's id nmsfm maps to it: plugin/Hub.cpp). Gated (the sprite art): hosted on RemoteFM1FW only.
 fm1_add_rfm1(nomansky AUTHORS "Hericdk" MEMORY_MIB 16
+             HOSTED_DESPITE_GATE "its sprite art (one image No Man's Sky's key art redrawn) has no licence statement: built as its author ships it, hosted on RemoteFM1FW only, the owner call of 2026-11-02"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "Apache-2.0 (msfa in {name})=LICENSES/Apache-2.0-msfa.txt"
                            "LICENSING.md ({name})=LICENSING.md"
                            "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt")
