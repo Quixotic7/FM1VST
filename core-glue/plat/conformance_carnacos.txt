@@ -1,0 +1,33 @@
+# Carnac OS 0.9.6: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the sound: the power-on performance (0) plays the chord; the UI starts after the 1.5 s splash
+boot_ms 3000
+# the flash round trip: on HOME (LAYER, the power-on page) the Algorithm Encoder steps ARCH (SINGLE -> the next);
+# SAVE opens the save page on the performance (slot 0, used: OVERWRITE? opens on NO), the Algorithm Encoder picks
+# YES, SAVE writes it (preset_store_fm1.c). Power-on always plays the factory's performance 0 (syn_boot_perf); after
+# the reboot the PRESETS encoder loads performance 1, then 0 again, from flash: the page shows the other ARCH
+save wait 2000
+save turn ALGORITHM +1
+save wait 2500
+save btn SAVE 80
+save wait 400
+save btn SAVE 80
+save wait 400
+save turn ALGORITHM +1
+save wait 200
+save btn SAVE 80
+save wait 1500
+save quit
+saved wait 3500
+saved turn PRESETS +1
+saved wait 1000
+saved turn PRESETS -1
+saved wait 2000
+saved quit
+saved-lcd-differs
+# OCT- + OCT+ held 5 s: UBOOT (synth_main_fm1.c); four failed boots in a row: UBOOT (fm1_cstart)
+reboot-guard 3
+reboot wait 2000
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

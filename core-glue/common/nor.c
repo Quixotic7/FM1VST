@@ -5,7 +5,9 @@
 #include <string.h>
 #include "fm1core.h"
 
-uint8_t fm1nor_image[FM1NOR_SIZE];
+/* (aligned as the device's flash is through XIP: a firmware reading the image in place may check a header's
+ * alignment, Carnac OS's pcm_store_check; a byte array alone may land at an odd address in a native module) */
+uint8_t fm1nor_image[FM1NOR_SIZE] __attribute__((aligned(64)));
 
 static uint8_t stage[FM1NOR_SIZE];
 static uint32_t stage_len;                /* bytes staged (0: a fresh, erased flash) */

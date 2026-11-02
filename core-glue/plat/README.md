@@ -12,6 +12,7 @@
 | `penumbra` | Penumbra 1.0 (Lunar Eclipse Forge) | `cores/Penumbra` @ v1.0 | GPL-3.0-only (Barlow, Terminus fonts: OFL-1.1) |
 | `mope1` | MOPE-1 0.3.0 (slothpallas) | `cores/mope-1` @ v0.3.0 | GPL-3.0-only (Barlow font: OFL-1.1) |
 | `perf1` | PERF-1 0.16.0 (deamonSLINKY) | `cores/PERF-1` @ v0.16.0 | GPL-3.0-only (fonts: OFL-1.1) |
+| `carnacos` | Carnac OS 0.9.6 (OrbVorgis) | `cores/carnac-os` @ v0.9.6 (X0X in its own `x0x-firmware/`) | GPL-3.0-only (Barlow, Terminus fonts: OFL-1.1) |
 
 Ravel keeps its own portable platform (`firmware/app/plat.h`) over X0X's Felucca layer, adapted (`firmware/fm1`): the
 unit is its device platform unit (`ravel_fm1.c`: `storage.c`, `ota.c`, `panel.c`, `plat_fm1.c` with `projstore.c`'s
@@ -49,6 +50,14 @@ SysEx (the web editor, the player's DX7 voices, BACKUP AND RESTORE: F0 7D 50 ..)
 main_fm1.c's `dx_service` / `px_service`, copied unchanged into `core_perf1.c`, on `plat_sx.h`'s transport; a pass
 that hands a voice to the engine draws no frame (the engine takes it a render later, and autosave would store the
 voices without it).
+Carnac OS (a wavetable synth) replaces X0X's app with its own (`src/hardware/synth_main_fm1.c`: build_fm1.py cuts
+X0X's `x0x.c` at its app) and carries X0X as a submodule of its own: the unit (`core_carnacos.c`) is X0X's platform
+pieces (`storage.c`, `ota.c`, `slots.c`, `panel.c`, `plat_fm1.c`), the UI and screens, and `synth_panel.c` (the panel,
+the settings and the preset store: the file the firmware's own browser emulator also runs); the DSP its own unit
+(`carnacos_dsp.c`). Its PCM waves and the Foundations bank live in the store flash on a unit (uploaded by the
+installer): a flash image without them gets the release's own at power-on (`carnacos_images.c`), then they are read in
+place, as through XIP (which needs `common/nor.c`'s image 4-byte aligned). The 1.5 s splash is kept, as the device
+and its browser emulator show it. Power-on always plays the factory's performance 0; a saved one loads from PRESETS.
 
 The fm1-base cores (`core-glue/fm1base`, AMB-1) use the same HAL half and shared core.
 
@@ -103,6 +112,7 @@ before the frame), with the firmware's own handlers compiled from the submodule:
 | `fomni` | the installer, a screen reader | `ota.c` (`FM-1_8000400`, via `common/sysex_ota.h`), `announce.c` |
 | `penumbra` | the installer, a screen reader | `ota.c` (`FM-1_73010000`, via `common/sysex_ota.h`), `announce.c` |
 | `fimba`, `fartmachine` | the installer | `ota.c` (`FM-1_8000601`, `FM-1_701`) |
+| `carnacos` | the installer (`web/site/installer.html`: INFO, the PCM waves' PCM_ID / upload) | `ota.c` (`FM-1_900`), the editor (7D 46 4C) redone from `synth_main_fm1.c` with `pcm_store_fm1.c`, `wt_store_fm1.c` |
 | `trax` | the web editor (`web/editor.html`: songs and library banks), the installer | `link.c` (F0 7D 46 44: HELLO, LIST, READ, WRITE / DATA, DELETE), `ota.c` (`FM-1_601000903`) |
 | `sidj` | the songs page (`web/site/index.html#songs`, `fm1songs.js`: list, add, fetch, delete, play), `tools/fm1_sid.py`, the installer | `songs.c` (F0 7D 53 cmd: INFO, ENTRY, PUT_BEGIN / DATA / END, GET, DELETE, WIPE, PLAY, STATS, OUTPUT, RX, USB), `ota.c` (`FM-1_64010300`) |
 | `mope1` | the installer | `ota.c` (`FM-1_6673000300`; its load and crash replies, cmd 0x12 / 0x13, left out) |

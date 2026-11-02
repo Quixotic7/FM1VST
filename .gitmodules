@@ -178,3 +178,6 @@
 [submodule "PERF-1"]
 	path = cores/PERF-1
 	url = https://github.com/deamonSLINKY/PERF-1
+[submodule "carnac-os"]
+	path = cores/carnac-os
+	url = https://github.com/OwenKirby/carnac-os
