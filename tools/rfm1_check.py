@@ -58,6 +58,8 @@ EXPORTS = {
     "rfm1_flash": (0, 1), "rfm1_flash_dirty": (0, 1), "rfm1_flash_sync": (0, 1), "rfm1_stats": (2, 0),
     "rfm1_ui_info": (2, 0),
 }
+# optional exports, checked when present (docs/DYNAMIC-LABELS.md: every module built with rfm1_shim.c has them)
+OPTIONAL_EXPORTS = {"rfm1_labels_epoch": (0, 1), "rfm1_label": (1, 1)}
 FEATURES_OK = {"sign-ext", "nontrapping-fptoint", "bulk-memory", "bulk-memory-opt", "mutable-globals", "multivalue"}
 
 
@@ -463,9 +465,10 @@ class Check:
 
         if exports.get("memory", (None,))[0] != 2:
             self.err("no memory exported as \"memory\"")
-        for nm, (na, nr) in EXPORTS.items():
+        for nm, (na, nr) in list(EXPORTS.items()) + list(OPTIONAL_EXPORTS.items()):
             if nm not in exports:
-                self.err("no export %s" % nm)
+                if nm not in OPTIONAL_EXPORTS:
+                    self.err("no export %s" % nm)
                 continue
             kind, idx = exports[nm]
             want = ((I32,) * na, (I32,) * nr)

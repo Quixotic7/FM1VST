@@ -37,7 +37,8 @@ licence, the source URL with its commit, authors), your credits, the licence tex
    core whose glue has the line.)
 
 `fm1_add_rfm1` builds the same units as the plugin's core, with the same defines, includes and generate step, plus
-`core-glue/common/rfm1_shim.c` (the exports). It takes the manifest's id, name, version, licence and source URL from
+`core-glue/common/rfm1_shim.c` (the exports; with the optional live panel labels, `rfm1_labels_epoch` / `rfm1_label`:
+[DYNAMIC-LABELS.md](DYNAMIC-LABELS.md)). It takes the manifest's id, name, version, licence and source URL from
 your descriptor, so they always match. Its options (cmake/FM1Rfm1.cmake has them all):
 
 | Option | What |
