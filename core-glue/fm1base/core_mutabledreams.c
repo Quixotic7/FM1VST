@@ -23,7 +23,8 @@
  * then RESTORE FROM USB? SEL / HOME) of the app's objects (backup.c, tools/dreams_backup.py). Here the same, in that
  * order, from the submodule's files; the restore waits as on the device: the service runs on a coroutine
  * (FM1CORE_PL_SX_CORO) that yields where the device feeds its watchdog. The log readout says what an emulated unit
- * has: no crash recorded, then "end". The remote control (7D 4C 43) is not answered. The update key F0 22 24 35 7F F7
+ * has: no crash recorded, then "end". The remote control (7D 4C 43: the browser editor's panel and its lease, op 5)
+ * as main_fm1.c remote_frame, on plat_fm1.c's remote state, acked F0 7D 4C 43 op F7. The update key F0 22 24 35 7F F7
  * and UBOOT's F0 22 24 35 7D F7 are not taken (plat_sx.h): an installer gets the identity, no read requests (it
  * times out), and nothing is written. */
 #include <math.h>
@@ -229,10 +230,12 @@ static void fm1core_md_usb_cmd(uint32_t d)
                 !rc ? "RESTORED" : rc == RS_E_PLAYING ? "then restore" : rc == RS_E_NO ? "NOTHING CHANGED" : "NOT RESTORED");
     }
 }
+#define FM1CORE_FB_REMOTE_LEASE 1        /* (Mutable Dreams' fm1-base: plat_fm1.c remote_lease, op 5) */
+#include "fm1base_remote.h"           /* the remote control, 7D 4C 43 */
 static int fm1core_md_sx_accept(const uint8_t *f, uint32_t n)   /* the frames a service of fm1_main reads */
 {
     return fm1sx_is_mupg(f, n) || FM1CORE_PL_SX_READER(f, n) || fm1core_pl_sx_is(f, n, 0x4Cu, 0x47u) ||
-           fm1core_pl_sx_is(f, n, 0x4Du, 0x44u);
+           fm1core_pl_sx_is(f, n, 0x4Cu, 0x43u) || fm1core_pl_sx_is(f, n, 0x4Du, 0x44u);
 }
 /* main_fm1.c fm1_main, each pass: sysex_dispatch.h (a frame one service took is done; only a frame none took goes to
  * ota_service, then usb_cmd), then the backup streaming */
@@ -241,7 +244,7 @@ static void fm1core_md_sx_service(void)
     const uint8_t *p;
     uint32_t n;
     if (ota_frame_get(&p, &n)) {
-        if (ann_frame(p, n, fm1_ms) || fm1core_md_log_frame(p, n) || app_sysex(p, n))
+        if (ann_frame(p, n, fm1_ms) || fm1core_md_log_frame(p, n) || fm1core_fb_remote_frame(p, n) || app_sysex(p, n))
             ota_frame_done();
         else
             fm1core_md_usb_cmd(ota_service());
