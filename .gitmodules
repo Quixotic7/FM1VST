@@ -226,3 +226,6 @@
 [submodule "Vector37"]
 	path = cores/Vector37
 	url = https://github.com/genkigenki/Vector37
+[submodule "guitchordi"]
+	path = cores/guitchordi
+	url = https://github.com/stoogs/guitchordi

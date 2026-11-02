@@ -1,0 +1,10 @@
+# GuitChordi 0.1.0-beta.1: tests/core_conformance.cpp's script for this core (see its header for the directives).
+# The boot screen (2.2 s of audio time) does not hold back a key: the first playing key sounds (app.c fw_keys), and
+# D4 is a white (string) key, so the default sound test needs no prelude.
+flash none GuitChordi saves nothing to flash (its device adapter writes only the update's staging area; SAVE is a RAM snapshot: "SAVE: RAM ONLY FOR NOW")
+# no boot guard here (boot_options NULL); the reboot: OCT- + OCT+ held 5 s is UBOOT (exit 3)
+reboot wait 600
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6500
+reboot quit
