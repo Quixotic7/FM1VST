@@ -136,3 +136,6 @@
 [submodule "Ravel_FM1"]
 	path = cores/Ravel_FM1
 	url = https://github.com/De-Pattern/Ravel_FM1
+[submodule "fm1-trax"]
+	path = cores/fm1-trax
+	url = https://github.com/jartificer/fm1-trax
