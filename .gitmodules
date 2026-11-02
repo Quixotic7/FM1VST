@@ -148,3 +148,6 @@
 [submodule "smileyface"]
 	path = cores/smileyface
 	url = https://github.com/pbarilla/smileyface
+[submodule "chipbox"]
+	path = cores/chipbox
+	url = https://github.com/pbarilla/chipbox
