@@ -226,3 +226,6 @@
 [submodule "Vector37"]
 	path = cores/Vector37
 	url = https://github.com/genkigenki/Vector37
+[submodule "K-WASUB_Firmware_for_FM1"]
+	path = cores/K-WASUB_Firmware_for_FM1
+	url = https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1

@@ -1,0 +1,26 @@
+# K-WASUB 1.0.46: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the sound: an empty flash is the very first start: the start screen (until a touch), CLASSIC or SHIFT, then the look;
+# SEL answers each (ksub_ui.c ui_input), then the key plays the patch (DEEP PRESSURE)
+sound wait 1000
+sound btn SEL 60
+sound wait 540
+sound btn SEL 60
+sound wait 540
+sound btn SEL 60
+sound wait 300
+sound quit
+# the flash round trip: the answers kept in the settings record (2 s after, when silent; flash_sync does it at once);
+# after the reboot no question: the patch page, not CLASSIC or SHIFT
+save wait 1000
+save btn SEL 60
+save wait 540
+save btn SEL 60
+save wait 540
+save btn SEL 60
+save wait 3000
+save quit
+saved wait 1000
+saved quit
+saved-lcd-differs
+# the reboot: the host mode has no reset path (UBOOT is a USB request, the boot guard the device branch's)
+reboot none the host build has no reset path (UBOOT over USB, the boot guard in the device branch only)
