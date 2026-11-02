@@ -181,3 +181,6 @@
 [submodule "carnac-os"]
 	path = cores/carnac-os
 	url = https://github.com/OwenKirby/carnac-os
+[submodule "mono2k"]
+	path = cores/mono2k
+	url = https://github.com/InigoHernandez/mono2k
