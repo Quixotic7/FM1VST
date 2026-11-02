@@ -8,6 +8,7 @@
 | `fartmachine` | Fart Machine One 1.0.0 | `cores/Fart-Machine-One` @ V1.0.0 | GPL-3.0-only, **GATED** (the recordings) |
 | `ravel` | Ravel 1.5.0 (De-Pattern) | `cores/Ravel_FM1` @ v1.5.0 | GPL-3.0-only |
 | `trax` | FM1-TRAX 0.9.3 (jartificer) | `cores/fm1-trax` @ v0.9.3 | GPL-3.0-only (Terminus font: OFL-1.1) |
+| `mope1` | MOPE-1 0.3.0 (slothpallas) | `cores/mope-1` @ v0.3.0 | GPL-3.0-only (Barlow font: OFL-1.1) |
 
 Ravel keeps its own portable platform (`firmware/app/plat.h`) over X0X's Felucca layer, adapted (`firmware/fm1`): the
 unit is its device platform unit (`ravel_fm1.c`: `storage.c`, `ota.c`, `panel.c`, `plat_fm1.c` with `projstore.c`'s
@@ -20,6 +21,10 @@ FM1-TRAX (a Mega Drive tracker on FM1-GM's platform, FoMni's layout) is its devi
 `settings.c`'s song slots and instrument library in `storage.c`'s chunk store, `link.c`) on the HAL half, with
 `libc.c`'s string helpers (its memset / memcpy / memcmp renamed away); the chips and the tracker (`dsp/`, `trk/`) are
 their own units (`trax_*.c`).
+
+MOPE-1 (a wavetable synth with a backing band, a FiMba-1 fork) is FiMba's glue over its own files: the device unity
+build (`main.c`: the UI with `px.c` and `blob.c`) on the HAL half, the instrument (`dsp/synth.c`) its own unit
+(`mope1_synth.c`). The band playing defers `flash_sync` (the device never autosaves under it).
 
 The fm1-base cores (`core-glue/fm1base`, AMB-1) use the same HAL half and shared core.
 
@@ -74,6 +79,7 @@ before the frame), with the firmware's own handlers compiled from the submodule:
 | `fomni` | the installer, a screen reader | `ota.c` (`FM-1_8000400`, via `common/sysex_ota.h`), `announce.c` |
 | `fimba`, `fartmachine` | the installer | `ota.c` (`FM-1_8000601`, `FM-1_701`) |
 | `trax` | the web editor (`web/editor.html`: songs and library banks), the installer | `link.c` (F0 7D 46 44: HELLO, LIST, READ, WRITE / DATA, DELETE), `ota.c` (`FM-1_601000903`) |
+| `mope1` | the installer | `ota.c` (`FM-1_6673000300`; its load and crash replies, cmd 0x12 / 0x13, left out) |
 
 X0X's restore waits as the device does (`ota.c` read requests to the host, then RESTORE FROM USB? with SEL / HOME):
 its service runs on a coroutine (`common/coro.h`, `FM1CORE_PL_SX_CORO`) that yields at `fm1_wdt_feed`; while it waits
