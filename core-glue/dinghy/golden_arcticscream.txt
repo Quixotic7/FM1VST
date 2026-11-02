@@ -1,0 +1,13 @@
+# Arctic Scream's golden check (dinghy_golden.c): the script in tests/host.c's format, run by its own host sim and by
+# the core; the screens compared at 6000 ms (one of host.c's fixed SHOT times, after the 5.6 s boot screen). HOME to
+# MIXER 1 and its GRAIN SEND up, a chord on T1, ALGORITHM to T2, HOME twice (MIXER 2, HOME), FX (TAPE) and its WOW.
+2600 btn 8
+2610 enc 5 100
+3000 keys 0x4880
+3400 keys 0
+3500 enc 1 1
+4500 btn 8
+4510 btn 8
+5500 btn 2
+5600 enc 2 40
+6010 end

@@ -139,3 +139,6 @@
 [submodule "fm1-trax"]
 	path = cores/fm1-trax
 	url = https://github.com/jartificer/fm1-trax
+[submodule "Arctic-scream-FM-1"]
+	path = cores/Arctic-scream-FM-1
+	url = https://github.com/PolarPatch/Arctic-scream-FM-1
