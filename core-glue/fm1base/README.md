@@ -8,6 +8,7 @@
 | `remotefm1` | RemoteFM1 0.3.1 (Quixotic7) | `cores/RemoteFM1` @ v0.3.1 (e6fa19d), with `base` = fm1-base @ 934e40d, `base/bsp` = felucca-bsp @ 2cd696a, both patched at build time | MPL-2.0; FM6's MSFA parts Apache-2.0; Yamaha's DX7 ROM voices compiled in from the builder's .syx files |
 | `vesper` | VESPER 2.0.1 (Fat Cat Studios) | `cores/vesper-fm1` @ vesper-2.0.1 (f50977b), with `base` = fm1-base @ d8ff8f4, `base/bsp` = felucca-bsp @ 305c372 | GPL-3.0-only with the FM1 SDK linking exception (fm1-base MPL-2.0); MIT / Apache-2.0 DSP; CC0 samples |
 | `berlinan` | Berlinan 0.5.1 (Jiří Píša) | `cores/fm1-berlinan` @ v0.5.1 (afe2d93), with `base` = fm1-base @ 15dff6d, `base/bsp` = felucca-bsp @ 6b087c2 (AMB-1's) | GPL-2.0-or-later; Berkeley SoftFloat 3e BSD-3-Clause; fm1-base MPL-2.0 |
+| `modelar` | MODELAR 0.3 (Hirakos) | `cores/MODELAR` @ v0.3 (89475ca), with `base` = fm1-base @ 865bc2f, `base/bsp` = felucca-bsp @ 33cac69 | MPL-2.0 |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
@@ -187,6 +188,27 @@ v0.5.1 (afe2d93). Its fm1-base and felucca-bsp are AMB-1's (15dff6d, 6b087c2), s
 - **Saving:** only SAVE writes (pressed while playing, at the stop); `flash_sync` waits while a SAVE is pending.
 - Version and identity: build.py --release 0.5.1's, "0.5.1" and FM-1_23000501. USB product (fm1.toml
   `usb_product`): "FM-Berlinan". Not gated: GPL-2.0-or-later; SoftFloat BSD-3-Clause; the Barlow OFL.
+## MODELAR
+
+MODELAR (Hirakos: a semi-modular drone synth played like a Kaoss Pad, four cross-modulating oscillators, the keys an XY
+pad and gestures, a stereo FX chain, ARP and SEQ) is pinned at v0.3 (89475ca). Its fm1-base (865bc2f) is between
+LOOM-8's and VESPER's; `core_modelar.c` follows `core_vesper.c` (branch rfm1-vesper) with `sys_text.c`, without
+backup.c and without app_sysex (MODELAR has neither); neither of VESPER's two stand-ins is needed here.
+
+- **The sound is fm1.toml's `o2` unit** (`app/dsp/synth.c`), `EXTRA_SOURCES` straight from the submodule with
+  `PLAT_HOST` (its `.pool` section off), as build.py's host and browser builds compile it.
+- **The managers' SysEx:** main_fm1.c's order: the screen reader, the log readout, the remote control (this fm1-base's,
+  no lease), then `ota_service` (the M-UPGRADE identity). No app frames.
+- **Saving:** SAVE writes the patch and its eight patterns into the slot (store.c: 16 slots and a quick backup, 12 KiB
+  each from 0x97000 in the data area, `plat_data_write`); the system settings are a store object (0xFC000) written as
+  they change; `flash_sync` has nothing pending.
+- **RUN_ARGS:** MODELAR starts with its four volumes at 0 (silent until K1..K4 are turned), so the run turns them up
+  through the remote control: `tests/fixtures/modelar/volumes.syx` (F0 7D 4C 43 03 role 104 F7 for K1..K4, three
+  times), sent as `--sysex`.
+- Version and identity: build.py --release 0.3's, "0.3" and FM-1_42000300. USB product (fm1.toml `usb_product`):
+  "MODELAR FM-1". Not built: the splash (the logo), USB audio in.
+- Licence texts in the .rfm1: MODELAR's LICENSE (MPL-2.0), fm1-base's and felucca-bsp's MPL-2.0 with their notes, the
+  Barlow OFL. Not gated.
 
 ## A next fm1-base app
 

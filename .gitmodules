@@ -205,3 +205,6 @@
 [submodule "fm1-berlinan"]
 	path = cores/fm1-berlinan
 	url = https://github.com/jiripisa/fm1-berlinan
+[submodule "MODELAR"]
+	path = cores/MODELAR
+	url = https://github.com/hirakos999/MODELAR
