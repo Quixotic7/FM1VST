@@ -142,3 +142,6 @@
 [submodule "RUPTURE"]
 	path = cores/RUPTURE
 	url = https://github.com/SikkenWorks/RUPTURE
+[submodule "ETCH"]
+	path = cores/ETCH
+	url = https://github.com/SikkenWorks/ETCH

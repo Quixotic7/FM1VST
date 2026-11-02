@@ -1,14 +1,14 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The RUPTURE core's flash HAL: what the device's hal/fm1_flash.h (the SPI NOR driver that runs from RAM) gives
+/* The SikkenWorks cores' flash HAL: what the device's hal/fm1_flash.h (the SPI NOR driver that runs from RAM) gives
  * wave_store_target.c, ota.c and ota_target.c, on core-glue/common/nor.c's 1 MiB image. The core's VFS overlay
- * (core.cmake) reads this file in its place. The device's rules hold: the ranges (FL_RANGE_OK, which
+ * (sikken.cmake) reads this file in its place. The device's rules hold: the ranges (FL_RANGE_OK, which
  * wave_store_target.c sets before it includes this file, and FL_ERASE_RANGE_OK, its WIPE ALL window), a page program
  * within one 256-byte page that only clears bits, a 4 KiB erase of 0xFF that silences the audio for its ~45 ms
- * (nor.c's stall: the device's interrupts are off while it erases). Each operation marks fm1core_ru_flash_op, so the
- * fm1_wdt_feed the firmware calls after it does not yield (rupture_hal.h). irq_save / irq_restore only count. */
+ * (nor.c's stall: the device's interrupts are off while it erases). Each operation marks fm1core_sk_flash_op, so the
+ * fm1_wdt_feed the firmware calls after it does not yield (sikken_hal.h). irq_save / irq_restore only count. */
 #pragma once
 #include <stdint.h>
-#include "rupture_hal.h"
+#include "sikken_hal.h"
 
 #define RAMFN
 #define RAMINL static inline
@@ -43,13 +43,13 @@ static uint32_t fl_jedec_ram(void) { return 0x856014u; }   /* the FM-1's 1 MiB p
 static uint32_t fl_status_ram(void) { return 0; }
 static int fl_read_ram(uint32_t off, uint8_t *dst, uint32_t n)
 {
-    fm1core_ru_flash_op = 1;
+    fm1core_sk_flash_op = 1;
     return fm1nor_read(off, dst, n) ? -2 : 0;
 }
 #if !ETCH_FLASH_READ_ONLY
 static int fl_erase4k_ram(uint32_t off, uint32_t *took_us)
 {
-    fm1core_ru_flash_op = 1;
+    fm1core_sk_flash_op = 1;
     if (took_us)
         *took_us = 0;                              /* (its time: nor.c's stall, in the audio) */
     if (!FL_ERASE_RANGE_OK(off, 0x1000u) || (off & 0xFFFu))
@@ -58,7 +58,7 @@ static int fl_erase4k_ram(uint32_t off, uint32_t *took_us)
 }
 static int fl_prog_ram(uint32_t off, const uint8_t *src, uint32_t n, uint32_t *took_us)
 {
-    fm1core_ru_flash_op = 1;
+    fm1core_sk_flash_op = 1;
     if (took_us)
         *took_us = 0;
     if (!FL_RANGE_OK(off, n) || n == 0 || n > 256u || ((off & 0xFFu) + n) > 256u)
