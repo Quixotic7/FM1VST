@@ -30,6 +30,9 @@
  *                                        has no divider: always)
  *   FM1CORE_PL_MID_PLANE (optional)      a steady mid-level plane between lit and dim (fm1-base's plat_lights_mid:
  *                                        felucca-bsp's fm1_led_mid), shown at FM1P_LED_MID
+ *   FM1CORE_PL_DIM2_PLANE (optional)     a second dim plane after the glow, with its own duty (PERF-1's keys:
+ *                                        fm1_led_dim2 / fm1_led_dim2_div), shown at FM1CORE_PL_DIM2_LEVEL while
+ *                                        FM1CORE_PL_DIM2_ON
  *   FM1CORE_PL_NAME                      for the log lines ("X0X")
  *   FM1CORE_PL_FRAME_MS (optional)       the frame's period (default 16 ms; Ravel's main_fm1.c: 33)
  *   FM1CORE_PL_BTN_OF(label) / FM1CORE_PL_ENC_OF(role) (optional)   the firmware's panel.c index of an FM1P_B_*
@@ -152,6 +155,16 @@ static void fm1core_pl_out(void)                 /* the LEDs and the LCD, after 
     const uint8_t lv[3] = {FM1P_LED_LIT, FM1P_LED_MID, (uint8_t)(FM1CORE_PL_DIM_LEVEL)};
     const uint8_t *const pl[3] = {fm1_led, FM1CORE_PL_MID_PLANE, fm1_led_dim};
     fm1p_leds_planes(FM1CORE_PL_P, pl, lv, (FM1CORE_PL_DIM_ON) ? 3 : 2, FM1P_PLAY_GREEN_POS);
+#elif defined FM1CORE_PL_DIM2_PLANE
+    /* lit, the glow, then the second dim plane (either dim plane only while its duty is on) */
+    uint8_t lv[3] = {FM1P_LED_LIT, 0, 0};
+    const uint8_t *pl[3] = {fm1_led, 0, 0};
+    int n = 1;
+    if (FM1CORE_PL_DIM_ON)
+        lv[n] = (uint8_t)(FM1CORE_PL_DIM_LEVEL), pl[n++] = fm1_led_dim;
+    if (FM1CORE_PL_DIM2_ON)
+        lv[n] = (uint8_t)(FM1CORE_PL_DIM2_LEVEL), pl[n++] = FM1CORE_PL_DIM2_PLANE;
+    fm1p_leds_planes(FM1CORE_PL_P, (const uint8_t *const *)pl, lv, n, FM1P_PLAY_GREEN_POS);
 #else
     const uint8_t lv[2] = {FM1P_LED_LIT, (uint8_t)(FM1CORE_PL_DIM_LEVEL)};
     const uint8_t *const pl[2] = {fm1_led, fm1_led_dim};

@@ -8,6 +8,7 @@
 | `fartmachine` | Fart Machine One 1.0.0 | `cores/Fart-Machine-One` @ V1.0.0 | GPL-3.0-only, **GATED** (the recordings) |
 | `ravel` | Ravel 1.5.0 (De-Pattern) | `cores/Ravel_FM1` @ v1.5.0 | GPL-3.0-only |
 | `trax` | FM1-TRAX 0.9.3 (jartificer) | `cores/fm1-trax` @ v0.9.3 | GPL-3.0-only (Terminus font: OFL-1.1) |
+| `perf1` | PERF-1 0.16.0 (deamonSLINKY) | `cores/PERF-1` @ v0.16.0 | GPL-3.0-only (fonts: OFL-1.1) |
 
 Ravel keeps its own portable platform (`firmware/app/plat.h`) over X0X's Felucca layer, adapted (`firmware/fm1`): the
 unit is its device platform unit (`ravel_fm1.c`: `storage.c`, `ota.c`, `panel.c`, `plat_fm1.c` with `projstore.c`'s
@@ -20,6 +21,16 @@ FM1-TRAX (a Mega Drive tracker on FM1-GM's platform, FoMni's layout) is its devi
 `settings.c`'s song slots and instrument library in `storage.c`'s chunk store, `link.c`) on the HAL half, with
 `libc.c`'s string helpers (its memset / memcpy / memcmp renamed away); the chips and the tracker (`dsp/`, `trk/`) are
 their own units (`trax_*.c`).
+
+PERF-1 (a fork of HYP-1, itself of AMB-1, on FoMni's layout) is its device unity build (`main.c` without the hardware:
+UI, project, `plat_fm1.c`) on the HAL half, the instrument with Melodee's FM6 engine (`dsp/amb.c`) its own unit
+(`perf1_amb.c`). Its second core (`EN_CORE2`) and USB MIDI host (`PERF_USB_HOST`) are built out (the reverb runs
+inline); its sliced erase keeps the audio going through a write (`plat_store_seamless`), so the NOR image's erase
+stall is 0 ms; the keys' second dim plane (`fm1_led_dim2`) is plat_glue.h's optional `FM1CORE_PL_DIM2_PLANE`. Its
+SysEx (the web editor, the player's DX7 voices, BACKUP AND RESTORE: F0 7D 50 ..) is usb.c's `px_end` / `dx_end` and
+main_fm1.c's `dx_service` / `px_service`, copied unchanged into `core_perf1.c`, on `plat_sx.h`'s transport; a pass
+that hands a voice to the engine draws no frame (the engine takes it a render later, and autosave would store the
+voices without it).
 
 The fm1-base cores (`core-glue/fm1base`, AMB-1) use the same HAL half and shared core.
 
@@ -74,6 +85,7 @@ before the frame), with the firmware's own handlers compiled from the submodule:
 | `fomni` | the installer, a screen reader | `ota.c` (`FM-1_8000400`, via `common/sysex_ota.h`), `announce.c` |
 | `fimba`, `fartmachine` | the installer | `ota.c` (`FM-1_8000601`, `FM-1_701`) |
 | `trax` | the web editor (`web/editor.html`: songs and library banks), the installer | `link.c` (F0 7D 46 44: HELLO, LIST, READ, WRITE / DATA, DELETE), `ota.c` (`FM-1_601000903`) |
+| `perf1` | the web editor (`web/editor`: parameters, DX7 voices), the installer (identity, BACKUP AND RESTORE) | `px_end` / `dx_end`, `dx_service` / `px_service` (F0 7D 50 ..; DX7 bulk / single voice), `ota.c` (`FM-1_7001600`) |
 
 X0X's restore waits as the device does (`ota.c` read requests to the host, then RESTORE FROM USB? with SEL / HOME):
 its service runs on a coroutine (`common/coro.h`, `FM1CORE_PL_SX_CORO`) that yields at `fm1_wdt_feed`; while it waits
