@@ -154,3 +154,9 @@
 [submodule "bytemania"]
 	path = cores/bytemania
 	url = https://github.com/llozd/bytemania
+[submodule "fm1-sid"]
+	path = cores/fm1-sid
+	url = https://github.com/joakimeriksson/fm1-sid
+[submodule "fm1-dock"]
+	path = cores/fm1-dock
+	url = https://github.com/joakimeriksson/fm1-dock
