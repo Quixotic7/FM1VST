@@ -1,0 +1,22 @@
+# SIDOU 1.1.0: tests/core_conformance.cpp's script for this core (see its header for the directives). A fresh flash
+# plays the full boot once (app/boot.h: the C64 prompt, LOADING, the title card), and its capture takes the first
+# button or knob (a note ends it too, and plays).
+# the flash round trip: the boot dismissed (OCT+), ENV opens LAB at ENVELOPE, SAVE keeps the sound as a USER sound
+# (KEPT AS U01 LAB 01; docs/manual/lab.md), written once the device is quiet, and the settings record 5 s after
+# the change (app/settings.h SETTINGS_DEBOUNCE_MS).
+# After the reboot the boot is the short one (the settings name this version: the title card alone), where a fresh
+# unit's plays the full one: at 1.5 s the screens differ
+save wait 1500
+save btn OCT+ 100
+save wait 800
+save btn ENV 100
+save wait 800
+save btn SAVE 100
+save wait 8000
+save quit
+saved wait 1500
+saved quit
+saved-lcd-differs
+# the boot guard (app/bootguard.h): a boot after a failed one is the second that died early in a row, the third
+# boot ends in UBOOT: boot_options(1) makes this boot that third one (exit 3)
+reboot-guard 1
