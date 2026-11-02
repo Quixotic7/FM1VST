@@ -38,7 +38,8 @@ licence, the source URL with its commit, authors), your credits, the licence tex
 
 `fm1_add_rfm1` builds the same units as the plugin's core, with the same defines, includes and generate step, plus
 `core-glue/common/rfm1_shim.c` (the exports; with the optional live panel labels, `rfm1_labels_epoch` / `rfm1_label`:
-[DYNAMIC-LABELS.md](DYNAMIC-LABELS.md)). It takes the manifest's id, name, version, licence and source URL from
+[DYNAMIC-LABELS.md](DYNAMIC-LABELS.md); with `WANTS ain1`, the audio input's `rfm1_audio_in` / `rfm1_audio_in_info`:
+[VIRTUAL-CARTS.md](VIRTUAL-CARTS.md) section 8). It takes the manifest's id, name, version, licence and source URL from
 your descriptor, so they always match. Its options (cmake/FM1Rfm1.cmake has them all):
 
 | Option | What |
@@ -103,7 +104,8 @@ and `--lean L` play the chord at another velocity and aftertouch; `--help` has t
 `--folder DIR` serves `rfm1_host_1` from a RemoteFM1 folder (`DIR/code/<id>`, `DIR/data/<id>`, `DIR/audio`: sandboxed,
 as the manifest's `folders` allow, each request completed one device ms later); `--press PLAY@3000` presses a button by
 its label, `--info-at MS` and `--expect-ui TEXT` print and check `ui_info`, `--flash-in` / `--flash-out` boot from and
-save the flash image, `--screen out.ppm` saves the screen. Interpreted, a core runs 10-25 times slower than native (FM1VST's own cores: 8-50x real time on an M5
+save the flash image, `--screen out.ppm` saves the screen. `--audio-in in.wav` (with `--audio-in-latency N`,
+`--audio-in-off-at MS`, `--audio-in-once`) is a host's live input for a cart with `ain1` (VIRTUAL-CARTS.md 8). Interpreted, a core runs 10-25 times slower than native (FM1VST's own cores: 8-50x real time on an M5
 Mac with wasm3).
 
 ## Attach it to your releases (GitHub Actions)

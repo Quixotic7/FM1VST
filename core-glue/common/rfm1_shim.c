@@ -148,3 +148,22 @@ EXPORT(rfm1_label) uint32_t rfm1_label(int32_t which)
 {
     return fm1core_label && which >= 0 && which < FM1CORE_LBL_N ? (uint32_t)(uintptr_t)fm1core_label(which) : 0u;
 }
+
+/* audio input (docs/VIRTUAL-CARTS.md 8, capability ain1): only in a module built with ain1 in its fm1_add_rfm1 WANTS or
+ * NEEDS (RFM1_AIN1), so a cart without it exports neither and rfm1_check can require ain1 of a cart that does. The
+ * core's optional symbols, through weak references (a core without them: no-ops). Until the next ABI bump these are
+ * module symbols, not descriptor fields: a native host does not see them yet. */
+#ifdef RFM1_AIN1
+extern void fm1core_audio_in(const int16_t *stereo, uint32_t frames) __attribute__((weak));
+extern void fm1core_audio_in_info(uint32_t state, uint32_t latency_frames) __attribute__((weak));
+EXPORT(rfm1_audio_in) void rfm1_audio_in(uint32_t stereo, uint32_t frames)
+{
+    if (fm1core_audio_in)
+        fm1core_audio_in((const int16_t *)(uintptr_t)stereo, frames);
+}
+EXPORT(rfm1_audio_in_info) void rfm1_audio_in_info(uint32_t state, uint32_t latency_frames)
+{
+    if (fm1core_audio_in_info)
+        fm1core_audio_in_info(state, latency_frames);
+}
+#endif

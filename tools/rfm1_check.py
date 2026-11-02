@@ -19,6 +19,10 @@ imports rfm1_host_1 fails.
 
 Prints each problem ("error:" or "warning:") and a summary line; exits 1 if any file has an error, 2 on a usage or
 file error. Python 3 standard library only. Running the module is rfm1_run's job (tools/rfm1_run).
+
+Audio input (docs/VIRTUAL-CARTS.md 8, capability "ain1"): the manifest's optional "wants" (a list of names; names this
+checker does not know are ignored, as hosts ignore them), the optional exports rfm1_audio_in and rfm1_audio_in_info
+(both [i32 i32] -> []), and "ain1" in "wants" or "needs" whenever either is exported.
 """
 import json
 import re
@@ -48,7 +52,9 @@ HOST_IMPORTS = {
     "fs_cancel": ((I32,), ()),
     "fs_changed": ((), (I32,)),
 }
-KNOWN_NEEDS = {"fs1"}
+KNOWN_NEEDS = {"fs1", "ain1"}
+# docs/VIRTUAL-CARTS.md 8: audio input, called only when the manifest lists ain1 in "wants" or "needs"
+AIN_EXPORTS = {"rfm1_audio_in": (2, 0), "rfm1_audio_in_info": (2, 0)}
 # section 2: the exports, (params, results); all i32
 EXPORTS = {
     "rfm1_version": (0, 1), "rfm1_get": (1, 1), "rfm1_layout": (1, 1), "rfm1_alloc": (1, 1), "rfm1_free": (1, 0),
@@ -465,9 +471,9 @@ class Check:
 
         if exports.get("memory", (None,))[0] != 2:
             self.err("no memory exported as \"memory\"")
-        for nm, (na, nr) in list(EXPORTS.items()) + list(OPTIONAL_EXPORTS.items()):
+        for nm, (na, nr) in list(EXPORTS.items()) + list(OPTIONAL_EXPORTS.items()) + list(AIN_EXPORTS.items()):
             if nm not in exports:
-                if nm not in OPTIONAL_EXPORTS:
+                if nm not in OPTIONAL_EXPORTS and nm not in AIN_EXPORTS:
                     self.err("no export %s" % nm)
                 continue
             kind, idx = exports[nm]
@@ -481,6 +487,7 @@ class Check:
             if kind != 0 or ftype(idx) != ((), ()):
                 self.err("the export _initialize is not a function () -> ()")
         self.info["exports"] = len(exports)
+        self.info["ain_exports"] = sorted(n for n in AIN_EXPORTS if n in exports)
 
         # the custom sections (sections 1 and 4)
         if "rfm1" not in custom:
@@ -551,6 +558,15 @@ class Check:
                         self.err("the manifest's folders: %r is not audio, code or data" % k)
                     elif v not in ("r", "rw") or (k != "data" and v != "r"):
                         self.err("the manifest's folders: %s %r (audio and code: \"r\"; data: \"r\" or \"rw\")" % (k, v))
+        wants = m.get("wants", [])
+        if "wants" in m and (not isinstance(wants, list) or not all(isinstance(n, str) for n in wants)):
+            self.err("the manifest's wants is not a list of names")
+            wants = []
+        ain = self.info.get("ain_exports", [])
+        if ain and "ain1" not in wants and "ain1" not in (needs if isinstance(needs, list) else []):
+            self.err("exports %s but the manifest has no \"ain1\" in wants or needs (docs/VIRTUAL-CARTS.md 8)" %
+                     " and ".join(ain))
+        self.info["ain"] = bool(ain)
         host = False
         for mod, nm, ti in func_imports:
             what = "%s.%s" % (mod, nm)
@@ -651,11 +667,12 @@ def main(argv):
             print("%s: FAILED (%d errors)" % (p, len(c.errors)))
         elif not quiet:
             m = c.info.get("manifest", {})
-            print("%s: ok: %s %s (%s)%s, %d bytes, %g MiB memory, %d exports, %d licence texts%s" % (
+            print("%s: ok: %s %s (%s)%s%s, %d bytes, %g MiB memory, %d exports, %d licence texts%s" % (
                 p, m.get("id"), m.get("version"), m.get("license"),
                 ", virtual (Fantasy CFW, needs %s%s)" % (",".join(m.get("needs", [])) or "nothing",
                                                         ", imports rfm1_host_1" if c.info.get("host_imports") else "")
                 if c.info.get("virtual") else "",
+                ", audio input (ain1)" if c.info.get("ain") else "",
                 c.size, c.info.get("memory", 0) / 1048576, c.info.get("exports", 0), c.info.get("licenses", 0),
                 ", %d warnings" % len(c.warnings) if c.warnings else ""))
     return 1 if bad else 0

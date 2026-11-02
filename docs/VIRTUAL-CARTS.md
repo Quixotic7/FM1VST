@@ -223,6 +223,68 @@ version and the file's SHA-256 (the autosave, named states, `.rfm1state` files, 
 - **Host order:** the web player first. Its `engine.js` gets the `rfm1_host_1` imports and the page gets a folder
   picker. Then iOS, as the canonical format owner. Then Android and FM1VST.
 
+## 8. Audio input (`ain1`)
+
+Added 2026-11-02 (decided by the RemoteFM1 session; the first user is Elasticat FM-1's INPUT machine and its REC
+sampling). Hosts feed **live stereo input** to a cart: the phone's microphone, an audio interface, or on iOS (AUv3)
+another plugin's audio through an input bus. The web player comes first; until a host has it, `rfm1_run --audio-in`
+is the stand-in.
+
+**Manifest:** a new optional list, `"wants"`: capabilities a cart uses when the host has them and does without
+otherwise. Hosts use what they can and ignore the rest; **unknown names in `wants` are always ignored**. A cart that
+cannot work without input lists `ain1` in `"needs"` instead (and an old host then refuses it as for any unknown
+need). Elasticat: `"needs": ["fs1"], "wants": ["ain1"]`. `wants` is allowed on any cart, virtual or not.
+
+Hosts show "uses audio input" on the card, and ask for the microphone permission only for such carts, and only on a
+click (never at load).
+
+**Exports** (both optional; a host calls them only when the manifest lists `ain1` in `wants` or `needs` **and** the
+module exports them):
+
+```c
+/* [i32 i32] -> [] each */
+void rfm1_audio_in(const int16_t *stereo, uint32_t frames);
+void rfm1_audio_in_info(uint32_t state, uint32_t latency_frames);
+```
+
+- `rfm1_audio_in`: interleaved stereo int16 at 44100 Hz, in a buffer the host allocated with `rfm1_alloc` (like the
+  output buffer). The host calls it **immediately before `rfm1_audio(out, frames)` for the same block, with the same
+  `frames`**: input frame *i* lines up with output frame *i*. The cart copies or consumes the input during the call.
+  A block with no `rfm1_audio_in` before it is silence; a host may stop calling it at any time while the input is off
+  (that is not an error). Mono sources arrive duplicated, L = R.
+- `rfm1_audio_in_info`: called before the first `rfm1_audio_in` and whenever either value changes. `state` 0 = no
+  input (off, permission denied, unplugged), 1 = live. `latency_frames` = the **round trip** at 44.1 kHz (below; 0 =
+  unknown).
+- **Order per block** while input is on: `rfm1_audio_in_info` (only when something changed), `rfm1_audio_in(in,
+  frames)`, `rfm1_audio(out, frames)`. Turning input off, switching firmware or disposing the instance calls
+  `rfm1_audio_in_info(0, 0)`; blocks then come with no `rfm1_audio_in`.
+- **`latency_frames` is the round trip** (decided 2026-11-02 for every host: web, iOS, Android, FM1VST): a sound
+  the cart outputs in output frame *j* comes back (speaker to microphone, or an interface looped back) in input frame
+  *j* + `latency_frames`. To line a take up with what the cart played, take input frame *i* as played at output frame
+  *i* − `latency_frames`. Each host includes its output side, its input side and any buffering between them; a cart
+  adds nothing of its own (not its block). The web player's number: its 256-frame in-page delay + the capture latency
+  + the context's baseLatency and outputLatency (RemoteFM1 `web/engine/API.md` section 6). This replaces the first
+  wording ("the input side only").
+- **Monitoring:** hosts do not monitor the input themselves (unless they say so in their own UI); what is heard of it
+  is what the cart plays. A cart that passes the input through (Elasticat's INPUT machine) is the monitor.
+
+**Build:** `fm1_add_rfm1(<id> ... WANTS ain1)` writes the manifest's `wants` and compiles `rfm1_shim.c` with
+`RFM1_AIN1`, which exports `rfm1_audio_in` / `rfm1_audio_in_info` calling the core's optional module symbols
+`fm1core_audio_in(const int16_t *, uint32_t)` / `fm1core_audio_in_info(uint32_t, uint32_t)` (weak: a core without
+them gets no-ops). Without ain1 in `WANTS` or `NEEDS` neither is exported. `rfm1_check.py` accepts `wants` (a list of
+names; names it does not know are ignored), checks both exports' signatures when present, and fails a module that
+exports either without `ain1` in `wants` or `needs`.
+
+**`rfm1_run`:** `--audio-in F.wav` feeds the WAV (PCM 16 / 24 / 32-bit or float; mono as L = R; played at 44.1 kHz)
+through `rfm1_audio_in` immediately before each `rfm1_audio`, the same frames, looped (`--audio-in-once`: once, then
+no more calls), after `rfm1_audio_in_info(1, N)` (`--audio-in-latency N`, default 0); `--audio-in-off-at MS` calls
+`rfm1_audio_in_info(0, 0)` at that device ms and stops feeding; the order per block is the web player's (info when
+changed, then `rfm1_audio_in`, then `rfm1_audio`). A cart whose manifest has no `ain1`, or that does not
+export `rfm1_audio_in`, is run without input (said on stderr), as a host would.
+
+**Native cores** (`fm1core.h`): the same two calls become optional descriptor fields at the next ABI bump. Not now:
+until then they are module symbols only the `.rfm1` shim sees, and the plugin's native build has no input.
+
 ## Decisions (owner, 2026-11-01)
 
 1. Name in the apps: **Fantasy CFW**.

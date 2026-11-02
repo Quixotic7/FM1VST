@@ -32,6 +32,14 @@
  *     --screen F     the screen at the end as a PPM image
  *     --describe     no run: the descriptor as JSON (stdout, or --out FILE); works on a bare module (no manifest):
  *                    fm1_add_rfm1 makes the manifest from it
+ *     --audio-in F   a stand-in for a host's live input (docs/VIRTUAL-CARTS.md 8, ain1): the WAV F (PCM 16 / 24 /
+ *                    32-bit or float, mono arrives as L = R; played at 44.1 kHz whatever its rate) fed through
+ *                    rfm1_audio_in immediately before each rfm1_audio, the same frames, looped; rfm1_audio_in_info(1,
+ *                    latency) first. Only when the manifest lists ain1 in "wants" or "needs" and the module exports
+ *                    rfm1_audio_in, as a host does (else said and ignored)
+ *     --audio-in-once        the WAV once, then no more rfm1_audio_in calls (silence, state stays 1)
+ *     --audio-in-latency N   the latency_frames given to rfm1_audio_in_info (default 0, unknown)
+ *     --audio-in-off-at MS   at device ms MS: rfm1_audio_in_info(0, 0) (the input off), no more rfm1_audio_in
  *
  * Prints one line: id version, the chord's RMS and peak, LCD writes, x real time, load and boot times. Exits 0 when
  * the module loaded, its layout and manifest agree, it booted, drew and sounded, and never trapped or halted; 1 on a
@@ -58,7 +66,9 @@
 enum {
     F_INITIALIZE, F_VERSION, F_GET, F_LAYOUT, F_ALLOC, F_FREE, F_OPTIONS, F_BOOT_OPTIONS, F_INIT, F_TICK, F_FRAME,
     F_IDLE, F_AUDIO, F_MIDI_IN, F_MIDI_OUT_TAKE, F_HALTED, F_SHUTDOWN, F_FLASH_STAGE, F_FLASH, F_FLASH_DIRTY,
-    F_FLASH_SYNC, F_STATS, F_UI_INFO, F_N
+    F_FLASH_SYNC, F_STATS, F_UI_INFO,
+    F_AUDIO_IN, F_AUDIO_IN_INFO,           /* (optional: docs/VIRTUAL-CARTS.md 8, a cart with ain1) */
+    F_N
 };
 static const struct {
     const char *name;
@@ -70,6 +80,7 @@ static const struct {
     {"rfm1_audio", 2, 0},      {"rfm1_midi_in", 1, 1},       {"rfm1_midi_out_take", 1, 1}, {"rfm1_halted", 0, 1},
     {"rfm1_shutdown", 0, 0},   {"rfm1_flash_stage", 2, 1},   {"rfm1_flash", 0, 1},        {"rfm1_flash_dirty", 0, 1},
     {"rfm1_flash_sync", 0, 1}, {"rfm1_stats", 2, 0},         {"rfm1_ui_info", 2, 0},
+    {"rfm1_audio_in", 2, 0},   {"rfm1_audio_in_info", 2, 0},
 };
 
 static IM3Environment g_env;
@@ -373,7 +384,13 @@ static int32_t fs_do(int op, const char *path, int area, int64_t off, uint32_t b
         if (S_ISDIR(st.st_mode) ? rmdir(path) : unlink(path))
             return fs_errno(errno);
         return 0;
-    case FS_MKDIR:
+    case FS_MKDIR: {
+        char base[PATH_MAX];                       /* (the cart's own data folder, as at its first write) */
+        snprintf(base, sizeof base, "%s/data", g_fs.root);
+        mkdir(base, 0755);
+        snprintf(base, sizeof base, "%s/data/%s", g_fs.root, g_fs.id);
+        mkdir(base, 0755);
+    }
         if (mkdir(path, 0755) && !(errno == EEXIST && !stat(path, &st) && S_ISDIR(st.st_mode)))
             return fs_errno(errno);
         return 0;
@@ -728,11 +745,111 @@ static uint8_t *read_file(const char *path, size_t *n)
     return b;
 }
 
+/* the manifest lists name in its array member key ("wants": ["ain1"]): a flat object, so the array's span is enough */
+static int manifest_lists(const uint8_t *man, uint32_t n, const char *key, const char *name)
+{
+    char pat[64], want[64];
+    if (!man)
+        return 0;
+    snprintf(pat, sizeof pat, "\"%s\"", key);
+    snprintf(want, sizeof want, "\"%s\"", name);
+    const char *j = (const char *)man, *end = j + n;
+    for (const char *p = j; p + strlen(pat) <= end; p++) {
+        if (memcmp(p, pat, strlen(pat)))
+            continue;
+        const char *q = p + strlen(pat);
+        while (q < end && (*q == ' ' || *q == '\t' || *q == '\n' || *q == '\r' || *q == ':'))
+            q++;
+        if (q >= end || *q != '[')
+            continue;
+        const char *e = memchr(q, ']', (size_t)(end - q));
+        if (!e)
+            return 0;
+        for (const char *r = q; r + strlen(want) <= e; r++)
+            if (!memcmp(r, want, strlen(want)))
+                return 1;
+        return 0;
+    }
+    return 0;
+}
+
+static uint32_t le16(const uint8_t *p) { return (uint32_t)p[0] | (uint32_t)p[1] << 8; }
+static uint32_t le32(const uint8_t *p) { return le16(p) | le16(p + 2) << 16; }
+
+/* --audio-in: a RIFF WAVE file as int16 stereo frames (malloc'd); NULL after saying why */
+static int16_t *wav_read(const char *path, uint32_t *frames)
+{
+    size_t n = 0;
+    uint8_t *b = read_file(path, &n);
+    uint32_t fmt = 0, ch = 0, rate = 0, bits = 0, at = 12;
+    const uint8_t *data = NULL;
+    uint32_t dlen = 0;
+    if (!b || n < 12 || memcmp(b, "RIFF", 4) || memcmp(b + 8, "WAVE", 4)) {
+        fprintf(stderr, "rfm1_run: --audio-in %s: %s\n", path, b ? "not a RIFF WAVE file" : strerror(errno));
+        free(b);
+        return NULL;
+    }
+    while (at + 8 <= n) {
+        const uint32_t len = le32(b + at + 4);
+        const uint8_t *c = b + at + 8;
+        if (!memcmp(b + at, "fmt ", 4) && len >= 16 && at + 8 + 16 <= n) {
+            fmt = le16(c);
+            ch = le16(c + 2);
+            rate = le32(c + 4);
+            bits = le16(c + 14);
+            if (fmt == 0xFFFE && len >= 26 && at + 8 + 26 <= n)
+                fmt = le16(c + 24);          /* WAVE_FORMAT_EXTENSIBLE: the sub-format's tag */
+        } else if (!memcmp(b + at, "data", 4)) {
+            data = c;
+            dlen = len <= n - (at + 8) ? len : (uint32_t)(n - (at + 8));
+            break;
+        }
+        at += 8 + len + (len & 1u);
+    }
+    const uint32_t bps = bits / 8;
+    if (!data || !ch || !bps || !((fmt == 1 && (bits == 16 || bits == 24 || bits == 32)) || (fmt == 3 && bits == 32))) {
+        fprintf(stderr, "rfm1_run: --audio-in %s: no PCM 16 / 24 / 32-bit or float data\n", path);
+        free(b);
+        return NULL;
+    }
+    if (rate != FM1P_FS)
+        fprintf(stderr, "rfm1_run: --audio-in %s: %u Hz, played at %u Hz\n", path, rate, FM1P_FS);
+    const uint32_t nf = dlen / (bps * ch);
+    int16_t *out = malloc((size_t)(nf ? nf : 1) * 4u);
+    if (!out) {
+        free(b);
+        return NULL;
+    }
+    for (uint32_t i = 0; i < nf; i++)
+        for (uint32_t k = 0; k < 2; k++) {
+            const uint8_t *p = data + ((size_t)i * ch + (k < ch ? k : 0)) * bps;   /* (mono: L = R) */
+            int32_t v;
+            if (fmt == 3) {
+                float f;
+                memcpy(&f, p, 4);
+                f = f > 1.0f ? 1.0f : f < -1.0f ? -1.0f : f;
+                v = (int32_t)lrintf(f * 32767.0f);
+            } else if (bits == 16)
+                v = (int16_t)le16(p);
+            else if (bits == 24)
+                v = (int32_t)((uint32_t)p[0] << 8 | (uint32_t)p[1] << 16 | (uint32_t)p[2] << 24) >> 16;
+            else
+                v = (int32_t)le32(p) >> 16;
+            out[2 * i + k] = (int16_t)v;
+        }
+    free(b);
+    *frames = nf;
+    if (!nf)
+        fprintf(stderr, "rfm1_run: --audio-in %s: no frames (silence)\n", path);
+    return out;
+}
+
 static void usage(void)
 {
     fputs("usage: rfm1_run [--seconds S] [--settle MS] [--keys K,K,..] [--vel V] [--lean L] [--tap B,..] [--sysex FILE] [--wav FILE]\n"
           "                [--min-rms X] [--folder DIR] [--press B@MS[+D]].. [--info-at MS].. [--expect-ui S]..\n"
           "                [--flash-in FILE] [--flash-out FILE] [--screen FILE.ppm] [--midi-out FILE]\n"
+          "                [--audio-in FILE.wav [--audio-in-once] [--audio-in-latency N] [--audio-in-off-at MS]]\n"
           "                [--verbose] [--describe [--out FILE]] <file.rfm1>\n", stderr);
 }
 
@@ -750,6 +867,9 @@ int main(int argc, char **argv)
     int npress = 0, ninfo = 0, nexpect = 0;
     uint32_t info_at[64];
     const char *expect[16], *folder = NULL, *flash_in = NULL, *flash_out = NULL, *screen = NULL;
+    const char *ain_path = NULL;                 /* --audio-in */
+    int ain_once = 0;
+    uint32_t ain_latency = 0, ain_off_at = UINT32_MAX;
     for (int i = 1; i < argc; i++) {
         const char *a = argv[i];
         const int more = i + 1 < argc;
@@ -763,6 +883,10 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--midi-out") && more) midi_out_path = argv[++i];
         else if (!strcmp(a, "--out") && more) out_path = argv[++i];
         else if (!strcmp(a, "--describe")) describe = 1;
+        else if (!strcmp(a, "--audio-in") && more) ain_path = argv[++i];
+        else if (!strcmp(a, "--audio-in-once")) ain_once = 1;
+        else if (!strcmp(a, "--audio-in-latency") && more) ain_latency = (uint32_t)strtoul(argv[++i], NULL, 10);
+        else if (!strcmp(a, "--audio-in-off-at") && more) ain_off_at = (uint32_t)strtoul(argv[++i], NULL, 10);
         else if (!strcmp(a, "--verbose")) g_verbose = 1;
         else if (!strcmp(a, "--folder") && more) folder = argv[++i];
         else if (!strcmp(a, "--flash-in") && more) flash_in = argv[++i];
@@ -900,7 +1024,7 @@ int main(int argc, char **argv)
         r = m3_FindFunction(&g_fn[f], g_rt, FN[f].name);
         if (r) {
             g_fn[f] = NULL;
-            if (f == F_INITIALIZE)
+            if (f == F_INITIALIZE || f == F_AUDIO_IN || f == F_AUDIO_IN_INFO)
                 continue;
             return fail("export %s: %s", FN[f].name, r);
         }
@@ -994,6 +1118,22 @@ int main(int argc, char **argv)
                 g_fs.access[0], g_fs.access[1], g_fs.access[2]);
     }
 
+    /* --audio-in: the WAV, and whether the cart takes input (ain1 in the manifest's wants / needs, rfm1_audio_in) */
+    int16_t *ain = NULL;
+    uint32_t ain_frames = 0, ain_pos = 0, ain_blocks = 0, ain_buf = 0;
+    int ain_on = 0;
+    if (ain_path) {
+        const int listed = manifest_lists(man, mlen, "wants", "ain1") || manifest_lists(man, mlen, "needs", "ain1");
+        ain = wav_read(ain_path, &ain_frames);
+        if (!ain)
+            return 2;
+        if (!listed || !g_fn[F_AUDIO_IN])
+            fprintf(stderr, "rfm1_run: --audio-in %s ignored: %s\n", ain_path,
+                    !listed ? "the manifest has no ain1 in wants or needs" : "the module exports no rfm1_audio_in");
+        else
+            ain_on = 1;
+    }
+
     /* boot from a fresh flash (FM1CORE_FLASH_STAGED with no bytes), as Device::boot_from; or --flash-in's */
     const uint32_t scr = C1(F_ALLOC, 8192);
     if (!scr || !in_mem(scr, 8192))
@@ -1021,6 +1161,14 @@ int main(int argc, char **argv)
     const double boot_ms = (now_s() - t_boot) * 1000.0;
     if (g_err[0])
         return fail("init trapped: %s", g_err);
+    if (ain_on) {                                /* (the input buffer: rfm1_alloc'd like the output's) */
+        ain_buf = C1(F_ALLOC, FM1P_BLOCK * 4u);
+        if (!ain_buf || !in_mem(ain_buf, FM1P_BLOCK * 4u))
+            return fail("rfm1_alloc(%u) for the input = %u", FM1P_BLOCK * 4u, ain_buf);
+        C2(F_AUDIO_IN_INFO, 1, ain_latency);     /* before the first rfm1_audio_in */
+        fprintf(stderr, "rfm1_run: audio in %s: %u frames%s, latency %u frames\n", ain_path, ain_frames,
+                ain_once ? " once" : " looped", ain_latency);
+    }
 
     /* the clock */
     FILE *wav = NULL;
@@ -1159,7 +1307,29 @@ int main(int argc, char **argv)
             C0(F_FRAME);
         } else
             C0(F_IDLE);
+        if (ain_on && ms >= ain_off_at) {        /* --audio-in-off-at: the input off (unplugged, denied) */
+            C2(F_AUDIO_IN_INFO, 0, 0);
+            ain_on = 0;
+            fprintf(stderr, "rfm1_run: audio in off at %u ms (%u blocks fed)\n", ms, ain_blocks);
+        }
         while (frames_done + FM1P_BLOCK <= (uint64_t)ms * FM1P_FS / 1000u) {
+            if (ain_on && (!ain_once || ain_pos < ain_frames)) {   /* the input block, then the same frames out */
+                uint8_t *m = mem(NULL) + ain_buf;
+                for (uint32_t i = 0; i < FM1P_BLOCK; i++) {
+                    int16_t l = 0, r = 0;
+                    if (ain_pos < ain_frames) {
+                        l = ain[2 * ain_pos];
+                        r = ain[2 * ain_pos + 1];
+                        ain_pos++;
+                        if (!ain_once && ain_pos >= ain_frames)
+                            ain_pos = 0;
+                    }
+                    memcpy(m + 4u * i, &l, 2);
+                    memcpy(m + 4u * i + 2u, &r, 2);
+                }
+                C2(F_AUDIO_IN, ain_buf, FM1P_BLOCK);
+                ain_blocks++;
+            }
             C2(F_AUDIO, s_audio, FM1P_BLOCK);
             int16_t blk[FM1P_BLOCK * 2];
             if (in_mem(s_audio, sizeof blk))
@@ -1257,7 +1427,10 @@ int main(int argc, char **argv)
         bad |= fail("silent: the chord's RMS %.6f is under %.6f", rms, min_rms);
     if (!bad && !lcd_writes)
         bad |= fail("no LCD writes");
+    if (ain_path)
+        fprintf(stderr, "rfm1_run: audio in: %u blocks fed\n", ain_blocks);
     free(sx);
+    free(ain);
     m3_FreeRuntime(g_rt);
     m3_FreeEnvironment(g_env);
     free(bytes);
