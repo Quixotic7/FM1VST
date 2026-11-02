@@ -184,3 +184,6 @@
 [submodule "mono2k"]
 	path = cores/mono2k
 	url = https://github.com/InigoHernandez/mono2k
+[submodule "hawk-chua"]
+	path = cores/hawk-chua
+	url = https://github.com/Plieuw/hawk-chua
