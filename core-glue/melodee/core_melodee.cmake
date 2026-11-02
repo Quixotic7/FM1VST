@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # Melodee (https://github.com/keremimo/melodee, Felucca's fork with Prophet, FM6, CZ-1, SID and the x0x 909):
-# core-glue/melodee/ is its emulator over the unmodified sources (cmake/FM1Cores.cmake: fm1_add_core).
+# core-glue/melodee/ is its emulator over the unmodified sources (cmake/FM1Cores.cmake: fm1_add_core), the melodee
+# family (README.md: melodee_hal.h, melodee_glue.h, melodee_desc.h shared with Tessera, core_tessera.cmake).
 # x0x_drum_tables.h is not written by build.py generate() (build_app runs tools/gen_909_tables.py): EXTRA_GEN.
 # UN-GATED (the owner's call, 2026-10-19): the firmware bundles two sets of third-party sound data whose owners grant
 # no licence (LICENSING.md, "Third-party material"): Casio's 64 CZ-1 preset tones and Sequential's 200 Prophet-5/10
