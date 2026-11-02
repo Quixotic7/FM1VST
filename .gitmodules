@@ -133,3 +133,6 @@
 [submodule "RemoteFM1"]
 	path = cores/RemoteFM1
 	url = https://github.com/Quixotic7/RemoteFM1
+[submodule "Ravel_FM1"]
+	path = cores/Ravel_FM1
+	url = https://github.com/De-Pattern/Ravel_FM1
