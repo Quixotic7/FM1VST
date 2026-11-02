@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The FiMba-1 core's descriptor (plat_desc.h) */
-#define FM1CORE_PL_TITLE "FiMba-1"
+/* The FM1-TRAX core's descriptor (plat_desc.h) */
+#define FM1CORE_PL_TITLE "FM1-TRAX"
 #define FM1CORE_PL_REPO "https://github.com/jartificer/fm1-trax"
 /* app/panel.c B_NAME: the printed labels */
 #define FM1CORE_PL_BUTTONS                                                                                     \

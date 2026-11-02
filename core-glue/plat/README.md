@@ -7,6 +7,7 @@
 | `fimba` | FiMba-1 0.6.1 | `cores/fm1-fimba` @ v0.6.1 | GPL-3.0-only |
 | `fartmachine` | Fart Machine One 1.0.0 | `cores/Fart-Machine-One` @ V1.0.0 | GPL-3.0-only, **GATED** (the recordings) |
 | `ravel` | Ravel 1.5.0 (De-Pattern) | `cores/Ravel_FM1` @ v1.5.0 | GPL-3.0-only |
+| `trax` | FM1-TRAX 0.9.3 (jartificer) | `cores/fm1-trax` @ v0.9.3 | GPL-3.0-only (Terminus font: OFL-1.1) |
 
 Ravel keeps its own portable platform (`firmware/app/plat.h`) over X0X's Felucca layer, adapted (`firmware/fm1`): the
 unit is its device platform unit (`ravel_fm1.c`: `storage.c`, `ota.c`, `panel.c`, `plat_fm1.c` with `projstore.c`'s
@@ -14,6 +15,11 @@ compressed projects) on the HAL half, the instrument (`ravel_app.c`) its own uni
 knobs its own way (`FM1CORE_PL_BTN_OF` / `_ENC_OF`) and draws a frame every 33 ms (`FM1CORE_PL_FRAME_MS`). Its
 transfer page (projects and sound banks, `rv_xfer.c`, commands 0x60..0x64 in the update's framing) reads and writes
 the NOR image's slots as on the device.
+
+FM1-TRAX (a Mega Drive tracker on FM1-GM's platform, FoMni's layout) is its device unity build (`main.c`: the UI,
+`settings.c`'s song slots and instrument library in `storage.c`'s chunk store, `link.c`) on the HAL half, with
+`libc.c`'s string helpers (its memset / memcpy / memcmp renamed away); the chips and the tracker (`dsp/`, `trk/`) are
+their own units (`trax_*.c`).
 
 The fm1-base cores (`core-glue/fm1base`, AMB-1) use the same HAL half and shared core.
 
@@ -67,6 +73,7 @@ before the frame), with the firmware's own handlers compiled from the submodule:
 | `x0x` | `web/backup/index.html` (backup / restore), the break-loop page, a screen reader | `ota.c` (identity `FM-1_9010100`), `backup.c` (with `main_fm1.c`'s hooks redone in `core_x0x.c`), `editor.c` (INFO, PING, the sample slots), `announce.c` |
 | `fomni` | the installer, a screen reader | `ota.c` (`FM-1_8000400`, via `common/sysex_ota.h`), `announce.c` |
 | `fimba`, `fartmachine` | the installer | `ota.c` (`FM-1_8000601`, `FM-1_701`) |
+| `trax` | the web editor (`web/editor.html`: songs and library banks), the installer | `link.c` (F0 7D 46 44: HELLO, LIST, READ, WRITE / DATA, DELETE), `ota.c` (`FM-1_601000903`) |
 
 X0X's restore waits as the device does (`ota.c` read requests to the host, then RESTORE FROM USB? with SEL / HOME):
 its service runs on a coroutine (`common/coro.h`, `FM1CORE_PL_SX_CORO`) that yields at `fm1_wdt_feed`; while it waits
