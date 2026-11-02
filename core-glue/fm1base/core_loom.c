@@ -29,8 +29,8 @@
  * the restore waits as on the device: the service runs on a coroutine (FM1CORE_PL_SX_CORO) that yields where the
  * device feeds its watchdog. A restore writes the NOR image as the device does (each object staged in its other
  * copy, the journal record in the update's staging area, the headers last; rs_boot at power-on). The log readout
- * says what an emulated unit has: no crash recorded, then "end". The remote control (7D 4C 43) is not answered. The
- * update key F0 22 24 35 7F F7 and UBOOT's F0 22 24 35 7D F7 are not taken (plat_sx.h): an installer gets the
+ * says what an emulated unit has: no crash recorded, then "end". The remote control (7D 4C 43) as main_fm1.c
+ * remote_frame (fm1base_remote.h; LOOM-8's fm1-base has no lease: ops 1-4), acked F0 7D 4C 43 op F7. The update key F0 22 24 35 7F F7 and UBOOT's F0 22 24 35 7D F7 are not taken (plat_sx.h): an installer gets the
  * identity, no read requests (it times out), and nothing is written. */
 #include <math.h>
 #include <stdint.h>
@@ -237,16 +237,18 @@ static void fm1core_loom_usb_cmd(uint32_t d)
                 !rc ? "RESTORED" : rc == RS_E_PLAYING ? "then restore" : rc == RS_E_NO ? "NOTHING CHANGED" : "NOT RESTORED");
     }
 }
+#include "fm1base_remote.h"           /* the remote control, 7D 4C 43 (LOOM-8's fm1-base: no lease) */
 static int fm1core_loom_sx_accept(const uint8_t *f, uint32_t n)   /* the frames a service of fm1_main reads */
 {
     return fm1sx_is_mupg(f, n) || FM1CORE_PL_SX_READER(f, n) || fm1core_pl_sx_is(f, n, 0x4Cu, 0x47u) ||
-           fm1core_pl_sx_is(f, n, SB_HDR1, SB_HDR2);
+           fm1core_pl_sx_is(f, n, 0x4Cu, 0x43u) || fm1core_pl_sx_is(f, n, SB_HDR1, SB_HDR2);
 }
 static void fm1core_loom_sx_service(void) /* main_fm1.c fm1_main, each pass (the update key's ota_req: not taken) */
 {
     const uint8_t *p;
     uint32_t n;
-    if (ota_frame_get(&p, &n) && (ann_frame(p, n, fm1_ms) || fm1core_loom_log_frame(p, n) || app_sysex(p, n)))
+    if (ota_frame_get(&p, &n) && (ann_frame(p, n, fm1_ms) || fm1core_loom_log_frame(p, n) || fm1core_fb_remote_frame(p, n) ||
+                                    app_sysex(p, n)))
         ota_frame_done();
     fm1core_loom_usb_cmd(ota_service());  /* M-UPGRADE handshake; backup and restore (other SysEx is dropped) */
     bu_step();                            /* a backup streaming to the host */

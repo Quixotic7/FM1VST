@@ -20,7 +20,8 @@
  * control, then runs ota_service (the M-UPGRADE handshake: felucca-bsp's chip/ota.c, compiled here through
  * common/sysex_ota.h with the package identity). The log readout is main_fm1.c's (the hardware's: its crash record,
  * the supplies' registers, Bluetooth's log, the timer's statistics); here it says what an emulated unit has: no
- * crash recorded, then its "end". The remote control (7D 4C 43, tools/fm1_remote.py, not a manager) is not answered.
+ * crash recorded, then its "end". The remote control (7D 4C 43, tools/fm1_remote.py, not a manager) as main_fm1.c
+ * remote_frame (fm1base_remote.h; AMB-1's fm1-base has no lease: ops 1-4), acked F0 7D 4C 43 op F7.
  * The update key F0 22 24 35 7F F7 and UBOOT's F0 22 24 35 7D F7 are not taken (plat_sx.h): the installer gets the
  * identity, no read requests (it times out), and nothing is written. */
 #include <math.h>
@@ -100,15 +101,18 @@ static int fm1core_amb_log_frame(const uint8_t *p, uint32_t n)
     fm1core_amb_log_line("end");
     return 1;
 }
+#include "fm1base_remote.h"           /* the remote control, 7D 4C 43 (AMB-1's fm1-base: no lease) */
 static int fm1core_amb_sx_accept(const uint8_t *f, uint32_t n)
 {
-    return fm1sx_is_mupg(f, n) || FM1CORE_PL_SX_READER(f, n) || fm1core_pl_sx_is(f, n, 0x4Cu, 0x47u);
+    return fm1sx_is_mupg(f, n) || FM1CORE_PL_SX_READER(f, n) || fm1core_pl_sx_is(f, n, 0x4Cu, 0x47u) ||
+           fm1core_pl_sx_is(f, n, 0x4Cu, 0x43u);
 }
 static void fm1core_amb_sx_service(void)  /* main_fm1.c fm1_main, each pass (the update key's ota_req: not taken) */
 {
     const uint8_t *p;
     uint32_t n;
-    if (fm1sx_frame(&fm1core_pl_sxi, &p, &n) && (ann_frame(p, n, fm1_ms) || fm1core_amb_log_frame(p, n)))
+    if (fm1sx_frame(&fm1core_pl_sxi, &p, &n) && (ann_frame(p, n, fm1_ms) || fm1core_amb_log_frame(p, n) ||
+                                                      fm1core_fb_remote_frame(p, n)))
         fm1sx_done(&fm1core_pl_sxi);
     ota_service();                        /* M-UPGRADE handshake (other SysEx is dropped) */
 }
