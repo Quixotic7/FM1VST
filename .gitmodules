@@ -211,3 +211,6 @@
 [submodule "fm1-ctl"]
 	path = cores/fm1-ctl
 	url = https://github.com/charlesvestal/fm1-ctl
+[submodule "sidou"]
+	path = cores/sidou
+	url = https://github.com/dsablic/sidou
