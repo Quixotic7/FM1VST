@@ -199,3 +199,6 @@
 [submodule "matryoshka"]
 	path = cores/matryoshka
 	url = https://github.com/glvno/matryoshka
+[submodule "vesper-fm1"]
+	path = cores/vesper-fm1
+	url = https://github.com/fatcatstudios-hub/vesper-fm1
