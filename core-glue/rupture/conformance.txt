@@ -1,0 +1,26 @@
+# RUPTURE 1.48: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: a project saved by hand (README: SAVE opens PROJECTS, SAVE on the empty slot 1 its name
+# editor, ALGORITHM a character, SAVE stores the name and the project). After the reboot PROJECTS (SAVE) lists slot 1
+# by its name, where a fresh unit's shows it EMPTY
+save wait 5000
+save btn SAVE 80
+save wait 1000
+save btn SAVE 80
+save wait 1000
+save knob ALGORITHM +5
+save wait 1000
+save btn SAVE 80
+save wait 3000
+save quit
+saved wait 5000
+saved btn SAVE 80
+saved wait 1000
+saved quit
+saved-lcd-differs
+# (no reboot-guard: a second failed boot in a row starts RUPTURE in its SAFE MODE, read-only and silent, not halted)
+# OCT- + OCT+ held 5 s: UBOOT (bringup.c's main loop): exit 3
+reboot wait 5000
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit
