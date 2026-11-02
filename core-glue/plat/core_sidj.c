@@ -20,6 +20,12 @@
  * jack's UART (the ABI's MIDI in is one stream), the load valve (eng_busy: no render load is measured), the 200 ms
  * fade a flash write waits for on the device (the song is stopped, the write happens at once).
  *
+ * THE TUNES IT COMES WITH: the author's two (LICENSING.md "The tunes that come with the site": not under the GPL,
+ * free to play and to share unmodified with SiDJ), web/site/songs/, the ones the browser emulator puts in its store at
+ * the first visit (web/emu/index.html: songs.json's order, lengths and MD5). Compiled in unmodified (sidj_tunes.h, made
+ * by core_sidj.cmake in the build tree) and put in the store at boot when it was never written: a fresh flash. A store
+ * with songs, or with deleted ones, is left as it is.
+ *
  * Its version is a build-time define (SIDJ_VERSION, tools/version.sh's by default; tools/build.py --release sets it):
  * the hub's version (core_sidj.cmake). */
 #include <math.h>
@@ -158,6 +164,7 @@ static int songs_play_request(int k, int subsong);
 #include "app/clkstore.c"
 #include "app/ui.c"
 #undef __attribute__
+#include "sidj_tunes.h"
 
 /* main_fm1.c: the MIDI clock's bytes, timed. A byte rendered at frame f of a block goes out when that frame plays
  * (the device: a half buffer after its interrupt, TIMER5 sending it); here the frame's time on the device clock
@@ -222,6 +229,11 @@ static void fm1core_pl_app_boot(void)    /* main_fm1.c fm1_main, after panel_ini
     settings_load();                      /* defaults if nothing is saved */
     eng_usb4 = set.usb4;                  /* the speed cap (USB audio's format: not here) */
     songs_scan();                         /* the index of the song pool */
+    if (flash_ok && song_blank(SONG_POOL_BASE, SONG_POOL_SIZE)) {   /* never written: the tunes it comes with */
+        int i;
+        for (i = 0; i < SIDJ_NTUNES; i++)
+            song_put(sidj_tunes[i].data, sidj_tunes[i].size, sidj_tunes[i].md5, sidj_tunes[i].lens, sidj_tunes[i].nlen);
+    }
     fm1core_sidj_frames = 0;
     fm1core_sidj_rt_w = fm1core_sidj_rt_r = 0;
     ci_w = ci_r = ci_n = 0;

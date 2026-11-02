@@ -27,8 +27,10 @@ files, remixed live) is its device unity build (`sidj.c`: the UI, the settings, 
 0xA0000..0xDBFFF read in place from the image, the kept MIDI clocks in `OBJ_SOUND`) on the HAL half; the SID, the C64
 and the engine are their own units (`sidj_*.c`). Its MIDI clock in is timed by a hook (`FM1CORE_PL_MIDI_IN_HOOK`: F8
 into its own ring, never queued, as its usb.c does), its clock out leaves at the frame it was rendered for
-(`FM1CORE_PL_TICK_HOOK`). Left out: USB audio (the five-channel stream), the TRS jack. The flash starts with no songs
-(silent): the run test sends one first, `sidj_test_tune.syx` (`make_test_tune.py`: a tiny PSID written for the test).
+(`FM1CORE_PL_TICK_HOOK`). Left out: USB audio (the five-channel stream), the TRS jack. A fresh flash gets the author's
+two tunes the site and the browser emulator come with (`web/site/songs/`: Debut & Credit and TwinCross, unmodified, not
+under the GPL: LICENSING.md's terms are a licence section of the .rfm1), compiled in from the submodule at configure
+time (`<build>/core_sidj_tunes/sidj_tunes.h`) and put in a song store never written; the run test taps PLAY.
 
 The fm1-base cores (`core-glue/fm1base`, AMB-1) use the same HAL half and shared core.
 
