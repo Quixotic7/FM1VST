@@ -73,6 +73,8 @@ endif()
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: what is compiled in, all
 # GPL-3.0-only (RUPTURE's own code and art, Felucca's HAL and drivers, the 5x7 pixel font drawn for the firmware):
 # the GPL and Felucca's licensing notes. Not the JieLi loader's Apache-2.0 (left out: ota_trusted_loader.h above).
+# RUN_ARGS: the chord after the firmware's staged output startup (README: the first sound at about 5.7 s), not before.
 fm1_add_rfm1(rupture AUTHORS "Joppe Sikken (SikkenWorks)" "Leo Kuroshita (Hügelton Instruments)"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
-                           "Felucca licensing (in {name})=licenses/FELUCCA-LICENSING.txt")
+                           "Felucca licensing (in {name})=licenses/FELUCCA-LICENSING.txt"
+             RUN_ARGS --settle 6000)

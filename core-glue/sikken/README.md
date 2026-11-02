@@ -50,6 +50,12 @@ runs, not a twin of it. One glue serves both:
   `FM-1_1500` identities, so it works with the ETCH core (probe, RAM snapshot read), not RUPTURE's.
 - **ETCH's cold boot**: ETCH asks for a workflow (SIMPLE or ADVANCED, K1 chooses, SEL confirms) at every cold boot
   and is silent until then; `rfm1_run`'s RUN_ARGS and the `sound` script press SEL.
+- **RUPTURE's first sound**: about 5.7 s after power-on, as on the device. The firmware's own staged output startup
+  (`native_output_startup.h`, `audio_target.c` `native_output_poll`) keeps the DMA at digital zero through the splash
+  (40 ms + 24 x 56 ms + 675 ms, ~2.06 s), USB state stable for 2 s, PC6 then 1 s of analog settle, 500 ms of a quiet
+  screen and the PLAY frame, then a 186 ms fade in. A key released before then is not heard (one held over it is);
+  after it a key sounds within a few ms. The conformance key goes down at 6.3 s (`settle_ms 6000`), `rfm1_run`'s
+  chord at 6 s (RUN_ARGS `--settle 6000`). ETCH has the same gate, after its workflow prompt.
 - **The version**: the tags are `V<major>.<minor>` with a capital V (`V1.88` is 1.88). The cmake reads it from
   `RELEASE-MANIFEST.json`: `"release_version"` (ETCH), `"version"` (RUPTURE).
 - **Not here**: the TRS jack, USB audio, the update session and the USB UBOOT key (both dropped, printed). OCT- + OCT+

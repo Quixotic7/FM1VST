@@ -1,4 +1,7 @@
 # RUPTURE 1.48: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the sound: RUPTURE's output is digital zero until its staged startup ends (README: about 5.7 s after power-on,
+# as on the device); a key released before then is not heard, so the key goes down at 6.3 s
+settle_ms 6000
 # the flash round trip: a project saved by hand (README: SAVE opens PROJECTS, SAVE on the empty slot 1 its name
 # editor, ALGORITHM a character, SAVE stores the name and the project). After the reboot PROJECTS (SAVE) lists slot 1
 # by its name, where a fresh unit's shows it EMPTY
