@@ -1,0 +1,13 @@
+# Smileyface's golden check (dinghy_golden.c): the script in tests/host.c's format, run by its own host sim and by
+# the core; the screens compared at 4000 ms. After the power-on smiley (SPLASH_DEMO, 1.1 s): two notes written on the
+# STEPS view, KNOB 1 (CUTOFF) up, LFO a random pattern, PLAY. Only taps of buttons that act on the press (host.c's
+# "btn" sets the edge alone, never the held bit: SEL, HOME, EDIT, ENV and GLO act on holds and releases).
+1500 keys 0x80
+1600 keys 0
+1800 keys 0x800
+1900 keys 0
+2200 enc 2 5
+2600 btn 5
+3000 btn 12
+4000 shot
+4010 end

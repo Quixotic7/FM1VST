@@ -1,0 +1,14 @@
+# Smileyface 1.0.0: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the power-on smiley stands 1.1 s (smileyface.c splash, SPLASH_DEMO): the key after it
+settle_ms 2000
+# the flash round trip: PRESETS three detents on (pattern 4), kept in the open project (slot_save, 2 s after the
+# edit when stopped; flash_sync does it at once); after the reboot the STEPS view shows pattern 4, not 1
+save wait 2000
+save knob PRESETS +3
+save wait 3000
+save quit
+saved wait 2000
+saved quit
+saved-lcd-differs
+# the reboot: the host mode has no reset path (UBOOT is a USB request, the boot guard the device branch's)
+reboot none the host build has no reset path (UBOOT over USB, the boot guard in the device branch only)
