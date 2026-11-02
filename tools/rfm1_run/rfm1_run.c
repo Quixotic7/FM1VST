@@ -30,6 +30,14 @@
  *     --flash-in F   boot from this flash image (a save) instead of a fresh flash
  *     --flash-out F  the flash image after the run (flash_sync first): a save
  *     --screen F     the screen at the end as a PPM image
+ *     --profile      the time spent in each export (tick, frame, idle, audio, ..): its share of the run, the mean and
+ *                    the worst single call, and the worst device ms (tick + frame or idle + its audio blocks)
+ *     --fprofile N   (a build with -DRFM1_FPROF and the shadow-stack patch, tools/rfm1_run/wasm3_fprof.patch) the N
+ *                    hottest wasm functions by samples of a 0.1 ms profiling timer, self and inclusive: an .rfm1 built
+ *                    with -DFM1_RFM1_NAMES=ON shows their names
+ *     --helpers      docs/HOST-HELPERS.md 3: a module export named as a helper (strlen) runs natively here, bound
+ *                    before the module is compiled (the module's own code is the fallback of a host without this)
+ *     --frame-ms N   frame every N device ms (default 15; RemoteFM1's iOS app draws an .rfm1 at 30 fps: 33)
  *     --describe     no run: the descriptor as JSON (stdout, or --out FILE); works on a bare module (no manifest):
  *                    fm1_add_rfm1 makes the manifest from it
  *
@@ -53,6 +61,7 @@
 
 #include "fm1core.h"
 #include "wasm3.h"
+#include "m3_env.h"                    /* (--helpers: IM3Function's module, LinkRawFunction) */
 
 /* ------------------------------------------------------------------------------------------------ the exports --- */
 enum {
@@ -79,6 +88,77 @@ static int g_verbose;
 static int g_exit_code = -1;           /* proc_exit's code, -1 none */
 static char g_err[512];                /* the first trap */
 static const char *g_file = "";
+static int g_profile;                  /* --profile */
+static struct { uint64_t calls; double total, worst; } g_prof[F_N];
+
+#ifdef RFM1_FPROF
+/* --fprofile: wasm3's op_Entry pushes the function on this stack, op_Call / op_CallIndirect restore the depth (the
+ * patch); a SIGPROF timer counts the top (self) and every distinct frame (inclusive) */
+#include <signal.h>
+#include <sys/time.h>
+void *volatile rfm1_prof_stack[1024];
+volatile int rfm1_prof_depth;
+#define FP_SLOTS 16384
+static struct { void *f; uint32_t self, incl; } g_fp[FP_SLOTS];
+static volatile uint32_t g_fp_total, g_fp_outside, g_fp_on;
+static uint32_t fp_slot(void *f)
+{
+    uint32_t h = (uint32_t)(((uintptr_t)f >> 4) * 2654435761u) & (FP_SLOTS - 1);
+    while (g_fp[h].f && g_fp[h].f != f)
+        h = (h + 1) & (FP_SLOTS - 1);
+    g_fp[h].f = f;
+    return h;
+}
+static void fp_signal(int sig)
+{
+    (void)sig;
+    if (!g_fp_on)
+        return;
+    g_fp_total++;
+    int d = rfm1_prof_depth;
+    if (d > 1024)
+        d = 1024;
+    if (d <= 0) {
+        g_fp_outside++;
+        return;
+    }
+    g_fp[fp_slot(rfm1_prof_stack[d - 1])].self++;
+    for (int i = 0; i < d; i++) {
+        int seen = 0;
+        for (int j = 0; j < i && !seen; j++)
+            seen = rfm1_prof_stack[j] == rfm1_prof_stack[i];
+        if (!seen)
+            g_fp[fp_slot(rfm1_prof_stack[i])].incl++;
+    }
+}
+static int fp_by_self(const void *a, const void *b)
+{
+    const uint32_t x = ((const uint32_t *)a)[0], y = ((const uint32_t *)b)[0];
+    return x < y ? 1 : x > y ? -1 : 0;
+}
+static void fp_report(int top)
+{
+    static uint32_t idx[FP_SLOTS][2];
+    int n = 0;
+    for (int pass = 0; pass < 2; pass++) {
+        n = 0;
+        for (uint32_t i = 0; i < FP_SLOTS; i++)
+            if (g_fp[i].f) {
+                idx[n][0] = pass ? g_fp[i].incl : g_fp[i].self;
+                idx[n][1] = i;
+                n++;
+            }
+        qsort(idx, (size_t)n, sizeof idx[0], fp_by_self);
+        printf("fprofile %s (%u samples, %u outside the module):\n", pass ? "inclusive" : "self", g_fp_total,
+               g_fp_outside);
+        for (int k = 0; k < n && k < top; k++) {
+            const uint32_t i = idx[k][1];
+            const char *nm = m3_GetFunctionName((IM3Function)g_fp[i].f);
+            printf("  %6.2f%%  %s\n", g_fp_total ? 100.0 * idx[k][0] / g_fp_total : 0, nm ? nm : "?");
+        }
+    }
+}
+#endif
 
 static double now_s(void)
 {
@@ -173,6 +253,51 @@ static m3ApiRawFunction(w_proc_exit)       /* the instance halts (halted = 0x100
     (void)runtime; (void)_ctx; (void)_mem;
     g_exit_code = (int)(code & 0xFFu);
     m3ApiTrap(m3Err_trapExit);
+}
+
+/* -------------------------------------------------------------------------------------------- the helpers --- */
+/* docs/HOST-HELPERS.md 3: C library functions the module exports by name, run natively with the same result. Each
+ * checks every byte it reads against the memory's size and traps where the module's own code would */
+M3Result LinkRawFunction(IM3Module io_module, IM3Function io_function, ccstr_t signature, const void *i_function,
+                         const void *i_userdata);
+static uint32_t g_helper_calls;
+static m3ApiRawFunction(h_strlen)          /* size_t strlen(const char *) */
+{
+    m3ApiReturnType(uint32_t);
+    m3ApiGetArg(uint32_t, s);
+    (void)_ctx;
+    const uint32_t size = m3_GetMemorySize(runtime);
+    const uint8_t *m = (const uint8_t *)_mem;
+    g_helper_calls++;
+    if (s >= size)
+        m3ApiTrap(m3Err_trapOutOfBoundsMemoryAccess);
+    const uint8_t *z = memchr(m + s, 0, size - s);
+    if (!z)
+        m3ApiTrap(m3Err_trapOutOfBoundsMemoryAccess);
+    m3ApiReturn((uint32_t)(z - (m + s)));
+}
+static const struct {
+    const char *name, *sig;
+    M3RawCall f;
+} HELPERS[] = {
+    {"strlen", "i(i)", h_strlen},
+};
+/* each helper the module exports, bound before m3_CompileModule (so every call to it compiles to the native one);
+ * the number bound */
+static int helpers_bind(IM3Runtime rt)
+{
+    int n = 0;
+    for (size_t i = 0; i < sizeof HELPERS / sizeof HELPERS[0]; i++) {
+        IM3Function fn = NULL;
+        if (m3_FindFunction(&fn, rt, HELPERS[i].name) || !fn || fn->import.moduleUtf8)
+            continue;
+        if (LinkRawFunction(fn->module, fn, HELPERS[i].sig, (const void *)HELPERS[i].f, NULL)) {
+            fprintf(stderr, "rfm1_run: helper %s: not bound (its signature)\n", HELPERS[i].name);
+            continue;
+        }
+        n++;
+    }
+    return n;
 }
 
 /* ------------------------------------------------------------------------------------------- the folder (fs1) --- */
@@ -489,7 +614,21 @@ static uint32_t call(int f, uint32_t a0, uint32_t a1, uint32_t a2, uint32_t a3)
         return 0;
     if (g_err[0])                           /* (after a trap: the instance is dead) */
         return 0;
+    const double t0 = g_profile ? now_s() : 0;
+#ifdef RFM1_FPROF
+    rfm1_prof_depth = 0;
+#endif
     M3Result res = m3_Call(g_fn[f], FN[f].nargs, ap);
+#ifdef RFM1_FPROF
+    rfm1_prof_depth = 0;
+#endif
+    if (g_profile) {
+        const double dt = now_s() - t0;
+        g_prof[f].calls++;
+        g_prof[f].total += dt;
+        if (dt > g_prof[f].worst)
+            g_prof[f].worst = dt;
+    }
     if (res) {
         M3ErrorInfo info;
         memset(&info, 0, sizeof info);
@@ -733,13 +872,18 @@ static void usage(void)
     fputs("usage: rfm1_run [--seconds S] [--settle MS] [--keys K,K,..] [--vel V] [--lean L] [--tap B,..] [--sysex FILE] [--wav FILE]\n"
           "                [--min-rms X] [--folder DIR] [--press B@MS[+D]].. [--info-at MS].. [--expect-ui S]..\n"
           "                [--flash-in FILE] [--flash-out FILE] [--screen FILE.ppm] [--midi-out FILE]\n"
+          "                [--profile] [--frame-ms N] [--helpers]\n"
           "                [--verbose] [--describe [--out FILE]] <file.rfm1>\n", stderr);
 }
 
 int main(int argc, char **argv)
 {
     double seconds = 5.0, min_rms = 0.0005;
-    uint32_t settle_ms = 4000;
+    uint32_t settle_ms = 4000, frame_ms = 15;
+    int helpers = 0, nhelpers = 0;
+#ifdef RFM1_FPROF
+    int fprofile = 0;
+#endif
     int describe = 0;
     const char *out_path = NULL, *wav_path = NULL, *sysex_path = NULL, *path = NULL, *midi_out_path = NULL;
     int keys[FM1P_NKEY], nkeys = 0, vel = 100, lean = 0;
@@ -764,6 +908,12 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--out") && more) out_path = argv[++i];
         else if (!strcmp(a, "--describe")) describe = 1;
         else if (!strcmp(a, "--verbose")) g_verbose = 1;
+        else if (!strcmp(a, "--profile")) g_profile = 1;
+        else if (!strcmp(a, "--helpers")) helpers = 1;
+#ifdef RFM1_FPROF
+        else if (!strcmp(a, "--fprofile") && more) fprofile = atoi(argv[++i]);
+#endif
+        else if (!strcmp(a, "--frame-ms") && more) frame_ms = (uint32_t)strtoul(argv[++i], NULL, 10);
         else if (!strcmp(a, "--folder") && more) folder = argv[++i];
         else if (!strcmp(a, "--flash-in") && more) flash_in = argv[++i];
         else if (!strcmp(a, "--flash-out") && more) flash_out = argv[++i];
@@ -822,7 +972,7 @@ int main(int argc, char **argv)
         } else
             path = a;
     }
-    if (!path || vel < 0 || vel > 127 || lean < 0 || lean > 100) {
+    if (!path || !frame_ms || vel < 0 || vel > 127 || lean < 0 || lean > 100) {
         usage();
         return 2;
     }
@@ -893,6 +1043,8 @@ int main(int argc, char **argv)
                 return fail("import rfm1_host_1.%s: %s", hi[i].name, r);
         }
     }
+    if (helpers)
+        nhelpers = helpers_bind(g_rt);
     r = m3_CompileModule(mod);
     if (r)
         return fail("compile: %s (an import outside the format's list, or an instruction wasm3 0.5.0 lacks)", r);
@@ -1061,11 +1213,23 @@ int main(int argc, char **argv)
     double sumsq = 0, peak = 0, wall_chord = 0;
     uint32_t pending_pkt = 0, sx_packets = 0;
     int sx_in = 0;                               /* (inside a frame) */
+    memset(g_prof, 0, sizeof g_prof);            /* (--profile: the run only, not the load and boot) */
+    double worst_ms = 0;
+    uint32_t worst_ms_at = 0;
+#ifdef RFM1_FPROF
+    if (fprofile) {
+        struct itimerval it = {{0, 100}, {0, 100}};
+        signal(SIGPROF, fp_signal);
+        setitimer(ITIMER_PROF, &it, NULL);
+        g_fp_on = 1;
+    }
+#endif
     const double t_run = now_s();
     double t_chord = 0;
     int halted = 0, chord_on = 0, chord_done = 0;
     uint32_t ms = 0;
     for (; ms < end_ms && ms < 600000u; ms++) {
+        const double t_ms = g_profile ? now_s() : 0;
         if (sx && ms >= sx_from && (pending_pkt || sx_at < sx_n)) {
             while (!mo && C1(F_MIDI_OUT_TAKE, s_words) && !g_err[0])
                 (void)rd32(s_words);
@@ -1154,7 +1318,7 @@ int main(int argc, char **argv)
                 printf("ui@%u: %s\n", ms, ui ? ui : "");
             }
         C1(F_TICK, ms);
-        if (ms == 0 || ms - last_frame >= 15u) {
+        if (ms == 0 || ms - last_frame >= frame_ms) {
             last_frame = ms;
             C0(F_FRAME);
         } else
@@ -1179,6 +1343,10 @@ int main(int argc, char **argv)
             }
             frames_done += FM1P_BLOCK;
         }
+        if (g_profile && now_s() - t_ms > worst_ms) {
+            worst_ms = now_s() - t_ms;
+            worst_ms_at = ms;
+        }
         if (g_err[0])
             break;
         if (ms % 50u == 0 && C0(F_HALTED)) {
@@ -1187,6 +1355,9 @@ int main(int argc, char **argv)
         }
     }
     const uint32_t total_ms = ms;
+#ifdef RFM1_FPROF
+    g_fp_on = 0;
+#endif
     if (mo) {
         fclose(mo);
         fprintf(stderr, "rfm1_run: %s: %u MIDI bytes out\n", midi_out_path, mo_bytes);
@@ -1239,6 +1410,31 @@ int main(int argc, char **argv)
            "boot %.1f ms, %u KiB memory, flash %u KiB, %ld KiB file%s%s\n",
            id, version, rms, peak, lcd_writes, xrt, xrt_chord, load_ms, boot_ms, memsize / 1024u, flash_size / 1024u,
            (long)(n / 1024), info[0] ? "; ui_info: " : "", info);
+    if (helpers)
+        printf("helpers: %d bound, %u native calls\n", nhelpers, g_helper_calls);
+    if (g_profile) {   /* the exports' share of the run's wall time (the rest: rfm1_run itself) */
+        static const int SHOW[] = {F_TICK, F_FRAME, F_IDLE, F_AUDIO, F_MIDI_IN, F_MIDI_OUT_TAKE, F_HALTED};
+        double in = 0;
+        printf("profile %s %s (frame every %u ms, %u device ms, %.1f ms wall):\n", id, version, frame_ms, total_ms,
+               wall * 1e3);
+        printf("  %-18s %8s %7s %10s %10s\n", "export", "calls", "share", "mean us", "worst us");
+        for (size_t k = 0; k < sizeof SHOW / sizeof SHOW[0]; k++) {
+            const int f = SHOW[k];
+            if (!g_prof[f].calls)
+                continue;
+            in += g_prof[f].total;
+            printf("  %-18s %8llu %6.1f%% %10.2f %10.1f\n", FN[f].name, (unsigned long long)g_prof[f].calls,
+                   wall > 0 ? 100.0 * g_prof[f].total / wall : 0, 1e6 * g_prof[f].total / (double)g_prof[f].calls,
+                   1e6 * g_prof[f].worst);
+        }
+        printf("  %-18s %8s %6.1f%%\n", "(rfm1_run)", "", wall > 0 ? 100.0 * (wall - in) / wall : 0);
+        printf("  worst device ms: %.1f us at ms %u; an audio block (%d frames) is due every %.0f us\n",
+               worst_ms * 1e6, worst_ms_at, FM1P_BLOCK, 1e6 * FM1P_BLOCK / FM1P_FS);
+    }
+#ifdef RFM1_FPROF
+    if (fprofile)
+        fp_report(fprofile);
+#endif
     int bad = 0;
     if (g_err[0]) {
         bad |= fail("trap: %s", g_err);

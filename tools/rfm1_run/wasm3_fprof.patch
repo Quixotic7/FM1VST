@@ -1,0 +1,40 @@
+--- a/third_party/wasm3/source/m3_exec.h
++++ b/third_party/wasm3/source/m3_exec.h
+@@ -526,6 +526,8 @@
+ }
+ 
+ 
++extern void * volatile rfm1_prof_stack[1024];
++extern volatile int rfm1_prof_depth;
+ d_m3Op  (Call)
+ {
+     pc_t callPC                 = immediate (pc_t);
+@@ -534,7 +536,9 @@
+ 
+     m3stack_t sp = _sp + stackOffset;
+ 
++    int _pd = rfm1_prof_depth;
+     m3ret_t r = Call (callPC, sp, _mem, d_m3OpDefaultArgs);
++    rfm1_prof_depth = _pd;
+     _mem = memory->mallocated;
+ 
+     if (LIKELY(not r))
+@@ -572,7 +576,9 @@
+ 
+                 if (LIKELY(not r))
+                 {
++                    int _pd = rfm1_prof_depth;
+                     r = Call (function->compiled, sp, _mem, d_m3OpDefaultArgs);
++                    rfm1_prof_depth = _pd;
+                     _mem = memory->mallocated;
+ 
+                     if (LIKELY(not r))
+@@ -787,6 +793,8 @@
+ #if defined(DEBUG)
+         function->hits++;
+ #endif
++        if (rfm1_prof_depth < 1024) rfm1_prof_stack[rfm1_prof_depth] = function;
++        rfm1_prof_depth++;
+         u8 * stack = (u8 *) ((m3slot_t *) _sp + function->numRetAndArgSlots);
+ 
+         memset (stack, 0x0, function->numLocalBytes);

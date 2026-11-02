@@ -12,8 +12,9 @@
  *   frame / idle         the panel's input into fm1_in / web_pressed / web_enc_steps / web_master_adc (as web_buttons,
  *                        web_keys, web_enc, web_master do), then ONE web_ms(): the device's millisecond as the browser
  *                        runs it (its own 15 ms frame cadence, from its own boot time), then the LEDs and the LCD out.
- *                        The firmware's frame is therefore web_ms's, not the host's frame() call: the host's
- *                        frame / idle split only says when the output is read (both are one device ms here).
+ *                        Both are one device ms. main.c's frame (the drawing) runs only in frame(), at most every
+ *                        15 ms: in idle() a frame that falls due waits for the host's next frame() (the host's pace,
+ *                        FM1CORE_FW_HOST_FRAMES, docs/HOST-HELPERS.md 2); the audio ISR runs every ms either way.
  *   audio(128)           the ring web_ms filled (one I2S half each, already rendered by the audio ISR), as s16:
  *                        abuf (Q15 << OUT_SHIFT) >> OUT_SHIFT, i.e. Q15 = 0 dBFS as ChoralRoot's emulator and the
  *                        old Felucca glue (the browser plays it 6 dB lower: abuf / 2^23)
@@ -191,6 +192,9 @@ static void fm1core_fw_sx_service(void)  /* main.c's loop: ed_service (editor fr
 #endif
 #ifndef FM1CORE_FW_BOOTGUARD
 #define FM1CORE_FW_BOOTGUARD 1
+#endif
+#ifndef FM1CORE_FW_HOST_FRAMES
+#define FM1CORE_FW_HOST_FRAMES 1          /* main.c's frame only in the host's frame() (fm1core_fw_ms_run) */
 #endif
 #ifndef FM1CORE_FW_BEFORE_BOOT
 #define FM1CORE_FW_BEFORE_BOOT() ((void)0)
@@ -511,13 +515,24 @@ void FM1CORE_FW(init)(int demo)
     fm1core_fw_out();
 }
 void FM1CORE_FW(tick)(uint32_t ms) { fm1core_fw_ms = ms; }
-static void fm1core_fw_ms_run(void)      /* frame / idle: the input, the device's millisecond, the output */
+static void fm1core_fw_ms_run(int host_frame)   /* frame / idle: the input, the device's millisecond, the output */
 {
     if (fm1core_halted() || !fm1core_fw_ready)
         return;
     fm1core_fw_in();
     if (fm1core_fw_uboot())
         return;
+#if FM1CORE_FW_HOST_FRAMES
+    /* the screen at the host's pace (docs/HOST-HELPERS.md 2): main.c's 15 ms frame is drawn only in a frame() call,
+     * at most every 15 ms as before. In idle() a frame that falls due is held (web_last_frame kept 14 ms back), so this
+     * millisecond is main.c's wait loop instead (ui_input); the next frame() draws it. A host that calls frame() every
+     * 15 ms sees the firmware's own cadence; RemoteFM1's 30 fps draws half the frames. The sound (the audio ISR, in
+     * web_ms whatever the call) is not touched */
+    if (!host_frame && web_booted && !web_boot_ms && fm1_ms + 1u - web_last_frame >= 15u)
+        web_last_frame = fm1_ms + 1u - 14u;
+#else
+    (void)host_frame;
+#endif
     web_ms();
     FM1CORE_FW_AFTER_MS();
     if (fm1core_halted())
@@ -526,8 +541,8 @@ static void fm1core_fw_ms_run(void)      /* frame / idle: the input, the device'
         fm1core_fw_sx_service();
     fm1core_fw_out();
 }
-void FM1CORE_FW(frame)(void) { fm1core_fw_ms_run(); }
-void FM1CORE_FW(idle)(void) { fm1core_fw_ms_run(); }
+void FM1CORE_FW(frame)(void) { fm1core_fw_ms_run(1); }
+void FM1CORE_FW(idle)(void) { fm1core_fw_ms_run(0); }
 /* the ring web_ms filled, 128 frames a block: abuf's 24-bit (Q15 << OUT_SHIFT) values, exact in its floats */
 void FM1CORE_FW(audio)(int16_t *out, uint32_t frames)
 {
