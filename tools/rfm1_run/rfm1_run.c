@@ -16,6 +16,8 @@
  *     --wav FILE     the whole run's audio as a 44.1 kHz 16-bit stereo WAV
  *     --min-rms X    the chord's RMS below this (full scale 1.0) fails as silent (default 0.0005)
  *     --verbose      the firmware's stdout / stderr through
+ *     --midi-out F   the core's MIDI out (midi_out_take drained every device ms, SysEx replies included) as raw MIDI
+ *                    bytes in F (a .syx for SysEx); without it the replies are drained only while --sysex sends
  *     --folder DIR   a Fantasy CFW's shared folder (docs/VIRTUAL-CARTS.md 3-4): rfm1_host_1 served from DIR, a RemoteFM1
  *                    root (/audio -> DIR/audio, /code -> DIR/code/<id>, /data -> DIR/data/<id>), as the manifest's
  *                    "folders" allow; "..", absolute escapes and symlinks out refused, writes only in /data; each
@@ -730,7 +732,7 @@ static void usage(void)
 {
     fputs("usage: rfm1_run [--seconds S] [--settle MS] [--keys K,K,..] [--vel V] [--lean L] [--tap B,..] [--sysex FILE] [--wav FILE]\n"
           "                [--min-rms X] [--folder DIR] [--press B@MS[+D]].. [--info-at MS].. [--expect-ui S]..\n"
-          "                [--flash-in FILE] [--flash-out FILE] [--screen FILE.ppm]\n"
+          "                [--flash-in FILE] [--flash-out FILE] [--screen FILE.ppm] [--midi-out FILE]\n"
           "                [--verbose] [--describe [--out FILE]] <file.rfm1>\n", stderr);
 }
 
@@ -739,7 +741,7 @@ int main(int argc, char **argv)
     double seconds = 5.0, min_rms = 0.0005;
     uint32_t settle_ms = 4000;
     int describe = 0;
-    const char *out_path = NULL, *wav_path = NULL, *sysex_path = NULL, *path = NULL;
+    const char *out_path = NULL, *wav_path = NULL, *sysex_path = NULL, *path = NULL, *midi_out_path = NULL;
     int keys[FM1P_NKEY], nkeys = 0, vel = 100, lean = 0;
     uint32_t taps = 0;                           /* (label bits: --tap) */
     static const char *const LABEL[FM1P_NB] = {"FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ",
@@ -758,6 +760,7 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--vel") && more) vel = atoi(argv[++i]);
         else if (!strcmp(a, "--lean") && more) lean = atoi(argv[++i]);
         else if (!strcmp(a, "--sysex") && more) sysex_path = argv[++i];
+        else if (!strcmp(a, "--midi-out") && more) midi_out_path = argv[++i];
         else if (!strcmp(a, "--out") && more) out_path = argv[++i];
         else if (!strcmp(a, "--describe")) describe = 1;
         else if (!strcmp(a, "--verbose")) g_verbose = 1;
@@ -1038,6 +1041,12 @@ int main(int argc, char **argv)
             return 2;
         }
     }
+    FILE *mo = NULL;                             /* --midi-out */
+    uint32_t mo_bytes = 0;
+    if (midi_out_path && !(mo = fopen(midi_out_path, "wb"))) {
+        fprintf(stderr, "rfm1_run: %s: %s\n", midi_out_path, strerror(errno));
+        return 2;
+    }
     const uint32_t chord_ms = (uint32_t)(seconds * 1000.0 + 0.5);
     uint32_t chord_mask = 0;
     for (int k = 0; k < nkeys; k++)
@@ -1058,9 +1067,8 @@ int main(int argc, char **argv)
     uint32_t ms = 0;
     for (; ms < end_ms && ms < 600000u; ms++) {
         if (sx && ms >= sx_from && (pending_pkt || sx_at < sx_n)) {
-            uint32_t out;
-            while (C1(F_MIDI_OUT_TAKE, s_words) && !g_err[0])
-                (void)(out = rd32(s_words));
+            while (!mo && C1(F_MIDI_OUT_TAKE, s_words) && !g_err[0])
+                (void)rd32(s_words);
             for (;;) {
                 if (!pending_pkt) {
                     while (!sx_in && sx_at < sx_n && sx[sx_at] != 0xF0)
@@ -1123,6 +1131,13 @@ int main(int argc, char **argv)
             chord_done = 1;
             end_ms = ms + 200u;
         }
+        while (mo && C1(F_MIDI_OUT_TAKE, s_words) && !g_err[0]) {   /* --midi-out: a USB-MIDI packet's bytes, by CIN */
+            static const uint8_t CIN_N[16] = {0, 0, 2, 3, 3, 1, 2, 3, 3, 3, 3, 3, 2, 2, 3, 1};
+            const uint32_t pkt = rd32(s_words);
+            for (uint32_t k = 0; k < CIN_N[pkt & 15u]; k++)
+                fputc((int)(pkt >> (8u + 8u * k) & 0xFFu), mo);
+            mo_bytes += CIN_N[pkt & 15u];
+        }
         fs_complete(ms);                         /* (between two calls: the folder's requests due now) */
         for (int k = 0; k < npress; k++) {       /* --press: held from at, let go after dur */
             const uint32_t m = 1u << rd8(P(btn_id) + (uint32_t)press[k].b);
@@ -1172,6 +1187,10 @@ int main(int argc, char **argv)
         }
     }
     const uint32_t total_ms = ms;
+    if (mo) {
+        fclose(mo);
+        fprintf(stderr, "rfm1_run: %s: %u MIDI bytes out\n", midi_out_path, mo_bytes);
+    }
     if (sx && !g_err[0] && !halted)
         fprintf(stderr, "rfm1_run: %s: %u SysEx packets in from %u ms, the last at %u ms\n", sysex_path, sx_packets,
                 sx_from, sx_done_ms);

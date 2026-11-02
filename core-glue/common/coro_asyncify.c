@@ -24,8 +24,8 @@
  *
  * Asyncify restores the wasm locals of the rewound frames, not the __stack_pointer global (their prologues are
  * skipped), hence the stack pointer the yield records and the rewind puts back. The Asyncify buffer (the locals saved
- * by an unwind) is FM1CORO_RFM1_DATA bytes per coroutine; both it and the stack are malloc'ed inside the module's
- * fixed memory. Only the functions that can reach a yield are instrumented (wasm-opt's own analysis from the yield
+ * by an unwind) is FM1CORO_RFM1_DATA bytes per coroutine; both it and the stack (16-byte aligned) are allocated inside
+ * the module's fixed memory. Only the functions that can reach a yield are instrumented (wasm-opt's own analysis from the yield
  * and park, through direct and indirect calls). The functions here that move the stack pointer have no shadow-stack
  * frame of their own (no address-taken locals). */
 #include "coro.h"
@@ -73,7 +73,11 @@ fm1coro_t *fm1coro_new(void (*fn)(void *), void *arg, size_t stack_bytes)
     c = (fm1coro_t *)calloc(1, sizeof *c);
     if (!c)
         return NULL;
-    c->stack = (uint8_t *)malloc(stack_bytes);
+    /* 16-byte aligned (malloc's 8 is not enough): clang assumes a 16-aligned stack pointer in every frame, and
+     * folds the addresses of its locals to match (sp + 16 | 14 for sp + 30): on a stack top that is only 8-aligned
+     * those land 8 bytes off, over the frame's other locals (the M-UPGRADE identity came out as "FM-1_7", zeros
+     * and this FILL) */
+    c->stack = (uint8_t *)aligned_alloc(16u, stack_bytes);
     c->data = (uint32_t *)malloc(FM1CORO_RFM1_DATA);
     if (!c->stack || !c->data) {
         free(c->stack);
