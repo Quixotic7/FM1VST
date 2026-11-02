@@ -168,6 +168,7 @@ platform screens) and two stand-ins: usb.c's `midi_usb_lost` (0: the link never 
 - Licence texts in the .rfm1: LICENSE.md (GPL-3.0 with the linking exception), THIRD_PARTY.md (Open303, DaisySP,
   stmlib, emu2149, SEA: MIT; MSFA / Dexed and M-VAVE's V15 factory DX7 voice: Apache-2.0), SAMPLE-CREDITS.md (VSCO-2
   CE, CC0), fm1-base's and felucca-bsp's MPL-2.0 with their notes, the Barlow OFL. Not gated.
+
 ## Berlinan
 
 Berlinan (Jiří Píša: a generative Berlin School MIDI sequencer, the C translation of Berlinan for macOS) is pinned at
@@ -189,6 +190,7 @@ v0.5.1 (afe2d93). Its fm1-base and felucca-bsp are AMB-1's (15dff6d, 6b087c2), s
 - **Saving:** only SAVE writes (pressed while playing, at the stop); `flash_sync` waits while a SAVE is pending.
 - Version and identity: build.py --release 0.5.1's, "0.5.1" and FM-1_23000501. USB product (fm1.toml
   `usb_product`): "FM-Berlinan". Not gated: GPL-2.0-or-later; SoftFloat BSD-3-Clause; the Barlow OFL.
+
 ## MODELAR
 
 MODELAR (Hirakos: a semi-modular drone synth played like a Kaoss Pad, four cross-modulating oscillators, the keys an XY
@@ -210,6 +212,7 @@ backup.c and without app_sysex (MODELAR has neither); neither of VESPER's two st
   "MODELAR FM-1". Not built: the splash (the logo), USB audio in.
 - Licence texts in the .rfm1: MODELAR's LICENSE (MPL-2.0), fm1-base's and felucca-bsp's MPL-2.0 with their notes, the
   Barlow OFL. Not gated.
+
 ## CTL-1
 
 CTL-1 (Charles Vestal: a MIDI controller for the FM-1, the keys with velocity and aftertouch in any scale with its

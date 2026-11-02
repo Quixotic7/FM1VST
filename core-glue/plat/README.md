@@ -33,14 +33,17 @@ and the engine are their own units (`sidj_*.c`). Its MIDI clock in is timed by a
 into its own ring, never queued, as its usb.c does), its clock out leaves at the frame it was rendered for
 (`FM1CORE_PL_TICK_HOOK`). Left out: USB audio (the five-channel stream), the TRS jack. The flash starts with no songs
 (silent): the run test sends one first, `sidj_test_tune.syx` (`make_test_tune.py`: a tiny PSID written for the test).
+
 Penumbra (a space-drone instrument, a fork of X0X) is its device unity build (`penumbra.c`: the UI, `settings.c`'s
 settings, journeys and loop in `storage.c`'s objects) on the HAL half, X0X's second-core and guard stubs, the DSP, the
 clock, the journey, the looper and the engine their own units (`penumbra_*.c`, tools/build.py's O2_UNITS). Its gfx.c
 has one palette (`palette_set` stubbed in the unit). The journey plays at power-on and never falls silent, so the
 device's AUTOSAVE (a second of silence) would never write: `flash_sync` does what SAVE does (written at once).
+
 MOPE-1 (a wavetable synth with a backing band, a FiMba-1 fork) is FiMba's glue over its own files: the device unity
 build (`main.c`: the UI with `px.c` and `blob.c`) on the HAL half, the instrument (`dsp/synth.c`) its own unit
 (`mope1_synth.c`). The band playing defers `flash_sync` (the device never autosaves under it).
+
 PERF-1 (a fork of HYP-1, itself of AMB-1, on FoMni's layout) is its device unity build (`main.c` without the hardware:
 UI, project, `plat_fm1.c`) on the HAL half, the instrument with Melodee's FM6 engine (`dsp/amb.c`) its own unit
 (`perf1_amb.c`). Its second core (`EN_CORE2`) and USB MIDI host (`PERF_USB_HOST`) are built out (the reverb runs
@@ -50,6 +53,7 @@ SysEx (the web editor, the player's DX7 voices, BACKUP AND RESTORE: F0 7D 50 ..)
 main_fm1.c's `dx_service` / `px_service`, copied unchanged into `core_perf1.c`, on `plat_sx.h`'s transport; a pass
 that hands a voice to the engine draws no frame (the engine takes it a render later, and autosave would store the
 voices without it).
+
 Carnac OS (a wavetable synth) replaces X0X's app with its own (`src/hardware/synth_main_fm1.c`: build_fm1.py cuts
 X0X's `x0x.c` at its app) and carries X0X as a submodule of its own: the unit (`core_carnacos.c`) is X0X's platform
 pieces (`storage.c`, `ota.c`, `slots.c`, `panel.c`, `plat_fm1.c`), the UI and screens, and `synth_panel.c` (the panel,
