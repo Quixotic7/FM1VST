@@ -160,3 +160,6 @@
 [submodule "fm1-dock"]
 	path = cores/fm1-dock
 	url = https://github.com/joakimeriksson/fm1-dock
+[submodule "sid-1"]
+	path = cores/sid-1
+	url = https://github.com/putchdev/sid-1

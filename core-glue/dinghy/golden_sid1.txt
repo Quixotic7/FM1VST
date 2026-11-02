@@ -1,0 +1,9 @@
+# SID-1's golden check (dinghy_golden.c): the script in tests/host.c's format, run by its own host sim and by the
+# core; the screens compared at 3000 ms (one of host.c's fixed SHOT times). A chord on HOME, PRESETS two patches on,
+# ENV (button 4) and its KNOB 1 turned, the chord changed, the footer's voices lit.
+200 keys 0x4880
+600 enc 6 2
+900 btn 4
+1200 enc 2 5
+2000 keys 0x4890
+3010 end
