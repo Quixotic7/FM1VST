@@ -214,3 +214,6 @@
 [submodule "sidou"]
 	path = cores/sidou
 	url = https://github.com/dsablic/sidou
+[submodule "tessera"]
+	path = cores/tessera
+	url = https://github.com/Rastapopolix/tessera

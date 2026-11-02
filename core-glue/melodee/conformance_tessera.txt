@@ -1,0 +1,35 @@
+# Tessera 3.2.2: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: a project saved by hand. SAVE + REC at power-on finds no slot (a new song: "NEW: PICK SLOT")
+# and opens PROJECT; OCT+ opens slot A's sheet, KNOB 1 one row down to SAVE HERE, OCT+ saves. After the reboot the
+# PROJECT page shows slot A with the project, where a fresh unit's says EMPTY
+save wait 2500
+save btn SAVE down
+save wait 500
+save btn REC 200
+save wait 500
+save btn SAVE up
+save wait 700
+save btn OCT+ 100
+save wait 500
+save knob KNOB1 +1
+save wait 300
+save btn OCT+ 100
+save wait 3000
+save quit
+saved wait 2500
+saved btn SAVE down
+saved wait 500
+saved btn REC 200
+saved wait 500
+saved btn SAVE up
+saved wait 1000
+saved quit
+saved-lcd-differs
+# the boot guard: a second failed boot in a row enters UBOOT (exit(3))
+reboot-guard 2
+# OCT- + OCT+ held 5 s: UBOOT (tessera_fw.c, main.c's countdown)
+reboot wait 600
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit
