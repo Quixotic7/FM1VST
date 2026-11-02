@@ -1,0 +1,33 @@
+# ETCH 1.88: tests/core_conformance.cpp's script for this core (see its header for the directives). At every cold
+# boot ETCH asks for a workflow (SIMPLE / ADVANCED) and is silent until SEL confirms it; it reads the buttons on a
+# 100 ms control tick (the glue holds a press at least 120 ms)
+sound wait 2000
+sound btn SEL 200
+sound wait 2000
+sound quit
+# the flash round trip: a project saved by hand (README: SAVE outside DRAW opens SAVE PROJECT, K3 a letter of the
+# name, SAVE stores it; slot 1). After the reboot the same SAVE screen shows slot 1 by its name, where a fresh
+# unit's asks for one
+save wait 2000
+save btn SEL 200
+save wait 2000
+save btn SAVE 200
+save wait 1500
+save knob KNOB3 +5
+save wait 1000
+save btn SAVE 200
+save wait 5000
+save quit
+saved wait 2000
+saved btn SEL 200
+saved wait 2000
+saved btn SAVE 200
+saved wait 1500
+saved quit
+saved-lcd-differs
+# OCT- + OCT+ held 5 s: UBOOT (bringup.c's main loop): exit 3
+reboot wait 5000
+reboot btn OCT- down
+reboot btn OCT+ down
+reboot wait 6000
+reboot quit

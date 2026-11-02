@@ -139,3 +139,9 @@
 [submodule "fm1-trax"]
 	path = cores/fm1-trax
 	url = https://github.com/jartificer/fm1-trax
+[submodule "RUPTURE"]
+	path = cores/RUPTURE
+	url = https://github.com/SikkenWorks/RUPTURE
+[submodule "ETCH"]
+	path = cores/ETCH
+	url = https://github.com/SikkenWorks/ETCH
