@@ -2,7 +2,7 @@
 
 | core | firmware | submodule | licence |
 |---|---|---|---|
-| `elasticat` | Elasticat FM-1 0.2.0 (E1-E5, Quixotic7) | `cores/elasticatfm1` (github.com/Quixotic7/elasticatfm1, `main`) | GPL-3.0-only |
+| `elasticat` | Elasticat FM-1 0.3.0 (E1-E5 + the UX redesign, Quixotic7) | `cores/elasticatfm1` (github.com/Quixotic7/elasticatfm1, `main`) | GPL-3.0-only |
 
 Elasticat, the norns sample-mangling sequencer by Quixotic7, rewritten in C for the FM-1 as a host-only `.rfm1`
 ([docs/VIRTUAL-CARTS.md](../../docs/VIRTUAL-CARTS.md)): `fm1_add_rfm1(elasticat VIRTUAL NEEDS fs1 FOLDERS audio=r
@@ -22,7 +22,7 @@ allowed).
   flash header + the project record; the core pads the rest) built through panel input by the repo's
   `host/glue_project.txt` + `host/trim_flash.py`: four tracks on the test loop (loop with trigs, p-locks and a region
   lock; granular; slice poly; chopped with a ratchet). PLAY at 1.5 s; the chord's RMS must be >= 0.02 and `ui_info`
-  must say `ec0.2.0 play:1 file:testloop_bpm120.wav ready:1 missing:0 seq:on` (trigs fired).
+  must say `ec0.3.0 play:1 file:testloop_bpm120.wav ready:1 missing:0 seq:on` (trigs fired).
 - **Speed** (wasm3, M-series Mac): 2.1x real time while playing the worst case (the repo's `ec_make_heavy`: six busy
   tracks across the E3 warp modes and R.POLY, an insert on every track, both sends, master COMP, LFOs everywhere);
   5.9x with the repo's v020 demo project.
