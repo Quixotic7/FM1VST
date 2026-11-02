@@ -130,3 +130,6 @@
 [submodule "AURORA"]
 	path = cores/AURORA
 	url = https://github.com/twochannels/AURORA
+[submodule "RemoteFM1"]
+	path = cores/RemoteFM1
+	url = https://github.com/Quixotic7/RemoteFM1
