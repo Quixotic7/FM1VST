@@ -31,6 +31,9 @@
  *   FM1CORE_PL_MID_PLANE (optional)      a steady mid-level plane between lit and dim (fm1-base's plat_lights_mid:
  *                                        felucca-bsp's fm1_led_mid), shown at FM1P_LED_MID
  *   FM1CORE_PL_NAME                      for the log lines ("X0X")
+ *   FM1CORE_PL_FRAME_MS (optional)       the frame's period (default 16 ms; Ravel's main_fm1.c: 33)
+ *   FM1CORE_PL_BTN_OF(label) / FM1CORE_PL_ENC_OF(role) (optional)   the firmware's panel.c index of an FM1P_B_*
+ *                                        label / FM1P_E_* role (default: the same number)
  * Optional: FM1CORE_PL_SX (1: the managers' SysEx, plat_sx.h included before the firmware's sources: see
  * there), FM1CORE_PL_TICK_HOOK() (each device ms, after the input: fm1-base's app_tick), FM1CORE_PL_KEY_HOOK(down,
  * up, held) (the note keys that went down / up this ms, and those held now: fm1-base's velocity and pressure), FM1CORE_PL_DEFAULT_MASTER (the pot's position
@@ -64,7 +67,17 @@ static void fm1core_pl_sx_main(void *arg)
 #define FM1CORE_PL_DEFAULT_MASTER 724     /* -> master_q12 = 724^2 >> 8 = 2047: plat_fm1.c's 2048 */
 #endif
 #define FM1CORE_PL_RELEASE_MS 9u          /* Felucca's fm1_input.h: a release needs ~9 ms open (FM1_DEB_RELEASE) */
+#ifndef FM1CORE_PL_FRAME_MS
 #define FM1CORE_PL_FRAME_MS 16u           /* main_fm1.c: ui_frame at most every 16 ms, ui_input_only between */
+#endif
+/* the firmware's panel.c index of a label (FM1P_B_*) and of a knob role (FM1P_E_*): the same order unless the
+ * firmware numbers them its own way (Ravel: OCT- and OCT+ first, PRESETS after the four knobs) */
+#ifndef FM1CORE_PL_BTN_OF
+#define FM1CORE_PL_BTN_OF(label) (label)
+#endif
+#ifndef FM1CORE_PL_ENC_OF
+#define FM1CORE_PL_ENC_OF(role) (role)
+#endif
 #define FM1CORE_PL_BLOCK 256u             /* the render's block (plat: REND_FRAMES; fm1-base: APP_BLOCK) */
 #ifndef FM1CORE_PL_PALETTE
 #define FM1CORE_PL_PALETTE 1u             /* fm1_main's palette_set before the splash (fm1-base: APP_PALETTE) */
@@ -241,10 +254,10 @@ void fm1core_pl_init(int demo)
     fm1core_pl_ui_start();
     /* the panel table back to the host (label -> matrix button, role -> matrix encoder and its direction) */
     for (i = 0; i < FM1P_NB; i++)
-        p->btn_id[i] = panel.btn[i];
+        p->btn_id[i] = panel.btn[FM1CORE_PL_BTN_OF(i)];
     for (i = 0; i < FM1P_NE - 1u; i++) {
-        p->enc_id[i] = panel.enc[i];
-        p->enc_dir[i] = panel.dir[i] < 0 ? -1 : 1;
+        p->enc_id[i] = panel.enc[FM1CORE_PL_ENC_OF(i)];
+        p->enc_dir[i] = panel.dir[FM1CORE_PL_ENC_OF(i)] < 0 ? -1 : 1;
     }
     if (!p->master)
         p->master = FM1CORE_PL_DEFAULT_MASTER;   /* the pot where the firmware's default puts it */

@@ -6,6 +6,14 @@
 | `fomni` | FoMni-1 0.4 | `cores/fm1-fomni` @ v0.4 | GPL-3.0-only |
 | `fimba` | FiMba-1 0.6.1 | `cores/fm1-fimba` @ v0.6.1 | GPL-3.0-only |
 | `fartmachine` | Fart Machine One 1.0.0 | `cores/Fart-Machine-One` @ V1.0.0 | GPL-3.0-only, **GATED** (the recordings) |
+| `ravel` | Ravel 1.5.0 (De-Pattern) | `cores/Ravel_FM1` @ v1.5.0 | GPL-3.0-only |
+
+Ravel keeps its own portable platform (`firmware/app/plat.h`) over X0X's Felucca layer, adapted (`firmware/fm1`): the
+unit is its device platform unit (`ravel_fm1.c`: `storage.c`, `ota.c`, `panel.c`, `plat_fm1.c` with `projstore.c`'s
+compressed projects) on the HAL half, the instrument (`ravel_app.c`) its own unit. Its panel numbers the labels and
+knobs its own way (`FM1CORE_PL_BTN_OF` / `_ENC_OF`) and draws a frame every 33 ms (`FM1CORE_PL_FRAME_MS`). Its
+transfer page (projects and sound banks, `rv_xfer.c`, commands 0x60..0x64 in the update's framing) reads and writes
+the NOR image's slots as on the device.
 
 The fm1-base cores (`core-glue/fm1base`, AMB-1) use the same HAL half and shared core.
 
