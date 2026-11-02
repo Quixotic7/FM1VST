@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The Mutable Dreams core's descriptor (the plat family's: core-glue/plat/plat_desc.h) */
-#define FM1CORE_PL_TITLE "Mutable Dreams"
+/* The RemoteFM1 core's descriptor (the plat family's: core-glue/plat/plat_desc.h) */
+#define FM1CORE_PL_TITLE "RemoteFM1"
 #define FM1CORE_PL_REPO "https://github.com/Quixotic7/RemoteFM1"
 /* base/device/panel.c B_NAME: the printed labels */
 #define FM1CORE_PL_BUTTONS                                                                                     \

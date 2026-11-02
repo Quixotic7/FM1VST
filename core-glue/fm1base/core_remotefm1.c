@@ -1,31 +1,35 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The Mutable Dreams core: Mutable Dreams 1.4 by Kid Bunka / Christoph Link (https://github.com/Quixotic7/RemoteFM1,
- * the pinned, unmodified submodule cores/RemoteFM1: GPL-3.0-only as a combined distribution, the app also MIT,
- * with fm1-base and felucca-bsp (MPL-2.0) and Mutable Instruments' code (MIT) vendored in it) built with the fm1-base
- * glue (core-glue/fm1base/README.md). The include list follows fm1-base's device unity build (base/device/unity.c)
- * with the hardware left out, as LOOM-8's core does (core_loom.c): plat.h, the app's header, gfx.c, fm1-base's
- * defaults (fm1b_config.h), the store (storage.c on the NOR image, the app's APP_STORE_MAP: the live Biome, the
- * prefs, the User Banks), the updater's framing (felucca-bsp's chip/ota.c: the M-UPGRADE identity, and the pulls of
- * a restore), the screen reader (announce.c), the panel calibration (panel.c), the build with no radio
- * (radio_none.c, fm1.toml ble = false), the device's plat.h implementation (plat_fm1.c), backup and restore
- * (backup.c, fm1.toml backup = true: the .mddb of the project, the prefs and the User Banks) and the app (app.c: the
- * pages, the banks, the live editor's transfer, the diagnostics). The engine (app/dsp/dreams.cpp on Plaits, Rings,
- * Elements and stmlib) is C++, its own units (core_remotefm1.cmake, fm1.toml "o2").
+/* The RemoteFM1 core: RemoteFM1 0.3.1 by Quixotic7 (https://github.com/Quixotic7/RemoteFM1, the pinned, unmodified
+ * submodule cores/RemoteFM1 at v0.3.1, MPL-2.0, on fm1-base and felucca-bsp, MPL-2.0; saadet's FM6 with MSFA,
+ * Apache-2.0; the Jersey 10 font, OFL-1.1) built with the fm1-base glue (core-glue/fm1base/README.md: the plat
+ * family's HAL and shared core). The meta joke: RemoteFM1 is the firmware that makes an FM-1 the panel of a host
+ * running .rfm1 files, and here it is an .rfm1 itself.
  *
- * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 1.4.0's: "1.4.0" and
- * FM-1_710010400 (fm1.toml id_prefix FM-1_710 + 01 04 00; DEVICE-TEST-REPORT-1.4.txt), from core_remotefm1.cmake.
+ * What runs is RemoteFM1's standalone instrument (firmware/sa/): a DX7 (saadet's FM6, sa/sa_synth.c its own unit,
+ * fm1.toml "o2") with Yamaha's eight ROM cartridges compiled in (build/gen/dx7_rom.h from the builder's .syx files:
+ * core_remotefm1.cmake, FM1_DX7_ROM_DIR) and the user cartridges, the MIDI controller and its REMOTE mode, the 16
+ * loops, the arp, the scales, the screens. The panel half (a host's HELLO and session over USB SysEx, bulk or
+ * Bluetooth) is compiled in as it is, but nothing here starts one: no vendor bulk pair, no Bluetooth (radio_none.c),
+ * and the USB SysEx it would answer only comes from a host that sends RemoteFM1's own F0 7D 52 46 messages.
  *
- * THE MANAGERS (core-glue/plat/plat_sx.h): fm1-base's main loop (base/device/main_fm1.c fm1_main, its
- * sysex_dispatch.h) gives a SysEx frame to the screen reader (announce.c, 7D 53 52), the log readout (7D 4C 47), the
- * remote control and the app's own (app_sysex, 7D 4D 44: the diagnostics and the live editor's transfer, the
- * browser editor and tools/device_editor.py), and only a frame none of them took to ota_service (the M-UPGRADE
- * handshake), then usb_cmd: backup (0x42, streamed by bu_step) and restore (0x41: ota.c's read requests to the host,
- * then RESTORE FROM USB? SEL / HOME) of the app's objects (backup.c, tools/dreams_backup.py). Here the same, in that
- * order, from the submodule's files; the restore waits as on the device: the service runs on a coroutine
- * (FM1CORE_PL_SX_CORO) that yields where the device feeds its watchdog. The log readout says what an emulated unit
- * has: no crash recorded, then "end". The remote control (7D 4C 43) is not answered. The update key F0 22 24 35 7F F7
- * and UBOOT's F0 22 24 35 7D F7 are not taken (plat_sx.h): an installer gets the identity, no read requests (it
- * times out), and nothing is written. */
+ * fm1-base and felucca-bsp as RemoteFM1 builds them: build.sh applies firmware/patches/fm1-base/*.patch and
+ * firmware/patches/felucca-bsp/*.patch to a copy of base/; core_remotefm1.cmake does the same into the build folder
+ * (git apply, exactly or the configure stops) and this unit reads fm1-base from there. The include list follows
+ * fm1-base's device unity build (base/device/unity.c) with the hardware left out, as the other fm1-base cores do:
+ * plat.h, the app's header, lib/touch.h (app.h APP_TOUCH: the keys' velocity), gfx.c, fm1b_config.h, sys_text.c,
+ * storage.c (app.h APP_STORE_MAP and APP_STORE_MUX: OBJ_RF's records, src/rfm_store.c), the screen reader
+ * (announce.c, nothing sent), panel.c, radio_none.c (fm1.toml ble = true, not built: no radio), plat_fm1.c (patched:
+ * the store's raw functions, plat_lights_levels), lib/touch.c's host part, then app.c (src/ and sa/).
+ *
+ * Two of RemoteFM1's MPL-2.0 files are read through a clang VFS overlay (core_remotefm1.cmake):
+ *   src/rfm_dev.c   the port on the FM-1 (usb.c's rings and vendor pair, the panel's DMA): remotefm1_port.c here
+ *   src/rfm_main.c  the submodule's file with one change: rf_run takes one turn a pass (as in fm1-base's host
+ *                   simulator, PLAT_HOST's break), since it spins on the tick counter for 2 ms otherwise, and
+ *                   simulated time does not move inside a pass (common/ticks.h)
+ * The second core (fm1.toml cpu2) is not built (FM1B_CPU2 0): sa_synth.c renders every voice on the one thread. No
+ * managers' SysEx (the update, backup / restore, the log readout: RemoteFM1's SysEx is the panel protocol).
+ *
+ * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release's, from core_remotefm1.cmake. */
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -46,211 +50,81 @@
 #ifndef FELUCCA_ID
 #error "FELUCCA_ID: the package identity (core_remotefm1.cmake)"
 #endif
-#define FM1B_BACKUP 1                     /* fm1.toml backup = true (build.py opt_flags) */
-#define FM1CORE_PL_SX 1                   /* the managers' SysEx (core-glue/plat/plat_sx.h) */
-#define FM1CORE_PL_SX_CORO 1              /* (a restore waits for the host and for SEL: the service's coroutine) */
+#if defined FM1B_CPU2 && FM1B_CPU2
+#error "FM1B_CPU2: one thread runs the device here (core_remotefm1.c)"
+#endif
 #include "fm1base_hal.h"
-#include "../plat/plat_sx.h"
+
+/* felucca-bsp's two more steady LED levels (RemoteFM1's patch 0004, boards/fm1/fm1_input.h: fm1_led_lv, lit a8 / 8 and
+ * b8 / 8 of the scan's frames), as plat_fm1.c's plat_lights_levels (patch 0007) fills them; shown here as the mid
+ * plane with felucca-bsp's own (plat_glue.h FM1CORE_PL_MID_PLANE: one steady level between lit and the glow) */
+static uint8_t fm1_led_lv[2][FM1P_NCOL];
+static uint8_t fm1core_rf_lv8[2];
+static void fm1_led_levels(uint32_t a8, uint32_t b8)
+{
+    fm1core_rf_lv8[0] = (uint8_t)(a8 > 8u ? 8u : a8);
+    fm1core_rf_lv8[1] = (uint8_t)(b8 > 8u ? 8u : b8);
+}
+static uint8_t fm1core_rf_mid[FM1P_NCOL];
+static const uint8_t *fm1core_rf_mid_plane(void)
+{
+    uint32_t c;
+    for (c = 0; c < FM1P_NCOL; c++)
+        fm1core_rf_mid[c] = (uint8_t)(fm1_led_mid[c] | (fm1core_rf_lv8[0] ? fm1_led_lv[0][c] : 0u) |
+                                      (fm1core_rf_lv8[1] ? fm1_led_lv[1][c] : 0u));
+    return fm1core_rf_mid;
+}
 
 /* ---------------------------------------------------------------- the firmware --- */
 #define __attribute__(x)                  /* (as the host simulator: .noinit / .pool sections) */
 #include "plat.h"
 #include "app.h"
+#include "touch.h"
 #include "gfx.c"
 #include "fm1b_config.h"
+#include "sys_text.c"                     /* the faces of the platform's own screens (panel.c's) */
 #include "storage.c"
 
-/* felucca-bsp's chip/ota.c on the glue's transport (plat_sx.h), with unity.c's hooks on the core's HAL: the device's
- * ms, the wait (the watchdog fed: the coroutine yields), the update's staging area (OTA_AREA; backup.c keeps its
- * journal record there) on the NOR image. The update's own steps (ota_session: its screen, its commit) are never
- * reached here */
-static int ota_wire_send(const uint8_t *p, uint32_t n) { return fm1core_pl_sx_send(p, n); }
-static int ota_frame_get(const uint8_t **p, uint32_t *n) { return fm1sx_frame(&fm1core_pl_sxi, p, n); }
-static void ota_frame_done(void) { fm1sx_done(&fm1core_pl_sxi); }
-#include "../../cores/RemoteFM1/base/bsp/chip/ota.c"
+/* plat_fm1.c's host reads (plat_host_read, plat_host_patience): felucca-bsp's chip/ota.c reads, over the managers'
+ * SysEx, which this core does not answer: nothing read */
+static uint32_t ota_try_ms, ota_deadline;
 static uint32_t ota_now_ms(void) { return fm1_ms; }
-static void ota_idle(void) { fm1_wdt_feed(); }
-static int fm1core_md_ota_in(uint32_t off, uint32_t n) { return FL_IN(off, n, OTA_AREA, OTA_AREA + OTA_AREA_LEN); }
-static int ota_erase(uint32_t off)
+static int ota_read(uint32_t addr, uint8_t *dst, uint32_t n)
 {
-    if (!fm1core_md_ota_in(off, 0x1000u) || (off & 0xFFFu))
-        return -8;
-    return fm1nor_erase(off);
+    (void)addr, (void)dst, (void)n;
+    return -1;
 }
-static int ota_prog(uint32_t off, const void *p, uint32_t n)
-{
-    if (!fm1core_md_ota_in(off, n))
-        return -8;
-    return fm1nor_prog_span(off, p, n);
-}
-static int ota_fread(uint32_t off, void *p, uint32_t n) { return st_read(off, p, n); }
-static void ota_show(uint32_t step, int32_t code)
-{
-    (void)step;
-    (void)code;
-}
-static void ota_commit(const uint8_t *parm) { (void)parm; }
+/* felucca-bsp's usb.c and guard, as plat_fm1.c reads them: the USB link never lost (a host is always there); the
+ * guard's code window has no meaning here */
+static volatile uint8_t midi_usb_lost;
+static void fm1_guard_pc_extend(uint32_t end) { (void)end; }
 
 #define ANN_NAME APP_NAME " " APP_VERSION
 #include "ann_words.h"
 #include "announce.c"
-static uint8_t backup_streaming(void);
-static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room (nobody reading), a backup
-                                                          * streaming: not sent (unity.c's) */
+static int ann_wire_send(const uint8_t *p, uint32_t n)   /* (no managers' SysEx: not sent) */
 {
-    if (backup_streaming())
-        return -1;
-    return fm1core_pl_sx_send(p, n);
+    (void)p, (void)n;
+    return -1;
 }
 #include "panel.c"
 #include "radio_none.c"
 #include "plat_fm1.c"
-#include "backup.c"
-/* unity.c's hooks for backup.c (fm1-base's "backup and restore" section, on the core's HAL: the same statements) */
-static uint8_t backup_streaming(void) { return bu.on; }
-static int rs_fetch(uint32_t addr, uint8_t *dst, uint32_t n) { return ota_read(addr, dst, n); }
-static int rs_note(uint32_t addr)                   /* (past the question: no session deadline, 3 tries) */
-{
-    uint8_t b[8];
-    ota_deadline = 0;
-    return ota_read(addr, b, 8);
-}
-static int rs_playing(void) { return app_backup_playing() != 0; }
-static void rs_screen(const char *a, const char *b)
-{
-    lcd_fill(0, 0, 240, 240, C_BLACK);
-    draw_text_box(0, 92, 240, &FONT_S, a, C_WHITE, 1);
-    if (b)
-        draw_text_box(0, 124, 240, &FONT_S, b, C_HI, 1);
-}
-static void rs_begin(void)                          /* a backup is coming: patient now (5 s a read, 2 min in all) */
-{
-    app_panic();
-    ota_try_ms = 5000u;
-    ota_deadline = ota_now_ms() + 120000u;
-}
-static void rs_show(uint32_t pct)
-{
-    char b[8];
-    uint32_t i = 0;
-    if (pct >= 100u)
-        b[i++] = '1';
-    if (pct >= 10u)
-        b[i++] = (char)('0' + pct / 10u % 10u);
-    b[i++] = (char)('0' + pct % 10u);
-    b[i++] = '%';
-    b[i] = 0;
-    if (!pct)
-        lcd_fill(0, 0, 240, 240, C_BLACK);
-    draw_text_box(0, 92, 240, &FONT_S, "RESTORE", C_WHITE, 1);
-    draw_text_box(0, 124, 240, &FONT_S, b, C_HI, 1);
-}
-static int rs_ask(void)                             /* SEL yes, HOME no; playing or 60 s: no. The hand's buttons only */
-{
-    uint32_t t0 = fm1_ms, was = plat_buttons() & ~mirror_in_buttons() & ~remote.btn;
-    rs_screen("RESTORE FROM USB?", "SEL yes   HOME no");
-    draw_text_box(0, 156, 240, &FONT_S, APP_BACKUP_WHAT, C_GRAY, 1);
-    ann_say("Restore from USB? It " APP_BACKUP_WHAT ". SEL: yes. HOME: no.", 0, ANN_NOW | ANN_KEEP);
-    while (fm1_ms - t0 < 60000u) {
-        uint32_t b = plat_buttons() & ~mirror_in_buttons() & ~remote.btn, down = b & ~was;
-        fm1_wdt_feed();
-        was = b;
-        if (down >> B_SEL & 1u)
-            return 1;
-        if ((down >> B_HOME & 1u) || rs_playing())
-            return 0;
-    }
-    return 0;
-}
-static void rs_reload(void)
-{
-    app_panic();
-    app_backup_restored();
-}
-static int rs_rec_erase(void) { return ota_erase(RS_REC); }
-static int rs_rec_prog(uint32_t off, const void *src, uint32_t n) { return ota_prog(RS_REC + off, src, n); }
-static int rs_rec_read(uint32_t off, void *dst, uint32_t n) { return ota_fread(RS_REC + off, dst, n); }
-static int bu_room(void)                            /* the SysEx ring empty: a frame goes in whole (a host is there) */
-{
-    return !fm1sx_out_queued(&fm1core_pl_sxo);
-}
-static int bu_send(const uint8_t *p, uint32_t n) { return ota_wire_send(p, n); }
-static void bu_flush(void) { app_backup_flush(); }
-static void bu_hold(int on) { app_backup_hold(on); }
+#define PLAT_HOST 1                       /* lib/touch.c's host part: app_host_key / app_host_tick (the readings) */
+#include "touch.c"
+#undef PLAT_HOST
+
+/* fm1-base's lcd.c lcd_idle (RemoteFM1's patch 0001): the panel's transfer is over. lcd_blit here is done when it
+ * returns */
+static int lcd_idle(void) { return 1; }
 #include "app.c"
 #undef __attribute__
 
-/* ---------------------------------------------------------------- the managers' SysEx (plat_sx.h) --- */
-/* main_fm1.c log_frame's answer on a unit that never crashed: one frame a line, F0 7D 4C 47 <ASCII> F7, "end" last */
-static void fm1core_md_log_line(const char *t)
-{
-    uint8_t f[48];
-    uint32_t n = 0;
-    f[n++] = 0xF0;
-    f[n++] = 0x7D;
-    f[n++] = 0x4C;
-    f[n++] = 0x47;
-    while (*t && n < sizeof f - 1u)
-        f[n++] = (uint8_t)(*t++ & 0x7Fu);
-    f[n++] = 0xF7;
-    fm1core_pl_sx_send(f, n);
-}
-static int fm1core_md_log_frame(const uint8_t *p, uint32_t n)
-{
-    if (n < 3u || p[0] != 0x7Du || p[1] != 0x4Cu || p[2] != 0x47u)
-        return 0;
-    fm1core_md_log_line("no crash recorded");
-    fm1core_md_log_line("end");
-    return 1;
-}
-/* main_fm1.c usb_cmd: a frame in the update's framing that ota_service did not take: backup and restore (the mirror
- * and APP_USB_CMD are not built) */
-static void fm1core_md_usb_cmd(uint32_t d)
-{
-    if (d < 7u || ota_dec[2] == 0x11u)
-        return;
-    if (d == 11u && ota_dec[2] == BU_REQ && bu_rd32(ota_dec + 6) == BU_MAGIC && flash_ok) {
-        bu_start(app_backup_playing());   /* a backup to the host: streamed by bu_step, playing on */
-        return;
-    }
-    if (d == 15u && ota_dec[2] == RS_REQ && flash_ok) {   /* a restore from the host */
-        uint32_t len = ota_rd32(ota_dec + 6), crc = ota_rd32(ota_dec + 10);
-        int begun = 0, rc;
-        if (bu.on)
-            bu_stop();                    /* (a backup streaming: given up) */
-        ota_try_ms = 300u;                /* its head first: a host that does not answer costs a second */
-        ota_deadline = ota_now_ms() + 3000u;
-        rc = restore_rx(len, crc, &begun);
-        ota_try_ms = 5000u;
-        ota_deadline = 0;
-        if (begun)
-            app_ui_init();                /* the screen again (restored: everything reloaded) */
-        app_say(rc == RS_E_PLAYING ? "STOP FIRST" : "RESTORE FROM USB",
-                !rc ? "RESTORED" : rc == RS_E_PLAYING ? "then restore" : rc == RS_E_NO ? "NOTHING CHANGED" : "NOT RESTORED");
-    }
-}
-static int fm1core_md_sx_accept(const uint8_t *f, uint32_t n)   /* the frames a service of fm1_main reads */
-{
-    return fm1sx_is_mupg(f, n) || FM1CORE_PL_SX_READER(f, n) || fm1core_pl_sx_is(f, n, 0x4Cu, 0x47u) ||
-           fm1core_pl_sx_is(f, n, 0x4Du, 0x44u);
-}
-/* main_fm1.c fm1_main, each pass: sysex_dispatch.h (a frame one service took is done; only a frame none took goes to
- * ota_service, then usb_cmd), then the backup streaming */
-static void fm1core_md_sx_service(void)
-{
-    const uint8_t *p;
-    uint32_t n;
-    if (ota_frame_get(&p, &n)) {
-        if (ann_frame(p, n, fm1_ms) || fm1core_md_log_frame(p, n) || app_sysex(p, n))
-            ota_frame_done();
-        else
-            fm1core_md_usb_cmd(ota_service());
-    }
-    bu_step();                            /* a backup streaming to the host */
-}
-#define FM1CORE_PL_SX_ACCEPT fm1core_md_sx_accept
-#define FM1CORE_PL_SX_SERVICE() fm1core_md_sx_service()
-#define FM1CORE_PL_SX_WORK() (fm1core_pl_sxi.ready || bu.on)
+/* the ROM cartridges are compiled in (core_remotefm1.cmake fails the configure without them): never an INIT VOICE
+ * build by accident */
+#if SA_ROM_NBANKS != 8
+#error "dx7_rom.h has no ROM cartridges: give FM1_DX7_ROM_DIR (or DX7_ROM_DIR) the eight .syx files"
+#endif
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME APP_NAME
@@ -258,17 +132,43 @@ static void fm1core_md_sx_service(void)
 #define FM1CORE_PL_UI_INPUT() app_input_only()
 #define FM1CORE_PL_DIM_LEVEL (fm1core_fb_dim_lo ? FM1P_LED_FAINT : FM1P_LED_DIM)   /* the glow: DIM LO / HI */
 #define FM1CORE_PL_DIM_ON 1               /* (plat_lights fills the dim plane only while glowing) */
+#define FM1CORE_PL_MID_PLANE fm1core_rf_mid_plane()   /* plat_lights' mid level and plat_lights_levels' two */
 #define FM1CORE_PL_PALETTE APP_PALETTE
 #define FM1CORE_PL_DEFAULT_MASTER 512     /* -> master_pos 2048, plat_fm1.c's (the gain APP_GAIN(2048)) */
 
-static void fm1core_pl_flash_boot(void)  /* fm1_main: a restore's commit cut short by a power loss finished */
+static void fm1core_fb_sense_tick(void)  /* the keys' readings, while plat_sense is on (the converter is the scan's) */
 {
-    rs_boot();
-    ota_boot_cleanup();
+    if (fm1_an.con)
+        app_host_tick();
 }
+#define FM1CORE_PL_TICK_HOOK() fm1core_fb_sense_tick()
+/* the keys' velocity and pressure (APP_TOUCH: VELOCITY on, the default): the panel's key_vel / key_lean become the
+ * readings the scan would hand the app, through lib/touch.c's own host model (as core_amb.c, core_ripple.c) */
+extern fm1panel_t fm1core_pl_panel;
+static uint8_t fm1core_fb_vel[NKEYS], fm1core_fb_lean[NKEYS];
+static void fm1core_fb_keys(uint32_t down, uint32_t up, uint32_t held)
+{
+    uint32_t k;
+    for (k = 0; k < NKEYS; k++) {
+        const uint8_t lean = fm1p_lean(&fm1core_pl_panel, k);
+        if ((down >> k) & 1u) {
+            fm1core_fb_vel[k] = fm1p_vel(&fm1core_pl_panel, k, 100);   /* (none given: 100, the emulator's) */
+            fm1core_fb_lean[k] = lean;
+            app_host_key(k, fm1core_fb_vel[k], lean);
+        } else if ((up >> k) & 1u) {
+            app_host_key(k, 0, 0);
+        } else if (((held >> k) & 1u) && lean != fm1core_fb_lean[k]) {
+            fm1core_fb_lean[k] = lean;
+            app_host_key(k, fm1core_fb_vel[k], lean);   /* the lean changed: the same landing, pressed more */
+        }
+    }
+}
+#define FM1CORE_PL_KEY_HOOK(down, up, held) fm1core_fb_keys(down, up, held)
+
+static void fm1core_pl_flash_boot(void) {}   /* (no backup and restore: nothing to finish) */
 static void fm1core_pl_app_boot(void)    /* base/device/main_fm1.c fm1_main */
 {
-    app_init();                           /* the prefs, the saved Biome (or the factory one), the engine */
+    app_init();                           /* the store, the settings, the ROM voice, the loops kept */
     radio_boot_note();
     if (!radio_last_bad && APP_BLE_AT_BOOT)
         ble_start();                      /* (no radio in this build: nothing) */
@@ -278,7 +178,7 @@ static void fm1core_pl_ui_start(void)
     lcd_fill(0, 0, 240, 240, 0);
     app_ui_init();
 }
-static void fm1core_pl_render(int32_t *lr, uint32_t n)   /* main_fm1.c render_block (USB audio full: no USB audio) */
+static void fm1core_pl_render(int32_t *lr, uint32_t n)   /* main_fm1.c render_block (no USB audio) */
 {
     app_render(lr, n, APP_GAIN(master_pos));
 }
@@ -299,13 +199,22 @@ static void fm1core_pl_uboot_say(uint32_t left)
         app_say("UPDATE MODE", "CANCELLED");
     }
 }
-/* the lazy save: Mutable Dreams has none (SAVE writes the Biome and the prefs, the bank page its User Banks; the
- * device keeps nothing else): nothing is pending */
-static int fm1core_pl_sync(void) { return 1; }
+/* the lazy save now: the settings (sa_main.c sa_store_step saves them 2 s after a change, when quiet); a bank or loop
+ * still being written (sa_store.c's job, a sector a pass): deferred */
+static int fm1core_pl_sync(void)
+{
+    if (sf_busy())
+        return 0;
+    if (sa.store_dirty && !sa.panel)
+        sa_save_now();
+    return !sa.store_dirty;
+}
 static void fm1core_pl_info(char *buf, uint32_t n)
 {
-    snprintf(buf, n, "page %d track %d playing %d biome %d help %d", dream_ui.page, dream_ui.track + 1,
-             md_playing(), (int)md_state()->biome_id, dream_ui.help);
+    snprintf(buf, n, "%s screen %u base %u bank %u (%s) voice %u '%s' octave %d channel %u voices %u recording %d",
+             sa.panel ? "panel" : "standalone", (unsigned)sa.ov, (unsigned)sa.base, (unsigned)sa.bank + 1u,
+             sa.bank < SA_NBANKS ? sa_rom_name(sa.bank) : "USER", (unsigned)sa.voice + 1u, sa.name, (int)sa.oct,
+             (unsigned)sa.ch, (unsigned)sa_synth_voices(), sl_recording());
 }
 
 #include "../plat/plat_glue.h"

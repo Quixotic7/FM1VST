@@ -5,6 +5,7 @@
 | `amb` | AMB-1 1.3 | `cores/fm1-amb` @ v1.3, with `base` = fm1-base @ 15dff6d, `base/bsp` = felucca-bsp @ 6b087c2 | MPL-2.0 |
 | `loom` | LOOM-8 0.6.1 | `cores/fm1-loom` @ v0.6.1 (3f41391), with `base` = fm1-base @ 71128a3, `base/bsp` = felucca-bsp @ 33cac69 | GPL-3.0-only (fm1-base MPL-2.0); un-gated 2026-10-21 (the owner's call: the 909 hi-hat) |
 | `mutabledreams` | Mutable Dreams 1.4 | `cores/mutable-dreams` @ v1.4 (0321551), fm1-base and felucca-bsp vendored in it (no submodules) | GPL-3.0-only combined (app also MIT; Mutable Instruments code MIT; fm1-base MPL-2.0) |
+| `remotefm1` | RemoteFM1 0.3.1 (Quixotic7) | `cores/RemoteFM1` @ v0.3.1 (e6fa19d), with `base` = fm1-base @ 934e40d, `base/bsp` = felucca-bsp @ 2cd696a, both patched at build time | MPL-2.0; FM6's MSFA parts Apache-2.0; Yamaha's DX7 ROM voices compiled in from the builder's .syx files |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
@@ -106,6 +107,33 @@ fm1-base: plat_fm1.c's host reads need chip/ota.c before it), with the platform'
   notice (`mutabledreams_mi_mit.txt`: the files' own header, gathered), fm1-base's and felucca-bsp's MPL-2.0 with
   LICENSING.md / NOTICE, the Barlow and Nunito OFL. `presets/` (JSON catalogs) is already compiled into
   `app/dsp/preset_bank.inc` upstream; nothing of it is shipped as a file.
+
+## RemoteFM1
+
+RemoteFM1 (Quixotic7) is the firmware that makes an FM-1 the panel of a host running .rfm1 files; here it is an
+.rfm1 itself. Without a host, 0.3.x is an instrument of its own, and that is what the core runs: a DX7 (saadet's FM6,
+`firmware/sa/sa_synth.c`, its own unit with `PLAT_HOST` as build.py gives the o2 units), Yamaha's eight ROM
+cartridges and the user cartridges, the MIDI controller and its REMOTE mode, 16 loops, the arp, the scales and the
+screens.
+
+- **fm1-base and felucca-bsp patched, as build.sh does.** `core_remotefm1.cmake` copies `base/` (include, device,
+  lib, host, ble, tools, bsp/chip, bsp/boards) into the build folder and applies `firmware/patches/fm1-base/*.patch`
+  and `firmware/patches/felucca-bsp/*.patch` with `git apply` (exactly, or the configure stops). The unit reads
+  fm1-base from there. The copy is made again when a patch or a pin changes; the submodule is never touched.
+- **Two files through a clang VFS overlay:** `src/rfm_dev.c` (the port on the FM-1: usb.c's rings, the vendor bulk
+  pair, the panel's DMA) is `remotefm1_port.c`, and `src/rfm_main.c` is the submodule's file with `rf_run` taking one
+  turn a pass (it spins on the tick counter for 2 ms otherwise, and simulated time does not move inside a pass).
+- **The port:** the host's MIDI is the USB port. USB SysEx in goes byte by byte to `rf_sx_tap`, as usb.c hands it, so
+  a DX7 32-voice dump sent to the core becomes a user cartridge (rfm1_run `--sysex rom2a.syx`: bank 9, USER), and
+  RemoteFM1's own F0 7D 52 46 messages reach its parser. SysEx out goes to the USB out ring. Nothing is ever full or
+  waited for. No vendor bulk pair, no Bluetooth (`radio_none.c`), one core (`FM1B_CPU2` 0), no managers' SysEx.
+- **LEDs:** `plat_lights_levels` (patch 0007, felucca-bsp's `fm1_led_lv`) shows as the mid plane.
+- **The ROM voices:** `gen_dx7_rom.py --dir FM1_DX7_ROM_DIR` (a cache path, default `$ENV{DX7_ROM_DIR}`) writes
+  `firmware/build/gen/dx7_rom.h` in the submodule's ignored build folder. Without the eight `.syx` files the configure
+  fails when the build selects cores (`FM1_ONLY_CORES`) or makes `.rfm1` files; a native build of every core leaves
+  RemoteFM1 out with a warning. `core_remotefm1.c` does not compile against a header without the eight cartridges,
+  so an INIT VOICE-only build is never made. The `.syx` files and the header are never committed here.
+- Version and identity: build.py --release 0.3.1's, "0.3.1" and FM-1_52000301. Not gated.
 
 ## A next fm1-base app
 
