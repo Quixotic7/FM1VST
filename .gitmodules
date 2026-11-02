@@ -232,3 +232,6 @@
 [submodule "guitchordi"]
 	path = cores/guitchordi
 	url = https://github.com/stoogs/guitchordi
+[submodule "K-WASUB_Firmware_for_FM1"]
+	path = cores/K-WASUB_Firmware_for_FM1
+	url = https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1
