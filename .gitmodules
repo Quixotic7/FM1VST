@@ -202,3 +202,6 @@
 [submodule "vesper-fm1"]
 	path = cores/vesper-fm1
 	url = https://github.com/fatcatstudios-hub/vesper-fm1
+[submodule "fm1-berlinan"]
+	path = cores/fm1-berlinan
+	url = https://github.com/jiripisa/fm1-berlinan
