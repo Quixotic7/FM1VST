@@ -139,3 +139,6 @@
 [submodule "fm1-trax"]
 	path = cores/fm1-trax
 	url = https://github.com/jartificer/fm1-trax
+[submodule "spellbox"]
+	path = cores/spellbox
+	url = https://github.com/pjac1810/spellbox
