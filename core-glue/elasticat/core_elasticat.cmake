@@ -43,8 +43,10 @@ endif()
 # (bank A, slots 1-16). FILE (printed SAVE) at 2 s while playing opens the SAMPLER (FILE itself is gated while
 # playing); the chord is B11 (key 25), which arms a take on the next bar: it is recording (rec:rec) by the end. The
 # take is written to /data only when it ends, after the run.
+# 0.6.1 (docs/UX-V2.md 9/10): projects are files in /data/projects (the flash keeps APP SETTINGS and the last name); the
+# test's old flash record still loads once; two inserts per track (the arena 200 MiB).
 set(_ec_run --folder ${CMAKE_CURRENT_LIST_DIR}/test_folder --flash-in ${CMAKE_CURRENT_LIST_DIR}/test_project.flash
-            --settle 3000 --seconds 4 --press PLAY@1500 --keys 25 --min-rms 0.02 --expect-ui ec0.6.0
+            --settle 3000 --seconds 4 --press PLAY@1500 --keys 25 --min-rms 0.02 --expect-ui ec0.6.1
             --expect-ui play:1 --expect-ui file:testloop_bpm120.wav --expect-ui ready:1 --expect-ui missing:0
             --expect-ui seq:on --audio-in ${CMAKE_CURRENT_LIST_DIR}/test_folder/audio/testloop_bpm120.wav
             --audio-in-latency 256)
