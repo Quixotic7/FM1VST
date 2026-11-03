@@ -46,7 +46,7 @@ endif()
 # 0.6.1 (docs/UX-V2.md 9/10): projects are files in /data/projects (the flash keeps APP SETTINGS and the last name); the
 # test's old flash record still loads once; two inserts per track (the arena 200 MiB).
 set(_ec_run --folder ${CMAKE_CURRENT_LIST_DIR}/test_folder --flash-in ${CMAKE_CURRENT_LIST_DIR}/test_project.flash
-            --settle 3000 --seconds 4 --press PLAY@1500 --keys 25 --min-rms 0.02 --expect-ui ec0.6.1
+            --settle 3000 --seconds 4 --press PLAY@1500 --keys 25 --min-rms 0.02 --expect-ui ec0.6.2
             --expect-ui play:1 --expect-ui file:testloop_bpm120.wav --expect-ui ready:1 --expect-ui missing:0
             --expect-ui seq:on --audio-in ${CMAKE_CURRENT_LIST_DIR}/test_folder/audio/testloop_bpm120.wav
             --audio-in-latency 256)
