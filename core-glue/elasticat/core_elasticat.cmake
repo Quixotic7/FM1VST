@@ -31,23 +31,26 @@ if(TARGET core_elasticat_obj)
     endforeach()
 endif()
 
-# the .rfm1: a Fantasy CFW reading /audio, writing its own /data (later: exports), 128 MiB (the sample store's arena,
+# the .rfm1: a Fantasy CFW reading /audio, writing its own /data (later: exports), 256 MiB (0.6.0) (the sample store's arena,
 # src/io/ec_samplestore.h). The test boots a saved project (test_project.flash: four tracks on the folder's test loop
 # -- loop with p-locks and a region lock, granular, slice poly, chopped with a ratchet -- built through panel input by
 # the repo's host/glue_project.txt) and presses PLAY at 1.5 s: the sequencer must fire trigs and the mix be audible
 #
-# E6 (0.4.0): audio input (docs/VIRTUAL-CARTS.md 8): WANTS ain1 (it runs without; the INPUT machine and REC's input
-# source are then silent). The test feeds the test loop through rfm1_audio_in (latency 256), opens the REC pop-up
-# (REC at 2 s) and arms a take (OCT+ at 2.2 s: synced on PLAY, already playing, it waits: nothing is written into the
-# test folder); rfm1_elasticat_ain_off turns the input off at 5 s (state 0).
+# E6 (0.4.0): audio input (docs/VIRTUAL-CARTS.md 8): WANTS ain1 (it runs without; the INPUT machine and the
+# SAMPLER's input source are then silent). The test feeds the test loop through rfm1_audio_in (latency 256);
+# rfm1_elasticat_ain_off turns the input off at 5 s (state 0).
+# 0.6.0 (the modes, docs/UX-V2.md): MEMORY_MIB 256 (the sample arena 219 MiB); the old (0.5) project record loads
+# (bank A, slots 1-16). FILE (printed SAVE) at 2 s while playing opens the SAMPLER (FILE itself is gated while
+# playing); the chord is B11 (key 25), which arms a take on the next bar: it is recording (rec:rec) by the end. The
+# take is written to /data only when it ends, after the run.
 set(_ec_run --folder ${CMAKE_CURRENT_LIST_DIR}/test_folder --flash-in ${CMAKE_CURRENT_LIST_DIR}/test_project.flash
-            --settle 3000 --seconds 4 --press PLAY@1500 --keys 26 --min-rms 0.02 --expect-ui ec0.5.0
+            --settle 3000 --seconds 4 --press PLAY@1500 --keys 25 --min-rms 0.02 --expect-ui ec0.6.0
             --expect-ui play:1 --expect-ui file:testloop_bpm120.wav --expect-ui ready:1 --expect-ui missing:0
             --expect-ui seq:on --audio-in ${CMAKE_CURRENT_LIST_DIR}/test_folder/audio/testloop_bpm120.wav
             --audio-in-latency 256)
-fm1_add_rfm1(elasticat VIRTUAL NEEDS fs1 WANTS ain1 FOLDERS audio=r data=rw MEMORY_MIB 128 AUTHORS "Quixotic7"
-             RUN_ARGS ${_ec_run} --press REC@2000 --press OCT+@2200 --expect-ui ain:1 --expect-ui lat:256
-                      --expect-ui recpop:1 --expect-ui rec:armed)
+fm1_add_rfm1(elasticat VIRTUAL NEEDS fs1 WANTS ain1 FOLDERS audio=r data=rw MEMORY_MIB 256 AUTHORS "Quixotic7"
+             RUN_ARGS ${_ec_run} --press SAVE@2000 --expect-ui ain:1 --expect-ui lat:256
+                      --expect-ui cat:SAMPLER --expect-ui rec:rec)
 get_property(_ec_file GLOBAL PROPERTY FM1_RFM1_FILE_elasticat)
 if(_ec_file)
     string(REPLACE ";" " " _ec_ra "${_ec_run};--audio-in-off-at;5000;--expect-ui;ain:0;--expect-ui;lat:0")
