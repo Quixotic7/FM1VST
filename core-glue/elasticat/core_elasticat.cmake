@@ -41,7 +41,7 @@ endif()
 # (REC at 2 s) and arms a take (OCT+ at 2.2 s: synced on PLAY, already playing, it waits: nothing is written into the
 # test folder); rfm1_elasticat_ain_off turns the input off at 5 s (state 0).
 set(_ec_run --folder ${CMAKE_CURRENT_LIST_DIR}/test_folder --flash-in ${CMAKE_CURRENT_LIST_DIR}/test_project.flash
-            --settle 3000 --seconds 4 --press PLAY@1500 --keys 26 --min-rms 0.02 --expect-ui ec0.4.1
+            --settle 3000 --seconds 4 --press PLAY@1500 --keys 26 --min-rms 0.02 --expect-ui ec0.5.0
             --expect-ui play:1 --expect-ui file:testloop_bpm120.wav --expect-ui ready:1 --expect-ui missing:0
             --expect-ui seq:on --audio-in ${CMAKE_CURRENT_LIST_DIR}/test_folder/audio/testloop_bpm120.wav
             --audio-in-latency 256)
