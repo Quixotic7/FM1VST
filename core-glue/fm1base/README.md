@@ -10,6 +10,7 @@
 | `berlinan` | Berlinan 0.5.1 (Jiří Píša) | `cores/fm1-berlinan` @ v0.5.1 (afe2d93), with `base` = fm1-base @ 15dff6d, `base/bsp` = felucca-bsp @ 6b087c2 (AMB-1's) | GPL-2.0-or-later; Berkeley SoftFloat 3e BSD-3-Clause; fm1-base MPL-2.0 |
 | `modelar` | MODELAR 0.3 (Hirakos) | `cores/MODELAR` @ v0.3 (89475ca), with `base` = fm1-base @ 865bc2f, `base/bsp` = felucca-bsp @ 33cac69 | MPL-2.0 |
 | `ctl1` | CTL-1 1.0 | `cores/fm1-ctl` @ v1.0 (c3c2a7e), with `base` = fm1-base @ b16c177, `base/bsp` = felucca-bsp @ b4bb32e | MPL-2.0; Sonivox EAS Apache-2.0 |
+| `echofield` | ECHOFIELD FM-1 0.2.8 (Philip Bos) | `cores/echofield-fm1` @ v0.2.8 (8187473), with `base` = fm1-base @ 4039a8b, `base/bsp` = felucca-bsp @ b0b2428 | MIT; factory sounds CC0-1.0; fm1-base MPL-2.0 |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
@@ -241,6 +242,43 @@ above), lib/btdev.c (`APP_BTDEV`: the Setup page's Bluetooth devices, never any 
 - Licence texts in the .rfm1: its LICENSE (MPL-2.0) and LICENSING.md, Sonivox EAS's Apache-2.0 and NOTICE, fm1-base's
   and felucca-bsp's MPL-2.0 with their notes, the Barlow OFL. JieLi's Bluetooth libraries are not in the repository
   and not in this build. Not gated.
+
+## ECHOFIELD
+
+ECHOFIELD FM-1 (Philip Bos: a granular sampler, six cloud modes over a 16-slot IMA ADPCM sample bank in the flash, 14
+CC0 factory sounds, presets, a filter / delay / reverb / tape chain, and a companion web app for samples, presets and
+recording) is pinned at v0.2.8 (8187473). Its fm1-base (4039a8b, 2026-10-31) is the newest here; `core_echofield.c`
+follows `core_frasil.c` (backup.c, the service's coroutine, lib/touch.c's host part for `APP_TOUCH`), with
+`sys_text.c` and VESPER's `midi_usb_lost` stand-in.
+
+- **app.c as the browser emulator compiles it** (build.py `--web`: `PLAT_HOST` with emcc). Two things in app.c depend
+  on it: an empty bank gets the 14 factory sounds at power-on (`emu_factory`, under `__EMSCRIPTEN__`: "an emulated FM-1
+  starts as a real one does after the flasher"; the sounds are the fm1.toml gen step's `factory_data.h`, from
+  companion/factory), and `settle()`, which on the device spins on `plat_ms` while the audio interrupt fades the output
+  around a flash write, returns at once (simulated time does not move inside a pass). A native build defines
+  `__EMSCRIPTEN__` around the include for the same path. The host simulator's hooks (`app_host_cmd`, `app_expect`) are
+  compiled, unused.
+- **The engine** (fm1.toml `o2`: app/dsp/engine.c) is its own unit (`echofield_dsp_engine.c`, `PLAT_HOST`: its
+  `.ram_text` off).
+- **The sample bank** (bank.c: 92 sectors of 4 KiB in the data windows) is raw flash on the NOR image, kept with the
+  plugin's state, the factory sounds included.
+- **The managers' SysEx:** main_fm1.c's order: the screen reader ("ECHOFIELD 0.2.8"), the log readout, the remote
+  control (no lease); no `app_sysex`; then `ota_service` (the M-UPGRADE identity) and usb_cmd: backup (0x42 "ECB1"),
+  restore (0x41, SEL / HOME), then the companion's commands (`APP_USB_CMD`, proto.c: HELLO, DIR, UPLOAD with its read
+  requests, ERASE, RENAME, PARAMS, SET, PRESETS, PRESET OP, READ, WIPE, PRESET GET / PUT, STATS; the 0x7F notices
+  out), on the coroutine (an upload and a restore wait for the host). `sysex_test_echofield` runs the companion's
+  connect (HELLO), DIR, PRESETS, PARAMS, an export (READ, checked against factory.json's CRC), an upload, SET, a
+  backup, the update keys and a reboot from the flash image.
+- **Saving:** settings, presets and the bank are written when they change; `flash_sync` is app_frame's session save
+  without its waits (deferred while something sounds).
+- **Not built:** the splash, the overload hook (`APP_OVERLOAD`), the second core (fm1.toml `cpu2`: one core renders
+  every grain; `plat_cpu2_*` say "off, never given up"), the screen mirror (fm1.toml `mirror`: the companion's Mirror
+  gets no answer), USB audio (`usb_audio_in`: the computer recording the FM-1's output, the companion's takes; the
+  core's output is the host's audio).
+- Version and identity: CHANGELOG.md's first `## X.Y.Z` (VERSION_FILE), build.py --release's: "0.2.8" and
+  FM-1_3246000208 (fm1.toml `id_prefix` FM-1_3246 + 00 02 08). USB product: "ECHOFIELD FM-1".
+- Licence texts in the .rfm1: its LICENSE (MIT) and LICENSING.md, the factory sounds' CC0 note
+  (`echofield_factory_cc0.txt`), fm1-base's and felucca-bsp's MPL-2.0 with their notes, the Barlow OFL. Not gated.
 
 ## A next fm1-base app
 
