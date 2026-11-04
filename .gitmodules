@@ -238,3 +238,7 @@
 [submodule "echofield-fm1"]
 	path = cores/echofield-fm1
 	url = https://github.com/Philip-Bos/echofield-fm1
+[submodule "cores/elasticatfm1"]
+	path = cores/elasticatfm1
+	url = https://github.com/Quixotic7/elasticatfm1
+	branch = main

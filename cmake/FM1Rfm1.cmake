@@ -23,8 +23,12 @@
 #       [VIRTUAL]                   a Fantasy CFW (docs/VIRTUAL-CARTS.md): host-only, the manifest says "virtual":
 #                                   true; MEMORY_MIB up to 512, the file under 16 MiB, the rfm1_host_1 imports allowed
 #       [NEEDS <cap..>]             (VIRTUAL) the host capabilities it uses, the manifest's "needs" ("fs1": the files)
-#       [FOLDERS <name=r|rw..>])    (VIRTUAL) the shared folder's parts it uses, the manifest's "folders"
+#       [FOLDERS <name=r|rw..>]     (VIRTUAL) the shared folder's parts it uses, the manifest's "folders"
 #                                   ("audio=r" "code=r" "data=rw")
+#       [WANTS <cap..>])            host capabilities it uses when a host has them and does without otherwise, the
+#                                   manifest's "wants" ("ain1": audio input, docs/VIRTUAL-CARTS.md 8). ain1 in WANTS
+#                                   or NEEDS also makes the shim export rfm1_audio_in / rfm1_audio_in_info from the
+#                                   core's fm1core_audio_in / fm1core_audio_in_info
 #
 # Makes rfm1_<id> (build/rfm1/<id>-<version>.rfm1, also in ALL), appended to rfm1_all, and the test rfm1_<id>
 # (rfm1_check + rfm1_run). The generate step is the core's own (gen_<id>). The coroutine: core-glue/common/coro.c
@@ -141,7 +145,7 @@ endfunction()
 
 function(fm1_add_rfm1 id)
     cmake_parse_arguments(A "VIRTUAL" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE"
-                          "AUTHORS;LICENSE_FILES;DEFINES;FLAGS;INCLUDES;RUN_ARGS;NEEDS;FOLDERS" ${ARGN})
+                          "AUTHORS;LICENSE_FILES;DEFINES;FLAGS;INCLUDES;RUN_ARGS;NEEDS;FOLDERS;WANTS" ${ARGN})
     if(A_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR "fm1_add_rfm1(${id}): unknown arguments ${A_UNPARSED_ARGUMENTS}")
     endif()
@@ -225,6 +229,10 @@ function(fm1_add_rfm1 id)
     # own object, linked only into a core that calls it (rfm1_link.cmake)
     list(FILTER _srcs EXCLUDE REGEX "/coro\\.c$")
     list(APPEND _srcs ${FM1_COMMON_DIR}/rfm1_shim.c)
+    set(_shim_opt "")             # audio input (docs/VIRTUAL-CARTS.md 8): the shim's two exports, only when asked for
+    if("ain1" IN_LIST A_WANTS OR "ain1" IN_LIST A_NEEDS)
+        set(_shim_opt -DRFM1_AIN1=1)
+    endif()
     set(_objs "")
     set(_n 0)
     foreach(_s IN LISTS _srcs)
@@ -233,7 +241,9 @@ function(fm1_add_rfm1 id)
         math(EXPR _n "${_n} + 1")
         set(_sopt "")
         set(_sdeps "")
-        if(NOT _s STREQUAL "${FM1_COMMON_DIR}/rfm1_shim.c")
+        if(_s STREQUAL "${FM1_COMMON_DIR}/rfm1_shim.c")
+            set(_sopt ${_shim_opt})
+        else()
             get_source_file_property(_sopt ${_s} COMPILE_OPTIONS)
             get_source_file_property(_sdef ${_s} COMPILE_DEFINITIONS)
             get_source_file_property(_sdeps ${_s} OBJECT_DEPENDS)
@@ -354,6 +364,9 @@ function(fm1_add_rfm1 id)
     if(A_SOURCE_URL)
         list(APPEND _pack_args --source-url "${A_SOURCE_URL}")
     endif()
+    foreach(_w IN LISTS A_WANTS)  # the manifest's "wants" (any cart: hosts ignore what they lack)
+        list(APPEND _pack_args --wants ${_w})
+    endforeach()
     if(A_VIRTUAL)                 # the manifest's "virtual", "needs", "folders" (rfm1_check then applies section 2)
         list(APPEND _pack_args --virtual)
         foreach(_n IN LISTS A_NEEDS)
@@ -380,6 +393,9 @@ function(fm1_add_rfm1 id)
     set(_v "")
     if(A_VIRTUAL)
         set(_v ", virtual (Fantasy CFW): needs ${A_NEEDS}, folders ${A_FOLDERS}")
+    endif()
+    if(A_WANTS)
+        string(APPEND _v ", wants ${A_WANTS}")
     endif()
     message(STATUS "${id} rfm1: ${id}-${_fver}.rfm1, ${A_MEMORY_MIB} MiB${_v}")
 endfunction()

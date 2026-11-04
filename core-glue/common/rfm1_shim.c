@@ -135,3 +135,35 @@ EXPORT(rfm1_ui_info) void rfm1_ui_info(uint32_t buf, uint32_t n)
         C->ui_info(b, n);
     b[n - 1] = 0;
 }
+
+/* live panel labels (docs/DYNAMIC-LABELS.md): the core's optional symbols through weak references, so every .rfm1
+ * exports both; a core without them: epoch 0, label 0 */
+extern uint32_t fm1core_labels_epoch(void) __attribute__((weak));
+extern const char *fm1core_label(int32_t which) __attribute__((weak));
+EXPORT(rfm1_labels_epoch) uint32_t rfm1_labels_epoch(void)
+{
+    return fm1core_labels_epoch ? fm1core_labels_epoch() : 0u;
+}
+EXPORT(rfm1_label) uint32_t rfm1_label(int32_t which)
+{
+    return fm1core_label && which >= 0 && which < FM1CORE_LBL_N ? (uint32_t)(uintptr_t)fm1core_label(which) : 0u;
+}
+
+/* audio input (docs/VIRTUAL-CARTS.md 8, capability ain1): only in a module built with ain1 in its fm1_add_rfm1 WANTS or
+ * NEEDS (RFM1_AIN1), so a cart without it exports neither and rfm1_check can require ain1 of a cart that does. The
+ * core's optional symbols, through weak references (a core without them: no-ops). Until the next ABI bump these are
+ * module symbols, not descriptor fields: a native host does not see them yet. */
+#ifdef RFM1_AIN1
+extern void fm1core_audio_in(const int16_t *stereo, uint32_t frames) __attribute__((weak));
+extern void fm1core_audio_in_info(uint32_t state, uint32_t latency_frames) __attribute__((weak));
+EXPORT(rfm1_audio_in) void rfm1_audio_in(uint32_t stereo, uint32_t frames)
+{
+    if (fm1core_audio_in)
+        fm1core_audio_in((const int16_t *)(uintptr_t)stereo, frames);
+}
+EXPORT(rfm1_audio_in_info) void rfm1_audio_in_info(uint32_t state, uint32_t latency_frames)
+{
+    if (fm1core_audio_in_info)
+        fm1core_audio_in_info(state, latency_frames);
+}
+#endif

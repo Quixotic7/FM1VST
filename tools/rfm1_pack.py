@@ -16,6 +16,9 @@ The manifest's id, name, version, licence and source_url come from the descripto
 --virtual [--needs CAP].. [--folder NAME=r|rw]..: a Fantasy CFW (docs/VIRTUAL-CARTS.md): the manifest's "virtual": true,
 "needs" and "folders".
 
+--wants CAP..: a host capability the cart uses when the host has it and does without otherwise, the manifest's
+"wants" (any cart; "ain1": audio input, docs/VIRTUAL-CARTS.md 8). Hosts ignore names they do not know.
+
 --license-file NAME=PATH: NAME is the section's first line ("{name}" is replaced by the firmware's name); texts that are
 the same (whitespace aside) are carried once, under their names joined by "; ".
 """
@@ -107,6 +110,8 @@ def main():
     ap.add_argument("--needs", action="append", default=[], help="(--virtual) a host capability it uses: fs1")
     ap.add_argument("--folder", action="append", default=[], metavar="NAME=r|rw",
                     help="(--virtual) a part of the shared folder it uses: audio=r, code=r, data=rw")
+    ap.add_argument("--wants", action="append", default=[],
+                    help="a host capability it uses when present (ain1: audio input); any cart")
     for k in ("id", "name", "version", "license", "source-url"):
         ap.add_argument("--" + k, help="override the descriptor's " + k)
     a = ap.parse_args()
@@ -157,6 +162,11 @@ def main():
             man["folders"] = folders
     elif a.needs or a.folder:
         sys.exit("rfm1_pack: --needs and --folder are for a --virtual cart")
+    if a.wants:
+        for w in a.wants:
+            if not re.fullmatch(r"[a-z0-9_]{1,31}", w):
+                sys.exit("rfm1_pack: --wants %r is not [a-z0-9_]{1,31}" % w)
+        man["wants"] = list(dict.fromkeys(a.wants))
     if not re.fullmatch(r"[a-z0-9_]{1,31}", man["id"]):
         sys.exit("rfm1_pack: the id %r is not [a-z0-9_]{1,31}" % man["id"])
     for k in ("license", "source_url"):
