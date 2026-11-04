@@ -49,13 +49,14 @@ tools/rfm1_labels.py writes them as a header that core-glue/common/rfm1_shim.c i
 - `knobs`: SELECT ALGO PRESETS K1 K2 K3 K4 MASTER. They and the buttons are a static table behind `rfm1_labels_epoch`
   / `rfm1_label` ([DYNAMIC-LABELS.md](DYNAMIC-LABELS.md): slots 0..7 and 8..21), served **only while the core has no
   live labels of its own** (no `fm1core_labels_epoch`, or its epoch 0). A core with live labels keeps full control.
-- A label: 0..10 characters, upper case, printable ASCII; `""` = the control has no job (drawn blank or dimmed).
+- A label: 0..10 printable ASCII characters, shown in upper case (lower case is upper-cased); `""` = the control has
+  no job (drawn blank or dimmed).
   Short labels draw best (up to 5 characters at full size).
 
 ## Errors, and the owner's switches
 
 Nothing in this file fails a build. Each bad field (a path with `..`, a missing or too large image, a bad colour, a
-`dim` out of range, a label too long, in lower case, not ASCII, for an unknown control) is a warning in the build
+`dim` out of range, a label too long, not ASCII, for an unknown control) is a warning in the build
 output and is left out; the rest is used. A file that is not JSON is one warning and is ignored. `rfm1_check` reports
 what a file has (`skin: dim 0.2, theme 5 roles, background 1080x1920 PNG, ..`, `labels: 4 buttons, 3 knobs`).
 
