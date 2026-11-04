@@ -53,6 +53,11 @@ your descriptor, so they always match. Its options (cmake/FM1Rfm1.cmake has them
 | `RUN_ARGS <args..>` | options for the test's `rfm1_run` (`--sysex bank.syx`, `--settle 5000`) |
 | `VIRTUAL` | a Fantasy CFW, host-only ([VIRTUAL-CARTS.md](VIRTUAL-CARTS.md)): the manifest says `"virtual": true`; `MEMORY_MIB` up to 512, the file under 16 MiB, the `rfm1_host_1` imports allowed |
 | `NEEDS <cap..>`, `FOLDERS <name=r\|rw..>` | (with `VIRTUAL`) the manifest's `needs` (`fs1`: the shared folder's files) and `folders` (`code=r data=rw`) |
+| `NO_SKIN` | leave out the skin of your repository's `RemoteFM1Metadata.json` ([RFM1-METADATA.md](RFM1-METADATA.md)) |
+| `NO_LABELS` | leave out its button and knob labels |
+
+A skin and labels of your own: a `RemoteFM1Metadata.json` at your repository's root (the background images, the
+colours, the panel's button and knob names), packed into the file at build time: [RFM1-METADATA.md](RFM1-METADATA.md).
 
 To try a core without editing its glue: `-DFM1_RFM1_EXTRA_CORES=<id>` (or `all`).
 
@@ -92,7 +97,8 @@ ctest --test-dir build-rfm1 -R rfm1_                                # both, for 
 
 `rfm1_check` (Python 3, standard library only) reads the whole module: the manifest's fields, the imports (only the
 format's WASI list), the exports and their signatures, the memory (fixed, at most 32 MiB), and every instruction (it
-finds SIMD, atomics and the rest). The build runs it on every file it makes. A manifest that says `"virtual": true` is
+finds SIMD, atomics and the rest), and a skin's sections when there are any (RFM1-FORMAT.md section 8). The build runs
+it on every file it makes. A manifest that says `"virtual": true` is
 checked against [VIRTUAL-CARTS.md](VIRTUAL-CARTS.md)'s rules instead, by itself: the `rfm1_host_1` imports with their
 exact signatures (and `fs1` in `needs` when it imports them), up to 512 MiB of memory, a file under 16 MiB. Any other
 module that imports `rfm1_host_1` fails.
@@ -104,7 +110,8 @@ and `--lean L` play the chord at another velocity and aftertouch; `--help` has t
 `--folder DIR` serves `rfm1_host_1` from a RemoteFM1 folder (`DIR/code/<id>`, `DIR/data/<id>`, `DIR/audio`: sandboxed,
 as the manifest's `folders` allow, each request completed one device ms later); `--press PLAY@3000` presses a button by
 its label, `--info-at MS` and `--expect-ui TEXT` print and check `ui_info`, `--flash-in` / `--flash-out` boot from and
-save the flash image, `--screen out.ppm` saves the screen. `--audio-in in.wav` (with `--audio-in-latency N`,
+save the flash image, `--screen out.ppm` saves the screen, `--describe --labels` prints the descriptor (its
+`button_names`) and the live labels before init. `--audio-in in.wav` (with `--audio-in-latency N`,
 `--audio-in-off-at MS`, `--audio-in-once`) is a host's live input for a cart with `ain1` (VIRTUAL-CARTS.md 8). Interpreted, a core runs 10-25 times slower than native (FM1VST's own cores: 8-50x real time on an M5
 Mac with wasm3).
 
