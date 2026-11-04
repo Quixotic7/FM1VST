@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# RemoteFM1 0.3.1 (https://github.com/Quixotic7/RemoteFM1, tag v0.3.1 = e6fa19d; the firmware MPL-2.0, with fm1-base
+# RemoteFM1 0.3.2 (https://github.com/Quixotic7/RemoteFM1, tag v0.3.2 = f4da149; the firmware MPL-2.0, with fm1-base
 # and felucca-bsp MPL-2.0, saadet's FM6 with MSFA Apache-2.0, the Jersey 10 font OFL-1.1): the fm1-base glue
 # (core-glue/fm1base/README.md) over the unmodified submodule and its own submodules (base = fm1-base @ 934e40d,
 # base/bsp = felucca-bsp @ 2cd696a). Its standalone instrument as an .rfm1: the DX7 with Yamaha's ROM cartridges, the
@@ -22,7 +22,7 @@
 # build with only the INIT VOICE is never made. Neither the .syx files nor the header are ever committed here: only
 # the compiled .rfm1 carries the voices, as ChoralRoot and Melodee compile in the CZ-1 and Prophet-5 sounds.
 set(_rf ${CMAKE_SOURCE_DIR}/cores/RemoteFM1)
-set(_rf_ver 0.3.1)
+set(_rf_ver 0.3.2)
 set(_rf_fw ${_rf}/firmware)
 set(_rf_bin ${CMAKE_BINARY_DIR}/remotefm1)
 set(_rf_base ${_rf_bin}/fm1-base)
@@ -146,8 +146,8 @@ string(APPEND _v "  { \"type\": \"file\", \"name\": \"${_rf_fw}/src/rfm_dev.c\",
 file(WRITE ${_rf_vfs}.in "${_v}")
 configure_file(${_rf_vfs}.in ${_rf_vfs} COPYONLY)
 
-# ---- the core. build.py --release 0.3.1: APP_VERSION "0.3.1", the identity fm1.toml's id_prefix FM-1_52 + 00 03 01
-set(_rf_id FM-1_52000301)
+# ---- the core. build.py --release 0.3.2: APP_VERSION "0.3.2", the identity fm1.toml's id_prefix FM-1_52 + 00 03 01
+set(_rf_id FM-1_52000302)
 set(_rf_gen "(lambda b: (setattr(b, 'APP', b.Path('.').resolve()), setattr(b, 'CONF', {k: ([g for g in v if 'gen_dx7_rom' not in g] if k == 'gen' else v) for k, v in b.read_conf(b.APP / 'fm1.toml').items()}), setattr(b, 'GEN', b.APP / 'build' / 'gen'), b.generate()))(__import__('sys').path.insert(0, '../base/tools') or __import__('build'))")
 file(RELATIVE_PATH _rf_rel ${CMAKE_CURRENT_LIST_DIR} ${_rf_fw})
 fm1_add_core(remotefm1 ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_rf} UNIT core_remotefm1.c DESC core_remotefm1_desc.c
