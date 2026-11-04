@@ -2,7 +2,7 @@
 
 | core | firmware | submodule | licence |
 |---|---|---|---|
-| `elasticat` | Elasticat FM-1 0.6.4 (E1-E6, the mod matrix, the 0.6.0 modes, 0.6.1: projects as files, two inserts per track, 0.6.2: the CAT's fractal, 0.6.3: seven evolving fractals, FX's EFFECTS / SENDS / MASTER pages, 0.6.4: SENDS raise-and-move, Quixotic7) | `cores/elasticatfm1` (github.com/Quixotic7/elasticatfm1, `main`) | GPL-3.0-only |
+| `elasticat` | Elasticat FM-1 0.6.5 (E1-E6, the mod matrix, the 0.6.0 modes, 0.6.1: projects as files, two inserts per track, 0.6.2: the CAT's fractal, 0.6.3: seven evolving fractals, FX's EFFECTS / SENDS / MASTER pages, 0.6.4: SENDS raise-and-move, 0.6.5: Elektron-style sticky locks and SLIDE, Quixotic7) | `cores/elasticatfm1` (github.com/Quixotic7/elasticatfm1, `main`) | GPL-3.0-only |
 
 Elasticat, the norns sample-mangling sequencer by Quixotic7, rewritten in C for the FM-1 as a host-only `.rfm1`
 ([docs/VIRTUAL-CARTS.md](../../docs/VIRTUAL-CARTS.md)): `fm1_add_rfm1(elasticat VIRTUAL NEEDS fs1 WANTS ain1 FOLDERS
@@ -25,7 +25,7 @@ allowed).
   flash header + the project record; the core pads the rest) built through panel input by the repo's
   `host/glue_project.txt` + `host/trim_flash.py`: four tracks on the test loop (loop with trigs, p-locks and a region
   lock; granular; slice poly; chopped with a ratchet). PLAY at 1.5 s; the chord's RMS must be >= 0.02 and `ui_info`
-  must say `ec0.6.4 play:1 file:testloop_bpm120.wav ready:1 missing:0 seq:on` (trigs fired). E6: the test loop is
+  must say `ec0.6.5 play:1 file:testloop_bpm120.wav ready:1 missing:0 seq:on` (trigs fired). E6: the test loop is
   also fed as the live input (`rfm1_run --audio-in`, latency 256): `ain:1 lat:256`. 0.6.0: FILE (printed SAVE) at
   2 s while playing opens the SAMPLER, the chord is B11 (key 25), which arms a take on the next bar: `cat:SAMPLER
   rec:rec` (still taking at the end, so nothing is written into test_folder). The project is a 0.4 record: it also
