@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# DRIFT 0.9.1 (https://github.com/FBNFRTG/drift-fm1, tag v0.9.1): Fabian Freitag's ambient instrument, a fork of
+# DRIFT 0.9.6 (https://github.com/FBNFRTG/drift-fm1, tag v0.9.6): Fabian Freitag's ambient instrument, a fork of
 # Felucca, the felucca_web family's core (fw_core.h over the firmware's own web/emu/felucca_web.c, unmodified;
 # cmake/FM1Cores.cmake fm1_add_core). Its Felucca-Engines are in the tree (firmware/engines, no submodule to fetch).
 # The version: FELUCCA_VERSION "DRIFT 0.9.1", as web/emu/build.sh passes it from felucca.c (and build.py --release

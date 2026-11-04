@@ -4,7 +4,7 @@
  * repeating generative Euclidean sequencer, eight voices, two oscillators, three user sample slots, a monochrome UI
  * (drift_ui.c, drift_osc.c, drift_seq.c ..). Its browser unit, web/emu/felucca_web.c (its own webplayer's), is driven
  * by the family's glue (fw_core.h). The idle LED animation is there (ANIM_IDLE).
- * Version and identity as tools/build.py --release 0.9.1 builds them (drift-fm1-0.9.1.fwsc): FELUCCA_VERSION
+ * Version and identity as tools/build.py --release 0.9.6 builds them (drift-fm1-0.9.1.fwsc): FELUCCA_VERSION
  * "DRIFT 0.9.1" (felucca.c's own default, as web/emu/build.sh passes it), FELUCCA_ID FM-1_983 (build.py PRODUCT:
  * DRIFT's one fixed identity across releases). The sample uploader (webplayer/samples) asks INFO for
  * "FELUCCA DRIFT 0.9.1" before it writes a slot. */
