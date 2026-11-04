@@ -9,7 +9,7 @@ core-glue/common/rfm1_shim.c is compiled with (fm1_add_rfm1, cmake/FM1Rfm1.cmake
 labels.buttons (by printed name: FX SEL ENV LFO EDIT GLO HOME SAVE ARP SEQ PLAY REC OCT- OCT+, any case) replace the
 descriptor's button_names for those buttons; labels.knobs (SELECT ALGO PRESETS K1 K2 K3 K4 MASTER) and the buttons
 are also the static live labels (docs/DYNAMIC-LABELS.md slots 0..7, 8..21) served while the core has none of its own.
-A label: 0..10 characters, upper case, printable ASCII; "" = no job. A bad entry is skipped with a warning; nothing
+A label: 0..10 printable ASCII characters, upper-cased here; "" = no job. A bad entry is skipped with a warning; nothing
 here fails the build. The header always gets written (RFM1_META_LABELS 0 when there is nothing to use).
 """
 import argparse
@@ -32,8 +32,6 @@ def label_problem(v):
         return "%d characters (at most %d)" % (len(v), LBL_MAX)
     if not LABEL_RE.fullmatch(v):
         return "not printable ASCII"
-    if v != v.upper():
-        return "not upper case"
     return None
 
 
@@ -73,7 +71,7 @@ def from_metadata(path, warn, json_warn=True):
             if why:
                 warn("labels.%s.%s: %r is %s: skipped" % (part, k, v, why))
                 continue
-            out[part][names.index(key)] = v
+            out[part][names.index(key)] = v.upper()      # (shown in upper case)
     if not out["buttons"] and not out["knobs"]:
         if lb:
             warn("labels: nothing usable")

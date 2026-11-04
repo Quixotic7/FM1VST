@@ -78,12 +78,13 @@ def main():
         d, r = header(tmp, META, "meta")
         lb = rfm1_labels.from_metadata(os.path.join(d, "RemoteFM1Metadata.json"), warns.append)
         ok(r.returncode == 0, "header written")
-        ok(lb == {"buttons": {0: "DRUMS", 1: "TRACK", 13: ""}, "knobs": {3: "CUTOFF", 7: "VOL"}},
-           "the good entries kept (any-case names, \"\" = no job): %s" % lb)
-        for what in ("'steps' is not upper case", "'ARPEGGIATOR' is 11 characters", "'RÉC' is not printable ASCII",
+        ok(lb == {"buttons": {0: "DRUMS", 1: "TRACK", 9: "STEPS", 13: ""}, "knobs": {3: "CUTOFF", 7: "VOL"}},
+           "the good entries kept (any-case names, lower case upper-cased, \"\" = no job): %s" % lb)
+        ok(not any("steps" in w for w in warns), "lower case: no warning")
+        for what in ("'ARPEGGIATOR' is 11 characters", "'RÉC' is not printable ASCII",
                      "unknown button 'TURBO'", "unknown knob 'K9'"):
             ok(any(what in w for w in warns), "warned: %s" % what)
-        ok(rfm1_labels.summary(open(os.path.join(d, "rfm1_meta_labels.h"), "rb").read()) == "3 buttons, 2 knobs",
+        ok(rfm1_labels.summary(open(os.path.join(d, "rfm1_meta_labels.h"), "rb").read()) == "4 buttons, 2 knobs",
            "the tag's counts")
         w2 = []
         ok(rfm1_labels.from_metadata(header(tmp, "{ nope", "badjson")[0] + "/RemoteFM1Metadata.json", w2.append)
@@ -101,12 +102,12 @@ def main():
                plain["button_names"][:3] == ["GFX", None, "GENV"], "no live labels, no metadata: as before")
             m, mw = build(a, tmp, "meta", 0, d)
             want = [None] * 49
-            want[3], want[7], want[8], want[9], want[21] = "CUTOFF", "VOL", "DRUMS", "TRACK", ""
+            want[3], want[7], want[8], want[9], want[17], want[21] = "CUTOFF", "VOL", "DRUMS", "TRACK", "STEPS", ""
             ok(m["labels_epoch"] != 0 and m["labels"] == want, "no live labels + metadata: the static table served")
             bn = m["button_names"]
             ok(bn[0] == "DRUMS" and bn[1] == "TRACK" and bn[2] == "GENV" and bn[13] == "" and bn[3] is None,
                "button_names: the author's entries over the glue's, the rest the glue's: %s" % bn)
-            ok(rfm1_labels.summary(mw) == "3 buttons, 2 knobs", "the module's data has the tag (rfm1_check's line)")
+            ok(rfm1_labels.summary(mw) == "4 buttons, 2 knobs", "the module's data has the tag (rfm1_check's line)")
             live, _ = build(a, tmp, "live", 1, None)
             lm, _ = build(a, tmp, "livemeta", 1, d)
             ok(live["labels_epoch"] == 7 and live["labels"][8] == "LIVE" and live["labels"][3] == "LCUT",
