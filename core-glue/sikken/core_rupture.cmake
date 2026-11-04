@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# RUPTURE 1.48 (https://github.com/SikkenWorks/RUPTURE, tag V1.48 = bea4bfe): Joppe Sikken's (SikkenWorks) mono bass
+# RUPTURE 1.67 (https://github.com/SikkenWorks/RUPTURE, tag V1.67 = 4562ceb): Joppe Sikken's (SikkenWorks) mono bass
 # synth, a native FM-1 application on Felucca's HAL (vendor/etch-v1.88-source/firmware/fm1-native, by way of
 # SikkenWorks' ETCH). The SikkenWorks family's glue (core-glue/sikken: sikken_hal.h, hal/fm1_flash.h,
 # ota_trusted_loader.h, sikken_glue.h, shared with ETCH; core_rupture.c) over the unmodified submodule
 # cores/RUPTURE. RUPTURE has no emulator: the
 # glue is Tonitor's kind (core-glue/tonitor), with the firmware's own reset entry and main loop on a coroutine.
 # THE VERSION: the tags are V<major>.<minor> (capital V); RELEASE-MANIFEST.json's "version" is the same number
-# ("1.48"), read from there. The package identity (FELUCCA_ID, bringup.c) is FM-1_968 for every release
+# ("1.67"), read from there. The package identity (FELUCCA_ID, bringup.c) is FM-1_968 for every release
 # (RELEASE-MANIFEST.json firmware_identity: kept for the OTA chain), so it says nothing about the version.
 # THE BUILD: build.py's units and settings, as the release builds them (README: build.py --storage --updater
 # --usb-audio-48k --multi-project), but ETCH_NATIVE_UAC 0 (USB audio out: a core's audio is its output). Nothing is
