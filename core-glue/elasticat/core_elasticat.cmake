@@ -55,7 +55,12 @@ set(_ec_run --folder ${CMAKE_CURRENT_LIST_DIR}/test_folder --flash-in ${CMAKE_CU
             --expect-ui seq:on --audio-in ${CMAKE_CURRENT_LIST_DIR}/test_folder/audio/testloop_bpm120.wav
             --audio-in-latency 256)
 fm1_add_rfm1(elasticat VIRTUAL NEEDS fs1 WANTS ain1 FOLDERS audio=r data=rw MEMORY_MIB 256 AUTHORS "Quixotic7"
-             RUN_ARGS ${_ec_run} --press SAVE@2000 --press SAVE@2300 --expect-ui ain:1 --expect-ui lat:256
+             RUN_ARGS --folder ${CMAKE_CURRENT_LIST_DIR}/test_folder --flash-in ${CMAKE_CURRENT_LIST_DIR}/test_project.flash
+                      --settle 3000 --seconds 4 --press PLAY@1500 --keys 25 --min-rms 0.02 --expect-ui ec0.6.15
+                      --expect-ui play:1 --expect-ui file:testloop_bpm120.wav --expect-ui ready:1 --expect-ui missing:0
+                      --expect-ui seq:on --audio-in ${CMAKE_CURRENT_LIST_DIR}/test_folder/audio/testloop_bpm120.wav
+                      --audio-in-latency 256   # (inline, not ${_ec_run}: the catalog manager reads these as written)
+                      --press SAVE@2000 --press SAVE@2300 --expect-ui ain:1 --expect-ui lat:256
                       --expect-ui cat:SAMPLER --expect-ui rec:rec)
 get_property(_ec_file GLOBAL PROPERTY FM1_RFM1_FILE_elasticat)
 if(_ec_file)
