@@ -6,8 +6,12 @@
 #
 # The source: the submodule cores/elasticatfm1, or -DEC_SOURCE=/path/to/elasticatfm1 (a working tree, while the engine
 # is being written: its src/dsp and src/seq join by the glob below).
-set(EC_SOURCE ${CMAKE_SOURCE_DIR}/cores/elasticatfm1 CACHE PATH "Elasticat FM-1's tree (default: the submodule)")
-set(_ec ${EC_SOURCE})
+set(EC_SOURCE "" CACHE PATH "Elasticat FM-1's tree (empty: the submodule cores/elasticatfm1)")
+if(EC_SOURCE)
+    set(_ec ${EC_SOURCE})
+else()
+    set(_ec ${CMAKE_SOURCE_DIR}/cores/elasticatfm1)   # (the plain form the catalog manager reads the submodule from)
+endif()
 file(GLOB _ec_units CONFIGURE_DEPENDS ${_ec}/src/plat/*.c ${_ec}/src/io/*.c ${_ec}/src/ui/*.c ${_ec}/src/dsp/*.c
      ${_ec}/src/seq/*.c ${_ec}/src/app/*.c)
 list(FILTER _ec_units EXCLUDE REGEX "/ec_fs_native\\.c$")   # (the repo's own native stand-in; here the host's API)
