@@ -6,7 +6,7 @@
  *   FM1CORE_SL_SLOOP    SLOOP 2.8       3 synth parts + drums, the second core, ui_vis
  *   FM1CORE_SL_DX       sloopDX 4.0     SLOOP 2.7 with the DX7 engine (ui_voice), no ui_vis, MIDI program change
  *   FM1CORE_SL_ORBIT    ORBIT 0.7.1     SLOOP 2.4+ line, one core, ORBIT's engines and screens
- *   FM1CORE_SL_NMS      No Man Sky 0.5  SLOOP 2.7.1 with ui_nms / ui_game (no ui_song, icons, ui_vis), its tree
+ *   FM1CORE_SL_NMS      No Man Sky 0.9  SLOOP 2.8.4 with ui_nms / ui_game (no ui_song, icons, ui_vis), its tree
  *                                       one level down (cores/nomanskyFM/firmware)
  * Built out (they need the hardware), as the firmwares' host builds leave them out: FELUCCA_OTA (usb.c's SysEx
  * plumbing, the M-UPGRADE update session and recovery.c; editor.c, the web editor's SysEx, and ota.c's identity are
@@ -95,6 +95,9 @@
 #if FM1CORE_SL_FW == FM1CORE_SL_NMS
 #include "ui_nms.c"
 #include "ui_game.c"
+#if __has_include("ui_cd.c")
+#include "ui_cd.c"                                  /* (No Man Sky 0.9: the CDs when a sound changes) */
+#endif
 /* ui_nms.c's colour `#define NB RGB(0x00, 0x6E, 0xA0)` (884) shadows panel.c's button count NB (14) in every unit
  * after it: ui_input.c's loops over panel.btn[NB] (the LIGHTS glow, the remote buttons, panel setup) and project.c's
  * panel check would read 884 entries of a 14-byte array (on the device too: an upstream bug). ui_game.c is the

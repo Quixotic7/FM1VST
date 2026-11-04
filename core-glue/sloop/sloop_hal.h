@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The FM-1 HAL for the SLOOP-family cores (SLOOP 2.8, sloopDX 4.0, ORBIT 0.7.1, No Man Sky FM 0.5): what the
+/* The FM-1 HAL for the SLOOP-family cores (SLOOP 2.8, sloopDX 4.0, ORBIT 0.7.1, No Man Sky FM 0.9): what the
  * device's firmware/hal/fm1_*.h headers give firmware/src/felucca.c, on the host. Included by sloop_firmware.h in
  * the place of those headers (first, before libc.c). None of these firmwares ships an emulator unit: this header is
  * modelled on their tests/ui_pages_test.c stubs (time, input, display) and No Man Sky's wasm/nms_wasm.c (the whole
@@ -303,6 +303,9 @@ static uint32_t fm1_vdc14(void) { return 7u; }     /* VDC14 1.60 V */
 static uint8_t flash_ok;                           /* storage: the part answered (persist_boot sets it) */
 #define FL_FAR(fn) (fn)
 static uint32_t fl_jedec_ram(void) { return 0x856014u; }   /* the FM-1's 1 MiB part */
+#ifndef FL_JEDEC_OK                                /* (SLOOP 2.8.5, Clipper 1.3.1: hal/fm1_flash_id.h, which the glue's */
+#define FL_JEDEC_OK(id) ((id) == 0x856014u || (id) == 0xB36014u)   /* HAL replaces: the Puya part and the UC25HQ80) */
+#endif
 static void fl_plain_window_init(void) {}          /* (the image is plaintext) */
 #define fm1_xip_ptr fm1core_sl_xip_device         /* (hal/fm1_xip.h, which eng_sample.c includes: the device's */
 #include "../hal/fm1_xip.h"                        /*  window, renamed and unused; #pragma once keeps it so) */

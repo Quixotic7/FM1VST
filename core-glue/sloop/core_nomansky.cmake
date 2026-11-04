@@ -1,15 +1,14 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# no tag: pinned at the commit of v0.5, the Firmware Hub's latest (the owner's call, 2026-11-02)
-# No Man Sky FM 0.5 (https://github.com/hericdk/nomanskyFM): no tags or releases, the submodule is pinned at main
-# 32e7f4c, the v0.5 commit (2026-10-20; its README: "Current version v0.5", no beta mark; release/nmsfm-0.5.fwsc).
-# v0.5 saves projects as format 7 (the FX lane and the arp; format 6 projects still load).
+# No Man Sky FM 0.9 (https://github.com/hericdk/nomanskyFM, tag v0.9 = 8271539, 2026-11-02; release/nmsfm-0.9.fwsc):
+# on SLOOP 2.8.4 (the second core's crash bar, fm1_c1_mb: FM1CORE_SL_C1_BAR) with ui_cd.c (the CDs on a sound change).
+# Projects as v0.5's (format 7: the FX lane and the arp; format 6 projects still load).
 # The firmware is in firmware/ (SOURCE): its own tools/build.py, firmware/src. assets/abertura.png (the opening
 # picture) is not in the repo: tools/gen_abertura.py writes NMS_ABERTURA 0 and the game's opening skips the picture
 # (the hub's package has it). The SLOOP-family glue (core-glue/sloop).
 # Credit (the author's request on top of the GPL): "Features from No Man Sky FM by Hericdk
 # (github.com/hericdk/nomanskyFM)".
 # GATED: a fan-made demake of Hello Games' No Man's Sky: the game's name, and sprite art compiled into the firmware
-# (assets/decolagem.png is the game's key art redrawn as pixel art; 0.5 adds assets/decola/*.png, nave-batalha.png
+# (assets/decolagem.png is the game's key art redrawn as pixel art; 0.5 added assets/decola/*.png, nave-batalha.png
 # and nave-cima-desenho.png, the ship drawn from a 3D model; assets/*.png carry no licence statement, the README's
 # asset terms cover only the CC0 samples and the Hugelton assets). Un-gate: the author confirms the art's
 # rights (or a build with the sprites left out: the generators write empty headers without the PNGs).
@@ -21,7 +20,7 @@ fm1_add_core(nomansky ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores
                  nms_nave.h nms_decolagem.h nms_nave_cima.h nms_nave_batalha.h
                  nms_nave_decola.h nms_anao.h nms_nebulosa.h nms_nave_lado.h nms_cabine.h
              PYTHON_NEEDS numpy
-             VERSION 0.5)
+             VERSION 0.9)
 # the .rfm1 (cmake/FM1Rfm1.cmake; docs/RFM1.md), as SLOOP's: its GPL, msfa's Apache-2.0, its LICENSING.md (the CC0
 # samples' terms) and the Terminus font's OFL (the screen font, gen_font.py; Pixelify Sans is the site's only). The
 # core id stays nomansky (the Hub's id nmsfm maps to it: plugin/Hub.cpp). Gated (the sprite art): hosted on RemoteFM1FW only.

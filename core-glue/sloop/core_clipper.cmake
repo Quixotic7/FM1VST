@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Clipper 1.3 (https://github.com/isod89/clipper-fm1, tag v1.3 = fbd8434), by isod89: a synthesizer grown out of SLOOP
+# Clipper 1.3.1 (https://github.com/isod89/clipper-fm1, tag v1.3.1 = 7bc15a9), by isod89: a synthesizer grown out of SLOOP
 # 2.8, on Felucca. Its felucca.c includes what SLOOP's does: the SLOOP-family glue (core-glue/sloop) as SLOOP.
 # GATED as SLOOP: the firmware compiles assets/icons.png (tools/gen_icons.py -> felucca_icons.h), the Hugelton icon
 # atlas, all rights reserved (LICENSING.md's GPL section 7 permission needs asset terms not yet published).
@@ -21,7 +21,7 @@ fm1_add_rfm1(clipper AUTHORS "isod89" MEMORY_MIB 16
 
 # the golden check: Clipper's own tests/ui_pages_test.c (the real UI on its test doubles) writes its pages; the core
 # runs golden_clipper.txt to the same state (SLOOP's script and comparison: the status corner differs, the HAL's USB
-# host and battery). Two more explained differences: at v1.3 the test's own checks fail (104 FAILs, the visualiser and
+# host and battery). Two more explained differences: at v1.3.1 the test's own checks fail (104 FAILs, the visualiser and
 # other SLOOP-era checks: REF_FAILS_OK, its pages are still written), and the TRACKS page's sound counter (x 77..82,
 # y 112..121) reads /409 there, /407 on the device build (the test's doubles count two more sounds)
 if(TARGET clipper_core AND NOT COMMAND fm1_sloop_golden)   # (FM1_ONLY_CORES=clipper: the family's core.cmake)
