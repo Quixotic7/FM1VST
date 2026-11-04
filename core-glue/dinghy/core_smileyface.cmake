@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Smileyface 1.0.0 (https://github.com/pbarilla/smileyface, tag v1.0.0, 622f74d): the Dinghy family glue
+# Smileyface 1.0.5 (https://github.com/pbarilla/smileyface, tag v1.0.5, 622f74d): the Dinghy family glue
 # (core-glue/dinghy/) over the unmodified submodule cores/smileyface, in its host mode (SMILEY_HOST). platform.c
 # includes "../../tests/host.c" by a relative path (a program: script, WAV, main), so clang's -ivfsoverlay maps that
 # path to smileyface_host.c, as core_aurora.cmake does. The same overlay maps firmware/src/projio.c to a copy written
@@ -19,7 +19,7 @@ fm1_add_core(smileyface ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_sf}
              UNIT core_smileyface.c DESC core_smileyface_desc.c FAMILY dinghy LICENSE GPL-3.0-only
              CREDITS "Smileyface by pbarilla (the app, the acid voice, the sequencer and its views, the website), built on Chipbox (pbarilla), on Dinghy by zvenson (the wiring platform.c, the host mode), over Felucca's platform by Leo Kuroshita (Hügelton Instruments), with SLOOP's changes by isod89. GPL-3.0-only. The screen's font is Terminus Font (8x16, Dimitar Toshkov Zhekov), SIL Open Font License 1.1. The full notices: the release's licences/cores/smileyface/ (LICENSING.md)."
              CREDITS_FILES ${_sf}/assets/fonts/Terminus-LICENSE.txt
-             NO_GEN VERSION 1.0.0 DEFINES APP_VER="1.0.0"
+             NO_GEN VERSION 1.0.5 DEFINES APP_VER="1.0.5"
              INCLUDES ${_sf}/firmware/src ${_sf}/firmware/gen ${CMAKE_CURRENT_LIST_DIR}
              FLAGS "-Dsection(x)=aligned(4)" "-ivfsoverlay" "${_sf_vfs}")
 if(TARGET core_smileyface_obj)
@@ -31,7 +31,7 @@ dinghy_core(smileyface core_smileyface.c)
 # the golden check: the same script on its own host sim (tests/host.c, unchanged, with the power-on smiley as the
 # core shows it), the screens compared at the script's shot
 dinghy_golden_check(smileyface SCRIPT golden_smileyface.txt AT 4000 SOURCE ${_sf}/firmware/src/smileyface.c
-                    DEFINES SMILEY_HOST SPLASH_DEMO APP_VER="1.0.0"
+                    DEFINES SMILEY_HOST SPLASH_DEMO APP_VER="1.0.5"
                     INCLUDES ${_sf}/firmware/src ${_sf}/firmware/gen
                     FLAGS "-Dsection(x)=aligned(4)")
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md): the main loop on the coroutine, so Asyncify
