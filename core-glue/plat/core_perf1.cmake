@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# PERF-1 0.16.0 by deamonSLINKY (https://github.com/deamonSLINKY/PERF-1, tag v0.16.0 = 22c295d6a098fc837f285c641aba4a4acb8c0077,
+# PERF-1 0.16.0 by deamonSLINKY (https://github.com/deamonSLINKY/PERF-1, tag v0.16.1 = 43a5dc7,
 # the release "PERF-1 0.16.0"): a fork of HYP-1 (RedtailWorks), itself a fork of AMB-1 (Charles Vestal), on the plat
 # layout. The plat glue (core-glue/plat/README.md) over the unmodified submodule, from HYP-1's glue; the instrument
 # (dsp/amb.c with the FM6 engine) its own unit, as the firmware builds it. Generate: tools/build.py generate() writes
@@ -9,7 +9,7 @@ fm1_add_core(perf1 ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_perf1} UNIT core_perf1.c 
              EXTRA_SOURCES perf1_amb.c
              FAMILY plat LICENSE GPL-3.0-only
              GEN felucca_font.h PYTHON_NEEDS raqm
-             VERSION 0.16.0
+             VERSION 0.16.1
              FLAGS -ffp-contract=off
              CREDITS "PERF-1 by deamonSLINKY, a fork of HYP-1 by RedtailWorks and of AMB-1 by Charles Vestal, on Felucca's platform layer (Leo Kuroshita, Hugelton Instruments) through X0X and FoMni. The FM6 engine, its DX7 voices, the USB MIDI host and the TRS MIDI fix from Melodee by Kerem Kilic (Ellic Studio), after Dexed (Pascal Gauthier) on MSFA (Raph Levien, Google, Apache-2.0). The DY voices: public-domain DX7 banks (Bobby Blues' and Dave Benson's DX7 pages). Dattorro's plate reverb from FoMni. Ideas from Tuna by delirioux (and Marbles by Emilie Gillet). Fonts: Chakra Petch (Cadson Demak), Barlow, Terminus (OFL-1.1)."
              INCLUDES ${_perf1}/firmware/src/dsp ${_perf1}/firmware/src/app)
