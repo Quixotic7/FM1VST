@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Hortator 0.26.0 (https://github.com/deadactive/hortator, tag drum-v0.26.0): DEADACTIVE's drum machine on Felucca.
+# Hortator 1.0.1 (https://github.com/deadactive/hortator, tag drum-v1.0.1): DEADACTIVE's drum machine on Felucca.
 # Not Felucca's web/emu/felucca_web.c (Hortator has none, so not fw_core.h either): its own browser simulator,
 # tests/sim_core.c over tests/sim_host.h, unmodified, driven by core_hortator.c (cmake/FM1Cores.cmake fm1_add_core).
 # Built as tools/build_sim.sh builds fm1sim.wasm: the generated headers on the path (build.py generate()'s
