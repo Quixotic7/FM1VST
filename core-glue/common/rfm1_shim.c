@@ -15,6 +15,12 @@
 #include <stdlib.h>
 
 #include "fm1core.h"
+#ifdef RFM1_META               /* a firmware's RemoteFM1Metadata.json labels (tools/rfm1_labels.py, fm1_add_rfm1) */
+#include "rfm1_meta_labels.h"
+#endif
+#ifndef RFM1_META_LABELS
+#define RFM1_META_LABELS 0
+#endif
 
 #define RFM1_FORMAT_VERSION 1
 #define EXPORT(name) __attribute__((export_name(#name), used))
@@ -30,12 +36,30 @@ static const fm1core_t *core(void)
 
 EXPORT(rfm1_version) int32_t rfm1_version(void) { return RFM1_FORMAT_VERSION; }
 
+#if RFM1_META_LABELS
+/* the author's button names (RemoteFM1Metadata.json labels.buttons) over the glue's: the host gets a copy of the
+ * descriptor with those entries replaced (made again at each rfm1_get; the entry points still go to the core's own) */
+static fm1core_t M;
+static const fm1core_t *with_meta(const fm1core_t *c)
+{
+    if (!c)
+        return c;
+    M = *c;
+    for (int b = 0; b < FM1P_NB; b++)
+        if (RFM1_META_BTN[b])
+            M.button_names[b] = RFM1_META_BTN[b];
+    return &M;
+}
+#else
+#define with_meta(c) (c)
+#endif
+
 EXPORT(rfm1_get) uint32_t rfm1_get(uint32_t abi)
 {
     const fm1core_t *c = fm1core_get(abi);
     if (c)
         C = c;
-    return (uint32_t)(uintptr_t)c;
+    return (uint32_t)(uintptr_t)with_meta(c);
 }
 
 EXPORT(rfm1_alloc) uint32_t rfm1_alloc(uint32_t n) { return (uint32_t)(uintptr_t)malloc(n ? n : 1u); }
@@ -140,6 +164,35 @@ EXPORT(rfm1_ui_info) void rfm1_ui_info(uint32_t buf, uint32_t n)
  * exports both; a core without them: epoch 0, label 0 */
 extern uint32_t fm1core_labels_epoch(void) __attribute__((weak));
 extern const char *fm1core_label(int32_t which) __attribute__((weak));
+#if RFM1_META_LABELS
+/* with the author's static labels (RemoteFM1Metadata.json: RFM1_META_SLOT, knobs and buttons): served while the core
+ * has no live labels of its own (no symbols, or its epoch 0); once its epoch is not 0 everything is the core's. The
+ * epoch here is the shim's own, moved at each switch between the two and at each move of the core's, so a host never
+ * misses a change */
+static uint32_t meta_epoch, meta_core_epoch;
+static int meta_src;
+EXPORT(rfm1_labels_epoch) uint32_t rfm1_labels_epoch(void)
+{
+    const uint32_t ce = fm1core_labels_epoch ? fm1core_labels_epoch() : 0u;
+    const int src = ce ? 2 : 1;
+    if (src != meta_src || ce != meta_core_epoch) {
+        meta_src = src;
+        meta_core_epoch = ce;
+        if (++meta_epoch == 0)
+            meta_epoch = 1;
+    }
+    (void)*(volatile const char *)RFM1_META_TAG;   /* (kept in the data: rfm1_check reports the counts) */
+    return meta_epoch;
+}
+EXPORT(rfm1_label) uint32_t rfm1_label(int32_t which)
+{
+    if (which < 0 || which >= FM1CORE_LBL_N)
+        return 0u;
+    if (fm1core_labels_epoch && fm1core_labels_epoch())
+        return fm1core_label ? (uint32_t)(uintptr_t)fm1core_label(which) : 0u;
+    return (uint32_t)(uintptr_t)RFM1_META_SLOT[which];
+}
+#else
 EXPORT(rfm1_labels_epoch) uint32_t rfm1_labels_epoch(void)
 {
     return fm1core_labels_epoch ? fm1core_labels_epoch() : 0u;
@@ -148,6 +201,7 @@ EXPORT(rfm1_label) uint32_t rfm1_label(int32_t which)
 {
     return fm1core_label && which >= 0 && which < FM1CORE_LBL_N ? (uint32_t)(uintptr_t)fm1core_label(which) : 0u;
 }
+#endif
 
 /* audio input (docs/VIRTUAL-CARTS.md 8, capability ain1): only in a module built with ain1 in its fm1_add_rfm1 WANTS or
  * NEEDS (RFM1_AIN1), so a cart without it exports neither and rfm1_check can require ain1 of a cart that does. The

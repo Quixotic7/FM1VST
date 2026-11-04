@@ -56,6 +56,11 @@ weak references (a core without them links, and answers epoch 0, label 0):
 | `rfm1_labels_epoch` | `() -> i32` | `fm1core_labels_epoch()`; 0 when the core has none |
 | `rfm1_label` | `(which) -> ptr` | `fm1core_label(which)`: a C string in the module's memory; 0 = NULL (also for `which` outside 0..48) |
 
+A firmware's `RemoteFM1Metadata.json` labels ([RFM1-METADATA.md](RFM1-METADATA.md)) are compiled into the shim as a
+static table for slots 0..21, served only while the core has no live labels (no symbols, or its epoch 0); the epoch
+is then the shim's own, moved at every switch between that table and the core's labels and at every move of the
+core's epoch. Its buttons also replace the descriptor's `button_names` for those buttons.
+
 Format version 1 unchanged: hosts already ignore exports they don't know (`docs/RFM1-FORMAT.md` section 1).
 `tools/rfm1_check.py` checks their signatures when present. A host treats a missing export (a file built before) as
 "no live labels", bounds-checks the pointer and caps the length, as for `button_names`.

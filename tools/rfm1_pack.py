@@ -19,6 +19,10 @@ The manifest's id, name, version, licence and source_url come from the descripto
 --wants CAP..: a host capability the cart uses when the host has it and does without otherwise, the manifest's
 "wants" (any cart; "ain1": audio input, docs/VIRTUAL-CARTS.md 8). Hosts ignore names they do not know.
 
+--skin-metadata PATH: a firmware's RemoteFM1Metadata.json (docs/RFM1-METADATA.md): its "skin" becomes the skin sections
+(docs/RFM1-FORMAT.md section 8: rfm1.skin, rfm1.skin.background, rfm1.skin.background.landscape) after the licence
+texts. Every bad field is skipped with a warning; nothing in that file fails the pack (tools/rfm1_skin.py).
+
 --license-file NAME=PATH: NAME is the section's first line ("{name}" is replaced by the firmware's name); texts that are
 the same (whitespace aside) are carried once, under their names joined by "; ".
 """
@@ -27,6 +31,9 @@ import json
 import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import rfm1_skin  # noqa: E402
 
 MAGIC = b"\0asm\x01\0\0\0"
 
@@ -112,6 +119,7 @@ def main():
                     help="(--virtual) a part of the shared folder it uses: audio=r, code=r, data=rw")
     ap.add_argument("--wants", action="append", default=[],
                     help="a host capability it uses when present (ain1: audio input); any cart")
+    ap.add_argument("--skin-metadata", metavar="PATH", help="a RemoteFM1Metadata.json: its skin, as skin sections")
     for k in ("id", "name", "version", "license", "source-url"):
         ap.add_argument("--" + k, help="override the descriptor's " + k)
     a = ap.parse_args()
@@ -199,12 +207,33 @@ def main():
     for i, (names, text) in enumerate(texts):
         out += custom_section("rfm1.license.%d" % i, ("; ".join(names) + "\n\n" + text + "\n").encode("utf-8"))
 
+    skin = ""
+    if a.skin_metadata:
+        def warn(m):
+            print("rfm1_pack: warning: %s: %s: %s" % (man["id"], a.skin_metadata, m), file=sys.stderr)
+        try:
+            sk = rfm1_skin.from_metadata(a.skin_metadata, warn)
+        except Exception as e:                 # (never fail the build on the author's file)
+            warn("unreadable, no skin (%s)" % e)
+            sk = None
+        if sk:
+            out += rfm1_skin.skin_bytes(sk["dim"], sk["theme"], sk["background"], sk["landscape"])
+            what = [k for k in ("background", "landscape") if sk[k] is not None]
+            if sk["theme"]:
+                what.append("theme")
+            if sk["dim"] is not None:
+                what.append("dim")
+            skin = ", skin (%s, from %s)" % (" ".join(what), rfm1_skin.METADATA)
+            for k, v in sk["sources"].items():
+                print("rfm1_pack: %s skin %s: %s, %d bytes, sha256 %s" % (man["id"], k, v["path"], v["bytes"],
+                                                                         v["sha256"]))
+
     tmp = a.out + ".tmp"
     with open(tmp, "wb") as f:
         f.write(out)
     os.replace(tmp, a.out)
-    print("rfm1_pack: %s: %s %s, %d bytes (%d licence texts%s)" % (
-        a.out, man["id"], man["version"], len(out), len(texts), ", credits" if credits else ""))
+    print("rfm1_pack: %s: %s %s, %d bytes (%d licence texts%s%s)" % (
+        a.out, man["id"], man["version"], len(out), len(texts), ", credits" if credits else "", skin))
 
 
 if __name__ == "__main__":
