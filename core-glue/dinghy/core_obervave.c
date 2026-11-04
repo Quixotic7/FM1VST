@@ -13,6 +13,7 @@
 #define OBV_HOST 1
 #define OBV_WASM 1
 #include "dinghy_pre.h"
+#include "obervave_mirror_host.h"       /* 3.3.2's FM-1 Mirror (obv_mirror.h): idle here */
 
 static int fm1core_obv_printf(const char *fmt, ...);
 #define printf(...) fm1core_obv_printf(__VA_ARGS__)
@@ -179,7 +180,7 @@ static int fm1core_dg_sync(void)
 static void fm1core_dg_info(char *buf, uint32_t n) { snprintf(buf, n, "page %u, program %u", (unsigned)page, (unsigned)set.prog + 1u); }
 
 /* the installer's M-UPGRADE identity: the device's platform_poll runs ota_service every pass (dinghy_glue.h) */
-#define FELUCCA_ID "FM-1_9533"            /* the 3.3 release package (tools/build.py: 95XY for X.Y) */
+#define FELUCCA_ID "FM-1_9533"            /* the 3.3.2 release package (tools/build.py: 95XY for X.Y) */
 #define FM1CORE_DG_OTA_C "../../cores/obervave/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
 
