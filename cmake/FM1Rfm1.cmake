@@ -25,10 +25,22 @@
 #       [NEEDS <cap..>]             (VIRTUAL) the host capabilities it uses, the manifest's "needs" ("fs1": the files)
 #       [FOLDERS <name=r|rw..>]     (VIRTUAL) the shared folder's parts it uses, the manifest's "folders"
 #                                   ("audio=r" "code=r" "data=rw")
+#       [NO_SKIN]                   leave the firmware's own skin out (below)
+#       [NO_LABELS]                 leave the firmware's own button and knob labels out (below)
 #       [WANTS <cap..>])            host capabilities it uses when a host has them and does without otherwise, the
 #                                   manifest's "wants" ("ain1": audio input, docs/VIRTUAL-CARTS.md 8). ain1 in WANTS
 #                                   or NEEDS also makes the shim export rfm1_audio_in / rfm1_audio_in_info from the
 #                                   core's fm1core_audio_in / fm1core_audio_in_info
+#
+# A skin (docs/RFM1-METADATA.md): if the firmware's repository has a RemoteFM1Metadata.json at its root (the root of
+# the git checkout that holds SOURCE: the submodule, even when SOURCE is a folder inside it), its "skin" (images,
+# theme, dim) is packed as the file's skin sections (docs/RFM1-FORMAT.md section 8), unless the call says NO_SKIN
+# (the owner's switch: an image whose licence is in doubt). A bad field there is a warning in the build output and is
+# left out; it never fails the build. Without that file the .rfm1 is as before, byte for byte.
+# Its "labels" too, unless NO_LABELS: tools/rfm1_labels.py writes them as a header (rfm1_build/<id>/meta/) that
+# core-glue/common/rfm1_shim.c is compiled with: labels.buttons replace the descriptor's button_names for those buttons
+# (the host is given a copy of the descriptor), and the buttons and labels.knobs are the static live labels
+# (docs/DYNAMIC-LABELS.md) served while the core has none of its own.
 #
 # Makes rfm1_<id> (build/rfm1/<id>-<version>.rfm1, also in ALL), appended to rfm1_all, and the test rfm1_<id>
 # (rfm1_check + rfm1_run). The generate step is the core's own (gen_<id>). The coroutine: core-glue/common/coro.c
@@ -104,6 +116,26 @@ if(FM1_RFM1)
     message(STATUS "rfm1: ${FM1_EMCC} ${FM1_EMCC_VERSION}, ${FM1_RFM1_MEMORY_MIB} MiB, into ${FM1_RFM1_DIR}")
 endif()
 
+# the root of the git checkout that holds a firmware's SOURCE (a submodule's root: SOURCE may be a folder in it); ""
+# when SOURCE is not in a checkout of its own (FM1VST's tree itself)
+function(fm1_rfm1_repo_root src out)
+    set(_dir ${src})
+    set(${out} "" PARENT_SCOPE)
+    while(TRUE)
+        if(EXISTS ${_dir}/.git)
+            if(NOT _dir STREQUAL FM1_RFM1_ROOT)
+                set(${out} ${_dir} PARENT_SCOPE)
+            endif()
+            return()
+        endif()
+        get_filename_component(_up ${_dir} DIRECTORY)
+        if(_up STREQUAL _dir)
+            return()
+        endif()
+        set(_dir ${_up})
+    endwhile()
+endfunction()
+
 # the firmware's licence texts: LICENSE (or LICENCE, COPYING, with .md / .txt), each file of LICENSES/, LICENSING.md;
 # at the firmware's SOURCE, else in its parents up to its git root (a SOURCE inside a submodule: nomanskyFM/firmware)
 function(fm1_rfm1_license_files id src license out)
@@ -144,7 +176,7 @@ function(fm1_rfm1_license_files id src license out)
 endfunction()
 
 function(fm1_add_rfm1 id)
-    cmake_parse_arguments(A "VIRTUAL" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE"
+    cmake_parse_arguments(A "VIRTUAL;NO_SKIN;NO_LABELS" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE"
                           "AUTHORS;LICENSE_FILES;DEFINES;FLAGS;INCLUDES;RUN_ARGS;NEEDS;FOLDERS;WANTS" ${ARGN})
     if(A_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR "fm1_add_rfm1(${id}): unknown arguments ${A_UNPARSED_ARGUMENTS}")
@@ -225,6 +257,35 @@ function(fm1_add_rfm1 id)
     endforeach()
     list(APPEND _base -I${FM1_COMMON_DIR}/wasm_compat ${_topt} ${A_FLAGS})
 
+    # the firmware's RemoteFM1Metadata.json (its repository's root): its labels, as the shim's header (below: the skin)
+    fm1_rfm1_repo_root(${_SOURCE} _repo)
+    set(_meta "")
+    if(_repo AND EXISTS ${_repo}/RemoteFM1Metadata.json)
+        set(_meta ${_repo}/RemoteFM1Metadata.json)
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_meta})
+    endif()
+    set(_meta_h "")
+    set(_meta_msg "")
+    set(_shim_meta "")
+    if(_meta AND A_NO_LABELS)
+        set(_meta_msg ", its RemoteFM1Metadata.json labels left out (NO_LABELS)")
+    elseif(_meta)
+        set(_meta_h ${_wdir}/meta/rfm1_meta_labels.h)
+        set(_jw "")
+        if(NOT A_NO_SKIN)
+            set(_jw --no-json-warning)   # (rfm1_pack says it, for the skin)
+        endif()
+        add_custom_command(OUTPUT ${_meta_h}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${_wdir}/meta
+            COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1_labels.py header --metadata ${_meta} --out ${_meta_h} --id ${id}
+                    ${_jw}
+            DEPENDS ${_meta} ${FM1_RFM1_TOOLS}/rfm1_labels.py
+            COMMENT "rfm1 ${id}: the labels of RemoteFM1Metadata.json"
+            VERBATIM)
+        list(APPEND _shim_meta -DRFM1_META=1 -I${_wdir}/meta)
+        set(_meta_msg ", labels from ${_meta}")
+    endif()
+
     # the units: the core's own, without the coroutine (ucontext), plus the shim; the coroutine on Asyncify is its
     # own object, linked only into a core that calls it (rfm1_link.cmake)
     list(FILTER _srcs EXCLUDE REGEX "/coro\\.c$")
@@ -242,7 +303,8 @@ function(fm1_add_rfm1 id)
         set(_sopt "")
         set(_sdeps "")
         if(_s STREQUAL "${FM1_COMMON_DIR}/rfm1_shim.c")
-            set(_sopt ${_shim_opt})
+            set(_sopt ${_shim_opt} ${_shim_meta})
+            set(_sdeps ${_meta_h})
         else()
             get_source_file_property(_sopt ${_s} COMPILE_OPTIONS)
             get_source_file_property(_sdef ${_s} COMPILE_DEFINITIONS)
@@ -376,11 +438,38 @@ function(fm1_add_rfm1 id)
             list(APPEND _pack_args --folder ${_f})
         endforeach()
     endif()
+    # the firmware's own skin (RemoteFM1Metadata.json at its repository's root; rfm1_pack checks it, field by field)
+    set(_skin_deps "")
+    set(_skin_msg "")
+    if(_meta)
+        if(A_NO_SKIN)
+            set(_skin_msg ", its RemoteFM1Metadata.json skin left out (NO_SKIN)")
+        else()
+            list(APPEND _pack_args --skin-metadata ${_repo}/RemoteFM1Metadata.json)
+            list(APPEND _skin_deps ${_repo}/RemoteFM1Metadata.json)
+            set(_skin_msg ", skin from ${_repo}/RemoteFM1Metadata.json")
+            # (the images too, so a changed one repacks: the paths that are there; rfm1_pack does the checking)
+            file(READ ${_repo}/RemoteFM1Metadata.json _mj)
+            foreach(_k background landscape)
+                string(JSON _ip ERROR_VARIABLE _je GET "${_mj}" skin ${_k})
+                if(_je OR "${_ip}" STREQUAL "" OR IS_ABSOLUTE "${_ip}")
+                    continue()
+                endif()
+                get_filename_component(_ipr ${_repo}/${_ip} REALPATH)
+                get_filename_component(_rr ${_repo} REALPATH)
+                string(FIND "${_ipr}" "${_rr}/" _at)
+                if(_at EQUAL 0 AND EXISTS ${_ipr} AND NOT IS_DIRECTORY ${_ipr})
+                    list(APPEND _skin_deps ${_ipr})
+                endif()
+            endforeach()
+        endif()
+    endif()
     add_custom_command(OUTPUT ${_out}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${FM1_RFM1_DIR}
         COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1_pack.py ${_pack_args}
         COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1_check.py --quiet ${_out}
         DEPENDS ${_wasm} ${_desc} ${FM1_RFM1_TOOLS}/rfm1_pack.py ${FM1_RFM1_TOOLS}/rfm1_check.py ${_lic_paths}
+                ${FM1_RFM1_TOOLS}/rfm1_skin.py ${_skin_deps}
         COMMENT "rfm1 ${id}: ${id}-${_fver}.rfm1"
         VERBATIM)
     add_custom_target(rfm1_${id} ALL DEPENDS ${_out})
@@ -397,6 +486,7 @@ function(fm1_add_rfm1 id)
     if(A_WANTS)
         string(APPEND _v ", wants ${A_WANTS}")
     endif()
+    string(APPEND _v "${_skin_msg}${_meta_msg}")
     message(STATUS "${id} rfm1: ${id}-${_fver}.rfm1, ${A_MEMORY_MIB} MiB${_v}")
 endfunction()
 
@@ -448,5 +538,9 @@ function(fm1_rfm1_finish)
                          -P ${FM1_RFM1_TOOLS}/rfm1/rfm1_test.cmake)
         set_tests_properties(rfm1_${_id} PROPERTIES TIMEOUT 300)
     endforeach()
+    # a firmware's RemoteFM1Metadata.json: the skin through rfm1_pack / rfm1_check, the labels through rfm1_shim.c
+    add_test(NAME rfm1_skin COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1/rfm1_skin_test.py)
+    add_test(NAME rfm1_labels COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1/rfm1_labels_test.py --emcc ${FM1_EMCC}
+                                      --run $<TARGET_FILE:rfm1_run>)
     message(STATUS "rfm1: ${_ids}")
 endfunction()

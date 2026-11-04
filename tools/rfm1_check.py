@@ -23,10 +23,19 @@ file error. Python 3 standard library only. Running the module is rfm1_run's job
 Audio input (docs/VIRTUAL-CARTS.md 8, capability "ain1"): the manifest's optional "wants" (a list of names; names this
 checker does not know are ignored, as hosts ignore them), the optional exports rfm1_audio_in and rfm1_audio_in_info
 (both [i32 i32] -> []), and "ain1" in "wants" or "needs" whenever either is exported.
+
+A skin (section 8, optional: tools/rfm1_skin.py): rfm1.skin's JSON ({"skin": 1}, dim 0 .. 0.8, a theme of all fourteen
+roles or the five picked ones as "#RRGGBB"), each image a PNG or JPEG of at most 4 MiB, its longer side at most 4096 px.
+The static labels of a RemoteFM1Metadata.json (tools/rfm1_labels.py, in the module's data) are reported when present.
 """
 import json
+import os
 import re
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import rfm1_labels  # noqa: E402
+import rfm1_skin  # noqa: E402
 
 MAGIC = b"\0asm\x01\0\0\0"
 MAX_MEMORY = 32 * 1048576
@@ -308,6 +317,7 @@ class Check:
             self.err("not a WebAssembly module, version 1 (the magic \\0asm 01 00 00 00)")
             return
         self.found = set()
+        self.info["labels"] = rfm1_labels.summary(b)
         try:
             self.module(b)
         except Bad as e:
@@ -514,8 +524,11 @@ class Check:
                 self.err("rfm1.license.%d: its first line (the licence's name) is empty" % n)
         self.info["licenses"] = len(lic)
         for n in custom:
-            if n.startswith("rfm1.") and n != "rfm1.credits" and not re.fullmatch(r"rfm1\.license\.\d+", n):
+            if (n.startswith("rfm1.") and n != "rfm1.credits" and not re.fullmatch(r"rfm1\.license\.\d+", n)
+                    and not n.startswith(rfm1_skin.SKIN)):
                 self.warn("an unknown section %s" % n)
+        self.info["skin"] = rfm1_skin.check_sections(
+            {n: v for n, v in custom.items() if n.startswith(rfm1_skin.SKIN)}, self.err, self.warn)
         self.virtual_rules(func_imports, types)
         if "target_features" in custom:
             tf = R(custom["target_features"])
@@ -667,13 +680,15 @@ def main(argv):
             print("%s: FAILED (%d errors)" % (p, len(c.errors)))
         elif not quiet:
             m = c.info.get("manifest", {})
-            print("%s: ok: %s %s (%s)%s%s, %d bytes, %g MiB memory, %d exports, %d licence texts%s" % (
+            print("%s: ok: %s %s (%s)%s%s, %d bytes, %g MiB memory, %d exports, %d licence texts%s%s%s" % (
                 p, m.get("id"), m.get("version"), m.get("license"),
                 ", virtual (Fantasy CFW, needs %s%s)" % (",".join(m.get("needs", [])) or "nothing",
                                                         ", imports rfm1_host_1" if c.info.get("host_imports") else "")
                 if c.info.get("virtual") else "",
                 ", audio input (ain1)" if c.info.get("ain") else "",
                 c.size, c.info.get("memory", 0) / 1048576, c.info.get("exports", 0), c.info.get("licenses", 0),
+                ", skin: %s" % c.info["skin"] if c.info.get("skin") else "",
+                ", labels: %s" % c.info["labels"] if c.info.get("labels") else "",
                 ", %d warnings" % len(c.warnings) if c.warnings else ""))
     return 1 if bad else 0
 

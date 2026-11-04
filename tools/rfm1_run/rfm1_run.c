@@ -40,6 +40,8 @@
  *     --frame-ms N   frame every N device ms (default 15; RemoteFM1's iOS app draws an .rfm1 at 30 fps: 33)
  *     --describe     no run: the descriptor as JSON (stdout, or --out FILE); works on a bare module (no manifest):
  *                    fm1_add_rfm1 makes the manifest from it
+ *     --labels       (with --describe) also the live labels before init (docs/DYNAMIC-LABELS.md: rfm1_labels_epoch,
+ *                    then the 49 rfm1_label slots, null = not given): "labels_epoch", "labels"
  *     --audio-in F   a stand-in for a host's live input (docs/VIRTUAL-CARTS.md 8, ain1): the WAV F (PCM 16 / 24 /
  *                    32-bit or float, mono arrives as L = R; played at 44.1 kHz whatever its rate) fed through
  *                    rfm1_audio_in immediately before each rfm1_audio, the same frames, looped; rfm1_audio_in_info(1,
@@ -77,6 +79,7 @@ enum {
     F_IDLE, F_AUDIO, F_MIDI_IN, F_MIDI_OUT_TAKE, F_HALTED, F_SHUTDOWN, F_FLASH_STAGE, F_FLASH, F_FLASH_DIRTY,
     F_FLASH_SYNC, F_STATS, F_UI_INFO,
     F_AUDIO_IN, F_AUDIO_IN_INFO,           /* (optional: docs/VIRTUAL-CARTS.md 8, a cart with ain1) */
+    F_LABELS_EPOCH, F_LABEL,               /* (optional: docs/DYNAMIC-LABELS.md) */
     F_N
 };
 static const struct {
@@ -90,6 +93,7 @@ static const struct {
     {"rfm1_shutdown", 0, 0},   {"rfm1_flash_stage", 2, 1},   {"rfm1_flash", 0, 1},        {"rfm1_flash_dirty", 0, 1},
     {"rfm1_flash_sync", 0, 1}, {"rfm1_stats", 2, 0},         {"rfm1_ui_info", 2, 0},
     {"rfm1_audio_in", 2, 0},   {"rfm1_audio_in_info", 2, 0},
+    {"rfm1_labels_epoch", 0, 1}, {"rfm1_label", 1, 1},
 };
 
 static IM3Environment g_env;
@@ -990,7 +994,7 @@ static void usage(void)
           "                [--flash-in FILE] [--flash-out FILE] [--screen FILE.ppm] [--midi-out FILE]\n"
           "                [--profile] [--frame-ms N] [--helpers]\n"
           "                [--audio-in FILE.wav [--audio-in-once] [--audio-in-latency N] [--audio-in-off-at MS]]\n"
-          "                [--verbose] [--describe [--out FILE]] <file.rfm1>\n", stderr);
+          "                [--verbose] [--describe [--labels] [--out FILE]] <file.rfm1>\n", stderr);
 }
 
 int main(int argc, char **argv)
@@ -1001,7 +1005,7 @@ int main(int argc, char **argv)
 #ifdef RFM1_FPROF
     int fprofile = 0;
 #endif
-    int describe = 0;
+    int describe = 0, labels = 0;
     const char *out_path = NULL, *wav_path = NULL, *sysex_path = NULL, *path = NULL, *midi_out_path = NULL;
     int keys[FM1P_NKEY], nkeys = 0, vel = 100, lean = 0;
     uint32_t taps = 0;                           /* (label bits: --tap) */
@@ -1027,6 +1031,7 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--midi-out") && more) midi_out_path = argv[++i];
         else if (!strcmp(a, "--out") && more) out_path = argv[++i];
         else if (!strcmp(a, "--describe")) describe = 1;
+        else if (!strcmp(a, "--labels")) labels = 1;
         else if (!strcmp(a, "--audio-in") && more) ain_path = argv[++i];
         else if (!strcmp(a, "--audio-in-once")) ain_once = 1;
         else if (!strcmp(a, "--audio-in-latency") && more) ain_latency = (uint32_t)strtoul(argv[++i], NULL, 10);
@@ -1176,7 +1181,7 @@ int main(int argc, char **argv)
         r = m3_FindFunction(&g_fn[f], g_rt, FN[f].name);
         if (r) {
             g_fn[f] = NULL;
-            if (f == F_INITIALIZE || f == F_AUDIO_IN || f == F_AUDIO_IN_INFO)
+            if (f == F_INITIALIZE || f == F_AUDIO_IN || f == F_AUDIO_IN_INFO || f == F_LABELS_EPOCH || f == F_LABEL)
                 continue;
             return fail("export %s: %s", FN[f].name, r);
         }
@@ -1244,6 +1249,19 @@ int main(int argc, char **argv)
             json_str(o, str(rd32(D(button_names) + 4u * (uint32_t)b)));
         }
         fputs("],\n  \"credits\": ", o); json_str(o, str(rd32(D(credits))));
+        if (labels) {
+            fprintf(o, ",\n  \"labels_epoch\": %u,\n  \"labels\": [", C0(F_LABELS_EPOCH));
+            for (int w = 0; w < FM1CORE_LBL_N; w++) {
+                const uint32_t lp = C1(F_LABEL, (uint32_t)w);
+                if (w)
+                    fputs(", ", o);
+                if (lp)
+                    json_str(o, str(lp));
+                else
+                    fputs("null", o);
+            }
+            fputs("]", o);
+        }
         fprintf(o, ",\n  \"memory_bytes\": %u\n}\n", memsize);
         if (out_path)
             fclose(o);

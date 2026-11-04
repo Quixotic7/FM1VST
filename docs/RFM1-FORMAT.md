@@ -1,4 +1,4 @@
-<!-- A copy: the original is RemoteFM1IOS's docs/RFM1-FORMAT.md (github.com/Quixotic7/RemoteFM1IOS, at 72b9d13).
+<!-- A copy: the original is RemoteFM1IOS's docs/RFM1-FORMAT.md (github.com/Quixotic7/RemoteFM1IOS, at 47da48a).
      Keep the text identical; change the original first. -->
 # The .rfm1 firmware file (version 1)
 
@@ -128,3 +128,19 @@ Index → value: 0 `sizeof(fm1panel_t)`; 1–16 the offsets of `fm1panel_t`'s `k
 5. Saved state (an AU's `fullState`): the firmware's id, version and the file's SHA-256, plus the flash image as for a
    native core. Restoring with a different file of the same id: the host warns and boots the flash anyway; the
    firmware decides what its flash means.
+
+## 8. A skin (optional)
+
+A firmware may carry its own look: an image behind the faceplate and its colours. It is three custom sections, which
+may come anywhere in the file (usually at the end):
+
+- `rfm1.skin`: UTF-8 JSON, `{"skin": 1, "dim": 0.2, "theme": {...}}`. `skin` is 1. `dim` (optional, 0–0.8, default 0)
+  is how much of the faceplate's `body` colour goes over the image (the labels are drawn for contrast on it). `theme` (optional) is either all fourteen roles of design/tokens.json or
+  the five a user picks (`body`, `key`, `knob`, `led`, `bezel`, as `"#RRGGBB"`), the rest derived from them.
+- `rfm1.skin.background`: a PNG or JPEG, at most 4 MiB, shown cropped to fill (portrait, or any shape).
+- `rfm1.skin.background.landscape` (optional): the image for a wide view.
+
+A skin needs `rfm1.skin` and at least an image or a theme. The host scales images to at most 2048 px on the longer side.
+`scripts/rfm1_skin.py add firmware.rfm1 -o out.rfm1 --background bg.png [--landscape wide.png] [--theme t.json]
+[--dim 0.2]` adds one to a built file (the code is untouched; the file's SHA-256 changes). The user can turn firmware
+skins off; then their own background and theme show.
