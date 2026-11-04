@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# SIDOU (https://github.com/dsablic/sidou, tag v1.1.0 = 1a75687; GPL-3.0-or-later, the image GPL-3.0-only), a C64 SID
+# SIDOU (https://github.com/dsablic/sidou, tag v1.5.0 = f4ed52b; GPL-3.0-or-later, the image GPL-3.0-only), a C64 SID
 # machine: bare-metal firmware on Felucca's HAL, its own glue family (core-glue/sidou/README.md) over the unmodified
 # submodule. Built as the firmware's CMake builds it: the portable instrument (app/, core/: their add_library lists,
 # read here) as their own units, the device layer (platform/fm1: main.c, midi.c with Felucca's usb.c and ota.c,
@@ -67,8 +67,8 @@ function(sidou_overlay src dst)           # ARGN: old new old new .. (each ";" w
 endfunction()
 set(_sd_note "/* Changed by FM1VST (core-glue/sidou/core_sidou.cmake, an overlay of this file for its host build): ")
 sidou_overlay(${_sd_fm1}/main.c ${_sd_bin}/main.c
-    "/* SIDOU boot and main loop."
-    "${_sd_note}the main loop's\n * wait for the next interrupt gives the clock back to the host, an update request is not run (a core has no update\n * loader) and fm1_cstart is never run (core_sidou.c runs its boot guard, then sidou_main). */\n/* SIDOU boot and main loop."
+    "// SPDX-License-Identifier: GPL-3.0-or-later\n#include <stdint.h>\n"
+    "// SPDX-License-Identifier: GPL-3.0-or-later\n${_sd_note}the main loop's\n * wait for the next interrupt gives the clock back to the host, an update request is not run (a core has no update\n * loader) and fm1_cstart is never run (core_sidou.c runs its boot guard, then sidou_main). */\n#include <stdint.h>\n"
     "    if (midi_usb_live()) {\n        uint32_t t = timer_irqs<SC>\n        while (timer_irqs == t) {\n        }\n        return<SC>\n    }\n    __asm__ volatile(\"idle\")<SC>\n"
     "    fm1core_sd_wait()<SC> /* FM1VST: the main loop's coroutine gives the clock back */\n"
     "        if (update_poll()) {\n            upgrade()<SC>\n        }"
@@ -83,8 +83,8 @@ sidou_overlay(${_sd_fm1}/audio.c ${_sd_bin}/audio.c
     "    if (midi_usb_live()) {\n        return<SC>\n    }\n    __asm__ volatile(\"idle\" ::: \"memory\")<SC>\n"
     "    fm1core_sd_wait()<SC> /* FM1VST: the main loop's coroutine gives the clock back */\n")
 sidou_overlay(${_sd_fm1}/store_fm1.c ${_sd_bin}/store_fm1.c
-    "/* The store on the device (store_fm1.h). */"
-    "${_sd_note}one thread (no\n * interrupt switch) and ALNK0's pending register a variable. */\n/* The store on the device (store_fm1.h). */"
+    "// SPDX-License-Identifier: GPL-3.0-or-later\n#include \"store_fm1.h\""
+    "// SPDX-License-Identifier: GPL-3.0-or-later\n${_sd_note}one thread (no\n * interrupt switch) and ALNK0's pending register a variable. */\n#include \"store_fm1.h\""
     "#define ALNK_CON2 (*(volatile uint8_t*)0x12E08u)"
     "#define ALNK_CON2 fm1core_sd_alnk_con2 /* FM1VST */"
     "    __asm__ volatile(\"cli\" ::: \"memory\")<SC>\n"
@@ -92,10 +92,10 @@ sidou_overlay(${_sd_fm1}/store_fm1.c ${_sd_bin}/store_fm1.c
     "    __asm__ volatile(\"csync\\n\\tsti\" ::: \"memory\")<SC>\n"
     "    /* FM1VST: one thread */\n")
 sidou_overlay(${_sd_fm1}/input.c ${_sd_bin}/input.c
-    "/* The only file that includes fm1_input.h"
-    "${_sd_note}the wait for the\n * next scan frame gives the clock back to the host. */\n/* The only file that includes fm1_input.h"
-    "        __asm__ volatile(\"idle\" ::: \"memory\")<SC> /* the next TIMER5 tick */"
-    "        fm1core_sd_wait()<SC> /* FM1VST: the next tick */")
+    "// SPDX-License-Identifier: GPL-3.0-or-later\n#include \"input.h\""
+    "// SPDX-License-Identifier: GPL-3.0-or-later\n${_sd_note}the wait for the\n * next scan frame gives the clock back to the host. */\n#include \"input.h\""
+    "    while (fm1_in.frames - from < FM1_DEB_PRESS + 1u) {\n        __asm__ volatile(\"idle\" ::: \"memory\")<SC>\n"
+    "    while (fm1_in.frames - from < FM1_DEB_PRESS + 1u) {\n        fm1core_sd_wait()<SC> /* FM1VST: the next tick */\n")
 file(GLOB _sd_hal RELATIVE ${_sd_glue}/hal ${_sd_glue}/hal/*.h)
 set(_v "{ \"version\": 0, \"case-sensitive\": \"true\", \"use-external-names\": false, \"roots\": [\n")
 foreach(_f main.c audio.c store_fm1.c input.c)

@@ -2,7 +2,7 @@
 
 | core | firmware | submodule | licence |
 |---|---|---|---|
-| `sidou` | SIDOU 1.1.0 (Denis Sablić and the SIDOU contributors) | `cores/sidou` @ v1.1.0 (1a75687), with `third_party/libresidfp` (host tests and the table generator only: not built here) | GPL-3.0-or-later; the image GPL-3.0-only (Felucca's HAL, usb.c, ota.c); reSIDfp-derived tables and GoatTracker 2's player GPL-2.0-or-later, FM-1 SID's PSID design BSD-2-Clause, Rings' reverb MIT |
+| `sidou` | SIDOU 1.5.0 (Denis Sablić and the SIDOU contributors) | `cores/sidou` @ v1.5.0 (f4ed52b), with `third_party/libresidfp` (host tests and the table generator only: not built here) | GPL-3.0-or-later; the image GPL-3.0-only (Felucca's HAL, usb.c, ota.c); reSIDfp-derived tables and GoatTracker 2's player GPL-2.0-or-later, FM-1 SID's PSID design BSD-2-Clause, Rings' reverb MIT |
 
 SIDOU is bare-metal firmware on Felucca's HAL (`platform/fm1/hal`, vendored), not a Felucca fork: no `web/sim`, no
 `firmware/src`, so neither felucca_web nor plat fits it. Its own CMake builds a portable instrument (`app/`, `core/`:

@@ -1,4 +1,4 @@
-# SIDOU 1.1.0: tests/core_conformance.cpp's script for this core (see its header for the directives). A fresh flash
+# SIDOU 1.5.0: tests/core_conformance.cpp's script for this core (see its header for the directives). A fresh flash
 # plays the full boot once (app/boot.h: the C64 prompt, LOADING, the title card), and its capture takes the first
 # button or knob (a note ends it too, and plays).
 # the flash round trip: the boot dismissed (OCT+), ENV opens LAB at ENVELOPE, SAVE keeps the sound as a USER sound
