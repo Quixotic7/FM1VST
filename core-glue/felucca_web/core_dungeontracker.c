@@ -7,11 +7,11 @@
  * (core.h FELUCCA_ADPCM 0, as on the device), so neither its LGPL DSP nor felucca_adpcm.h is compiled in.
  * No Tier 2 parameter map (its pages and tracker are not Felucca's): the panel only, as the other forks.
  * Version and identity as tools/build.py --release 1.0 builds the v1.0.0 release (dungeon-tracker-1.0.fwsc):
- * FELUCCA_VERSION "v1.0" (felucca.c's own default says v1.1), FELUCCA_ID "FM-1_910" (FM-1_9XY). */
+ * FELUCCA_VERSION "v1.0" (felucca.c's own default says v1.1), FELUCCA_ID "FM-1_915" (FM-1_9XY). */
 #define FM1CORE_FW_P dt
 #define FM1CORE_FW_WEB_C "../../cores/Dungeon-Tracker/web/emu/felucca_web.c"
 #define FM1CORE_FW_ANIM_IDLE 1
 #define FM1CORE_FW_EDITOR_C "../../cores/Dungeon-Tracker/firmware/src/editor.c"   /* the web editor's SysEx */
 #define FM1CORE_FW_OTA_C "../../cores/Dungeon-Tracker/firmware/src/ota.c"         /* the M-UPGRADE identity */
-#define FELUCCA_ID "FM-1_910"                                                     /* (build.py --release 1.0) */
+#define FELUCCA_ID "FM-1_915"                                                     /* (build.py --release 1.0) */
 #include "fw_core.h"

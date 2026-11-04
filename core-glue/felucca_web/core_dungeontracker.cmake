@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Dungeon Tracker 1.0.0 (https://github.com/BourbonWX/Dungeon-Tracker, tag v1.0.0): BourbonWX's fork of Felucca 1.6.1,
+# Dungeon Tracker 1.5 (https://github.com/BourbonWX/Dungeon-Tracker, tag v1.5): BourbonWX's fork of Felucca 1.6.1,
 # the felucca_web family's core (fw_core.h over the firmware's own web/emu/felucca_web.c, unmodified;
 # cmake/FM1Cores.cmake fm1_add_core), with its submodules (firmware/engines, firmware/bsp: SUBMODULES_RECURSIVE; the
 # web unit uses neither felucca-bsp nor the off-by-default ADPCM engine). Built as web/emu/build.sh builds its browser
@@ -12,7 +12,7 @@ fm1_add_core(dungeontracker ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}
              SUBMODULES_RECURSIVE
              CREDITS "Dungeon Tracker by BourbonWX and the Dungeon Tracker (RONDO) contributors, a fork of Felucca by Leo Kuroshita (Hügelton Instruments), GPL-3.0-only. Felucca-Engines and the Fukiai icon font (Hügelton Instruments), MIT. WAVES after Ambika by Emilie Gillet, GPL-3.0-or-later. DaisySP (Electrosmith, Emilie Gillet) and Rings (Emilie Gillet), MIT. msfa (Google Inc., Pascal Gauthier), Apache-2.0. Inter Tight font (The Inter Project Authors), SIL OFL 1.1. Samples: Versilian Studios VSCO-2 CE and VCSL (CC0 1.0), the Hügelton Sample Pack (CC0 1.0). The full notices: the release's licences/cores/dungeontracker/."
              GEN ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h felucca_tables.h felucca_fm6.h felucca_samples.h
-             VERSION 1.0.0
+             VERSION 1.5
              DEFINES ${_dt_defs})
 fw_golden(dungeontracker ${CMAKE_SOURCE_DIR}/cores/Dungeon-Tracker web/emu/felucca_web.c ${_dt_defs})
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: what is compiled into the core
