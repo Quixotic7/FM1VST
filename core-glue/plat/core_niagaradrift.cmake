@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Niagara Drift (https://github.com/evanyerburgh/niagara-drift, tag v0.2 = 802daa8; GPL-3.0-only), a FoMni fork that
+# Niagara Drift (https://github.com/evanyerburgh/niagara-drift, tag v0.2.1 = 86f47d2; GPL-3.0-only), a FoMni fork that
 # replaced the instrument with a two-drone engine: the plat glue (core-glue/plat/README.md) over the unmodified
 # submodule; the drone engine (dsp/drone.c, with drone_fx.c) its own unit, as the firmware builds it (tools/build.py
 # O2_UNITS; host/build_host.sh: -DOM_HOST -ffp-contract=off). Scaffolded by RFM1Manager from fomni's glue, ported by hand.
@@ -8,7 +8,7 @@ fm1_add_core(niagaradrift ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_nd} UNIT core_niag
              EXTRA_SOURCES niagaradrift_drone.c
              FAMILY plat LICENSE GPL-3.0-only
              GEN felucca_font.h PYTHON_NEEDS raqm
-             VERSION 0.2
+             VERSION 0.2.1
              FLAGS -ffp-contract=off
              INCLUDES ${_nd}/firmware/src/dsp ${_nd}/firmware/src/app)
 
