@@ -8,8 +8,9 @@
  * the bass sequences), the updater's framing (felucca-bsp's chip/ota.c), the screen reader (announce.c), the panel
  * calibration (panel.c), the build with no radio (radio_none.c, fm1.toml ble = false), the device's plat.h
  * implementation (plat_fm1.c), backup and restore (backup.c, fm1.toml backup = true: scenes.frasil), the keys'
- * velocity and pressure (lib/touch.c, its host part: APP_TOUCH) and the app (app.c with params.c, harmony.c, ui.c).
- * The DSP (app/dsp/*.c, fm1.toml "o2") is its own units (frasil_dsp_*.c).
+ * velocity and pressure (lib/touch.c, its host part: APP_TOUCH) and the app (app.c with pages.c, ui.c and, 3.0, the
+ * engine's core.c, params.c, harmony.c from engine/). The DSP (engine/dsp/*.c, fm1.toml "o2") is its own units
+ * (frasil_dsp_*.c).
  *
  * The FRASIL name and logo (app/assets/frasil-logo.png, compiled in as frasil_logo.h by the firmware's own generate
  * step) are built unchanged, as the author ships them (LICENSING.md); the core is HOSTED_DESPITE_GATE
@@ -402,22 +403,23 @@ static void fm1core_pl_uboot_say(uint32_t left)
         app_say("UPDATE MODE", "CANCELLED");
     }
 }
-/* the lazy save now: the settings prefs_save was asked for (st.prefs_due: app_frame writes them once nothing sounds,
+/* the lazy save now: the settings prefs_save was asked for (fm.prefs_due: app_frame writes them once nothing sounds,
  * prefs_quiet, a write stopping the render a moment); while something sounds or a backup streams: deferred. The
- * scenes and the bass sequences are written when stored (SAVE): nothing else waits */
+ * scenes and the bass sequences are written when stored (SAVE): nothing else waits. 3.0: the FM-1's own state is app.c's
+ * fm (the page, the scene, the logo, the lazy save), st the engine's (core.c) */
 static int fm1core_pl_sync(void)
 {
-    if (!st.prefs_due)
+    if (!fm.prefs_due)
         return 1;
-    if (st.store_hold || !prefs_quiet())
+    if (fm.store_hold || !prefs_quiet())
         return 0;
     prefs_save();
-    return !st.prefs_due;
+    return !fm.prefs_due;
 }
 static void fm1core_pl_info(char *buf, uint32_t n)
 {
-    snprintf(buf, n, "page %u scene %u logo %u dirty %u prefs_due %u", (unsigned)st.page, (unsigned)st.scene,
-             (unsigned)st.logo, (unsigned)st.dirty, (unsigned)st.prefs_due);
+    snprintf(buf, n, "page %u scene %u logo %u dirty %u prefs_due %u", (unsigned)fm.page, (unsigned)fm.scene,
+             (unsigned)fm.logo, (unsigned)st.dirty, (unsigned)fm.prefs_due);
 }
 
 #include "../plat/plat_glue.h"
