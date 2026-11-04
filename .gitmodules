@@ -235,3 +235,6 @@
 [submodule "K-WASUB_Firmware_for_FM1"]
 	path = cores/K-WASUB_Firmware_for_FM1
 	url = https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1
+[submodule "echofield-fm1"]
+	path = cores/echofield-fm1
+	url = https://github.com/Philip-Bos/echofield-fm1

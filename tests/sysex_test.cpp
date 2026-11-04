@@ -1715,6 +1715,167 @@ void pigeon_run(const std::string &module, Device &dev, Link &k, Session &s, con
     k.worst = std::max(k.worst, k2.worst);
 }
 
+// ---- ECHOFIELD: the companion app (companion/lib/efproto.js; app/proto.c), the installer's framing F0 pack7(00 59 cmd
+// len24 body ~sum) F7 with commands 0x70.. (tn_ask: the same frames as Tonitor's), its UPLOAD pulled by the FM-1's
+// read requests (0x30) and ended by its read of 0xC0000000 (done) or 0xCF0000xx (failed: code xx), as efproto.js
+// uploadNow answers them. The 14 factory sounds are in the bank at power-on (the browser emulator's emu_factory)
+std::string ef_str(const Bytes &b, size_t o, size_t n)
+{
+    std::string s;
+    for (size_t i = o; i < o + n && i < b.size() && b[i]; i++)
+        s += (char)b[i];
+    return s;
+}
+struct EfSlot {
+    uint8_t state = 0, factory = 0;
+    std::string name;
+    uint32_t frames = 0, rate = 0;
+};
+bool ef_dir(Link &k, std::vector<EfSlot> &dir)
+{
+    Bytes b;
+    dir.clear();
+    if (!tn_ask(k, 0x71, {}, b, 1500) || b.size() < 1 + 16 * 20 || b[0])
+        return false;
+    for (int i = 0; i < 16; i++) {
+        const size_t o = 1 + i * 20;
+        dir.push_back({b[o], b[o + 1], ef_str(b, o + 2, 12), rd32le(b, o + 14), (uint32_t)(b[o + 18] | b[o + 19] << 8)});
+    }
+    return true;
+}
+uint32_t ef_payload_bytes(uint32_t frames) { return (frames + 7423u) / 7424u * 3828u; }   // whole sectors (ef_dsp.h)
+bool ef_read(Link &k, uint8_t slot, uint32_t bytes, Bytes &out)   // efproto.js read: 512 at a time
+{
+    out.clear();
+    for (uint32_t off = 0; off < bytes; off += 512) {
+        const uint32_t n = std::min<uint32_t>(512, bytes - off);
+        Bytes q = {slot}, b;
+        tn_w32(q, off);
+        q.push_back((uint8_t)n);
+        q.push_back((uint8_t)(n >> 8));
+        if (!tn_ask(k, 0x79, q, b, 1500) || b.size() != 1 + n || b[0])
+            return false;
+        out.insert(out.end(), b.begin() + 1, b.end());
+    }
+    return true;
+}
+int ef_upload(Link &k, uint8_t slot, const Bytes &pay, uint32_t frames, uint32_t rate, const std::string &name,
+              uint32_t &reads)
+{
+    Bytes q = {slot, 0, (uint8_t)rate, (uint8_t)(rate >> 8)};
+    tn_w32(q, frames);
+    tn_w32(q, crc32(pay.data(), pay.size()));
+    for (size_t i = 0; i < 12; i++)
+        q.push_back(i < name.size() && i < 11 ? (uint8_t)name[i] : 0);
+    k.frames.clear();
+    k.put_frame(tn_frame(0x72, q));
+    reads = 0;
+    const uint64_t end = k.blocks + (uint64_t)(30000 / kBlockMs);
+    while (k.blocks < end) {
+        k.block();
+        while (!k.frames.empty()) {
+            Bytes f = std::move(k.frames.front());
+            k.frames.pop_front();
+            const Bytes u = f.size() >= 3 ? mupg_unpack(f) : Bytes();
+            if (u.size() != 15 || u[0] != 0 || u[1] != 0x59 || u[2] != 0x30)
+                continue;
+            const uint8_t fl = u[6];
+            const uint32_t addr = rd32le(u, 7), len = u[11] | u[12] << 8 | u[13] << 16, top = addr & 0xFF000000u;
+            Bytes data;
+            if (top == 0xC0000000u || top == 0xCF000000u)
+                data = {0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0};   // "success\0"
+            else if (len > 512 || addr + len > pay.size())
+                return -1;
+            else {
+                data.assign(pay.begin() + addr, pay.begin() + addr + len);
+                reads++;
+            }
+            const uint32_t n = (uint32_t)data.size();
+            Bytes m = {0x00, 0x59, 0x30, (uint8_t)((n + 8) & 0xFF), (uint8_t)((n + 8) >> 8), 0, fl};
+            Bytes a = le32(addr);
+            m.insert(m.end(), a.begin(), a.end());
+            m.push_back(n & 0xFF);
+            m.push_back(n >> 8 & 0xFF);
+            m.push_back(0);
+            m.insert(m.end(), data.begin(), data.end());
+            uint32_t s2 = 0;
+            for (size_t i = 6; i < m.size(); i++)
+                s2 += m[i];
+            m.push_back((uint8_t)~s2);
+            k.put_frame(upd_wire(m));
+            if (top == 0xC0000000u || top == 0xCF000000u)
+                return top == 0xC0000000u ? 0 : (int)(addr & 0xFFFF);
+        }
+    }
+    return -2;
+}
+void echofield_run(const std::string &module, Device &dev, Link &k, Session &s, const Profile &p)
+{
+    installer_run("ECHOFIELD 0.2", true)(module, dev, k, s, p);   // the identity, the reader, the log, the update keys
+    Bytes b;
+    bool ok = tn_ask(k, 0x70, {}, b, 700) && b.size() >= 38 && !b[0] && ef_str(b, 1, 4) == "EFM1";
+    check(ok && ef_str(b, 6, 16).rfind("0.2", 0) == 0 && b[22] == 16 && b[23] == 92,
+          "companion HELLO (app.js connect): \"" + (ok ? ef_str(b, 6, 16) : std::string()) + "\", " +
+              (ok ? std::to_string(b[22]) + " slots, " + std::to_string(b[23]) + " sectors, " + std::to_string(b[24]) +
+                        " free, " + std::to_string(b[33]) + " parameters, " + std::to_string(b[36]) + " user / " +
+                        std::to_string(b[37]) + " factory presets"
+                  : std::string("no answer")));
+    const uint32_t nparams = ok ? b[33] : 0;
+    std::vector<EfSlot> dir;
+    ok = ef_dir(k, dir);
+    int used = 0, fac = 0;
+    for (const EfSlot &e : dir)
+        used += e.state == 1, fac += e.factory;
+    check(ok && used == 14 && fac == 14 && dir[0].name == "FELT PIANO" && dir[0].frames == 37120 && dir[0].rate == 16000,
+          "DIR: " + std::to_string(used) + " samples, " + std::to_string(fac) + " factory (the first \"" +
+              (ok ? dir[0].name : std::string()) + "\", " + (ok ? std::to_string(dir[0].frames) : "?") + " frames)");
+    ok = tn_ask(k, 0x77, {}, b, 1500) && !b.empty() && !b[0] && b.size() >= 1 + 16 * 25 + 16;
+    check(ok, "PRESETS: 16 user presets and " + std::to_string(ok ? (b.size() - 1 - 16 * 25) / 16 : 0) +
+                  " factory names (the first \"" + (ok ? ef_str(b, 1 + 16 * 25, 16) : std::string()) + "\")");
+    ok = tn_ask(k, 0x75, {}, b, 1500) && b.size() >= 2 && !b[0] && b[1] == nparams && b.size() == 13 + 2 * nparams;
+    check(ok, "PARAMS: " + std::to_string(ok ? b[1] : 0) + " parameters, the slot " +
+                  std::to_string(ok ? (int)(int8_t)b[2 + 2 * nparams] : -9));
+    Bytes pay;
+    ok = ef_read(k, 0, ef_payload_bytes(37120), pay);
+    check(ok && crc32(pay.data(), pay.size()) == 1796032180u,
+          "READ slot 0 (an export): " + std::to_string(pay.size()) + " bytes, CRC-32 factory.json's FELT PIANO's");
+    uint32_t reads = 0;
+    const uint32_t dirty0 = dev.flash_dirty();
+    const int rc = ef_upload(k, 14, pay, 37120, 16000, "COPY", reads);
+    check(rc == 0, "UPLOAD into slot 15 (efproto.js uploadNow): code " + std::to_string(rc) + ", " +
+                       std::to_string(reads) + " read requests answered; the NOR image written (" +
+                       std::to_string(dev.flash_dirty() - dirty0) + " writes)");
+    Bytes back;
+    ok = ef_dir(k, dir) && dir[14].state == 1 && dir[14].name == "COPY" && ef_read(k, 14, (uint32_t)pay.size(), back);
+    check(ok && back == pay, "  DIR lists it (\"" + (dir.size() > 14 ? dir[14].name : std::string()) +
+                                 "\"), and READ gives it back byte for byte");
+    ok = tn_ask(k, 0x76, {0xF0, 1, 0}, b, 1500) && !b.empty() && !b[0];
+    k.run_ms(300);
+    ok = ok && tn_ask(k, 0x75, {}, b, 1500) && b.size() == 13 + 2 * nparams && b[3 + 2 * nparams] == 1;
+    check(ok, "SET play on (0xF0), PARAMS says playing");
+    std::string why;
+    uint32_t frames = 0;
+    ok = x0x_backup(k, b, why, &frames, {0x45, 0x43, 0x42, 0x31});
+    check(ok && b.size() > 16, "backup (0x42 \"ECB1\", fm1-base backup.c): " + std::to_string(b.size()) + " bytes in " +
+                                   std::to_string(frames) + " frames " + why);
+    const bool alive = update_keys(k, s, p);
+    dev.flash_sync();
+    const Bytes image(dev.flash(), dev.flash() + dev.flash_size());
+    std::unique_ptr<LoadedCore> lc2 = load(module);
+    Device dev2(lc2->core());
+    dev2.boot_from(image.data(), (uint32_t)image.size());
+    Link k2(dev2);
+    k2.run_ms(2000);
+    used = 0;
+    ok = ef_dir(k2, dir);
+    for (const EfSlot &e : dir)
+        used += e.state == 1;
+    check(alive && ok && used == 15 && dir[14].name == "COPY",
+          "rebooted from the flash image: " + std::to_string(used) + " samples, slot 15 \"" +
+              (dir.size() > 14 ? dir[14].name : std::string()) + "\"");
+    k.worst = std::max(k.worst, k2.worst);
+}
+
 const Profile kProfiles[] = {
     {"choralroot", "ChoralRoot ", true, "FM-1_920", true, fm6_bank_change},
     // CoralFlower: no DX7 receive service (its main loop has no fm6_service): the chord part's sound, PRESETS +2, in
@@ -1744,6 +1905,8 @@ const Profile kProfiles[] = {
     {"x0x", "X0X ", false, "FM-1_9010100", false, nullptr, false, nullptr, x0x_run},
     {"amb", nullptr, false, "FM-1_7010300", false, nullptr, false, nullptr, installer_run("AMB-1 ", true)},
     {"loom", "LOOM-8 0.6.1", false, "FM-1_10000601", false, nullptr, false, nullptr, loom_run},
+    // ECHOFIELD 0.2.8: build.py --release 0.2.8 (fm1.toml id_prefix FM-1_3246 + 00 02 08); its companion app
+    {"echofield", nullptr, false, "FM-1_3246000208", false, nullptr, false, nullptr, echofield_run},
     {"fomni", nullptr, false, "FM-1_8000400", false, nullptr, false, nullptr, installer_run("FoMni-1 ", false)},
     {"fimba", nullptr, false, "FM-1_8000601", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"fartmachine", nullptr, false, "FM-1_701", false, nullptr, false, nullptr, installer_run(nullptr, false)},

@@ -1,0 +1,11 @@
+ECHOFIELD FM-1's factory sounds, CC0-1.0
+
+The 14 factory sounds compiled into this build (companion/factory/*.efs in https://github.com/Philip-Bos/echofield-fm1,
+listed in companion/factory/factory.json, "licence": "CC0-1.0"; turned into app/build/gen/factory_data.h by the
+firmware's own app/tools/gen_factory_h.py) are by Philip Bos: synthesised by the R36S ECHOFIELD's sample generator,
+original material, encoded by tools/make_factory.mjs. ECHOFIELD's LICENSING.md:
+
+  The factory sounds | CC0-1.0 | companion/factory/
+
+FELT PIANO, BOWED GLASS, MUSIC BOX, WARM PAD and the other ten are dedicated to the public domain under the Creative
+Commons CC0 1.0 Universal Public Domain Dedication: https://creativecommons.org/publicdomain/zero/1.0/legalcode
