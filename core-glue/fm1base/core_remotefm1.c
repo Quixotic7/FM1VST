@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The RemoteFM1 core: RemoteFM1 0.3.1 by Quixotic7 (https://github.com/Quixotic7/RemoteFM1, the pinned, unmodified
- * submodule cores/RemoteFM1 at v0.3.1, MPL-2.0, on fm1-base and felucca-bsp, MPL-2.0; saadet's FM6 with MSFA,
+/* The RemoteFM1 core: RemoteFM1 0.3.2 by Quixotic7 (https://github.com/Quixotic7/RemoteFM1, the pinned, unmodified
+ * submodule cores/RemoteFM1 at v0.3.2, MPL-2.0, on fm1-base and felucca-bsp, MPL-2.0; saadet's FM6 with MSFA,
  * Apache-2.0; the Jersey 10 font, OFL-1.1) built with the fm1-base glue (core-glue/fm1base/README.md: the plat
  * family's HAL and shared core). The meta joke: RemoteFM1 is the firmware that makes an FM-1 the panel of a host
  * running .rfm1 files, and here it is an .rfm1 itself.
