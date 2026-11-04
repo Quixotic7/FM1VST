@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# AURORA 0.7.7 (https://github.com/twochannels/AURORA, tag v0.7.7, befdbfa): the Dinghy family glue
+# AURORA 0.8.0 (https://github.com/twochannels/AURORA, tag v0.8.0, befdbfa): the Dinghy family glue
 # (core-glue/dinghy/) over the unmodified submodule cores/AURORA, on its own fake FM-1 tests/fake_fm1.h in host mode
 # (DINGHY_HOST). platform.c includes "../../tests/host.c" by a relative path (a program: script, WAV, main), so
 # clang's -ivfsoverlay maps that path to aurora_host.c (the overlay file is written here, in the build tree), as
@@ -18,7 +18,7 @@ fm1_add_core(aurora ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_aurora}
              UNIT core_aurora.c DESC core_aurora_desc.c FAMILY dinghy LICENSE GPL-3.0-only
              CREDITS "AURORA by twochannels (the app, the CS-80 voice, the browser emulator), on Dinghy by zvenson (the wiring platform.c, the host mode), over Felucca's platform by Leo Kuroshita (Hügelton Instruments), with SLOOP's changes by isod89. The second core as an audio worker by PatttF (FM-106), after the AC79 SDK (Apache-2.0). MIDI IN on the TRS jack from Felucca as adapted in FM-106. The keys' velocity and pressure sensing (Velo) by Charles Vestal. GPL-3.0-only. The screen's font is Terminus Font (8x16, Dimitar Toshkov Zhekov), SIL Open Font License 1.1. The full notices: the release's licences/cores/aurora/ (LICENSING.md)."
              CREDITS_FILES ${CMAKE_CURRENT_LIST_DIR}/licences/aurora/Terminus-LICENSE.txt
-             NO_GEN VERSION 0.7.7 DEFINES APP_VER="0.7.7"
+             NO_GEN VERSION 0.8.0 DEFINES APP_VER="0.8.0"
              INCLUDES ${_aurora}/firmware/src ${_aurora}/firmware/gen ${CMAKE_CURRENT_LIST_DIR}
              FLAGS "-ivfsoverlay" "${_aurora_vfs}")
 if(TARGET core_aurora_obj)
@@ -30,7 +30,7 @@ dinghy_core(aurora core_aurora.c)
 # the golden check: the same script on its own host sim (tests/host.c, unchanged), the screens compared at 3000 ms
 # (one of its fixed SHOT times)
 dinghy_golden_check(aurora SCRIPT golden_aurora.txt AT 3000 SOURCE ${_aurora}/firmware/src/aurora.c
-                    DEFINES DINGHY_HOST APP_VER="0.7.7"
+                    DEFINES DINGHY_HOST APP_VER="0.8.0"
                     INCLUDES ${_aurora}/firmware/src ${_aurora}/firmware/gen)
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md): the main loop on the coroutine, so Asyncify
 # (tools/rfm1/rfm1_link.cmake). The licence texts: its GPL, its LICENSING.md and the Terminus font's OFL (FM1VST's
