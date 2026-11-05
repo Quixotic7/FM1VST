@@ -230,7 +230,7 @@ def from_metadata(path, warn):
     if "schema" in m and m["schema"] != 1:
         warn("schema %r (this build knows 1): read as 1" % m["schema"])
     for k in m:
-        if k not in ("schema", "card", "skin", "labels"):
+        if k not in ("$schema", "schema", "target", "card", "skin", "labels"):
             warn("unknown field %r ignored" % k)
     s = m.get("skin")
     if s is None:
