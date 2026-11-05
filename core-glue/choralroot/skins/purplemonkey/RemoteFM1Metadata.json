@@ -1,15 +1,24 @@
 {
   "schema": 1,
   "skin": {
-    "background": "skin-portrait.png",
-    "landscape": "skin-landscape.png",
-    "dim": 0.15,
+    "background": "skin-portrait.jpg",
+    "landscape": "skin-landscape.jpg",
+    "dim": 0,
     "theme": {
-      "body": "#3A1D6E",
-      "key": "#5B34A6",
-      "knob": "#FFB8E6",
+      "body": "#3A2272",
+      "label": "#FFFFFF",
+      "bed": "#22114A",
+      "key": "#3A2278",
+      "hi": "#4E3394",
+      "lo": "#160A32",
+      "keyText": "#FFF2FB",
+      "knob": "#FF9AD5",
+      "mark": "#22114A",
+      "bezel": "#120828",
+      "lcd": "#120828",
+      "ink": "#FFF2FB",
       "led": "#FFE14D",
-      "bezel": "#160A2E"
+      "ledOff": "#4A3880"
     }
   }
 }
