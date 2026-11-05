@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "skin": {
+    "background": "skin-portrait.png",
+    "landscape": "skin-landscape.png",
+    "dim": 0.2,
+    "theme": {
+      "body": "#080808",
+      "key": "#1C1C1C",
+      "knob": "#ECECEC",
+      "led": "#FFFFFF",
+      "bezel": "#2A2A2A"
+    }
+  }
+}

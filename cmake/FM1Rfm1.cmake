@@ -27,6 +27,9 @@
 #                                   ("audio=r" "code=r" "data=rw")
 #       [NO_SKIN]                   leave the firmware's own skin out (below)
 #       [NO_LABELS]                 leave the firmware's own button and knob labels out (below)
+#       [METADATA <file>]           a RemoteFM1Metadata.json kept with the glue (relative to the calling file), used in
+#                                   place of the one at the firmware repository's root: the owner's own skin and labels
+#                                   for a firmware whose repository has none (its image paths: relative to that file)
 #       [WANTS <cap..>])            host capabilities it uses when a host has them and does without otherwise, the
 #                                   manifest's "wants" ("ain1": audio input, docs/VIRTUAL-CARTS.md 8). ain1 in WANTS
 #                                   or NEEDS also makes the shim export rfm1_audio_in / rfm1_audio_in_info from the
@@ -176,7 +179,7 @@ function(fm1_rfm1_license_files id src license out)
 endfunction()
 
 function(fm1_add_rfm1 id)
-    cmake_parse_arguments(A "VIRTUAL;NO_SKIN;NO_LABELS" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE"
+    cmake_parse_arguments(A "VIRTUAL;NO_SKIN;NO_LABELS" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE;METADATA"
                           "AUTHORS;LICENSE_FILES;DEFINES;FLAGS;INCLUDES;RUN_ARGS;NEEDS;FOLDERS;WANTS" ${ARGN})
     if(A_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR "fm1_add_rfm1(${id}): unknown arguments ${A_UNPARSED_ARGUMENTS}")
@@ -260,7 +263,15 @@ function(fm1_add_rfm1 id)
     # the firmware's RemoteFM1Metadata.json (its repository's root): its labels, as the shim's header (below: the skin)
     fm1_rfm1_repo_root(${_SOURCE} _repo)
     set(_meta "")
-    if(_repo AND EXISTS ${_repo}/RemoteFM1Metadata.json)
+    if(A_METADATA)
+        # the glue's own file (METADATA): it wins over the repository's; its folder is where its paths start
+        get_filename_component(_meta ${A_METADATA} ABSOLUTE BASE_DIR ${CMAKE_CURRENT_LIST_DIR})
+        if(NOT EXISTS ${_meta})
+            message(FATAL_ERROR "fm1_add_rfm1(${id}): METADATA ${_meta} does not exist")
+        endif()
+        get_filename_component(_repo ${_meta} DIRECTORY)
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_meta})
+    elseif(_repo AND EXISTS ${_repo}/RemoteFM1Metadata.json)
         set(_meta ${_repo}/RemoteFM1Metadata.json)
         set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_meta})
     endif()
@@ -445,11 +456,11 @@ function(fm1_add_rfm1 id)
         if(A_NO_SKIN)
             set(_skin_msg ", its RemoteFM1Metadata.json skin left out (NO_SKIN)")
         else()
-            list(APPEND _pack_args --skin-metadata ${_repo}/RemoteFM1Metadata.json)
-            list(APPEND _skin_deps ${_repo}/RemoteFM1Metadata.json)
-            set(_skin_msg ", skin from ${_repo}/RemoteFM1Metadata.json")
+            list(APPEND _pack_args --skin-metadata ${_meta})
+            list(APPEND _skin_deps ${_meta})
+            set(_skin_msg ", skin from ${_meta}")
             # (the images too, so a changed one repacks: the paths that are there; rfm1_pack does the checking)
-            file(READ ${_repo}/RemoteFM1Metadata.json _mj)
+            file(READ ${_meta} _mj)
             foreach(_k background landscape)
                 string(JSON _ip ERROR_VARIABLE _je GET "${_mj}" skin ${_k})
                 if(_je OR "${_ip}" STREQUAL "" OR IS_ABSOLUTE "${_ip}")

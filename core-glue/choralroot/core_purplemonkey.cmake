@@ -16,4 +16,4 @@ fm1_add_core(purplemonkey ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_pm} UNIT core_purp
 crf_golden(purplemonkey SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden/purplemonkey.txt REF ${_pm}/build/host/pm_emu
            BUILD sh tools/emu/build_pm.sh BUILD_DEPENDS gen_purplemonkey AUDIO)
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
-fm1_add_rfm1(purplemonkey AUTHORS "Quixotic7")
+fm1_add_rfm1(purplemonkey AUTHORS "Quixotic7" METADATA skins/purplemonkey/RemoteFM1Metadata.json)
