@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# X0X (https://github.com/charlesvestal/fm1-x0x, tag v1.2.0): the plat glue (core-glue/plat/README.md) over the
+# X0X (https://github.com/charlesvestal/fm1-x0x, tag v1.2.1): the plat glue (core-glue/plat/README.md) over the
 # unmodified submodule; the DSP, sequencer and engine units as the firmware builds them (cmake/FM1Cores.cmake)
 # GATED (the integration's licence pass, CORES-BRIEF-PHASE1.md "when unsure, gate"): x0x_drum_samples.h compiles
 # assets/909/{hh,ride,crash}.wav; LICENSING.md: "909 hi-hat, ride and crash samples (assets/909/) | ER-99 via 9W9 |
@@ -13,7 +13,7 @@ fm1_add_core(x0x ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_x0x} UNIT core_x0x.c DESC c
              GATED "the 909 hi-hat, ride and crash samples (assets/909, from ER-99 via 9W9, said to be GPL-3.0) are of unverified provenance: they may be TR-909 ROM recordings"
              CREDITS "The break generator: ported from schwung-breakbeat (BB Gen) by mestela, used with the author's permission (that repository carries no licence file)."
              GEN felucca_font.h x0x_drum_samples.h ann_words.h x0x_break_bank.h PYTHON_NEEDS raqm
-             VERSION 1.2.0
+             VERSION 1.2.1
              FLAGS -ffp-contract=off
              INCLUDES ${_x0x}/firmware/src/dsp ${_x0x}/firmware/src/app)
 # the golden check: X0X's own host simulator (host/build_host.sh's sources and flags) and the core, one script
