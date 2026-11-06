@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The FM-1 HAL for the SLOOP-family cores (SLOOP 2.8, sloopDX 4.0, ORBIT 0.7.1, No Man Sky FM 0.9): what the
+/* The FM-1 HAL for the SLOOP-family cores (SLOOP 2.8, sloopDX 4.0, ORBIT 1.0.0, No Man Sky FM 0.9): what the
  * device's firmware/hal/fm1_*.h headers give firmware/src/felucca.c, on the host. Included by sloop_firmware.h in
  * the place of those headers (first, before libc.c). None of these firmwares ships an emulator unit: this header is
  * modelled on their tests/ui_pages_test.c stubs (time, input, display) and No Man Sky's wasm/nms_wasm.c (the whole
@@ -109,6 +109,8 @@ void isr_timer5(void) {}
 #define FM1_NKEY 41u                               /* ids: 0..13 buttons, 14..40 note keys */
 #define FM1_NENC 7u
 enum { FM1_BTN_OCT_DOWN = 0, FM1_BTN_OCT_UP = 1 };
+#define FM1_NBTN 14u                               /* (ORBIT 1.0's fm1_input.h) buttons: ids 0..13 */
+#define FM1_OCT_BOTH (1u << FM1_BTN_OCT_DOWN | 1u << FM1_BTN_OCT_UP)
 /* key id at (physical column, packed row bit), -1 = none (fm1_input.h) */
 static const int8_t FM1_KEYMAP[6][FM1_NCOL] = {
     {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},          /* PA0: encoders */

@@ -53,7 +53,7 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | Vector37 0.3.2, the FM-1 build (added 2026-11-02, .rfm1) | GPL-3.0-only (Terminus OFL) | SLOOP / Felucca's board layer (`vector37.c`, its own UI) | native test (`tests/fm1_panel.c`); its web sim is the SMK-37's | Speak37's glue (speak37_hal.h) |
 | SLOOP 2.8 | GPL-3.0 + Hügelton icons (§7) | early Felucca | native tests (`hostsim`, `ui_pages_test`) | D |
 | sloopDX 4.0 (tag v4.0) | GPL-3.0 | SLOOP 2.7 | native tests | D |
-| ORBIT 0.7.1 | GPL-3.0 + **OP-1 material** | SLOOP / Felucca | native preview + hostsim | D |
+| ORBIT 1.0.0 | GPL-3.0 + **OP-1 material** | SLOOP / Felucca | native preview + hostsim | D |
 | No Man Sky FM 0.5 (main 32e7f4c) | GPL-3.0 (+ credit request) | SLOOP 2.7.1 | wasm only | D |
 | OberVave 1.5.3 | GPL-3.0 | Dinghy (zvenson) | native `tests/host.c` + wasm | E |
 | Frodhes 0.9.4 | GPL-3.0 | Dinghy | native + wasm | E |
@@ -128,7 +128,7 @@ The ABI stops including a firmware's header and owns its panel struct:
 | A | **felucca_web**: one generic core that `#include`s the firmware's own `web/emu/felucca_web.c` and drives its `web_*` exports | Felucca 1.6.1, Rainbow Mode, GHOULBOX, JIANT FM, DUELL | add MIDI out (usb.c's queue in the same unit); second core off; seeded randomness for tests |
 | B | **choralroot** (updated) | ChoralRoot 0.25.1, PurpleMonkey 0.11, CoralFlower 0.2 | each fork's own `emu_hal_t` → `fm1panel_t`; velocity / lean fed; layout-dependent labels |
 | C | **plat** (+ fm1-base) | X0X 1.1.0, FoMni 0.4, FiMba-1 0.6.1, Fart Machine One 1.0.0, AMB-1 1.3 | small per-firmware adapters (FiMba's LED call); AMB's submodules; fm1-base's sense for later apps |
-| D | **sloop** (hand glue from `hostsim` + a main loop) | SLOOP 2.7.1, sloopDX 4.0, ORBIT 0.7.1, No Man Sky FM | user sample slots read in place from flash; no tags for two: pin commits |
+| D | **sloop** (hand glue from `hostsim` + a main loop) | SLOOP 2.7.1, sloopDX 4.0, ORBIT 1.0.0, No Man Sky FM | user sample slots read in place from flash; no tags for two: pin commits |
 | E | **dinghy** (coroutine) | OberVave 1.5, Frodhes 0.9.2, FM-106 Beta4 | RAM stores copied into the NOR image in the device's sector format; FM-106's host shim as an overlay |
 | F | **melodee** (updated hand glue) | Melodee 1.4.5 | the LED overrun first; params map rebuilt |
 
@@ -151,7 +151,7 @@ so these need an answer first:
 
 | Firmware | Question | Current answer |
 |---|---|---|
-| ORBIT | CLUSTER engine translates OP-1 firmware DSP and data; no switch to leave it out | leave ORBIT out of public builds unless its author clarifies |
+| ORBIT | CLUSTER engine translates OP-1 firmware DSP and data; no switch to leave it out; the Hügelton icon atlas | still left out of app bundles and public native builds unless its author clarifies. Hosted .rfm1 allowed (the owner's call, 2026-11-06, in their words: "Include ORBIT as hosted only as the author intended."): ORBIT 1.0.0 (the default build, not the 1.0.B Bluetooth build) built by `fm1_add_rfm1(... HOSTED_DESPITE_GATE)`, hosted on RemoteFM1FW only, as SLOOP / Clipper |
 | FM-106 | where its KR-106 port comes from, and that port's licence | check |
 | Fart Machine One | 11 bundled recordings, said to be from Pixabay; redistribution rights unverified | check, or ship without the recordings |
 | SLOOP (and forks with its icons: Clipper, KARMA) | Hügelton icon atlas, all rights reserved under a GPL §7 permission | still gated for app bundles and public native builds (check the permission covers a plugin, or use replacement icons). Hosted .rfm1 files allowed (the owner's call, 2026-10-31, in their words: "I would build them as the original authors intended and we only host the compiled .RFM1 at https://github.com/Quixotic7/RemoteFM1FW they are not distributed inside the app, the app just downloads and runs them."): SLOOP 2.8.4, Clipper 1.3 and KARMA 3.0.2 (hosted only, the same rule) are built with their icons by `fm1_add_rfm1(... HOSTED_DESPITE_GATE "<reason>")` |
@@ -171,7 +171,7 @@ so these need an answer first:
 
 Gated today (left out of FM1_PUBLIC_BUILD): fm106 (Juno-106 patch data), rainbow (character
 look-alikes), fartmachine (recordings), orbit (OP-1 material, the Hugelton atlas), sloop and sloopdx (the Hugelton
-atlas), nomansky (game art), x0x (the cymbal samples). GATED still builds an .rfm1 when its `fm1_add_rfm1` says `HOSTED_DESPITE_GATE` (sloop, clipper, x0x since 2026-10-31): a
+atlas), nomansky (game art), x0x (the cymbal samples). GATED still builds an .rfm1 when its `fm1_add_rfm1` says `HOSTED_DESPITE_GATE` (sloop, clipper, x0x since 2026-10-31; orbit since 2026-11-06): a
 hosted download from RemoteFM1FW, never bundled in an app or a public native build; a public build (FM1_PUBLIC_BUILD=ON)
 leaves the core out altogether, so hosted files come from a build without it. A public build bundles the other twenty-two: choralroot
 (the default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee, fomni, fimba, amb, obervave, frodhes,
