@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Penumbra (https://github.com/MadMooneyham/Penumbra, tag v1.1 = ffeffb6; GPL-3.0-only), Lunar Eclipse Forge's
+# Penumbra (https://github.com/MadMooneyham/Penumbra, tag v1.2.1 = 4318a4d; GPL-3.0-only), Lunar Eclipse Forge's
 # space-drone instrument, a fork of X0X on Felucca's platform: the plat glue (core-glue/plat/README.md) over the
 # unmodified submodule. The device's unity build (penumbra.c: the UI, the settings and journeys, the store, the
 # screen reader) is core_penumbra.c; the DSP, the clock, the journey, the looper and the engine their own units, as
@@ -14,7 +14,7 @@ fm1_add_core(penumbra ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_pen} UNIT core_penumbr
              FAMILY plat LICENSE GPL-3.0-only
              CREDITS "Penumbra by Lunar Eclipse Forge, a fork of X0X (Charles Vestal), itself of Felucca (Leo Kuroshita, Hügelton Instruments).\nThe tape delay, distortion and glue compressor: ported from 9W9 (athousanddetails), after ER-99 (Matthew Cieplak), GPL-3.0.\nThe second core's start-up: after Melodee (keremimo) and Jangada (zednaked).\nThe Barlow Semi Condensed font, SIL OFL 1.1."
              GEN felucca_font.h logo.h dsp_tables.h ann_words.h PYTHON_NEEDS raqm
-             VERSION 1.1
+             VERSION 1.2.1
              FLAGS -ffp-contract=off
              INCLUDES ${_pen}/firmware/src/dsp ${_pen}/firmware/src/app)
 
