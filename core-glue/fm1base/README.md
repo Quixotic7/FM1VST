@@ -3,7 +3,7 @@
 | core | firmware | submodule | licence |
 |---|---|---|---|
 | `amb` | AMB-1 1.3.1 | `cores/fm1-amb` @ v1.3.1 (285215a), with `base` = fm1-base @ 9bca715, `base/bsp` = felucca-bsp @ f878800 | MPL-2.0 |
-| `loom` | LOOM-8 0.6.1 | `cores/fm1-loom` @ v0.6.1 (3f41391), with `base` = fm1-base @ 71128a3, `base/bsp` = felucca-bsp @ 33cac69 | GPL-3.0-only (fm1-base MPL-2.0); un-gated 2026-10-21 (the owner's call: the 909 hi-hat) |
+| `loom` | LOOM-8 0.14 | `cores/fm1-loom` @ v0.14 (faf459d), with `base` = fm1-base @ 317cb86, `base/bsp` = felucca-bsp @ 5b0879b | GPL-3.0-only as a whole (MPL-2.0 files, GPL-3.0-only acid and 909 models; fm1-base MPL-2.0); un-gated 2026-10-21 (the owner's call: the 909 hi-hat) |
 | `mutabledreams` | Mutable Dreams 1.4 | `cores/mutable-dreams` @ v1.4 (0321551), fm1-base and felucca-bsp vendored in it (no submodules) | GPL-3.0-only combined (app also MIT; Mutable Instruments code MIT; fm1-base MPL-2.0) |
 | `remotefm1` | RemoteFM1 0.3.1 (Quixotic7) | `cores/RemoteFM1` @ v0.3.1 (e6fa19d), with `base` = fm1-base @ 934e40d, `base/bsp` = felucca-bsp @ 2cd696a, both patched at build time | MPL-2.0; FM6's MSFA parts Apache-2.0; Yamaha's DX7 ROM voices compiled in from the builder's .syx files |
 | `vesper` | VESPER 2.0.1 (Fat Cat Studios) | `cores/vesper-fm1` @ vesper-2.0.1 (f50977b), with `base` = fm1-base @ d8ff8f4, `base/bsp` = felucca-bsp @ 305c372 | GPL-3.0-only with the FM1 SDK linking exception (fm1-base MPL-2.0); MIT / Apache-2.0 DSP; CC0 samples |
@@ -103,6 +103,26 @@ NOR image, unity.c's stand-ins for the screen mirror); AMB-1 compiles it unused.
   samples (ER-99), the question that gated LOOM-8 with X0X. The owner decided to ship it unchanged: "ship the original,
   it is from the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal made"; the credits name
   that origin. X0X stays gated (its own question, CORES-PLAN.md 6).
+
+### LOOM-8 0.14: more output channels
+
+0.14 moved LOOM-8 to fm1-base 317cb86 (the 0.6.1 notes above are otherwise still how the glue works):
+
+- **More output channels (aout1).** fm1.toml `usb_audio_channels = 10` (`FM1B_UAC_CH`, read from fm1.toml by
+  `core_loom.cmake`): the tracks T1..T8 on channels 3..10, beside the master. On the device they go to a computer over
+  USB; here `plat_usb_ch` is `plat_glue.h`'s (each rendered block's channels queued beside the master's) and the core
+  exports `fm1core_audio_out_info` / `fm1core_audio_out` (fm1core.h); the .rfm1 exports `rfm1_audio_out_info` /
+  `rfm1_audio_out` (`fm1_add_rfm1 AUDIO_OUT 10`). No host taking them: `plat_usb_ch` is NULL and LOOM-8 skips the work.
+- **The second core** is fm1-base's now (fm1.toml `cpu2`, `plat_cpu2_*`, `plat_core`): `loom_plat.c` runs each job at
+  once, as fm1-base's host simulator does. `plat_fm1.c`'s `plat_core` and `plat_usb_ch` are renamed away on include.
+- **The factory set** stays built in (`loom_sample.c`, as 0.6.1 had it and the simulator still has it): since 0.8 the
+  FM-1's image leaves it to the installer, and a fresh flash here has no bank.
+- **The resource region** (fm1.toml `resources`: the 909 cymbals, ER-99's samples, GPL-3.0, and the large type) is
+  fm1-base's `res.c` on the NOR image, empty on a fresh flash: the cymbals are silent and the type is the built-in
+  faces, as on an FM-1 the installer has not written it to. Building it in is the owner's call (X0X is gated on the
+  same samples). A manager can send it as to an FM-1 (`RES_REQ`).
+- `plat_fm1.c`'s SysEx stream (`plat_sysex_begin` / `put` / `end`) writes into the managers' out ring
+  (`fm1core_pl_sxo`, the same USB-MIDI packets as usb.c's).
 
 ## Mutable Dreams
 

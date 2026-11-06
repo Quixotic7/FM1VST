@@ -46,7 +46,7 @@ asm outside its HAL or another macOS blocker. Dual-core code runs inline on the 
 | FiMba-1 0.6.1 | GPL-3.0 | FoMni | native + wasm | C |
 | Fart Machine One 1.0.0 | GPL-3.0 (code) | FoMni | native + wasm | C |
 | AMB-1 1.3 | **MPL-2.0** | fm1-base (Vestal) on felucca-bsp | native + wasm | C' |
-| LOOM-8 0.6.1 (added 2026-10-21) | GPL-3.0-only (fm1-base MPL-2.0) | fm1-base 71128a3 on felucca-bsp | native (`app/host.c`) + wasm | C' |
+| LOOM-8 0.14 (added 2026-10-21) | GPL-3.0-only (fm1-base MPL-2.0) | fm1-base 317cb86 on felucca-bsp | native (`app/host.c`) + wasm | C' |
 | Mutable Dreams 1.4 (added 2026-11-01, .rfm1) | GPL-3.0-only (app also MIT; Plaits / Rings / Elements / stmlib MIT; fm1-base MPL-2.0; fonts OFL) | fm1-base (vendored) on felucca-bsp, C++ engine | native (`base/host/plat_host.c`) + wasm | C' |
 | Tonitor 0.55 (a240bc1, no tags: the Hub package's commit; added 2026-10-22) | GPL-3.0-only (msfa Apache-2.0, Rings MIT, LIRA-8 BSD-3) | Felucca / SLOOP's HAL, its own unity build | a render / screen harness (`tests/host/host.c`), no main loop; no wasm | G (its own: tonitor) |
 | Speak37 1.0, the FM-1 build (added 2026-10-22) | GPL-3.0-only (+ MAME's TMS5220 tables BSD-3, FM1 Open's 808 MIT) | the Felucca platform (`speak.c`, not Felucca's UI) | native test (`tests/sp_screen.c -DT_FM1=1`); its web emu is plain Felucca | own glue (speak37) |
