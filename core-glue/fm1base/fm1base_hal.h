@@ -71,4 +71,21 @@ static uint32_t mirror_in_keys(void) { return 0; }
 static int32_t mirror_in_enc(int role) { (void)role; return 0; }
 static uint32_t mirror_in_master(uint32_t pot) { return pot; }
 static void mirror_enc(int role, int32_t n) { (void)role, (void)n; }
+#if defined FM1CORE_FB_MIRROR_DIM && FM1CORE_FB_MIRROR_DIM
+/* fm1-base 9bca715 on (AMB-1 1.3.1, CTL-1 1.0.1): the mirror's view has the glow's LEDs too and the mid plane
+ * (plat_lights, plat_lights_mid) */
+static void mirror_leds(uint32_t buttons, uint32_t keys, uint32_t dim_buttons, uint32_t dim_keys)
+{
+    (void)buttons, (void)keys, (void)dim_buttons, (void)dim_keys;
+}
+static void mirror_mid(uint32_t buttons, uint32_t keys) { (void)buttons, (void)keys; }
+#else
 static void mirror_leds(uint32_t buttons, uint32_t keys) { (void)buttons, (void)keys; }
+#endif
+
+/* ---- what fm1-base 9bca715 (AMB-1 1.3.1, CTL-1 1.0.1) reaches beyond the above ---- */
+/* felucca-bsp's fm1_irq.h fm1_icfg (plat_lock.c: the lock nests on icfg bit 9, the global enable): the main loop's
+ * view, interrupts on (fm1_irq_off / on do nothing here: one thread) */
+static uint32_t fm1_icfg(void) { return 0x200u; }
+/* felucca-bsp's fm1_sys.h fm1_cnum (plat_core: which core runs the caller): the first, the only one here */
+static uint32_t fm1_cnum(void) { return 0u; }
