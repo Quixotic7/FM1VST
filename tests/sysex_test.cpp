@@ -552,7 +552,7 @@ ChangeFn up_store_change(uint8_t store_cmd = 19)
     };
 }
 // ---- the sloop family ----
-// SLOOP 2.8, sloopDX 4.0, ORBIT 0.7.1, No Man Sky FM 0.5: the firmware's own editor.c (web/EDITOR_PROTOCOL.md v12),
+// SLOOP 2.8, sloopDX 4.0, ORBIT 1.0.0, No Man Sky FM 0.5: the firmware's own editor.c (web/EDITOR_PROTOCOL.md v12),
 // their web editors' requests (web/editor.html `req`): INFO 1, the backup BK_LIST / BK_GET / BK_PUT 34 / 35 / 36
 // (256-byte chunks, backupCapture / backupRestore), the user presets UP_STORE 19, sloopDX's DX7 bank BANK_BEGIN /
 // BANK_WRITE / BANK_END / BANK_INFO 37..40 (512-byte chunks, dxbank.upload). No restart command: the reboot is the
@@ -1899,7 +1899,7 @@ const Profile kProfiles[] = {
     // the sloop family: editor.c's v6 backup; the identity is build.py's development FM-1_900 (no --release)
     {"sloop", "FELUCCA SLOOP 2.8", true, "FM-1_900", false, sl_upreset_change, true},
     {"sloopdx", "FELUCCA sloopDX 4.0", true, "FM-1_900", false, sl_dxbank_change, true, sl_dxbank_kept},
-    {"orbit", "FELUCCA ORBIT 0.7.1", true, "FM-1_900", false, sl_upreset_change, true},
+    {"orbit", "FELUCCA ORBIT 1.0.0", true, "FM-1_900", false, sl_upreset_change, true},
     {"nomansky", "FELUCCA NMS FM 0.5", true, "FM-1_900", false, sl_upreset_change, true},
     // plat, fm1base, dinghy
     {"x0x", "X0X ", false, "FM-1_9010100", false, nullptr, false, nullptr, x0x_run},

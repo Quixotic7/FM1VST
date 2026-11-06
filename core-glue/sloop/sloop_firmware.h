@@ -5,7 +5,7 @@
  * tests/ui_pages_test.c; No Man Sky's wasm/nms_wasm.c). Which firmware: FM1CORE_SL_FW (core_<id>.c sets it):
  *   FM1CORE_SL_SLOOP    SLOOP 2.8       3 synth parts + drums, the second core, ui_vis
  *   FM1CORE_SL_DX       sloopDX 4.0     SLOOP 2.7 with the DX7 engine (ui_voice), no ui_vis, MIDI program change
- *   FM1CORE_SL_ORBIT    ORBIT 0.7.1     SLOOP 2.4+ line, one core, ORBIT's engines and screens
+ *   FM1CORE_SL_ORBIT    ORBIT 1.0.0     SLOOP 2.4+ line, one core, ORBIT's engines and screens
  *   FM1CORE_SL_NMS      No Man Sky 0.9  SLOOP 2.8.4 with ui_nms / ui_game (no ui_song, icons, ui_vis), its tree
  *                                       one level down (cores/nomanskyFM/firmware)
  * Built out (they need the hardware), as the firmwares' host builds leave them out: FELUCCA_OTA (usb.c's SysEx
@@ -87,7 +87,7 @@
 #include "icons.c"
 #endif
 #include "ui_draw.c"
-#if FM1CORE_SL_FW == FM1CORE_SL_SLOOP || FM1CORE_SL_FW == FM1CORE_SL_ORBIT || FM1CORE_SL_FW == FM1CORE_SL_KARMA
+#if FM1CORE_SL_FW == FM1CORE_SL_SLOOP || FM1CORE_SL_FW == FM1CORE_SL_KARMA   /* (ORBIT 1.0 dropped it) */
 #include "ui_vis.c"
 #endif
 #include "ui_layers.c"
