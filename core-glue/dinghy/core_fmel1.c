@@ -11,7 +11,7 @@
  *   the flash      the settings (every parameter, the SEQ's steps, each sound's PLAY) as on the device: one DNGY record
  *                  at 0xFC000 (fmel1_host.c over the NOR image), saved 2 s after a change when silent, or by SAVE
  *   SysEx          in: every frame goes to ota.c's ota_service, as the device's platform_poll hands them (the
- *                  M-UPGRADE identity FM-1_950: tools/build.py --release 1.1 stamps FM-1_95<minor>); out: the keys'
+ *                  M-UPGRADE identity FM-1_950: tools/build.py --release 1.2 stamps FM-1_95<minor>); out: the keys'
  *                  notes (midi_send)
  *   the LEDs       host_led per id (0..13 buttons, 14 + k keys), lit or off
  * MASTER is the glue's (the device's curve, after app_audio). Not here: USB audio, the rescue, the boot guard (the
@@ -84,7 +84,7 @@ static void fm1core_dg_info(char *buf, uint32_t n)
 }
 
 /* the M-UPGRADE identity: platform.c's platform_poll gives every SysEx frame to ota_service */
-#define FELUCCA_ID "FM-1_950"             /* tools/build.py --release 1.1: PRODUCT FM-1_95<minor> */
+#define FELUCCA_ID "FM-1_950"             /* tools/build.py --release 1.2: PRODUCT FM-1_95<minor> */
 #define FM1CORE_DG_OTA_C "../../cores/fmel-1/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
 
