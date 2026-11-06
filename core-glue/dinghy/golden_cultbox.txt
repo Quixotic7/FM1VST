@@ -1,0 +1,10 @@
+# CULTBOX's golden check (dinghy_golden.c): the script in tests/host.c's format, run by its own host sim and by the
+# core; the screens compared at 3000 ms (one of host.c's fixed SHOT times). A C major chord on PLVKS (the INIT
+# preset), ALGORITHM one on (off the mix page), PRESETS one on (SCREAMER), KNOB 1 turned, G4 + D5 held.
+200 keys 0x4880
+1500 keys 0
+1600 enc 1 1
+1800 enc 6 1
+2000 enc 2 3
+2700 keys 0x204
+3010 end

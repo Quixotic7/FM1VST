@@ -248,3 +248,6 @@
 [submodule "fm1-nachtfahrt"]
 	path = cores/fm1-nachtfahrt
 	url = https://github.com/FartyPants/fm1-nachtfahrt
+[submodule "CULTBOX"]
+	path = cores/CULTBOX
+	url = https://github.com/beatcult/CULTBOX
