@@ -39,8 +39,9 @@
 #include "env.h"                          /* getenv -> NULL: no environment in a core (common/env.h) */
 
 #define APP_VERSION FM1CORE_VERSION
-#define FELUCCA_ID "FM-1_7010300"         /* the package identity: build.py --release 1.3 (FM-1_7 01 03 00) */
+#define FELUCCA_ID "FM-1_7010301"         /* the package identity: build.py --release 1.3.1 (FM-1_7 01 03 01) */
 #define FM1CORE_PL_SX 1                   /* the managers' SysEx (core-glue/plat/plat_sx.h) */
+#define FM1CORE_FB_MIRROR_DIM 1           /* (this fm1-base's mirror_leds: the glow's LEDs too; mirror_mid) */
 #include "fm1base_hal.h"
 #include "../plat/plat_sx.h"
 
@@ -53,7 +54,19 @@
 #endif
 #include "gfx.c"
 #include "fm1b_config.h"
+#include "sys_text.c"                     /* the faces of the platform's own screens (panel.c's, unity.c's) */
 #include "storage.c"
+/* felucca-bsp's chip/ota.c (the M-UPGRADE identity) on the managers' transport, here where unity.c includes it:
+ * plat_fm1.c's host reads (plat_host_read, plat_host_patience) are its ota_read, ota_try_ms, ota_deadline */
+#define FM1SX_OTA_C "../../cores/fm1-amb/base/bsp/chip/ota.c"
+#define FM1SX_OTA_IN fm1core_pl_sxi
+#define FM1SX_OTA_OUT fm1core_pl_sxo
+#define FM1SX_OTA_MS() fm1_ms
+#include "sysex_ota.h"
+/* felucca-bsp's usb.c and guard, as plat_fm1.c reads them: the USB link never lost (a host is always there); the
+ * guard's code window (plat_code_window) has no meaning here */
+static volatile uint8_t midi_usb_lost;
+static void fm1_guard_pc_extend(uint32_t end) { (void)end; }
 #define ANN_NAME APP_NAME " " APP_VERSION
 #include "ann_words.h"
 #include "announce.c"
@@ -73,11 +86,6 @@ static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room
 #undef __attribute__
 
 /* ---------------------------------------------------------------- the managers' SysEx (plat_sx.h) --- */
-#define FM1SX_OTA_C "../../cores/fm1-amb/base/bsp/chip/ota.c"
-#define FM1SX_OTA_IN fm1core_pl_sxi
-#define FM1SX_OTA_OUT fm1core_pl_sxo
-#define FM1SX_OTA_MS() fm1_ms
-#include "sysex_ota.h"
 /* main_fm1.c log_frame's answer on a unit that never crashed: one frame a line, F0 7D 4C 47 <ASCII> F7, "end" last
  * (the device's lines about its supplies' registers, Bluetooth's log and its timer have no counterpart here) */
 static void fm1core_amb_log_line(const char *t)
