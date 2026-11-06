@@ -24,7 +24,7 @@
  * factory sounds included; the companion's UPLOAD writes there as on the device.
  *
  * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release's, from core_echofield.cmake
- * (CHANGELOG.md's version: "0.2.8", FM-1_3246000208).
+ * (CHANGELOG.md's version: "0.2.9", FM-1_3246000209).
  * Left out, as in every core: the splash (APP_SPLASH: the logo and the boot screen; plat_glue.h starts the UI at
  * power-on), the render's own time (APP_OVERLOAD's shedding: simulated time, the render never overloads), the second
  * core (fm1.toml cpu2: FM1B_CPU2 0, the engine renders every grain itself, as with cpu2 given up; plat_cpu2_on and
