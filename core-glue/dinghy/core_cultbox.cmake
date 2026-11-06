@@ -17,6 +17,7 @@ set(_cb_vfs ${CMAKE_BINARY_DIR}/dinghy/cultbox_vfs.yaml)
 file(WRITE ${_cb_vfs} "{ \"version\": 0, \"case-sensitive\": \"false\", \"roots\": [ { \"type\": \"file\", \"name\": \"${_cb}/tests/host.c\", \"external-contents\": \"${CMAKE_CURRENT_LIST_DIR}/cultbox_host.c\" } ] }\n")
 fm1_add_core(cultbox ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_cb}
              UNIT core_cultbox.c DESC core_cultbox_desc.c FAMILY dinghy LICENSE GPL-3.0-only
+             GATED "embeds ten Elka Drummer One samples with no stated recordist or terms (LICENSING.md) and the BEAT CULT logo, called artwork not GPL code in LICENSING.md"
              CREDITS "CULTBOX by beatcult (the PLVKS synth after the Formanta Polivoks, the drums and their sequencer, the DUBMARINE dub siren, the effects, the mixer, the screens), a fork of Dinghy by zvenson (the wiring platform.c, the host mode, the storage), over Felucca's platform by Leo Kuroshita (Hügelton Instruments), with SLOOP's changes by isod89 and the SMK-37 layer by M. Geisler (genkigenki). GPL-3.0-only. The drum samples: recorded from an Elka Drummer One. The BEAT CULT logo: artwork by beatcult, not GPL code. The screen's font: Terminus (Dimitar Toshkov Zhekov), SIL Open Font License 1.1. The full notices: the release's licences/cores/cultbox/ (LICENSING.md)."
              CREDITS_FILES ${_cb}/assets/fonts/Terminus-LICENSE.txt
              NO_GEN VERSION 1.2 DEFINES APP_VER="1.2"
@@ -39,5 +40,6 @@ dinghy_golden_check(cultbox SCRIPT golden_cultbox.txt AT 3000 SOURCE ${_cb}/firm
 # the Terminus font's OFL; Emscripten's and musl's are added by fm1_add_rfm1. rfm1_run plays its chord on PLVKS (the
 # INIT preset): no RUN_ARGS
 fm1_add_rfm1(cultbox AUTHORS "beatcult"
+             HOSTED_DESPITE_GATE "the author ships the samples and the logo in every package: built as shipped, hosted at RemoteFM1FW only, never bundled (owner, 2026-11-06)"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
                            "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt")
