@@ -242,3 +242,6 @@
 	path = cores/elasticatfm1
 	url = https://github.com/Quixotic7/elasticatfm1
 	branch = main
+[submodule "fm1-nachtfahrt"]
+	path = cores/fm1-nachtfahrt
+	url = https://github.com/FartyPants/fm1-nachtfahrt

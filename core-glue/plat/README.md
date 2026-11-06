@@ -13,6 +13,7 @@
 | `mope1` | MOPE-1 0.3.0 (slothpallas) | `cores/mope-1` @ v0.3.0 | GPL-3.0-only (Barlow font: OFL-1.1) |
 | `perf1` | PERF-1 0.16.0 (deamonSLINKY) | `cores/PERF-1` @ v0.16.0 | GPL-3.0-only (fonts: OFL-1.1) |
 | `carnacos` | Carnac OS 0.9.6 (OrbVorgis) | `cores/carnac-os` @ v0.9.6 (X0X in its own `x0x-firmware/`) | GPL-3.0-only (Barlow, Terminus fonts: OFL-1.1) |
+| `nachtfahrt` | NACHTFAHRT 1.0.0 (Cranky Man) | `cores/fm1-nachtfahrt` @ v1.0.0 | GPL-3.0-only (Pluck, SEA: MIT; the piano samples: CC0; Barlow, Terminus fonts: OFL-1.1) |
 
 Ravel keeps its own portable platform (`firmware/app/plat.h`) over X0X's Felucca layer, adapted (`firmware/fm1`): the
 unit is its device platform unit (`ravel_fm1.c`: `storage.c`, `ota.c`, `panel.c`, `plat_fm1.c` with `projstore.c`'s
@@ -64,6 +65,12 @@ the settings and the preset store: the file the firmware's own browser emulator 
 installer): a flash image without them gets the release's own at power-on (`carnacos_images.c`), then they are read in
 place, as through XIP (which needs `common/nor.c`'s image 4-byte aligned). The 1.5 s splash is kept, as the device
 and its browser emulator show it. Power-on always plays the factory's performance 0; a saved one loads from PRESETS.
+
+NACHTFAHRT (a generative Berlin School instrument, a fork of DUB-1, itself of AMB-1, on the plat layout) is HYP-1's
+glue with FoMni's screen reader: its device unity build (`main.c` without the hardware: UI, project, `plat_fm1.c`,
+`announce.c`) on the HAL half, the instrument (`dsp/amb.c` with the sequencer, the FM voices, the rain loop and the
+piano) its own unit (`nachtfahrt_amb.c`). It plays from power-on (`ui_init`), and its autosave never writes while it
+plays: `flash_sync` does what SAVE does (written at once), as Penumbra's. The animated launch screen is left out.
 
 The fm1-base cores (`core-glue/fm1base`, AMB-1) use the same HAL half and shared core.
 
