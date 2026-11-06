@@ -248,3 +248,6 @@
 [submodule "fm1-nachtfahrt"]
 	path = cores/fm1-nachtfahrt
 	url = https://github.com/FartyPants/fm1-nachtfahrt
+[submodule "Rhythmer"]
+	path = cores/Rhythmer
+	url = https://github.com/JazzyRhythmer/Rhythmer
