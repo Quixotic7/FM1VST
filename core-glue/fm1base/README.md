@@ -118,9 +118,8 @@ NOR image, unity.c's stand-ins for the screen mirror); AMB-1 compiles it unused.
 - **The factory set** stays built in (`loom_sample.c`, as 0.6.1 had it and the simulator still has it): since 0.8 the
   FM-1's image leaves it to the installer, and a fresh flash here has no bank.
 - **The resource region** (fm1.toml `resources`: the 909 cymbals, ER-99's samples, GPL-3.0, and the large type) is
-  fm1-base's `res.c` on the NOR image, empty on a fresh flash: the cymbals are silent and the type is the built-in
-  faces, as on an FM-1 the installer has not written it to. Building it in is the owner's call (X0X is gated on the
-  same samples). A manager can send it as to an FM-1 (`RES_REQ`).
+  built in, as the host simulator and the browser emulator have it (`plat_res` over build.py's `fm1_res_data.h`); on
+  the device the installer writes it to the flash. The owner's call (2026-11-06): build them in.
 - `plat_fm1.c`'s SysEx stream (`plat_sysex_begin` / `put` / `end`) writes into the managers' out ring
   (`fm1core_pl_sxo`, the same USB-MIDI packets as usb.c's).
 

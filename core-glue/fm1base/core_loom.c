@@ -211,12 +211,17 @@ static int bu_room(void)                            /* the SysEx ring empty: a f
 static int bu_send(const uint8_t *p, uint32_t n) { return ota_wire_send(p, n); }
 static void bu_flush(void) { app_backup_flush(); }
 static void bu_hold(int on) { app_backup_hold(on); }
-/* the resource region (fm1.toml resources, FM1B_RES: the 909 cymbals and the large type), read in place from the NOR
- * image; unity.c's place, after backup.c (its transfer is the restore's). A fresh flash has none (the installer writes
- * it after an update on the device; a manager may send it here as there: RES_REQ): the cymbals silent, the type the
- * built-in faces, as on an FM-1 without it */
-#include "fm1_res.h"
-#include "../../cores/fm1-loom/base/device/res.c"
+/* the resource region (fm1.toml resources, FM1B_RES: the 909 cymbals, ER-99's samples, and the large type) built in,
+ * as fm1-base's host simulator and LOOM-8's browser emulator have it (plat_host.c's plat_res over build.py's
+ * fm1_res_data.h): on the device the installer writes it to the flash after an update; here it is always there (the
+ * owner's call, 2026-11-06) */
+#include "fm1_res_data.h"
+const uint8_t *plat_res(uint32_t *len)
+{
+    if (len)
+        *len = (uint32_t)sizeof fm1b_res_data;
+    return fm1b_res_data;
+}
 #include "app.c"                          /* (its app/plat_loom.c: loom_plat.c, the VFS overlay) */
 #undef __attribute__
 
@@ -270,21 +275,6 @@ static void fm1core_loom_usb_cmd(uint32_t d)
                 !rc ? "RESTORED" : rc == RS_E_PLAYING ? "then restore" : rc == RS_E_NO ? "NOTHING CHANGED" : "NOT RESTORED");
         return;
     }
-    if (d == 15u && ota_dec[2] == RES_REQ && flash_ok) {   /* the resource region from the host (res.c) */
-        uint32_t len = ota_rd32(ota_dec + 6), crc = ota_rd32(ota_dec + 10);
-        int begun = 0, rc;
-        if (bu.on)
-            bu_stop();
-        ota_try_ms = 2000u;
-        ota_deadline = ota_now_ms() + 120000u;
-        rc = res_rx(len, crc, &begun);
-        ota_try_ms = 5000u;
-        ota_deadline = 0;
-        if (begun) {
-            app_ui_init();
-            app_say("RESOURCES", !rc ? "INSTALLED" : "NOT INSTALLED");
-        }
-    }
 }
 #include "fm1base_remote.h"           /* the remote control, 7D 4C 43 (LOOM-8's fm1-base: no lease) */
 static int fm1core_loom_sx_accept(const uint8_t *f, uint32_t n)   /* the frames a service of fm1_main reads */
@@ -323,7 +313,6 @@ static void fm1core_pl_flash_boot(void)  /* fm1_main: a restore's commit cut sho
     st_pool_boot();                       /* the A/B pairs from before the pool moved into it (storage.c) */
 #endif
     ota_boot_cleanup();
-    res_check();                          /* the resource region: this build's? (plat_res) */
 }
 static void fm1core_pl_app_boot(void)    /* base/device/main_fm1.c fm1_main */
 {

@@ -6,7 +6,7 @@
 # given to hosts as more output channels (aout1). The DSP and the sequencer (fm1.toml "o2") are their own units
 # (loom_*.c). The generate step is fm1-base's build.py generate() with the globals its main() sets from the app's
 # directory (APP, CONF from app/fm1.toml, GEN = app/build/gen): the fonts, the wavetables, the factory samples and
-# kits, the build's hash, the presets, the resource region, the screen reader's words; one Python expression, run in
+# kits, the build's hash, the presets, the resource region (built in: the 909 cymbals), the screen reader's words; one Python expression, run in
 # app/ (GEN_ROOT).
 # app/app.c includes app/plat_loom.c, the hardware's extras (the render's timer, the supplies, the crash record): a
 # clang VFS overlay (-ivfsoverlay, written below into the build folder) has the compiler read loom_plat.c in its
@@ -49,7 +49,7 @@ fm1_add_core(loom ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_loom} UNIT core_loom.c DES
              FAMILY fm1base LICENSE GPL-3.0-only
              CREDITS "LOOM-8 by Charles Vestal. Built on fm1-base and felucca-bsp (MPL-2.0), from Felucca by Leo Kuroshita (Hügelton Instruments). Factory breaks: free loops by u/FCTRYBEATS, used with their permission. 909 drums, the hi-hat included: renders of 9W9 (GPL-3.0), the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal made. Recorded instruments: Versilian Studios Chamber Orchestra 2 Community Edition (CC0 1.0). Inspired by teenage engineering's OP-XY, not affiliated with teenage engineering."
              CREDITS_FILES LICENSING.md base/assets/fonts/Barlow-OFL.txt base/assets/fonts/Terminus-LICENSE.txt
-             GEN ann_words.h felucca_font.h kits.h loom_build.h loom_font.h presets.h samples.h wavetables.h
+             GEN ann_words.h felucca_font.h fm1_res_data.h kits.h loom_build.h loom_font.h presets.h samples.h wavetables.h
              GEN_ROOT app GEN_PYTHON "${_loom_gen}" PYTHON_NEEDS raqm
              SUBMODULES_RECURSIVE
              VERSION ${_loom_ver}
