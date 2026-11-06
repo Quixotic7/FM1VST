@@ -245,3 +245,6 @@
 [submodule "fm1-dub"]
 	path = cores/fm1-dub
 	url = https://github.com/sbegueria/fm1-dub
+[submodule "fm1-nachtfahrt"]
+	path = cores/fm1-nachtfahrt
+	url = https://github.com/FartyPants/fm1-nachtfahrt
