@@ -13,6 +13,7 @@
 | `mope1` | MOPE-1 0.3.0 (slothpallas) | `cores/mope-1` @ v0.3.0 | GPL-3.0-only (Barlow font: OFL-1.1) |
 | `perf1` | PERF-1 0.16.0 (deamonSLINKY) | `cores/PERF-1` @ v0.16.0 | GPL-3.0-only (fonts: OFL-1.1) |
 | `carnacos` | Carnac OS 0.9.6 (OrbVorgis) | `cores/carnac-os` @ v0.9.6 (X0X in its own `x0x-firmware/`) | GPL-3.0-only (Barlow, Terminus fonts: OFL-1.1) |
+| `dub` | DUB-1 1.4.3 (Santiago Beguería) | `cores/fm1-dub` @ v1.4.3 | GPL-3.0-only (announce.c MIT; Barlow, Terminus fonts: OFL-1.1) |
 
 Ravel keeps its own portable platform (`firmware/app/plat.h`) over X0X's Felucca layer, adapted (`firmware/fm1`): the
 unit is its device platform unit (`ravel_fm1.c`: `storage.c`, `ota.c`, `panel.c`, `plat_fm1.c` with `projstore.c`'s
@@ -64,6 +65,12 @@ the settings and the preset store: the file the firmware's own browser emulator 
 installer): a flash image without them gets the release's own at power-on (`carnacos_images.c`), then they are read in
 place, as through XIP (which needs `common/nor.c`'s image 4-byte aligned). The 1.5 s splash is kept, as the device
 and its browser emulator show it. Power-on always plays the factory's performance 0; a saved one loads from PRESETS.
+
+DUB-1 (a generative dub techno machine, a fork of AMB-1 from before AMB moved onto fm1-base) is HYP-1's glue with
+FoMni's screen reader: the device unity build (`main.c`: the UI, `project.c`, `announce.c`, `plat_fm1.c`) on the HAL
+half, the instrument (`dsp/amb.c`) its own unit (`dub_amb.c`). plat_fm1.c's `plat_clock_mhz` busy-waits 20 ms on
+TIMER4: renamed away in the unit for the host simulator's (0 MHz). Left out: USB audio, the TRS jack, the launch
+animation, the battery reading. It plays from power-on, so `flash_sync` defers while it plays (as AUTOSAVE waits).
 
 The fm1-base cores (`core-glue/fm1base`, AMB-1) use the same HAL half and shared core.
 
@@ -117,6 +124,7 @@ before the frame), with the firmware's own handlers compiled from the submodule:
 | `x0x` | `web/backup/index.html` (backup / restore), the break-loop page, a screen reader | `ota.c` (identity `FM-1_9010100`), `backup.c` (with `main_fm1.c`'s hooks redone in `core_x0x.c`), `editor.c` (INFO, PING, the sample slots), `announce.c` |
 | `fomni` | the installer, a screen reader | `ota.c` (`FM-1_8000400`, via `common/sysex_ota.h`), `announce.c` |
 | `penumbra` | the installer, a screen reader | `ota.c` (`FM-1_73010000`, via `common/sysex_ota.h`), `announce.c` |
+| `dub` | the installer, a screen reader | `ota.c` (`FM-1_8010403`, via `common/sysex_ota.h`), `announce.c` |
 | `fimba`, `fartmachine` | the installer | `ota.c` (`FM-1_8000601`, `FM-1_701`) |
 | `carnacos` | the installer (`web/site/installer.html`: INFO, the PCM waves' PCM_ID / upload) | `ota.c` (`FM-1_900`), the editor (7D 46 4C) redone from `synth_main_fm1.c` with `pcm_store_fm1.c`, `wt_store_fm1.c` |
 | `trax` | the web editor (`web/editor.html`: songs and library banks), the installer | `link.c` (F0 7D 46 44: HELLO, LIST, READ, WRITE / DATA, DELETE), `ota.c` (`FM-1_601000903`) |

@@ -242,3 +242,6 @@
 	path = cores/elasticatfm1
 	url = https://github.com/Quixotic7/elasticatfm1
 	branch = main
+[submodule "fm1-dub"]
+	path = cores/fm1-dub
+	url = https://github.com/sbegueria/fm1-dub
