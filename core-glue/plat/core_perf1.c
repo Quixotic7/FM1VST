@@ -40,7 +40,7 @@
 
 #define EN_HOST 1                         /* the device's .pool section off (plat.h EN_POOL) */
 #define EN_VERSION FM1CORE_VERSION
-#define FELUCCA_ID "FM-1_7001601"         /* the package identity: build.py --release 0.16.1 (FM-1_7 00 16 00) */
+#define FELUCCA_ID "FM-1_7001602"         /* the package identity: build.py --release 0.16.2 (FM-1_7 00 16 00) */
 #define EN_CORE2 0                        /* the second core: not in this build (plat_fm1.c plat_core2) */
 #define PERF_USB_HOST 0                   /* the USB MIDI host: plat_fm1.c's stubs */
 #define FM1CORE_PL_SX 1                   /* the editor, the voices, the backup, the M-UPGRADE identity (plat_sx.h) */
