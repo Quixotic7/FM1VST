@@ -5,7 +5,7 @@
 # ota_trusted_loader.h, sikken_glue.h, shared with ETCH; core_rupture.c) over the unmodified submodule
 # cores/RUPTURE. RUPTURE has no emulator: the
 # glue is Tonitor's kind (core-glue/tonitor), with the firmware's own reset entry and main loop on a coroutine.
-# THE VERSION: the tags are V<major>.<minor> (capital V); RELEASE-MANIFEST.json's "version" is the same number
+# THE VERSION: the tags are V<major>.<minor>[.<patch>] (capital V); RELEASE-MANIFEST.json's "version" is the same number
 # ("1.84.2"), read from there. The package identity (FELUCCA_ID, bringup.c) is FM-1_968 for every release
 # (RELEASE-MANIFEST.json firmware_identity: kept for the OTA chain), so it says nothing about the version.
 # THE BUILD: build.py's units and settings, as the release builds them (README: build.py --storage --updater
@@ -59,7 +59,7 @@ fm1_add_core(rupture ${_ru_g} SOURCE ${_ru} UNIT core_rupture.c DESC core_ruptur
              FAMILY sikken LICENSE GPL-3.0-only NO_GEN
              CREDITS "RUPTURE by Joppe Sikken (SikkenWorks): the instrument, its sound design and Cycle Exchange Synthesis, the monochrome FM-1 interface (github.com/SikkenWorks/RUPTURE). Built on Felucca by Leo Kuroshita (@kurogedelic, Hügelton Instruments): its hardware layer, LCD, USB and TRS MIDI, interrupt, update and recovery code, which RUPTURE keeps and adapts (GPL-3.0-only), by way of SikkenWorks' ETCH. The FM1 is M-VAVE's: RUPTURE is unofficial third-party firmware, not an M-VAVE release."
              CREDITS_FILES licenses/FELUCCA-LICENSING.txt
-             VERSION_FILE RELEASE-MANIFEST.json VERSION_REGEX "\"version\": *\"([0-9]+\\.[0-9]+)\""
+             VERSION_FILE RELEASE-MANIFEST.json VERSION_REGEX "\"version\": *\"([0-9]+\\.[0-9]+(\\.[0-9]+)?)\""
              FLAGS -ffp-contract=off "-Dsection(x)=aligned(4)" "-ivfsoverlay${_ru_vfs}"
              DEFINES ETCH_FLASH_READ_ONLY=0 ETCH_NATIVE_STORAGE=1 ETCH_NATIVE_OTA=1 ETCH_TEST_RESTORE_ONLY=0
                      ETCH_NATIVE_UAC=0 ETCH_NATIVE_UAC_48K=0 ETCH_P04_EXPANDED=0 ETCH_P05_MULTI=1 RUPTURE_BUILD=1
