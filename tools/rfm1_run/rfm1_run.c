@@ -50,6 +50,13 @@
  *     --audio-in-once        the WAV once, then no more rfm1_audio_in calls (silence, state stays 1)
  *     --audio-in-latency N   the latency_frames given to rfm1_audio_in_info (default 0, unknown)
  *     --audio-in-off-at MS   at device ms MS: rfm1_audio_in_info(0, 0) (the input off), no more rfm1_audio_in
+ *     more output channels (aout1, RemoteFM1's RFM1-FORMAT.md section 9): a module that exports rfm1_audio_out and
+ *                    says 4..10 channels (rfm1_audio_out_info, after init) is given them as a host does: a zeroed
+ *                    buffer through rfm1_audio_out right before each rfm1_audio, the same frames. Each channel's peak
+ *                    and RMS over the run are printed (stderr)
+ *     --no-aout      a host that does not take them: no rfm1_audio_out calls
+ *     --aout-wav F   all the channels (the master on 1 and 2, then 3..N) as an N-channel WAV
+ *     --expect-aout N   fail unless the module gives N channels and channels 3..N sounded (some RMS above --min-rms)
  *
  * Prints one line: id version, the chord's RMS and peak, LCD writes, x real time, load and boot times. Exits 0 when
  * the module loaded, its layout and manifest agree, it booted, drew and sounded, and never trapped or halted; 1 on a
@@ -80,6 +87,7 @@ enum {
     F_FLASH_SYNC, F_STATS, F_UI_INFO,
     F_AUDIO_IN, F_AUDIO_IN_INFO,           /* (optional: docs/VIRTUAL-CARTS.md 8, a cart with ain1) */
     F_LABELS_EPOCH, F_LABEL,               /* (optional: docs/DYNAMIC-LABELS.md) */
+    F_AUDIO_OUT_INFO, F_AUDIO_OUT,         /* (optional: aout1, more output channels) */
     F_N
 };
 static const struct {
@@ -94,6 +102,7 @@ static const struct {
     {"rfm1_flash_sync", 0, 1}, {"rfm1_stats", 2, 0},         {"rfm1_ui_info", 2, 0},
     {"rfm1_audio_in", 2, 0},   {"rfm1_audio_in_info", 2, 0},
     {"rfm1_labels_epoch", 0, 1}, {"rfm1_label", 1, 1},
+    {"rfm1_audio_out_info", 0, 1}, {"rfm1_audio_out", 2, 0},
 };
 
 static IM3Environment g_env;
@@ -858,16 +867,17 @@ static const int32_t LAYOUT[] = {
 #define P(field) (panel + (uint32_t)offsetof(fm1panel_t, field))
 
 /* ------------------------------------------------------------------------------------------------ the WAV ------- */
-static void wav_header(FILE *f, uint32_t frames)
+static void wav_header_n(FILE *f, uint32_t frames, uint16_t ch)
 {
-    const uint32_t data = frames * 4u, rate = FM1P_FS, byterate = FM1P_FS * 4u;
+    const uint32_t data = frames * 2u * ch, rate = FM1P_FS, byterate = FM1P_FS * 2u * ch;
     const uint32_t riff = 36u + data, fmt = 16u;
-    const uint16_t pcm = 1, ch = 2, align = 4, bits = 16;
+    const uint16_t pcm = 1, align = (uint16_t)(2u * ch), bits = 16;
     fseek(f, 0, SEEK_SET);
     fwrite("RIFF", 1, 4, f); fwrite(&riff, 4, 1, f); fwrite("WAVEfmt ", 1, 8, f); fwrite(&fmt, 4, 1, f);
     fwrite(&pcm, 2, 1, f); fwrite(&ch, 2, 1, f); fwrite(&rate, 4, 1, f); fwrite(&byterate, 4, 1, f);
     fwrite(&align, 2, 1, f); fwrite(&bits, 2, 1, f); fwrite("data", 1, 4, f); fwrite(&data, 4, 1, f);
 }
+static void wav_header(FILE *f, uint32_t frames) { wav_header_n(f, frames, 2); }
 
 /* ------------------------------------------------------------------------------------------------ main ---------- */
 static uint8_t *read_file(const char *path, size_t *n)
@@ -994,6 +1004,7 @@ static void usage(void)
           "                [--flash-in FILE] [--flash-out FILE] [--screen FILE.ppm] [--midi-out FILE]\n"
           "                [--profile] [--frame-ms N] [--helpers]\n"
           "                [--audio-in FILE.wav [--audio-in-once] [--audio-in-latency N] [--audio-in-off-at MS]]\n"
+          "                [--no-aout] [--aout-wav FILE] [--expect-aout N]\n"
           "                [--verbose] [--describe [--labels] [--out FILE]] <file.rfm1>\n", stderr);
 }
 
@@ -1018,6 +1029,8 @@ int main(int argc, char **argv)
     const char *ain_path = NULL;                 /* --audio-in */
     int ain_once = 0;
     uint32_t ain_latency = 0, ain_off_at = UINT32_MAX;
+    int aout_off = 0, expect_aout = 0;           /* --no-aout, --expect-aout */
+    const char *aout_wav_path = NULL;            /* --aout-wav */
     for (int i = 1; i < argc; i++) {
         const char *a = argv[i];
         const int more = i + 1 < argc;
@@ -1036,6 +1049,9 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--audio-in-once")) ain_once = 1;
         else if (!strcmp(a, "--audio-in-latency") && more) ain_latency = (uint32_t)strtoul(argv[++i], NULL, 10);
         else if (!strcmp(a, "--audio-in-off-at") && more) ain_off_at = (uint32_t)strtoul(argv[++i], NULL, 10);
+        else if (!strcmp(a, "--no-aout")) aout_off = 1;
+        else if (!strcmp(a, "--aout-wav") && more) aout_wav_path = argv[++i];
+        else if (!strcmp(a, "--expect-aout") && more) expect_aout = atoi(argv[++i]);
         else if (!strcmp(a, "--verbose")) g_verbose = 1;
         else if (!strcmp(a, "--profile")) g_profile = 1;
         else if (!strcmp(a, "--helpers")) helpers = 1;
@@ -1181,7 +1197,8 @@ int main(int argc, char **argv)
         r = m3_FindFunction(&g_fn[f], g_rt, FN[f].name);
         if (r) {
             g_fn[f] = NULL;
-            if (f == F_INITIALIZE || f == F_AUDIO_IN || f == F_AUDIO_IN_INFO || f == F_LABELS_EPOCH || f == F_LABEL)
+            if (f == F_INITIALIZE || f == F_AUDIO_IN || f == F_AUDIO_IN_INFO || f == F_LABELS_EPOCH || f == F_LABEL ||
+                f == F_AUDIO_OUT_INFO || f == F_AUDIO_OUT)
                 continue;
             return fail("export %s: %s", FN[f].name, r);
         }
@@ -1338,6 +1355,32 @@ int main(int argc, char **argv)
         C2(F_AUDIO_IN_INFO, 1, ain_latency);     /* before the first rfm1_audio_in */
         fprintf(stderr, "rfm1_run: audio in %s: %u frames%s, latency %u frames\n", ain_path, ain_frames,
                 ain_once ? " once" : " looped", ain_latency);
+    }
+
+    /* aout1: the channels the module gives (asked once, after init) and a buffer for 3..N, as a host does */
+    uint32_t aout_n = 2, aout_buf = 0;
+    if (g_fn[F_AUDIO_OUT_INFO]) {
+        const uint32_t n = C0(F_AUDIO_OUT_INFO);
+        if (n == 4 || n == 6 || n == 8 || n == 10)
+            aout_n = n;
+        fprintf(stderr, "rfm1_run: aout1: rfm1_audio_out_info %u%s%s\n", n, aout_n > 2 ? "" : " (the master alone)",
+                aout_n > 2 && !g_fn[F_AUDIO_OUT] ? ", but no rfm1_audio_out" : aout_n > 2 && aout_off ? ", not taken (--no-aout)" : "");
+    }
+    const int aout_on = aout_n > 2 && g_fn[F_AUDIO_OUT] && !aout_off;
+    const uint32_t aout_k = aout_n - 2;          /* channels 3..N */
+    double aout_sumsq[8] = {0}, aout_peak[8] = {0};
+    uint64_t aout_frames = 0;
+    FILE *aout_wav = NULL;
+    if (aout_on) {
+        aout_buf = C1(F_ALLOC, FM1P_BLOCK * 2u * aout_k);
+        if (!aout_buf || !in_mem(aout_buf, FM1P_BLOCK * 2u * aout_k))
+            return fail("rfm1_alloc(%u) for the channels 3..%u = %u", FM1P_BLOCK * 2u * aout_k, aout_n, aout_buf);
+        if (aout_wav_path) {
+            aout_wav = fopen(aout_wav_path, "wb");
+            if (!aout_wav)
+                return fail("--aout-wav %s: not written", aout_wav_path);
+            wav_header_n(aout_wav, 0, (uint16_t)aout_n);
+        }
     }
 
     /* the clock */
@@ -1512,10 +1555,31 @@ int main(int argc, char **argv)
                 C2(F_AUDIO_IN, ain_buf, FM1P_BLOCK);
                 ain_blocks++;
             }
+            if (aout_on) {                       /* (aout1: zeroed, right before rfm1_audio, the same frames) */
+                memset(mem(NULL) + aout_buf, 0, FM1P_BLOCK * 2u * aout_k);
+                C2(F_AUDIO_OUT, aout_buf, FM1P_BLOCK);
+            }
             C2(F_AUDIO, s_audio, FM1P_BLOCK);
             int16_t blk[FM1P_BLOCK * 2];
             if (in_mem(s_audio, sizeof blk))
                 memcpy(blk, mem(NULL) + s_audio, sizeof blk);
+            if (aout_on && in_mem(aout_buf, FM1P_BLOCK * 2u * aout_k)) {
+                int16_t ab[FM1P_BLOCK * 8];
+                memcpy(ab, mem(NULL) + aout_buf, FM1P_BLOCK * 2u * aout_k);
+                for (uint32_t i = 0; i < FM1P_BLOCK; i++) {
+                    for (uint32_t c = 0; c < aout_k; c++) {
+                        const double v = ab[i * aout_k + c] / 32768.0;
+                        aout_sumsq[c] += v * v;
+                        if (fabs(v) > aout_peak[c])
+                            aout_peak[c] = fabs(v);
+                    }
+                    if (aout_wav) {
+                        fwrite(&blk[2 * i], 2, 2, aout_wav);
+                        fwrite(&ab[i * aout_k], 2, aout_k, aout_wav);
+                    }
+                }
+                aout_frames += FM1P_BLOCK;
+            }
             if (chord_on) {
                 for (int i = 0; i < FM1P_BLOCK * 2; i++) {
                     const double v = blk[i] / 32768.0;
@@ -1558,6 +1622,10 @@ int main(int argc, char **argv)
     if (wav) {
         wav_header(wav, (uint32_t)wav_frames);
         fclose(wav);
+    }
+    if (aout_wav) {
+        wav_header_n(aout_wav, (uint32_t)aout_frames, (uint16_t)aout_n);
+        fclose(aout_wav);
     }
     char info[1024] = "";
     if (!g_err[0]) {
@@ -1643,6 +1711,20 @@ int main(int argc, char **argv)
         bad |= fail("no LCD writes");
     if (ain_path)
         fprintf(stderr, "rfm1_run: audio in: %u blocks fed\n", ain_blocks);
+    double aout_rms_max = 0;
+    if (aout_on) {                               /* each channel's level over the whole run */
+        fprintf(stderr, "rfm1_run: aout1: %u channels:", aout_n);
+        for (uint32_t c = 0; c < aout_k; c++) {
+            const double r = aout_frames ? sqrt(aout_sumsq[c] / (double)aout_frames) : 0.0;
+            if (r > aout_rms_max)
+                aout_rms_max = r;
+            fprintf(stderr, " %u rms %.4f peak %.3f%s", c + 3, r, aout_peak[c], c + 1 < aout_k ? ";" : "\n");
+        }
+    }
+    if (expect_aout && (int)aout_n != expect_aout)
+        bad |= fail("aout1: %u channels, not %d", aout_n, expect_aout);
+    else if (expect_aout && (!aout_on || aout_rms_max < min_rms))
+        bad |= fail("aout1: channels 3..%u silent (the loudest's RMS %.6f under %.6f)", aout_n, aout_rms_max, min_rms);
     free(sx);
     free(ain);
     m3_FreeRuntime(g_rt);

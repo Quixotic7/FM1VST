@@ -98,6 +98,7 @@ static void midi_out_event(uint32_t pkt)          /* a host is always there: eve
 }
 static struct {
     uint8_t up, config, suspended;                /* (plat_battery: a USB host means power) */
+    uint32_t resets;                              /* (fm1-base's plat_usb_session: the bus resets, none here) */
 } usb = {1, 1, 0};
 
 /* ------------------------------------------------ flash (storage.c's hooks) --- */

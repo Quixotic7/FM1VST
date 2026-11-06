@@ -30,10 +30,13 @@
 #       [METADATA <file>]           a RemoteFM1Metadata.json kept with the glue (relative to the calling file), used in
 #                                   place of the one at the firmware repository's root: the owner's own skin and labels
 #                                   for a firmware whose repository has none (its image paths: relative to that file)
-#       [WANTS <cap..>])            host capabilities it uses when a host has them and does without otherwise, the
+#       [WANTS <cap..>]             host capabilities it uses when a host has them and does without otherwise, the
 #                                   manifest's "wants" ("ain1": audio input, docs/VIRTUAL-CARTS.md 8). ain1 in WANTS
 #                                   or NEEDS also makes the shim export rfm1_audio_in / rfm1_audio_in_info from the
 #                                   core's fm1core_audio_in / fm1core_audio_in_info
+#       [AUDIO_OUT <n>])            the output channels the core gives in all (aout1: 2, 4, 6, 8 or 10; fm1-base's
+#                                   fm1.toml usb_audio_channels): above 2, the shim exports rfm1_audio_out_info and
+#                                   rfm1_audio_out from the core's fm1core_audio_out_info / fm1core_audio_out
 #
 # A skin (docs/RFM1-METADATA.md): if the firmware's repository has a RemoteFM1Metadata.json at its root (the root of
 # the git checkout that holds SOURCE: the submodule, even when SOURCE is a folder inside it), its "skin" (images,
@@ -179,7 +182,7 @@ function(fm1_rfm1_license_files id src license out)
 endfunction()
 
 function(fm1_add_rfm1 id)
-    cmake_parse_arguments(A "VIRTUAL;NO_SKIN;NO_LABELS" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE;METADATA"
+    cmake_parse_arguments(A "VIRTUAL;NO_SKIN;NO_LABELS" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE;METADATA;AUDIO_OUT"
                           "AUTHORS;LICENSE_FILES;DEFINES;FLAGS;INCLUDES;RUN_ARGS;NEEDS;FOLDERS;WANTS" ${ARGN})
     if(A_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR "fm1_add_rfm1(${id}): unknown arguments ${A_UNPARSED_ARGUMENTS}")
@@ -304,6 +307,14 @@ function(fm1_add_rfm1 id)
     set(_shim_opt "")             # audio input (docs/VIRTUAL-CARTS.md 8): the shim's two exports, only when asked for
     if("ain1" IN_LIST A_WANTS OR "ain1" IN_LIST A_NEEDS)
         set(_shim_opt -DRFM1_AIN1=1)
+    endif()
+    if(A_AUDIO_OUT)               # more output channels (aout1): the shim's two exports, only for a core that gives some
+        if(NOT A_AUDIO_OUT MATCHES "^(2|4|6|8|10)$")
+            message(FATAL_ERROR "fm1_add_rfm1(${id}): AUDIO_OUT ${A_AUDIO_OUT}: 2, 4, 6, 8 or 10")
+        endif()
+        if(A_AUDIO_OUT GREATER 2)
+            list(APPEND _shim_opt -DRFM1_AOUT1=1)
+        endif()
     endif()
     set(_objs "")
     set(_n 0)
@@ -496,6 +507,9 @@ function(fm1_add_rfm1 id)
     endif()
     if(A_WANTS)
         string(APPEND _v ", wants ${A_WANTS}")
+    endif()
+    if(A_AUDIO_OUT GREATER 2)
+        string(APPEND _v ", ${A_AUDIO_OUT} output channels")
     endif()
     string(APPEND _v "${_skin_msg}${_meta_msg}")
     message(STATUS "${id} rfm1: ${id}-${_fver}.rfm1, ${A_MEMORY_MIB} MiB${_v}")
