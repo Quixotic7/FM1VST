@@ -251,3 +251,6 @@
 [submodule "Rhythmer"]
 	path = cores/Rhythmer
 	url = https://github.com/JazzyRhythmer/Rhythmer
+[submodule "CULTBOX"]
+	path = cores/CULTBOX
+	url = https://github.com/beatcult/CULTBOX
