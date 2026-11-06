@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# SiDJ (https://github.com/thomasj/fm1-sidj, tag v1.3.0 = a91d24a; GPL-3.0-only, its SID engine GPL-2.0-or-later), a
+# SiDJ (https://github.com/thomasj/fm1-sidj, tag v1.4.0 = 632ce3e; GPL-3.0-only, its SID engine GPL-2.0-or-later), a
 # C64 music deck (a cycle-exact 6510 and reSID-derived SID chips playing .sid files, remixed live) on X0X's platform
 # (Felucca's): the plat glue (core-glue/plat/README.md) over the unmodified submodule. The device's unity build
 # (firmware/src/sidj.c: the UI, the settings, the song store and its SysEx transfer, the kept MIDI clocks) is
@@ -15,7 +15,7 @@ fm1_add_core(sidj ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_sidj} UNIT core_sidj.c DES
              FAMILY plat LICENSE GPL-3.0-only
              CREDITS "SiDJ by Thomas Jansson (tubesockor), on Felucca's platform (Leo Kuroshita, Hügelton Instruments) by way of X0X (Charles Vestal).\nThe tunes it comes with: Debut & Credit (2024) and TwinCross (2026) by Thomas Jansson (tubesockor), as released in HVSC and on CSDb, unmodified. They are music, not part of the firmware, and not under the GPL: free to play and to share unmodified with SiDJ. For anything else, ask the author.\nThe SID engine: a C port of reSID 0.16 by Dag Lem, GPL-2.0-or-later.\nThe fonts: Barlow Semi Condensed by Jeremy Tribby and Terminus by Dimitar Zhekov, SIL OFL 1.1."
              GEN felucca_font.h PYTHON_NEEDS raqm
-             VERSION 1.3.0
+             VERSION 1.4.0
              FLAGS -ffp-contract=off
              INCLUDES ${_sidj} ${_sidj}/firmware/src/app ${_sidj}/firmware/src/c64 ${_sidj}/sid)
 

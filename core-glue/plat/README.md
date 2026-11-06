@@ -8,7 +8,7 @@
 | `fartmachine` | Fart Machine One 1.0.0 | `cores/Fart-Machine-One` @ V1.0.0 | GPL-3.0-only, **GATED** (the recordings) |
 | `ravel` | Ravel 1.5.0 (De-Pattern) | `cores/Ravel_FM1` @ v1.5.0 | GPL-3.0-only |
 | `trax` | FM1-TRAX 0.9.3 (jartificer) | `cores/fm1-trax` @ v0.9.3 | GPL-3.0-only (Terminus font: OFL-1.1) |
-| `sidj` | SiDJ 1.3.0 (Thomas Jansson) | `cores/fm1-sidj` @ v1.3.0 | GPL-3.0-only (the SID engine GPL-2.0-or-later, the fonts OFL-1.1) |
+| `sidj` | SiDJ 1.4.0 (Thomas Jansson) | `cores/fm1-sidj` @ v1.4.0 | GPL-3.0-only (the SID engine GPL-2.0-or-later, the fonts OFL-1.1) |
 | `penumbra` | Penumbra 1.0 (Lunar Eclipse Forge) | `cores/Penumbra` @ v1.0 | GPL-3.0-only (Barlow, Terminus fonts: OFL-1.1) |
 | `mope1` | MOPE-1 0.3.0 (slothpallas) | `cores/mope-1` @ v0.3.0 | GPL-3.0-only (Barlow font: OFL-1.1) |
 | `perf1` | PERF-1 0.16.0 (deamonSLINKY) | `cores/PERF-1` @ v0.16.0 | GPL-3.0-only (fonts: OFL-1.1) |
@@ -27,8 +27,8 @@ FM1-TRAX (a Mega Drive tracker on FM1-GM's platform, FoMni's layout) is its devi
 their own units (`trax_*.c`).
 
 SiDJ (a C64 music deck on X0X's platform: a cycle-exact 6510 and reSID-derived SID chips playing the player's .sid
-files, remixed live) is its device unity build (`sidj.c`: the UI, the settings, the song store in the user area
-0xA0000..0xDBFFF read in place from the image, the kept MIDI clocks in `OBJ_SOUND`) on the HAL half; the SID, the C64
+files, remixed live) is its device unity build (`sidj.c`: the UI, the settings, the song store in its pool
+0x93000..0xF2FFF read in place from the image, the kept MIDI clocks in `OBJ_SOUND`) on the HAL half; the SID, the C64
 and the engine are their own units (`sidj_*.c`). Its MIDI clock in is timed by a hook (`FM1CORE_PL_MIDI_IN_HOOK`: F8
 into its own ring, never queued, as its usb.c does), its clock out leaves at the frame it was rendered for
 (`FM1CORE_PL_TICK_HOOK`). Left out: USB audio (the five-channel stream), the TRS jack. A fresh flash gets the author's
@@ -120,7 +120,7 @@ before the frame), with the firmware's own handlers compiled from the submodule:
 | `fimba`, `fartmachine` | the installer | `ota.c` (`FM-1_8000601`, `FM-1_701`) |
 | `carnacos` | the installer (`web/site/installer.html`: INFO, the PCM waves' PCM_ID / upload) | `ota.c` (`FM-1_900`), the editor (7D 46 4C) redone from `synth_main_fm1.c` with `pcm_store_fm1.c`, `wt_store_fm1.c` |
 | `trax` | the web editor (`web/editor.html`: songs and library banks), the installer | `link.c` (F0 7D 46 44: HELLO, LIST, READ, WRITE / DATA, DELETE), `ota.c` (`FM-1_601000903`) |
-| `sidj` | the songs page (`web/site/index.html#songs`, `fm1songs.js`: list, add, fetch, delete, play), `tools/fm1_sid.py`, the installer | `songs.c` (F0 7D 53 cmd: INFO, ENTRY, PUT_BEGIN / DATA / END, GET, DELETE, WIPE, PLAY, STATS, OUTPUT, RX, USB), `ota.c` (`FM-1_64010300`) |
+| `sidj` | the songs page (`web/site/index.html#songs`, `fm1songs.js`: list, add, fetch, delete, play), `tools/fm1_sid.py`, the installer | `songs.c` (F0 7D 53 cmd: INFO, ENTRY, PUT_BEGIN / DATA / END, GET, DELETE, WIPE, PLAY, STATS, OUTPUT, RX, USB), `ota.c` (`FM-1_64010400`) |
 | `mope1` | the installer | `ota.c` (`FM-1_6673000300`; its load and crash replies, cmd 0x12 / 0x13, left out) |
 | `perf1` | the web editor (`web/editor`: parameters, DX7 voices), the installer (identity, BACKUP AND RESTORE) | `px_end` / `dx_end`, `dx_service` / `px_service` (F0 7D 50 ..; DX7 bulk / single voice), `ota.c` (`FM-1_7001600`) |
 

@@ -4,8 +4,8 @@
  * (Felucca's), built as one unit with the plat glue (core-glue/plat/README.md). The include list follows the device's
  * unity build (firmware/src/sidj.c) with the hardware left out, as the firmware's own host simulator
  * (host/sidj_host.c) does: gfx.c, plat.h, the engine's header, Felucca's storage.c (on the NOR image: the settings,
- * the panel, the kept MIDI clocks), the song store (songs.c: the .sid files packed in the user area 0xA0000..0xDBFFF,
- * read in place from the image as the device reads them through XIP), the panel calibration (panel.c), the device's
+ * the panel, the kept MIDI clocks), the song store (songs.c: the .sid files packed in the pool 0x93000..0xF2FFF, some
+ * of them deflated, read in place from the image as the device reads them through XIP), the panel calibration (panel.c), the device's
  * plat.h implementation (plat_fm1.c), the kept clocks (clkstore.c) and the UI. main_fm1.c (the boot, the audio
  * interrupt, the main loop) is the hardware's: plat_glue.h redoes it, and the hooks below hold its statements (the
  * boot's order, the render's gains, the MIDI clock's timed bytes). The SID, the C64 and the engine are their own
@@ -44,17 +44,18 @@
 
 #define SIDJ_HOST 1                       /* the device's .pool sections off (plat.h SIDJ_POOL, engine.h ENG_POOL) */
 #define SIDJ_VERSION FM1CORE_VERSION
-#define FELUCCA_ID "FM-1_64010300"        /* the package identity: build.py --release 1.3.0 (FM-1_64 01 03 00) */
+#define FELUCCA_ID "FM-1_64010400"        /* the package identity: build.py --release 1.4.0 (FM-1_64 01 04 00) */
 #define FELUCCA_UAC 0                     /* (USB audio: not in the ABI) */
 #define FELUCCA_UAC_STEMS 0
 #define FM1CORE_PL_SX 1                   /* the songs page and the installer's M-UPGRADE identity (plat_sx.h) */
-#define FM1CORE_PL_PALETTE 0u             /* main_fm1.c fm1_main: palette_set(0) (DEBUT) */
+#define FM1CORE_PL_PALETTE 0u             /* (one set of colours: palette_set below) */
 #include "plat_hal.h"
 #include "plat_sx.h"
 
 /* ---------------------------------------------------------------- the firmware --- */
 #define __attribute__(x)                  /* (as the host simulator: .noinit / .pool sections) */
 #include "gfx.c"
+#define palette_set(p) ((void)(p), colours_init())   /* main_fm1.c fm1_main: colours_init() (SiDJ 1.4: no palettes) */
 #include "app/plat.h"
 #include "app/engine.h"
 
@@ -83,13 +84,13 @@ static int fm1core_sidj_st_erase(uint32_t off)   /* sidj.c st_erase: the song qu
 #include "storage.c"
 #undef st_erase
 
-/* usb.c's MIDI clock in: each pulse's time (the 24 MHz ticks) and number, Start numbering from 0, Stop to Continue
- * not counted; F8 timed here, never queued; Start, Stop and Continue go on to the app's queue too
+/* usb.c's MIDI clock in: each pulse's time (the 24 MHz ticks) and number, Start numbering from 0, before the first
+ * Start or Continue and from Stop to Continue not counted; F8 timed here, never queued; Start, Stop and Continue go on to the app's queue too
  * (FM1CORE_PL_MIDI_IN_HOOK) */
 #define CQ 32u
 static uint32_t ci_t[CQ], ci_k[CQ], ci_n;
 static volatile uint32_t ci_w, ci_r;
-static uint8_t ci_stopped;
+static uint8_t ci_stopped = 1;            /* (usb.c: not counted until a Start or Continue) */
 static void clock_in(uint32_t b)
 {
     uint32_t k;
@@ -128,6 +129,7 @@ static int fm1core_sidj_midi_in(uint32_t pkt)   /* usb.c ep1_rx, after the SysEx
 #define FM1SX_OTA_IN fm1core_pl_sxi
 #define FM1SX_OTA_OUT fm1core_pl_sxo
 #define FM1SX_OTA_MS() fm1_ms
+static int ota_erase_any(uint32_t off) { (void)off; return -1; }   /* sidj.c: the old staging's erase (refused) */
 #include "sysex_ota.h"
 
 /* sidj.c: the song pool over the flash, read in place (the device's plain XIP window: here the NOR image itself) */
@@ -180,6 +182,10 @@ uint32_t plat_frame_ticks(uint32_t frame)
 {
     return (uint32_t)((fm1core_sidj_frames + frame) * (uint64_t)(FM1_TICKS_PER_US * 1000000u) / ENG_RATE);
 }
+/* main_fm1.c: how long until audio rendered now is heard (the device: the next render, half a buffer on average, then
+ * a buffer); here a block plays from when it is rendered: the next one, half a 256-frame block on average (as the
+ * firmware's host simulator) */
+uint32_t plat_out_ticks(void) { return 128u * (FM1_TICKS_PER_US * 1000000u / ENG_RATE); }
 void plat_midi_rt(uint8_t b, uint32_t frame)
 {
     if (fm1core_sidj_rt_w - fm1core_sidj_rt_r >= FM1CORE_SIDJ_RT_Q)
@@ -222,7 +228,12 @@ static void fm1core_sidj_sx_service(void)   /* main_fm1.c fm1_main, each pass (t
 #define FM1CORE_PL_UI_FRAME() ui_frame()
 #define FM1CORE_PL_UI_INPUT() ui_input_only()
 #define FM1CORE_PL_DIM_LEVEL FM1P_LED_DIM /* (plat_leds: lit only, no glow plane) */
-static void fm1core_pl_flash_boot(void) {}   /* (ota_boot_cleanup: the update's staging, never written here) */
+static void fm1core_pl_flash_boot(void)  /* main_fm1.c fm1_main, the flash found (ota_boot_cleanup: the update's
+                                          * staging, never written here) */
+{
+    st_migrate(OBJ_SOUND, song_rx);       /* an older SiDJ's kept clocks and calibration, before the song pool */
+    st_migrate(OBJ_PANEL, song_rx);       /* takes their old place (storage.c) */
+}
 static void fm1core_pl_app_boot(void)    /* main_fm1.c fm1_main, after panel_init and led_pos_init */
 {
     eng_init();
@@ -237,7 +248,7 @@ static void fm1core_pl_app_boot(void)    /* main_fm1.c fm1_main, after panel_ini
     fm1core_sidj_frames = 0;
     fm1core_sidj_rt_w = fm1core_sidj_rt_r = 0;
     ci_w = ci_r = ci_n = 0;
-    ci_stopped = 0;
+    ci_stopped = 1;
     flash_resume = 0;
 }
 static void fm1core_pl_ui_start(void)
