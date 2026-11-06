@@ -9,7 +9,7 @@
 | `vesper` | VESPER 2.0.1 (Fat Cat Studios) | `cores/vesper-fm1` @ vesper-2.0.1 (f50977b), with `base` = fm1-base @ d8ff8f4, `base/bsp` = felucca-bsp @ 305c372 | GPL-3.0-only with the FM1 SDK linking exception (fm1-base MPL-2.0); MIT / Apache-2.0 DSP; CC0 samples |
 | `berlinan` | Berlinan 0.5.1 (Jiří Píša) | `cores/fm1-berlinan` @ v0.5.1 (afe2d93), with `base` = fm1-base @ 15dff6d, `base/bsp` = felucca-bsp @ 6b087c2 (AMB-1 1.3's) | GPL-2.0-or-later; Berkeley SoftFloat 3e BSD-3-Clause; fm1-base MPL-2.0 |
 | `modelar` | MODELAR 0.3 (Hirakos) | `cores/MODELAR` @ v0.3 (89475ca), with `base` = fm1-base @ 865bc2f, `base/bsp` = felucca-bsp @ 33cac69 | MPL-2.0 |
-| `ctl1` | CTL-1 1.0 | `cores/fm1-ctl` @ v1.0 (c3c2a7e), with `base` = fm1-base @ b16c177, `base/bsp` = felucca-bsp @ b4bb32e | MPL-2.0; Sonivox EAS Apache-2.0 |
+| `ctl1` | CTL-1 1.0.1 | `cores/fm1-ctl` @ v1.0.1 (2b560cf), with `base` = fm1-base @ 698e2cb, `base/bsp` = felucca-bsp @ f878800 | MPL-2.0; Sonivox EAS Apache-2.0 |
 | `echofield` | ECHOFIELD FM-1 0.2.8 (Philip Bos) | `cores/echofield-fm1` @ v0.2.8 (8187473), with `base` = fm1-base @ 4039a8b, `base/bsp` = felucca-bsp @ b0b2428 | MIT; factory sounds CC0-1.0; fm1-base MPL-2.0 |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
@@ -235,8 +235,8 @@ backup.c and without app_sysex (MODELAR has neither); neither of VESPER's two st
 
 CTL-1 (Charles Vestal: a MIDI controller for the FM-1, the keys with velocity and aftertouch in any scale with its
 chords under the black keys, the knobs as controllers in four banks, an arpeggiator and a four-track Euclidean drum
-sequencer, with an onboard General MIDI synth) is pinned at v1.0 (c3c2a7e). Its fm1-base (b16c177) is a few commits
-before AMB-1's; `core_ctl1.c` follows `core_amb.c`, with lib/touch.c (`APP_TOUCH`: the velocity and pressure path
+sequencer, with an onboard General MIDI synth) is pinned at v1.0.1 (2b560cf). Its fm1-base (698e2cb) is AMB-1 1.3.1's
+(9bca715) with one installer-page fix; `core_ctl1.c` follows `core_amb.c`, with lib/touch.c (`APP_TOUCH`: the velocity and pressure path
 above), lib/btdev.c (`APP_BTDEV`: the Setup page's Bluetooth devices, never any here) and the remote control.
 
 - **The USB build** (build.py `--no-ble`, `ctl-usb.fwsc`): `FM1B_BLE` 0 (plat.h's default), `radio_none.c`; the Setup
@@ -248,13 +248,13 @@ above), lib/btdev.c (`APP_BTDEV`: the Setup page's Bluetooth devices, never any 
   from the submodule with build.py's host flags (`-std=c99 -w -DPLAT_HOST`, dsp and dsp/eas, each file's own
   directory). The device-only `<string.h>` (`device_include` dsp/eas/fm1inc) stays out.
 - **The managers' SysEx:** main_fm1.c's order: the screen reader (the FM-1 Screen Reader, which CTL-1's README names:
-  HELLO answers "CTL-1 1.0" and its words link), the log readout, the remote control (no lease in this fm1-base); no
+  HELLO answers "CTL-1 1.0.1" and its words link), the log readout, the remote control (no lease in this fm1-base); no
   `app_sysex`; then `ota_service` (the M-UPGRADE identity, for the installer page web/ctl_installer.html) every pass.
 - **Saving:** ui.c's autosave writes the settings (store object 0xFC000) a few seconds after a change; `flash_sync` is
   that save without its waits, deferred while the transport plays.
 - **Not built:** the splash (`APP_SPLASH`), `APP_QUIET` (no radio), `APP_OVERLOAD` (no audio timing on the host),
   Bluetooth MIDI and its devices, USB audio.
-- Version and identity: build.py --release 1.0's, "1.0" and FM-1_6010000 (fm1.toml `id_prefix` FM-1_6 + 01 00 00).
+- Version and identity: build.py --release 1.0.1's, "1.0.1" and FM-1_6010001 (fm1.toml `id_prefix` FM-1_6 + 01 00 01).
   USB product (fm1.toml `usb_product`): "CTL-1 FM-1".
 - Licence texts in the .rfm1: its LICENSE (MPL-2.0) and LICENSING.md, Sonivox EAS's Apache-2.0 and NOTICE, fm1-base's
   and felucca-bsp's MPL-2.0 with their notes, the Barlow OFL. JieLi's Bluetooth libraries are not in the repository

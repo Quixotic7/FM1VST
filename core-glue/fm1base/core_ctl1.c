@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The CTL-1 core: CTL-1 1.0 for the FM-1 by Charles Vestal (https://github.com/charlesvestal/fm1-ctl, the pinned,
+/* The CTL-1 core: CTL-1 1.0.1 for the FM-1 by Charles Vestal (https://github.com/charlesvestal/fm1-ctl, the pinned,
  * unmodified submodule cores/fm1-ctl, MPL-2.0, with its own submodules base = fm1-base and base/bsp = felucca-bsp,
  * MPL-2.0) built with the fm1-base glue (core-glue/fm1base/README.md), from AMB-1's (core_amb.c: its fm1-base,
- * b16c177, is a few commits before AMB-1's 15dff6d). The include list follows fm1-base's device unity build
+ * 698e2cb, is AMB-1's 9bca715 with one installer-page fix). The include list follows fm1-base's device unity build
  * (base/device/unity.c) with the hardware left out: plat.h, the app's header, lib/touch.h, gfx.c, fm1-base's defaults
  * (fm1b_config.h), the store (storage.c on the NOR image, the app's APP_STORE_MAP: the settings, the panel
  * calibration, the Bluetooth stack's address), the screen reader (announce.c), the panel calibration (panel.c), the
@@ -16,8 +16,8 @@
  * (plat_midi_send to the USB-MIDI out ring, fm1base_hal.h), MIDI in is passed along, and the onboard GM synth plays
  * it all (Sound on, the default), so the core has sound of its own.
  *
- * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 1.0's: "1.0" and FM-1_6010000
- * (fm1.toml id_prefix FM-1_6 + 01 00 00), from core_ctl1.cmake.
+ * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 1.0.1's: "1.0.1" and FM-1_6010001
+ * (fm1.toml id_prefix FM-1_6 + 01 00 01), from core_ctl1.cmake.
  * Left out, as in every core: the splash (APP_SPLASH: plat_glue.h starts the UI at power-on). APP_QUIET (the radio's
  * first second) never applies with no radio; APP_OVERLOAD (the synth sheds voices when the render runs late) has no
  * audio timing on the host and is not called.
@@ -51,6 +51,7 @@
 #error "FELUCCA_ID: the package identity (core_ctl1.cmake)"
 #endif
 #define FM1CORE_PL_SX 1                   /* the managers' SysEx (core-glue/plat/plat_sx.h) */
+#define FM1CORE_FB_MIRROR_DIM 1           /* (this fm1-base's mirror_leds: the glow's LEDs too; mirror_mid) */
 #include "fm1base_hal.h"
 #include "../plat/plat_sx.h"
 
@@ -61,7 +62,19 @@
 #include "touch.h"
 #include "gfx.c"
 #include "fm1b_config.h"
+#include "sys_text.c"                     /* the faces of the platform's own screens (panel.c's, unity.c's) */
 #include "storage.c"
+/* felucca-bsp's chip/ota.c (the M-UPGRADE identity) on the managers' transport, here where unity.c includes it:
+ * plat_fm1.c's host reads (plat_host_read, plat_host_patience) are its ota_read, ota_try_ms, ota_deadline */
+#define FM1SX_OTA_C "../../cores/fm1-ctl/base/bsp/chip/ota.c"
+#define FM1SX_OTA_IN fm1core_pl_sxi
+#define FM1SX_OTA_OUT fm1core_pl_sxo
+#define FM1SX_OTA_MS() fm1_ms
+#include "sysex_ota.h"
+/* felucca-bsp's usb.c and guard, as plat_fm1.c reads them: the USB link never lost (a host is always there); the
+ * guard's code window (plat_code_window) has no meaning here */
+static volatile uint8_t midi_usb_lost;
+static void fm1_guard_pc_extend(uint32_t end) { (void)end; }
 #define ANN_NAME APP_NAME " " APP_VERSION
 #include "ann_words.h"
 #include "announce.c"
@@ -80,11 +93,6 @@ static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room
 #undef __attribute__
 
 /* ---------------------------------------------------------------- the managers' SysEx (plat_sx.h) --- */
-#define FM1SX_OTA_C "../../cores/fm1-ctl/base/bsp/chip/ota.c"
-#define FM1SX_OTA_IN fm1core_pl_sxi
-#define FM1SX_OTA_OUT fm1core_pl_sxo
-#define FM1SX_OTA_MS() fm1_ms
-#include "sysex_ota.h"
 /* main_fm1.c log_frame's answer on a unit that never crashed: one frame a line, F0 7D 4C 47 <ASCII> F7, "end" last */
 static void fm1core_ctl_log_line(const char *t)
 {
