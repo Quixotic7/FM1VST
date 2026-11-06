@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# SIDOU (https://github.com/dsablic/sidou, tag v1.5.0 = f4ed52b; GPL-3.0-or-later, the image GPL-3.0-only), a C64 SID
+# SIDOU (https://github.com/dsablic/sidou, tag v1.7.0 = a2a5c76; GPL-3.0-or-later, the image GPL-3.0-only), a C64 SID
 # machine: bare-metal firmware on Felucca's HAL, its own glue family (core-glue/sidou/README.md) over the unmodified
 # submodule. Built as the firmware's CMake builds it: the portable instrument (app/, core/: their add_library lists,
 # read here) as their own units, the device layer (platform/fm1: main.c, midi.c with Felucca's usb.c and ota.c,
