@@ -276,11 +276,22 @@ typedef const fm1core_t *(*fm1core_get_fn)(uint32_t abi_version);
  *       A label: 0..10 upper case printable ASCII characters; "" = the control has no job now (drawn blank or
  *       dimmed); NULL = not given (the host's own: button_names, then the printed name). Valid until the next call
  *       into the core: hosts copy it. A host reads the epoch after frame() (or at its UI rate) and all 49 labels
- *       when it moved */
+ *       when it moved
+ *   uint32_t fm1core_audio_out_info(void)
+ *   void fm1core_audio_out(int16_t *buf, uint32_t frames)
+ *       more output channels (aout1, RemoteFM1's docs/RFM1-FORMAT.md section 9; fm1-base's usb_audio_channels): info
+ *       says how many the core gives in all, 4, 6, 8 or 10 (anything else: the master alone), valid after init.
+ *       Channels 1 and 2 are always audio()'s stereo; the core's own are 3..N. A host that takes them calls
+ *       fm1core_audio_out right before each audio(), with the same frames: buf holds frames frames of N - 2 int16
+ *       (channels 3..N, the next frame N - 2 on), zeroed by the host; the core adds its channels into it during that
+ *       audio(), at the master's scale (32767: full scale). A host that does not call it: the core skips the work */
 #define FM1CORE_LATENCY_SYMBOL "fm1core_latency_frames"
 #define FM1CORE_BOOT_OPTION_SYMBOL "fm1core_boot_option"
 #define FM1CORE_LABELS_EPOCH_SYMBOL "fm1core_labels_epoch"
 #define FM1CORE_LABEL_SYMBOL "fm1core_label"
+#define FM1CORE_AUDIO_OUT_INFO_SYMBOL "fm1core_audio_out_info"
+#define FM1CORE_AUDIO_OUT_SYMBOL "fm1core_audio_out"
+#define FM1CORE_AUDIO_OUT_MAX 10u   /* the most channels in all (the master and 8 more) */
 #define FM1CORE_LBL_KNOB0 0     /* + FM1P_E_* (SELECT ALGO PRESETS K1..K4 MASTER) */
 #define FM1CORE_LBL_BTN0 8      /* + FM1P_B_* */
 #define FM1CORE_LBL_WHITE0 22   /* + 0..15: the white keys W1..W16 (F3 G3 A3 B3 C4 .. G5) */
@@ -291,6 +302,8 @@ typedef uint32_t (*fm1core_latency_fn)(void);
 typedef int (*fm1core_boot_option_fn)(const char *key, const char *value);
 typedef uint32_t (*fm1core_labels_epoch_fn)(void);
 typedef const char *(*fm1core_label_fn)(int32_t which);
+typedef uint32_t (*fm1core_audio_out_info_fn)(void);
+typedef void (*fm1core_audio_out_fn)(int16_t *buf, uint32_t frames);
 
 #if defined(__GNUC__) || defined(__clang__)
 #define FM1CORE_EXPORT __attribute__((visibility("default")))

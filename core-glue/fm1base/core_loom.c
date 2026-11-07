@@ -11,12 +11,12 @@
  * DSP and the sequencer are their own -O2 units (loom_*.c, fm1.toml "o2").
  *
  * app.c is the device's (PLAT_HOST off: plat_fm1.c's paths, the voices' engine order, the cost model); the one file
- * of the app the core does not compile is app/plat_loom.c, the second core's hardware, read from loom_plat.c instead
- * (a clang VFS overlay, core_loom.cmake): the second core's job runs at once, in order, as LOOM-8's host simulator
+ * of the app the core does not compile is app/plat_loom.c, the hardware's extras, read from loom_plat.c instead
+ * (a clang VFS overlay, core_loom.cmake), with fm1-base's second core (cpu2): its job runs at once, in order, as the host simulator
  * and browser emulator run it (the split render, the same sums).
  *
  * LOOM-8's version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release's for the pinned tag:
- * "0.6.1" (the release in capitals) and FM-1_10000601 (fm1.toml id_prefix FM-1_10 + 00 06 01); core_loom.cmake
+ * "0.14" (the release in capitals) and FM-1_10001400 (fm1.toml id_prefix FM-1_10 + 00 14 00); core_loom.cmake
  * derives both from its VERSION.
  *
  * THE MANAGERS (core-glue/plat/plat_sx.h): fm1-base's main loop (base/device/main_fm1.c fm1_main) gives each SysEx
@@ -53,8 +53,14 @@
 #error "FELUCCA_ID: the package identity (core_loom.cmake)"
 #endif
 #define FM1B_BACKUP 1                     /* fm1.toml backup = true (build.py opt_flags) */
+#define FM1B_CPU2 1                       /* fm1.toml cpu2 = true: the second core, simulated (loom_plat.c) */
+#define FM1B_RES 1                        /* fm1.toml resources: the region read in place from the NOR image */
+#if FM1B_UAC_CH > 2                       /* fm1.toml usb_audio_channels (core_loom.cmake): the tracks on 3..10 */
+#define FM1CORE_PL_USB_CH FM1B_UAC_CH     /* (plat_glue.h: plat_usb_ch, given to hosts as aout1) */
+#endif
 #define FM1CORE_PL_SX 1                   /* the managers' SysEx (core-glue/plat/plat_sx.h) */
 #define FM1CORE_PL_SX_CORO 1              /* (a restore waits for the host and for SEL: the service's coroutine) */
+#define FM1CORE_FB_MIRROR_DIM 1           /* (this fm1-base's mirror_leds: the glow's LEDs too; mirror_mid) */
 #include "fm1base_hal.h"
 #include "../plat/plat_sx.h"
 
@@ -98,6 +104,10 @@ static void ota_show(uint32_t step, int32_t code)
 }
 static void ota_commit(const uint8_t *parm) { (void)parm; }
 
+/* felucca-bsp's usb.c and guard, as plat_fm1.c reads them: the USB link never lost (a host is always there); no
+ * guarded PC range to extend */
+static volatile uint8_t midi_usb_lost;
+static void fm1_guard_pc_extend(uint32_t end) { (void)end; }
 #define ANN_NAME APP_NAME " " APP_VERSION
 #include "ann_words.h"
 #include "announce.c"
@@ -111,7 +121,24 @@ static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room
 }
 #include "panel.c"
 #include "radio_none.c"
+/* plat_fm1.c's SysEx stream (plat_sysex_begin / put / end, plat_sysex_room) writes USB-MIDI packets into usb.c's
+ * SysEx ring: here the managers' out ring (plat_sx.h fm1core_pl_sxo, the same CIN 4..7 packets), read by
+ * midi_out_take; the stream holds it (sx_busy) from begin to end */
+static uint8_t sx_busy;
+#define SXQ FM1SX_OUT_PKTS
+#define sx_out_q fm1core_pl_sxo.q
+#define so_w fm1core_pl_sxo.w
+#define so_r fm1core_pl_sxo.r
+#define plat_usb_ch fm1core_loom_dev_usb_ch   /* (the device's: plat_glue.h's and loom_plat.c's take their place) */
+#define plat_core fm1core_loom_dev_core
 #include "plat_fm1.c"
+#undef plat_usb_ch
+#undef plat_core
+#undef SXQ
+#undef sx_out_q
+#undef so_w
+#undef so_r
+#include "btdev.c"                        /* (the Setup page's Bluetooth devices: no Bluetooth here, none found) */
 #include "backup.c"
 /* unity.c's hooks for backup.c (fm1-base's "backup and restore" section, on the core's HAL: the same statements) */
 static uint8_t backup_streaming(void) { return bu.on; }
@@ -184,6 +211,17 @@ static int bu_room(void)                            /* the SysEx ring empty: a f
 static int bu_send(const uint8_t *p, uint32_t n) { return ota_wire_send(p, n); }
 static void bu_flush(void) { app_backup_flush(); }
 static void bu_hold(int on) { app_backup_hold(on); }
+/* the resource region (fm1.toml resources, FM1B_RES: the 909 cymbals, ER-99's samples, and the large type) built in,
+ * as fm1-base's host simulator and LOOM-8's browser emulator have it (plat_host.c's plat_res over build.py's
+ * fm1_res_data.h): on the device the installer writes it to the flash after an update; here it is always there (the
+ * owner's call, 2026-11-06) */
+#include "fm1_res_data.h"
+const uint8_t *plat_res(uint32_t *len)
+{
+    if (len)
+        *len = (uint32_t)sizeof fm1b_res_data;
+    return fm1b_res_data;
+}
 #include "app.c"                          /* (its app/plat_loom.c: loom_plat.c, the VFS overlay) */
 #undef __attribute__
 
@@ -235,6 +273,7 @@ static void fm1core_loom_usb_cmd(uint32_t d)
             app_ui_init();                /* the screen again (restored: everything reloaded) */
         app_say(rc == RS_E_PLAYING ? "STOP FIRST" : "RESTORE FROM USB",
                 !rc ? "RESTORED" : rc == RS_E_PLAYING ? "then restore" : rc == RS_E_NO ? "NOTHING CHANGED" : "NOT RESTORED");
+        return;
     }
 }
 #include "fm1base_remote.h"           /* the remote control, 7D 4C 43 (LOOM-8's fm1-base: no lease) */
@@ -270,6 +309,9 @@ static void fm1core_loom_sx_service(void) /* main_fm1.c fm1_main, each pass (the
 static void fm1core_pl_flash_boot(void)  /* fm1_main: a restore's commit cut short by a power loss finished */
 {
     rs_boot();
+#ifdef APP_STORE_POOL
+    st_pool_boot();                       /* the A/B pairs from before the pool moved into it (storage.c) */
+#endif
     ota_boot_cleanup();
 }
 static void fm1core_pl_app_boot(void)    /* base/device/main_fm1.c fm1_main */

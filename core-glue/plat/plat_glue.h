@@ -43,7 +43,8 @@
  * FM1CORE_PL_MIDI_IN_HOOK(pkt) (a USB-MIDI packet before the app's queue, after the SysEx: 1 taken, never queued;
  * SiDJ's usb.c times the clock bytes into its own ring), FM1CORE_PL_DEFAULT_MASTER (the pot's position
  * when the host gives none, 0..1023: the firmware's own default MASTER), FM1CORE_PL_PALETTE (the palette set at
- * power-on, default 1).
+ * power-on, default 1), FM1CORE_PL_USB_CH (fm1-base's usb_audio_channels, FM1B_UAC_CH: 4..10, the app's channels
+ * on 3..N through plat_usb_ch, given to a host as aout1: below).
  *
  * Simulated time only (fm1core.h): nothing here reads the host's clock. */
 #pragma once
@@ -114,10 +115,55 @@ static uint32_t fm1core_pl_qw, fm1core_pl_qr;    /* frames written / read since 
 static uint32_t fm1core_pl_blocks;               /* blocks rendered since power-on */
 static int32_t fm1core_pl_blk[FM1CORE_PL_BLOCK * 2u];
 
+/* More output channels (FM1CORE_PL_USB_CH > 2: fm1-base's usb_audio_channels; aout1, fm1core.h): the app adds its
+ * channels 3..N into plat_usb_ch's frames during the render, as on the device (where they go to the computer over
+ * USB). Here each block's are queued in step with the master's, and audio() adds them into the host's buffer of
+ * fm1core_audio_out for the same frames. While no host calls fm1core_audio_out, plat_usb_ch says NULL and the app
+ * skips the work, as with no computer recording */
+#if defined(FM1CORE_PL_USB_CH) && FM1CORE_PL_USB_CH > 2
+#define FM1CORE_PL_AUX (FM1CORE_PL_USB_CH - 2)
+static int16_t fm1core_pl_ach[FM1CORE_PL_BLOCK * FM1CORE_PL_USB_CH];   /* the block's frames, plat.h's stride N */
+static int16_t fm1core_pl_aq[FM1CORE_PL_QN * FM1CORE_PL_AUX];          /* channels 3..N beside fm1core_pl_q */
+static uint8_t fm1core_pl_aon, fm1core_pl_arender;   /* a host takes them / a block rendering with them */
+static int16_t *fm1core_pl_abuf;                     /* fm1core_audio_out's, for the next audio() */
+static uint32_t fm1core_pl_aframes;
+int16_t *plat_usb_ch(uint32_t off, uint32_t *run)    /* (plat.h; the device's in plat_fm1.c is renamed away) */
+{
+    if (!fm1core_pl_arender || off >= FM1CORE_PL_BLOCK) {
+        *run = 0;
+        return 0;
+    }
+    *run = FM1CORE_PL_BLOCK - off;
+    return &fm1core_pl_ach[off * FM1CORE_PL_USB_CH + 2u];
+}
+FM1CORE_EXPORT uint32_t fm1core_audio_out_info(void) { return FM1CORE_PL_USB_CH; }
+FM1CORE_EXPORT void fm1core_audio_out(int16_t *buf, uint32_t frames)
+{
+    fm1core_pl_abuf = buf;
+    fm1core_pl_aframes = frames;
+    fm1core_pl_aon = 1;
+}
+#endif
+
 static void fm1core_pl_render_block(void)
 {
     uint32_t i;
+#ifdef FM1CORE_PL_AUX
+    fm1core_pl_arender = fm1core_pl_aon;
+    if (fm1core_pl_arender)
+        memset(fm1core_pl_ach, 0, sizeof fm1core_pl_ach);
+#endif
     fm1core_pl_render(fm1core_pl_blk, FM1CORE_PL_BLOCK);
+#ifdef FM1CORE_PL_AUX
+    for (i = 0; i < FM1CORE_PL_BLOCK; i++) {
+        int16_t *q = &fm1core_pl_aq[(fm1core_pl_qw + i) % FM1CORE_PL_QN * FM1CORE_PL_AUX];
+        if (fm1core_pl_arender)
+            memcpy(q, &fm1core_pl_ach[i * FM1CORE_PL_USB_CH + 2u], FM1CORE_PL_AUX * sizeof *q);
+        else
+            memset(q, 0, FM1CORE_PL_AUX * sizeof *q);
+    }
+    fm1core_pl_arender = 0;
+#endif
     for (i = 0; i < 2u * FM1CORE_PL_BLOCK; i++) {
         const int32_t v = fm1core_pl_blk[i] >> 8;    /* 24-bit (Q23) -> Q15 = 0 dBFS */
         fm1core_pl_q[(2u * fm1core_pl_qw + i) % (2u * FM1CORE_PL_QN)] =
@@ -416,6 +462,12 @@ void fm1core_pl_idle(void) { fm1core_pl_frame(); }   /* (the same pass: the loop
 void fm1core_pl_audio(int16_t *stereo, uint32_t frames)
 {
     uint32_t f;
+#ifdef FM1CORE_PL_AUX
+    int16_t *const abuf = fm1core_pl_abuf;       /* fm1core_audio_out's for these frames; none: the host takes none */
+    const uint32_t aframes = fm1core_pl_aframes;
+    fm1core_pl_abuf = 0;
+    fm1core_pl_aon = abuf != 0;
+#endif
     if (fm1core_halted() || !fm1core_pl_up) {
         memset(stereo, 0, (size_t)frames * 2u * sizeof *stereo);
         return;
@@ -430,6 +482,16 @@ void fm1core_pl_audio(int16_t *stereo, uint32_t frames)
             const uint32_t j = 2u * (fm1core_pl_qr % FM1CORE_PL_QN);
             stereo[2u * (f + i)] = stall ? 0 : fm1core_pl_q[j];
             stereo[2u * (f + i) + 1u] = stall ? 0 : fm1core_pl_q[j + 1u];
+#ifdef FM1CORE_PL_AUX
+            if (abuf && !stall && f + i < aframes) {   /* added, as the device's app adds into plat_usb_ch's */
+                const int16_t *a = &fm1core_pl_aq[fm1core_pl_qr % FM1CORE_PL_QN * FM1CORE_PL_AUX];
+                int16_t *o = &abuf[(f + i) * FM1CORE_PL_AUX];
+                for (uint32_t c = 0; c < FM1CORE_PL_AUX; c++) {
+                    const int32_t v = (int32_t)o[c] + a[c];
+                    o[c] = (int16_t)(v > 32767 ? 32767 : v < -32768 ? -32768 : v);
+                }
+            }
+#endif
         }
     }
 }

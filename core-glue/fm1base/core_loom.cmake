@@ -1,17 +1,18 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# LOOM-8 (https://github.com/charlesvestal/fm1-loom, tag v0.6.1; GPL-3.0-only, on fm1-base and felucca-bsp, MPL-2.0):
-# the fm1-base glue (core-glue/fm1base/README.md) over the unmodified submodule and its own submodules (base =
-# fm1-base, base/bsp = felucca-bsp). v0.6.1 (2026-10-22) is LOOM-8's first release without "-beta" (the ones before
-# it, to v0.6-beta, were all betas); fm1-base and felucca-bsp stay where v0.6-beta had them, app/samples unchanged.
-# The DSP and the sequencer (fm1.toml "o2") are their own units (loom_*.c). The generate step is fm1-base's build.py
-# generate() with the globals its main() sets from the app's directory (APP, CONF from app/fm1.toml, GEN =
-# app/build/gen): the fonts, the wavetables, the factory samples, the build's hash, the presets, the screen reader's
-# words; one Python expression, run in app/ (GEN_ROOT).
-# app/app.c includes app/plat_loom.c, the second core's hardware: a clang VFS overlay (-ivfsoverlay, written below
-# into the build folder) has the compiler read loom_plat.c in its place, the host's version of the same names; every
-# file of the submodule is compiled unmodified.
+# LOOM-8 (https://github.com/charlesvestal/fm1-loom, tag v0.14; GPL-3.0-only as a whole: MPL-2.0 files since 0.8, the
+# acid engine and the 909 models GPL-3.0-only; on fm1-base 317cb86 and felucca-bsp 5b0879b, MPL-2.0): the fm1-base
+# glue (core-glue/fm1base/README.md) over the unmodified submodule and its own submodules (base = fm1-base, base/bsp =
+# felucca-bsp). v0.14 (2026-11-06) is the first with fm1.toml usb_audio_channels = 10: the tracks on channels 3..10,
+# given to hosts as more output channels (aout1). The DSP and the sequencer (fm1.toml "o2") are their own units
+# (loom_*.c). The generate step is fm1-base's build.py generate() with the globals its main() sets from the app's
+# directory (APP, CONF from app/fm1.toml, GEN = app/build/gen): the fonts, the wavetables, the factory samples and
+# kits, the build's hash, the presets, the resource region (built in: the 909 cymbals), the screen reader's words; one Python expression, run in
+# app/ (GEN_ROOT).
+# app/app.c includes app/plat_loom.c, the hardware's extras (the render's timer, the supplies, the crash record): a
+# clang VFS overlay (-ivfsoverlay, written below into the build folder) has the compiler read loom_plat.c in its
+# place, the host's version of the same names; every file of the submodule is compiled unmodified.
 set(_loom ${CMAKE_SOURCE_DIR}/cores/fm1-loom)
-set(_loom_ver 0.6.1)
+set(_loom_ver 0.14)
 # build.py --release: APP_VERSION the release in capitals; the package identity fm1.toml's id_prefix (FM-1_10) + the
 # major, minor and patch as two digits each
 string(TOUPPER "${_loom_ver}" _loom_app_ver)
@@ -27,6 +28,13 @@ foreach(_g 1 2 4)
     endif()
     string(APPEND _loom_id "${_d}")
 endforeach()
+# fm1.toml usb_audio_channels (build.py opt_flags: FM1B_UAC_CH): the app's channels 3..N through plat_usb_ch, given
+# to hosts as more output channels (aout1: plat_glue.h, fm1_add_rfm1 AUDIO_OUT)
+file(STRINGS ${_loom}/app/fm1.toml _loom_uac REGEX "^usb_audio_channels *=")
+string(REGEX MATCH "[0-9]+" _loom_uac_ch "${_loom_uac}")
+if(NOT _loom_uac_ch)
+    set(_loom_uac_ch 2)
+endif()
 set(_loom_gen "(lambda b: (setattr(b, 'APP', b.Path('.').resolve()), setattr(b, 'CONF', b.read_conf(b.APP / 'fm1.toml')), setattr(b, 'GEN', b.APP / 'build' / 'gen'), b.generate()))(__import__('sys').path.insert(0, '../base/tools') or __import__('build'))")
 set(_loom_vfs ${CMAKE_BINARY_DIR}/core_vfs/loom.yaml)
 file(WRITE ${_loom_vfs}.in "{ \"version\": 0, \"case-sensitive\": \"false\", \"roots\": [ { \"type\": \"file\", \"name\": \"${_loom}/app/plat_loom.c\", \"external-contents\": \"${CMAKE_CURRENT_LIST_DIR}/loom_plat.c\" } ] }\n")
@@ -36,16 +44,17 @@ configure_file(${_loom_vfs}.in ${_loom_vfs} COPYONLY)
 # emulated 909 on the schwung firmware for Ableton Move that Charles Vestal made". The credits name that origin. X0X
 # (core-glue/plat/core_x0x.cmake) stays gated: its 909 cymbals are a separate question, not decided
 fm1_add_core(loom ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_loom} UNIT core_loom.c DESC core_loom_desc.c
-             EXTRA_SOURCES loom_synth.c loom_drumline.c loom_sample.c loom_fx.c loom_bench.c loom_pattern.c loom_seq.c
+             EXTRA_SOURCES loom_synth.c loom_drumline.c loom_digisophie.c loom_sample.c loom_fx.c loom_bass303.c loom_d909.c
+                           loom_bench.c loom_pattern.c loom_seq.c
              FAMILY fm1base LICENSE GPL-3.0-only
              CREDITS "LOOM-8 by Charles Vestal. Built on fm1-base and felucca-bsp (MPL-2.0), from Felucca by Leo Kuroshita (Hügelton Instruments). Factory breaks: free loops by u/FCTRYBEATS, used with their permission. 909 drums, the hi-hat included: renders of 9W9 (GPL-3.0), the emulated 909 on the schwung firmware for Ableton Move that Charles Vestal made. Recorded instruments: Versilian Studios Chamber Orchestra 2 Community Edition (CC0 1.0). Inspired by teenage engineering's OP-XY, not affiliated with teenage engineering."
              CREDITS_FILES LICENSING.md base/assets/fonts/Barlow-OFL.txt base/assets/fonts/Terminus-LICENSE.txt
-             GEN ann_words.h felucca_font.h loom_build.h loom_font.h presets.h samples.h wavetables.h
+             GEN ann_words.h felucca_font.h fm1_res_data.h kits.h loom_build.h loom_font.h presets.h samples.h wavetables.h
              GEN_ROOT app GEN_PYTHON "${_loom_gen}" PYTHON_NEEDS raqm
              SUBMODULES_RECURSIVE
              VERSION ${_loom_ver}
              FLAGS -ffp-contract=off "-ivfsoverlay${_loom_vfs}"
-             DEFINES APP_VERSION="${_loom_app_ver}" FELUCCA_ID="${_loom_id}"
+             DEFINES APP_VERSION="${_loom_app_ver}" FELUCCA_ID="${_loom_id}" FM1B_UAC_CH=${_loom_uac_ch}
              INCLUDES ${_loom}/app ${_loom}/app/dsp ${_loom}/app/seq ${_loom}/base/include ${_loom}/base/device
                       ${_loom}/base/lib)
 if(TARGET core_loom_obj)
@@ -53,13 +62,20 @@ if(TARGET core_loom_obj)
     set_property(SOURCE ${CMAKE_CURRENT_LIST_DIR}/core_loom.c APPEND PROPERTY OBJECT_DEPENDS
                  ${CMAKE_CURRENT_LIST_DIR}/loom_plat.c ${_loom_vfs})
 endif()
+# the .rfm1: its tracks as more output channels (aout1)
+fm1_add_rfm1(loom AUTHORS "Charles Vestal" AUDIO_OUT ${_loom_uac_ch}
+             RUN_ARGS --press PLAY@4100 --expect-aout ${_loom_uac_ch})   # (a fresh project's beat on T1: channel 3)
 # the golden check: fm1-base's host simulator (build.py --host: base/host/plat_host.c with the app, PLAT_HOST, its o2
 # units, fm1.toml's backup) and the core, one script
 include(${CMAKE_CURRENT_LIST_DIR}/../plat/plat_golden.cmake)
 plat_golden(loom GEN_TARGET gen_loom
             SOURCES ${_loom}/base/host/plat_host.c ${_loom}/app/dsp/synth.c ${_loom}/app/dsp/drumline.c
-                    ${_loom}/app/dsp/sample.c ${_loom}/app/dsp/fx.c ${_loom}/app/dsp/bench.c ${_loom}/app/seq/pattern.c
-                    ${_loom}/app/seq/seq.c
-            DEFINES PLAT_HOST FM1B_BACKUP=1 APP_VERSION="${_loom_app_ver}"
+                    ${_loom}/app/dsp/digisophie.c ${_loom}/app/dsp/sample.c ${_loom}/app/dsp/fx.c
+                    ${_loom}/app/dsp/bass303.c ${_loom}/app/dsp/d909.c ${_loom}/app/dsp/bench.c
+                    ${_loom}/app/seq/pattern.c ${_loom}/app/seq/seq.c
+            DEFINES PLAT_HOST FM1B_BACKUP=1 FM1B_CPU2=1 FM1B_RES=1 FM1B_UAC_CH=${_loom_uac_ch} APP_VERSION="${_loom_app_ver}"
             INCLUDES ${_loom}/base/device ${_loom}/base/include ${_loom}/base/lib ${_loom}/app ${_loom}/app/build/gen
-            SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden_loom.txt)
+            SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden_loom.txt
+            # (0.14's battery in the top bar: the core is on USB power, plat_battery 4, a plug; the host simulator's
+            # is full, 3: 27 pixels of every shot)
+            ALLOWED 27)

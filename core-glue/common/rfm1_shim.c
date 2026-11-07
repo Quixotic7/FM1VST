@@ -221,3 +221,20 @@ EXPORT(rfm1_audio_in_info) void rfm1_audio_in_info(uint32_t state, uint32_t late
         fm1core_audio_in_info(state, latency_frames);
 }
 #endif
+
+/* more output channels (aout1, RemoteFM1's docs/RFM1-FORMAT.md section 9): only in a module built with AUDIO_OUT in
+ * its fm1_add_rfm1 (RFM1_AOUT1), so a cart that gives the master alone exports neither. The core's optional symbols
+ * (fm1core.h), through weak references: a core without them says 2 (the master alone) and takes no channels */
+#ifdef RFM1_AOUT1
+extern uint32_t fm1core_audio_out_info(void) __attribute__((weak));
+extern void fm1core_audio_out(int16_t *buf, uint32_t frames) __attribute__((weak));
+EXPORT(rfm1_audio_out_info) uint32_t rfm1_audio_out_info(void)
+{
+    return fm1core_audio_out_info ? fm1core_audio_out_info() : 2u;
+}
+EXPORT(rfm1_audio_out) void rfm1_audio_out(uint32_t buf, uint32_t frames)
+{
+    if (fm1core_audio_out)
+        fm1core_audio_out((int16_t *)(uintptr_t)buf, frames);
+}
+#endif

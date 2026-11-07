@@ -1904,7 +1904,7 @@ const Profile kProfiles[] = {
     // plat, fm1base, dinghy
     {"x0x", "X0X ", false, "FM-1_9010100", false, nullptr, false, nullptr, x0x_run},
     {"amb", nullptr, false, "FM-1_7010300", false, nullptr, false, nullptr, installer_run("AMB-1 ", true)},
-    {"loom", "LOOM-8 0.6.1", false, "FM-1_10000601", false, nullptr, false, nullptr, loom_run},
+    {"loom", "LOOM-8 0.14", false, "FM-1_10001400", false, nullptr, false, nullptr, loom_run},
     // ECHOFIELD 0.2.8: build.py --release 0.2.8 (fm1.toml id_prefix FM-1_3246 + 00 02 08); its companion app
     {"echofield", nullptr, false, "FM-1_3246000208", false, nullptr, false, nullptr, echofield_run},
     {"fomni", nullptr, false, "FM-1_8000400", false, nullptr, false, nullptr, installer_run("FoMni-1 ", false)},

@@ -53,6 +53,7 @@ your descriptor, so they always match. Its options (cmake/FM1Rfm1.cmake has them
 | `RUN_ARGS <args..>` | options for the test's `rfm1_run` (`--sysex bank.syx`, `--settle 5000`) |
 | `VIRTUAL` | a Fantasy CFW, host-only ([VIRTUAL-CARTS.md](VIRTUAL-CARTS.md)): the manifest says `"virtual": true`; `MEMORY_MIB` up to 512, the file under 16 MiB, the `rfm1_host_1` imports allowed |
 | `NEEDS <cap..>`, `FOLDERS <name=r\|rw..>` | (with `VIRTUAL`) the manifest's `needs` (`fs1`: the shared folder's files) and `folders` (`code=r data=rw`) |
+| `AUDIO_OUT <n>` | more output channels (aout1, RemoteFM1's RFM1-FORMAT.md section 9): 4, 6, 8 or 10 in all. The module exports `rfm1_audio_out_info` / `rfm1_audio_out` from the core's `fm1core_audio_out_info` / `fm1core_audio_out` (fm1core.h). An fm1-base app's `usb_audio_channels` gets them through `plat_usb_ch` (core-glue/plat/plat_glue.h): LOOM-8's tracks on 3..10 |
 | `NO_SKIN` | leave out the skin of your repository's `RemoteFM1Metadata.json` ([RFM1-METADATA.md](RFM1-METADATA.md)) |
 | `NO_LABELS` | leave out its button and knob labels |
 
@@ -112,7 +113,9 @@ as the manifest's `folders` allow, each request completed one device ms later); 
 its label, `--info-at MS` and `--expect-ui TEXT` print and check `ui_info`, `--flash-in` / `--flash-out` boot from and
 save the flash image, `--screen out.ppm` saves the screen, `--describe --labels` prints the descriptor (its
 `button_names`) and the live labels before init. `--audio-in in.wav` (with `--audio-in-latency N`,
-`--audio-in-off-at MS`, `--audio-in-once`) is a host's live input for a cart with `ain1` (VIRTUAL-CARTS.md 8). Interpreted, a core runs 10-25 times slower than native (FM1VST's own cores: 8-50x real time on an M5
+`--audio-in-off-at MS`, `--audio-in-once`) is a host's live input for a cart with `ain1` (VIRTUAL-CARTS.md 8). A cart
+with more output channels (aout1) is given them as a host does, and each channel's level is printed; `--aout-wav F`
+saves all of them as one WAV, `--expect-aout N` fails unless it gives N and 3..N sounded, `--no-aout` takes none. Interpreted, a core runs 10-25 times slower than native (FM1VST's own cores: 8-50x real time on an M5
 Mac with wasm3).
 
 ## Attach it to your releases (GitHub Actions)

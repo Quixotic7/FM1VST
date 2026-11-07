@@ -292,7 +292,9 @@ function(fm1_add_core id glue)
     add_library(${id}_core MODULE $<TARGET_OBJECTS:${obj}>)
     set_target_properties(${id}_core PROPERTIES PREFIX "" SUFFIX ".fm1core" OUTPUT_NAME ${id}
                           LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/cores)
-    target_link_options(${id}_core PRIVATE -Wl,-exported_symbol,_fm1core_get)
+    target_link_options(${id}_core PRIVATE -Wl,-exported_symbol,_fm1core_get
+                        # (fm1core.h's optional aout1 pair, where the core has it: a pattern that matches nothing is fine)
+                        "-Wl,-exported_symbol,_fm1core_audio_out*")
     if(MATH_LIB)
         target_link_libraries(core_${id} PUBLIC ${MATH_LIB})
         target_link_libraries(${id}_core PRIVATE ${MATH_LIB})
