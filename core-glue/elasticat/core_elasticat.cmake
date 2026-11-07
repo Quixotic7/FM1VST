@@ -43,6 +43,7 @@ endif()
 # E6 (0.4.0): audio input (docs/VIRTUAL-CARTS.md 8): WANTS ain1 (it runs without; the INPUT machine and the
 # SAMPLER's input source are then silent). The test feeds the test loop through rfm1_audio_in (latency 256);
 # rfm1_elasticat_ain_off turns the input off at 5 s (state 0).
+# 0.6.91: MEMORY_MIB 280 (the engine's arena 26 -> 32 MiB: eight chord-note copies of the warp engine).
 # 0.6.53: MEMORY_MIB 272 (a second project, 9.6 MB, checks a record parses before it replaces the open one).
 # 0.6.0 (the modes, docs/UX-V2.md): MEMORY_MIB 256 (the sample arena 219 MiB); the old (0.5) project record loads
 # (bank A, slots 1-16). FILE (printed SAVE) three times from 2 s while playing (BROWSE, 0.6.42 PROJECTS) opens the SAMPLER (FILE itself is gated while
@@ -51,13 +52,13 @@ endif()
 # 0.6.1 (docs/UX-V2.md 9/10): projects are files in /data/projects (the flash keeps APP SETTINGS and the last name); the
 # test's old flash record still loads once; two inserts per track (the arena 200 MiB).
 set(_ec_run --folder ${CMAKE_CURRENT_LIST_DIR}/test_folder --flash-in ${CMAKE_CURRENT_LIST_DIR}/test_project.flash
-            --settle 3000 --seconds 4 --press PLAY@1500 --keys 25 --min-rms 0.02 --expect-ui ec0.6.89
+            --settle 3000 --seconds 4 --press PLAY@1500 --keys 25 --min-rms 0.02 --expect-ui ec0.6.93
             --expect-ui play:1 --expect-ui file:testloop_bpm120.wav --expect-ui ready:1 --expect-ui missing:0
             --expect-ui seq:on --audio-in ${CMAKE_CURRENT_LIST_DIR}/test_folder/audio/testloop_bpm120.wav
             --audio-in-latency 256)
-fm1_add_rfm1(elasticat VIRTUAL NEEDS fs1 WANTS ain1 FOLDERS audio=r data=rw MEMORY_MIB 272 AUTHORS "Quixotic7" METADATA skin/RemoteFM1Metadata.json
+fm1_add_rfm1(elasticat VIRTUAL NEEDS fs1 WANTS ain1 FOLDERS audio=r data=rw MEMORY_MIB 280 AUTHORS "Quixotic7" METADATA skin/RemoteFM1Metadata.json
              RUN_ARGS --folder ${CMAKE_CURRENT_LIST_DIR}/test_folder --flash-in ${CMAKE_CURRENT_LIST_DIR}/test_project.flash
-                      --settle 3000 --seconds 4 --press PLAY@1500 --keys 25 --min-rms 0.02 --expect-ui ec0.6.89
+                      --settle 3000 --seconds 4 --press PLAY@1500 --keys 25 --min-rms 0.02 --expect-ui ec0.6.93
                       --expect-ui play:1 --expect-ui file:testloop_bpm120.wav --expect-ui ready:1 --expect-ui missing:0
                       --expect-ui seq:on --audio-in ${CMAKE_CURRENT_LIST_DIR}/test_folder/audio/testloop_bpm120.wav
                       --audio-in-latency 256   # (inline, not ${_ec_run}: the catalog manager reads these as written)
