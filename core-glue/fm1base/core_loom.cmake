@@ -43,7 +43,10 @@ configure_file(${_loom_vfs}.in ${_loom_vfs} COPYONLY)
 # 9W9, its ER-99 engine and its hat samples) ships unchanged. In the owner's words: "ship the original, it is from the
 # emulated 909 on the schwung firmware for Ableton Move that Charles Vestal made". The credits name that origin. X0X
 # (core-glue/plat/core_x0x.cmake) stays gated: its 909 cymbals are a separate question, not decided
+# GATED since 0.14 (the owner, 2026-11-06): 0.14 builds in the 909 cymbals (its resource region), the same question as
+# X0X's; hosted at RemoteFM1FW only, as the author ships it, never bundled.
 fm1_add_core(loom ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_loom} UNIT core_loom.c DESC core_loom_desc.c
+             GATED "0.14 builds in the 909 cymbals, the same open question as X0X's 909 cymbals"
              EXTRA_SOURCES loom_synth.c loom_drumline.c loom_digisophie.c loom_sample.c loom_fx.c loom_bass303.c loom_d909.c
                            loom_bench.c loom_pattern.c loom_seq.c
              FAMILY fm1base LICENSE GPL-3.0-only
@@ -64,6 +67,7 @@ if(TARGET core_loom_obj)
 endif()
 # the .rfm1: its tracks as more output channels (aout1)
 fm1_add_rfm1(loom AUTHORS "Charles Vestal" AUDIO_OUT ${_loom_uac_ch}
+             HOSTED_DESPITE_GATE "the author ships the 909 cymbals in every package: built as shipped, hosted at RemoteFM1FW only, never bundled (owner, 2026-11-06)"
              RUN_ARGS --press PLAY@4100 --expect-aout ${_loom_uac_ch})   # (a fresh project's beat on T1: channel 3)
 # the golden check: fm1-base's host simulator (build.py --host: base/host/plat_host.c with the app, PLAT_HOST, its o2
 # units, fm1.toml's backup) and the core, one script
