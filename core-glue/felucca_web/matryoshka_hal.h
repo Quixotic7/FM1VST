@@ -110,6 +110,9 @@ static inline int fm1_cpu1_run(void (*fn)(uint32_t), uint32_t arg) { (void)fn; (
 static inline int fm1_cpu1_run_mischecked(void (*fn)(uint32_t), uint32_t arg) { (void)fn; (void)arg; return 0; }
 static inline int fm1_cpu1_wait(void) { return 0; }
 static uint32_t fm1_cpu1_stack_used(void) { return 0; }
+/* app.ld's core-1 stacks (main.c's DIAG page: the pool left free up to them): a stand-in at the pool's end, so the
+ * page reads 0 free beyond the pool */
+#define _c1_ustack ((uint32_t *)(void *)_pool_end)
 static inline int fm1_cpu1_busy(void) { return 0; }
 
 /* --------------------------------------------------------------- fm1_guard.h --- */
