@@ -10,7 +10,7 @@
  *   the flash      the device's own layout in the NOR image (bytemania_host.c): the settings record at 0xFC000
  *                  (DNGY), the library's four sectors (64 user slots, "BYT2") from 0x97000
  *   SysEx          in: every frame goes to ota.c's ota_service, as the device's platform_poll hands them: the
- *                  M-UPGRADE identity (FM-1_942: tools/build.py --release 1.2.0); out: its replies
+ *                  M-UPGRADE identity (FM-1_942: tools/build.py --release 1.3.0); out: its replies
  *   the LEDs       host_led per id (0..13 buttons, 14 + k keys): on = lit
  * MASTER is the glue's (the device's curve, after app_audio). Not here: USB audio, the rescue, the boot guard (the
  * device branch's). */
@@ -93,7 +93,7 @@ static void fm1core_dg_info(char *buf, uint32_t n)
 }
 
 /* the M-UPGRADE identity: platform.c's platform_poll gives every frame to ota_service */
-#define FELUCCA_ID "FM-1_942"             /* tools/build.py --release 1.2.0: FM-1_94 + the minor digit */
+#define FELUCCA_ID "FM-1_942"             /* tools/build.py --release 1.3.0: FM-1_94 + the minor digit */
 #define FM1CORE_DG_OTA_C "../../cores/bytemania/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
 
