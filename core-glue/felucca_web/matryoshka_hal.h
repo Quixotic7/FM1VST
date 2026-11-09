@@ -92,6 +92,8 @@ extern uint32_t _rt_start[], _rt_end[];
 static void fm1_guard_enable(uint32_t which) { (void)which; }
 static void fm1_guard_lock_top(void) {}
 static void fm1_guard_unlock_top(void) {}
+static int fm1_guard_top_locked(void) { return 0; }   /* (1.11.0: c1_boot) */
+static void fm1_guard_pc_open(void) {}
 
 /* --------------------------------------------------------------- fm1_timer.h --- */
 static uint8_t fm1core_mt_t5_on;
@@ -148,6 +150,10 @@ static int32_t fm1_adc_read(uint32_t ch) { return ch == FM1_ADC_MASTER ? fm1core
 #define FM1_XIP(off) (fm1nor_image + (uint32_t)(off))
 #define FL_XIP(off) FM1_XIP(off)
 static inline const uint8_t *fm1_xip_ptr(uint32_t off) { return fm1nor_image + off; }
+/* fm1_flash_id.h (1.11.0): the two 1 MiB parts the FM-1 ships with */
+#define FL_JEDEC_PUYA 0x856014u
+#define FL_JEDEC_UCUN 0xB36014u
+#define FL_JEDEC_OK(id) ((id) == FL_JEDEC_PUYA || (id) == FL_JEDEC_UCUN)
 static uint32_t fl_jedec_ram(void) { return 0x856014u; }   /* the expected 1 MiB part */
 static uint32_t fl_status_ram(void) { return 0; }
 static void fl_inval(uint32_t off, uint32_t n) { (void)off; (void)n; }
