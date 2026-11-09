@@ -172,6 +172,13 @@ function(fm1_add_core id glue)
             message(STATUS "${id} core: shares ${_shared}'s generate step (the same tree; its GEN / EXTRA_GEN rule)")
         else()
             file(GLOB gen_scripts CONFIGURE_DEPENDS ${groot}/tools/*.py)
+            # the tree's checked-out commit too: a new pin can change what the step reads (Ripple 0.6.1 renamed its
+            # currents with no tools/*.py change, and the stale build/gen kept the old built-in volume)
+            execute_process(COMMAND git rev-parse --absolute-git-dir WORKING_DIRECTORY ${src}
+                            OUTPUT_VARIABLE _gitdir OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET RESULT_VARIABLE _gr)
+            if(_gr EQUAL 0 AND EXISTS ${_gitdir}/HEAD)
+                list(APPEND gen_scripts ${_gitdir}/HEAD)
+            endif()
             add_custom_command(
                 OUTPUT ${gen_headers} ${_outs}
                 ${_cmds}
