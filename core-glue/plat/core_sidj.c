@@ -44,7 +44,7 @@
 
 #define SIDJ_HOST 1                       /* the device's .pool sections off (plat.h SIDJ_POOL, engine.h ENG_POOL) */
 #define SIDJ_VERSION FM1CORE_VERSION
-#define FELUCCA_ID "FM-1_64010400"        /* the package identity: build.py --release 1.4.0 (FM-1_64 01 04 00) */
+#define FELUCCA_ID "FM-1_64010501"        /* the package identity: build.py --release 1.5.1 (FM-1_64 01 04 00) */
 #define FELUCCA_UAC 0                     /* (USB audio: not in the ABI) */
 #define FELUCCA_UAC_STEMS 0
 #define FM1CORE_PL_SX 1                   /* the songs page and the installer's M-UPGRADE identity (plat_sx.h) */
