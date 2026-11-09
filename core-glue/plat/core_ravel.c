@@ -70,6 +70,10 @@ int plat_prefs_save(const void *src, int len)
 {
     return flash_ok && len > 0 ? st_save(OBJ_RPREF, src, (uint32_t)len) : -9;
 }
+/* 1.27.0's GLO > CPU 2 BUFFER and the drawing test, as its own host build (host/host_core.c) has them: no DMA to run
+ * ahead of here (-1: the page shows no choice), the screen drawn as usual */
+int plat_audio_safe(int on) { (void)on; return -1; }
+void plat_ui_slow(int on) { (void)on; }
 
 /* the updater's ota.c on the glue's transport: the identity answered, the frame left in ota_dec for the transfers;
  * its flash hooks refuse (common/sysex_ota.h) */
