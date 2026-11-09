@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# ChoralRoot 0.29.2 (https://github.com/Quixotic7/ChoralRootFM1, tag v0.29.2): its own emulator's unit,
+# ChoralRoot 0.32 (https://github.com/Quixotic7/ChoralRootFM1, tag v0.32): its own emulator's unit,
 # tools/emu/emu_fw.c, through core_choralroot.c and the family's glue (crf_glue.h; cmake/FM1Cores.cmake: fm1_add_core)
 include(${CMAKE_CURRENT_LIST_DIR}/crf.cmake)
 set(_cr ${CMAKE_SOURCE_DIR}/cores/ChoralRootFM1)
