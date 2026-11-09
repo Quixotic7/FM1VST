@@ -29,7 +29,7 @@
  *                  mailbox, usb_poll moves them into the firmware's rings as EP1 would (its own flow control: SysEx held
  *                  while a frame waits), SysEx frames to the main loop's host_poll: the editor's protocol (proto.c,
  *                  F0 7D 4D 31 ..: HELLO -> INFO, the patch upload, STORE, the bank) and the M-UPGRADE handshake (ota.c:
- *                  the identity FM-1_7010901); midi_out_take reads the mailbox's out ring (SysEx first, never split)
+ *                  the identity FM-1_7011100); midi_out_take reads the mailbox's out ring (SysEx first, never split)
  *   updates        the update key (F0 22 24 35 7F F7, usb.ota_req) and the UBOOT key (F0 22 24 35 7D F7, usb.uboot_req)
  *                  are cleared after each interrupt: no update and no chip boot inside a core. An installer gets the
  *                  identity, then no session
