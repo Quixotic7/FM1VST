@@ -55,6 +55,7 @@
 #if !defined PLAT_HOST || !defined PLAT_WEB
 #error "PLAT_HOST and PLAT_WEB: Ripple's emulator path (core_ripple.cmake)"
 #endif
+#define FM1CORE_FB_MIRROR_DIM 1           /* (fm1-base 9bca715 on, Ripple 0.6.1: mirror_leds with the glow's LEDs; mirror_mid) */
 #include "../fm1base/fm1base_hal.h"
 
 void rp_lua_budget(void);                 /* ripple_lua_hook.c: a pass's Lua budget, full again */

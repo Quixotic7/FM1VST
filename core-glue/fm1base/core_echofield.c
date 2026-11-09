@@ -68,6 +68,7 @@
 #define FM1B_CPU2 0                       /* (fm1.toml cpu2 = true: not built, above) */
 #define FM1CORE_PL_SX 1                   /* the managers' SysEx (core-glue/plat/plat_sx.h) */
 #define FM1CORE_PL_SX_CORO 1              /* (a restore and an upload wait for the host: the service's coroutine) */
+#define FM1CORE_FB_MIRROR_DIM 1           /* (fm1-base 9bca715 on, Echofield 0.2.10: mirror_leds with the glow's LEDs; mirror_mid) */
 #include "fm1base_hal.h"
 #include "../plat/plat_sx.h"
 
@@ -128,6 +129,7 @@ static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room
 #include "panel.c"
 #include "radio_none.c"
 static volatile uint8_t midi_usb_lost;   /* (usb.c's: the host's link never drops here; plat_usb_lost says 0) */
+static void fm1_guard_pc_extend(uint32_t end) { (void)end; }   /* (the guard's code window, plat_code_window: no meaning here) */
 #include "plat_fm1.c"
 /* the second core (cpu2.c, not built): one core, never given up (plat.h; app.c's STATS and SYSTEM page read these) */
 int plat_cpu2_set(int on) { return on ? -1 : 0; }
