@@ -53,6 +53,7 @@
 #if defined FM1B_CPU2 && FM1B_CPU2
 #error "FM1B_CPU2: one thread runs the device here (core_remotefm1.c)"
 #endif
+#define FM1CORE_FB_MIRROR_DIM 1           /* (fm1-base 9bca715 on, RemoteFM1 0.3.5: mirror_leds with the glow's LEDs; mirror_mid) */
 #include "fm1base_hal.h"
 
 /* felucca-bsp's two more steady LED levels (RemoteFM1's patch 0004, boards/fm1/fm1_input.h: fm1_led_lv, lit a8 / 8 and
