@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# FM1-TRAX (https://github.com/jartificer/fm1-trax, tag v0.9.3 = bea3146; GPL-3.0-only), a Mega Drive music tracker
+# FM1-TRAX (https://github.com/jartificer/fm1-trax, tag v0.9.5 = bb26ad0; GPL-3.0-only), a Mega Drive music tracker
 # (YM2612 + SN76489) on FM1-GM's platform (Felucca's, by way of X0X and FoMni): the plat glue
 # (core-glue/plat/README.md) over the unmodified submodule. The device's unity build (main.c: the UI, the settings and
 # song slots, the store, the editor's link) is core_trax.c; the chips and the tracker its own units, as tools/build.py
@@ -13,7 +13,7 @@ fm1_add_core(trax ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_trax} UNIT core_trax.c DES
              FAMILY plat LICENSE GPL-3.0-only
              CREDITS "FM1-TRAX by jartificer, on FM1-GM's platform (Felucca by Leo Kuroshita of Hügelton Instruments, X0X and FoMni by Charles Vestal).\nThe demo song “Sunset Beach Galaxy” by Tobikomi (the YM2017 music cart), GPL-3.0.\nThe Terminus font, SIL OFL 1.1."
              GEN drums.h felucca_font.h PYTHON_NEEDS raqm
-             VERSION 0.9.3
+             VERSION 0.9.5
              FLAGS -ffp-contract=off
              INCLUDES ${_trax}/firmware/src/dsp ${_trax}/firmware/src/trk ${_trax}/firmware/src/app)
 
