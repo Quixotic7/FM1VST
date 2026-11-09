@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Ripple 0.4 (https://github.com/charlesvestal/fm1-ripple, tag v0.4 = 34956a1; MPL-2.0, with Lua 5.4.7, Plaits /
+# Ripple 0.6.1 (https://github.com/charlesvestal/fm1-ripple, tag v0.6.1 = a710e43; MPL-2.0, with Lua 5.4.7, Plaits /
 # stmlib, the currents SDK and the MIDI effects MIT): the first Fantasy CFW (docs/VIRTUAL-CARTS.md section 7), a
 # host-only .rfm1 whose droplets come from the shared RemoteFM1 folder. The fm1-base glue (core-glue/fm1base/README.md)
 # over the unmodified submodule and its own submodules (base = fm1-base @ 2d8ed74, base/bsp = felucca-bsp @ 773b0b9),
@@ -24,12 +24,12 @@
 # lines, whose built-in volume needs the device's toolchain (the .cur files); ripple_gen.py instead makes the empty
 # disk, the built-in volume (the droplets and a stand-in .cur per compiled-in current) and the Faust currents' C.
 set(_rp ${CMAKE_SOURCE_DIR}/cores/fm1-ripple)
-set(_rp_ver 0.4)
+set(_rp_ver 0.6.1)
 set(_rp_app ${_rp}/app)
 set(_rp_gen ${_rp_app}/build/gen)
 set(_rp_bin ${CMAKE_BINARY_DIR}/ripple)
 # build.py --release: APP_VERSION the release in capitals; the package identity fm1.toml's id_prefix (FM-1_13) + the
-# major, minor and patch as two digits each (0.4: FM-1_13000400)
+# major, minor and patch as two digits each (0.4: FM-1_13000601)
 string(TOUPPER "${_rp_ver}" _rp_app_ver)
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)(\\.([0-9]+))?" _m "${_rp_ver}")
 set(_rp_id "FM-1_13")
