@@ -169,6 +169,29 @@ static int fl_prog_ram(uint32_t off, const uint8_t *src, uint32_t n, uint32_t *t
 }
 static int fl_read_ram(uint32_t off, uint8_t *dst, uint32_t n) { return fm1nor_read(off, dst, n) ? -2 : 0; }
 static void fl_plain_window_init(void) {}
+
+/* ---------------------------------------------------------- fm1_flash_step.h --- */
+/* 1.11.0's store writes in steps (storage_hw.c st_op, #656): the real one suspends the chip so the interrupts run
+ * between steps. Here there are no interrupts to serve: the write is done in its first step, on the same image and
+ * with the same range rule as fl_erase4k_ram / fl_prog_ram. The struct as the real header has it (st_op fills it) */
+typedef struct {
+    uint32_t op, off, n;
+    uint8_t hdr[4];
+    const uint8_t *src;
+    volatile int32_t *quiet;
+    uint32_t quiet_n;
+    uint32_t serve;
+    uint32_t run_min, run_max, serve_max;
+    uint32_t state;
+    uint32_t t_start, off_max, sus_fail;
+    int rc;
+} fl_step_t;
+static void fl_step_ram(fl_step_t *b)
+{
+    int r = b->op == 0x20u ? fl_erase4k_ram(b->off, 0) : b->op == 0x02u ? fl_prog_ram(b->off, b->src, b->n, 0) : -1;
+    b->rc = r == -2 ? -4 : r;                        /* (-1 outside the store's areas; an image failure as a timeout) */
+    b->state = 2u;
+}
 static inline uint32_t irq_save(void) { return 0; }
 static inline void irq_restore(uint32_t f) { (void)f; }
 static int fl_erase4k(uint32_t off, uint32_t *took_us) { return fl_erase4k_ram(off, took_us); }
