@@ -4,7 +4,7 @@ local lib = require("a1lib")
 local synth, delay
 
 function init()
-  synth = current.load("plaits-va")
+  synth = current.load("macro-va")
   delay = current.load("delay")
   flow.set(synth, delay)
   print("a1tone " .. lib.word())
