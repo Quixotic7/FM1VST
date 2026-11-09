@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Chipbox 1.3.3 (https://github.com/pbarilla/chipbox, tag v1.3.3, 4851031): the Dinghy family glue (core-glue/dinghy/)
+# Chipbox 1.5.1 (https://github.com/pbarilla/chipbox, tag v1.5.1, 4851031): the Dinghy family glue (core-glue/dinghy/)
 # over the unmodified submodule cores/chipbox, in its host mode (CHIPBOX_HOST), as core_smileyface.cmake does for its
 # descendant. platform.c includes "../../tests/host.c" by a relative path (a program: script, WAV, main), so clang's
 # -ivfsoverlay maps that path to chipbox_host.c. The same overlay maps two files to copies written here, in the build
@@ -42,7 +42,7 @@ fm1_add_core(chipbox ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_cb}
              UNIT core_chipbox.c DESC core_chipbox_desc.c FAMILY dinghy LICENSE GPL-3.0-only
              CREDITS "Chipbox by pbarilla (the app: the chips, the sequencer, the projects, its views, the website), on Dinghy by zvenson (the wiring platform.c, the host mode), over Felucca's platform by Leo Kuroshita (Hügelton Instruments), with SLOOP's changes by isod89. GPL-3.0-only. The SID's combined waveform tables are reSID's (Dag Lem, GPL-2.0-or-later). The screen's font is Terminus Font (8x16, Dimitar Toshkov Zhekov), SIL Open Font License 1.1. The full notices: the release's licences/cores/chipbox/ (LICENSING.md)."
              CREDITS_FILES ${_cb}/assets/fonts/Terminus-LICENSE.txt
-             NO_GEN VERSION 1.3.3 DEFINES APP_VER="1.3.3"
+             NO_GEN VERSION 1.5.1 DEFINES APP_VER="1.5.1"
              INCLUDES ${_cb}/firmware/src ${_cb}/firmware/gen ${CMAKE_CURRENT_LIST_DIR}
              FLAGS "-Dsection(x)=aligned(4)" "-ivfsoverlay" "${_cb_vfs}")
 if(TARGET core_chipbox_obj)
@@ -54,7 +54,7 @@ dinghy_core(chipbox core_chipbox.c)
 # the golden check: the same script on its own host sim (tests/host.c and chipbox.c unchanged; BOOT_DEMO=1 is the
 # power-on screen a fresh flash shows first, as the core does), the screens compared at the script's shot
 dinghy_golden_check(chipbox SCRIPT golden_chipbox.txt AT 6000 SOURCE ${_cb}/firmware/src/chipbox.c
-                    DEFINES CHIPBOX_HOST BOOT_DEMO=1 APP_VER="1.3.3"
+                    DEFINES CHIPBOX_HOST BOOT_DEMO=1 APP_VER="1.5.1"
                     INCLUDES ${_cb}/firmware/src ${_cb}/firmware/gen
                     FLAGS "-Dsection(x)=aligned(4)")
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md): the main loop on the coroutine, so Asyncify
