@@ -14,7 +14,7 @@ fm1_add_core(tessera ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/
              GEN ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h melodee_tables.h pid_help.h melodee_fm6.h
                  x0x_drum_tables.h
              EXTRA_GEN "tools/gen_909_tables.py build/gen/x0x_drum_tables.h"
-             VERSION 3.2.2
+             VERSION 3.4.1
              DEFINES MELODEE_FM6=1 MELODEE_SID=0 MELODEE_SID_KIT=0 MELODEE_PHYS=1 MELODEE_PLAITS=0 MELODEE_TRIO=1
                      MELODEE_LOOK=1 MELODEE_HELP_PACKED=1)
 set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/core_tessera.c PROPERTIES COMPILE_OPTIONS
