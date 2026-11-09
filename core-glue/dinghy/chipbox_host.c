@@ -102,6 +102,11 @@ static int midi_get(uint8_t *st, uint8_t *d1, uint8_t *d2)
     return 1;
 }
 static void midi_send(uint32_t st, uint32_t d1, uint32_t d2) { fm1core_dg_midi_out(st, d1, d2); }
+/* platform.c's (1.5.1 / 1.1.0): the MIDI clock from the audio ISR, and the installer's flags. The host has no
+ * installer and no radio to pause, so ota_hit_ms stays 0 and ota_back never rises. */
+__attribute__((unused)) static void midi_isr_send(uint32_t st, uint32_t d1, uint32_t d2) { midi_send(st, d1, d2); }
+__attribute__((unused)) static volatile uint32_t ota_hit_ms;
+__attribute__((unused)) static volatile uint8_t ota_back;
 
 static void app_audio(int32_t *out, uint32_t n);
 static void app_main(void);
