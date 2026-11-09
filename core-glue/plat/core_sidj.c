@@ -159,6 +159,12 @@ static int song_prog(uint32_t off, const uint8_t *src, uint32_t n)
 }
 static void songs_changed(void);          /* the song store changed over USB (songs.c -> the UI) */
 static int songs_play_request(int k, int subsong);
+/* 1.5.1's screen reader (fm1-reader, announce.c from fm1-base), as sidj.c includes it: its SAYs go out on the managers'
+ * SysEx like the updater's replies. No words file (gen_words.py's ann_words.h is not generated here): the reader says
+ * the screen's text as it is */
+#define ANN_NAME "SiDJ " SIDJ_VERSION
+#include "announce.c"
+static int ann_wire_send(const uint8_t *p, uint32_t n) { return ota_wire_send(p, n); }
 #include "app/settings.c"
 #include "app/songs.c"
 #include "app/panel.c"
