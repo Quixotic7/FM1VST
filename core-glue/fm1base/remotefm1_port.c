@@ -49,6 +49,8 @@ static void rp_service(void)
 
 static int rp_usb_cfg(void) { return usb.up && usb.config; }
 static int rp_usb_live(void) { return usb.up && usb.config && !usb.suspended; }
+/* 0.3.5: USB MIDI out is taken (rfm_main.c's routing): the computer here, never a USB HOST device */
+static int rp_usb_out(void) { return rp_usb_cfg(); }
 static uint32_t rp_usb_resets(void) { return 0; }
 
 /* SysEx out: a whole message's packets onto the USB out ring (plat_hal.h midi_out_event: dropped there when the host
