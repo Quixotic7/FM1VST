@@ -39,7 +39,7 @@
 #include "env.h"                          /* getenv -> NULL: no environment in a core (common/env.h) */
 
 #define APP_VERSION FM1CORE_VERSION
-#define FELUCCA_ID "FM-1_7010301"         /* the package identity: build.py --release 1.3.1 (FM-1_7 01 03 01) */
+#define FELUCCA_ID "FM-1_7010302"         /* the package identity: build.py --release 1.3.2 (FM-1_7 01 03 01) */
 #define FM1CORE_PL_SX 1                   /* the managers' SysEx (core-glue/plat/plat_sx.h) */
 #define FM1CORE_FB_MIRROR_DIM 1           /* (this fm1-base's mirror_leds: the glow's LEDs too; mirror_mid) */
 #include "fm1base_hal.h"

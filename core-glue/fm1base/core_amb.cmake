@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# AMB-1 (https://github.com/charlesvestal/fm1-amb, tag v1.3.1; MPL-2.0): the fm1-base glue (core-glue/fm1base/README.md)
+# AMB-1 (https://github.com/charlesvestal/fm1-amb, tag v1.3.2; MPL-2.0): the fm1-base glue (core-glue/fm1base/README.md)
 # over the unmodified submodule and its own submodules (base = fm1-base, base/bsp = felucca-bsp); the engine
 # (app/dsp/amb.c) its own unit, as fm1-base's build.py builds an fm1.toml "o2" unit.
 # The generate step is fm1-base's build.py generate() with the globals its main() sets from the app's directory (APP,
@@ -11,7 +11,7 @@ fm1_add_core(amb ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_amb} UNIT core_amb.c DESC c
              FAMILY fm1base LICENSE MPL-2.0
              GEN felucca_font.h ann_words.h GEN_ROOT app GEN_PYTHON "${_amb_gen}" PYTHON_NEEDS raqm
              SUBMODULES_RECURSIVE
-             VERSION 1.3.1
+             VERSION 1.3.2
              FLAGS -ffp-contract=off
              INCLUDES ${_amb}/app ${_amb}/app/dsp ${_amb}/base/include ${_amb}/base/device ${_amb}/base/lib)
 # the golden check: fm1-base's host simulator (build.py --host: base/host/plat_host.c with the app, its o2 unit) and
@@ -28,7 +28,7 @@ if(TARGET amb_core)
     target_include_directories(fm1base_touch_check PRIVATE ${_amb}/app/build/gen ${_amb}/app ${_amb}/app/dsp
                                ${_amb}/base/include ${_amb}/base/device ${_amb}/base/lib ${FM1_CORE_API_DIR}
                                ${FM1_COMMON_DIR})
-    target_compile_definitions(fm1base_touch_check PRIVATE APP_TOUCH FM1CORE_ID="amb" FM1CORE_VERSION="1.3.1")
+    target_compile_definitions(fm1base_touch_check PRIVATE APP_TOUCH FM1CORE_ID="amb" FM1CORE_VERSION="1.3.2")
     target_compile_options(fm1base_touch_check PRIVATE -w -fno-common)
     add_dependencies(fm1base_touch_check gen_amb)
 endif()
