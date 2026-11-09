@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# CTL-1 1.0.1 (https://github.com/charlesvestal/fm1-ctl, tag v1.0.1 = 2b560cf; Charles Vestal's MIDI controller firmware
+# CTL-1 1.0.3 (https://github.com/charlesvestal/fm1-ctl, tag v1.0.3 = 9bb5abc; Charles Vestal's MIDI controller firmware
 # with an onboard GM synth: MPL-2.0, on fm1-base and felucca-bsp, MPL-2.0, its own submodules base = fm1-base @
 # 698e2cb, base/bsp = felucca-bsp @ f878800): the fm1-base glue (core-glue/fm1base/README.md) over the unmodified
 # submodule, from AMB-1's glue. The GM synth (fm1.toml "o2": app/dsp/gm.c and Sonivox EAS, app/dsp/eas/, Apache-2.0)
@@ -11,8 +11,8 @@
 # CONF from app/fm1.toml, GEN = app/build/gen): the fonts (fm1-base's Barlow Semi Condensed) and the screen reader's
 # words; one Python expression, run in app/ (GEN_ROOT). Not gated.
 set(_ctl ${CMAKE_SOURCE_DIR}/cores/fm1-ctl)
-set(_ctl_ver 1.0.1)
-# build.py --release 1.0.1: APP_VERSION "1.0.1", the identity fm1.toml's id_prefix FM-1_6 + 01 00 01
+set(_ctl_ver 1.0.3)
+# build.py --release 1.0.3: APP_VERSION "1.0.3", the identity fm1.toml's id_prefix FM-1_6 + 01 00 01
 string(TOUPPER "${_ctl_ver}" _ctl_app_ver)
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)(\\.([0-9]+))?" _m "${_ctl_ver}")
 set(_ctl_id "FM-1_6")

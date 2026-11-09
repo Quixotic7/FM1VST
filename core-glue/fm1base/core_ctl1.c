@@ -16,7 +16,7 @@
  * (plat_midi_send to the USB-MIDI out ring, fm1base_hal.h), MIDI in is passed along, and the onboard GM synth plays
  * it all (Sound on, the default), so the core has sound of its own.
  *
- * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 1.0.1's: "1.0.1" and FM-1_6010001
+ * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 1.0.3's: "1.0.3" and FM-1_6010003
  * (fm1.toml id_prefix FM-1_6 + 01 00 01), from core_ctl1.cmake.
  * Left out, as in every core: the splash (APP_SPLASH: plat_glue.h starts the UI at power-on). APP_QUIET (the radio's
  * first second) never applies with no radio; APP_OVERLOAD (the synth sheds voices when the render runs late) has no
