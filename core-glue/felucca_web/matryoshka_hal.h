@@ -82,6 +82,36 @@ static void fm1_irq_attach(uint32_t n, void (*h)(void), uint32_t prio) { (void)n
 static void fm1_irq_mask(uint32_t n) { (void)n; }
 static void fm1_irq_enable_all(void) {}
 
+/* --------------------------------------------- fm1_cpu1.h, fm1_core1_stop.h --- */
+/* 1.11.0's second core (#271): it never starts here, so every job stays on the one core (fm1_cpu1_run says 0: the
+ * caller does the work, as on a unit where core 1 is barred). The state the DIAG pages read, at rest */
+typedef struct {
+    volatile uint32_t job, arg;
+    void (*volatile fn)(uint32_t);
+    volatile uint32_t check;
+    uint32_t pad0[12];
+    volatile uint32_t alive, done;
+    volatile uint32_t bad, bad_job, bad_done, bad_fn;
+    uint32_t pad1[10];
+} fm1_c1_mb_t;
+static fm1_c1_mb_t fm1_c1_mb;
+static volatile uint32_t fm1_c1_trace;
+static uint8_t fm1_c1_on;
+static uint8_t fm1_c1_gave_up;
+#define FM1_C1_BAR_MAGIC 0x43314241u
+static struct { uint32_t magic, barred; } fm1_c1_bar;
+static volatile uint32_t fm1_c1_race_ticks;
+#define FM1_CRASH_EMU_C1 0x000000C1u
+static void fm1_cpu1_bar(void) { fm1_c1_bar.magic = FM1_C1_BAR_MAGIC; fm1_c1_bar.barred = 1; }
+static inline void fm1_cpu1_halt(void) {}
+static void fm1_cpu1_hold(void) { fm1_c1_on = 0; }
+static int fm1_cpu1_start(void) { return -1; }
+static inline int fm1_cpu1_run(void (*fn)(uint32_t), uint32_t arg) { (void)fn; (void)arg; return 0; }
+static inline int fm1_cpu1_run_mischecked(void (*fn)(uint32_t), uint32_t arg) { (void)fn; (void)arg; return 0; }
+static inline int fm1_cpu1_wait(void) { return 0; }
+static uint32_t fm1_cpu1_stack_used(void) { return 0; }
+static inline int fm1_cpu1_busy(void) { return 0; }
+
 /* --------------------------------------------------------------- fm1_guard.h --- */
 #define FM1_GUARD_STACK 1u
 #define FM1_GUARD_WRITE 2u
