@@ -3,9 +3,10 @@
  * TRS driver usb/midi_uart.c and Felucca's update protocol src/ota.c, over this folder's hal/), and the core's
  * MIDI in and out on usb.c's rings, in the place of its EP1 (usb_poll, the SIE, never runs):
  *   in    usb.c's ep1_take, packet by packet: midi_in_event (SIDOU's raw hook usb_raw_in into its own ring, usb.c's
- *         SysEx assembly for the update protocol's frame, its filtered copy), refused (0: the host retries after its
+ *         SysEx assembly for the update protocol's frames, its filtered copy), refused (0: the host retries after its
  *         next render) while usb.c's ring is short of EP1_ROOM (SIDOU's back-pressure, ep1_hold, sets it so), or
- *         while the update protocol's one frame waits and this packet starts another (usb.c would drop it)
+ *         while the update protocol's frames waiting leave no room for its bytes (sx_fits, as ep1_take asks it for
+ *         a whole USB packet's)
  *   out   usb.c's ep1_tx: the update protocol's replies first, never split by notes, then MIDI out
  * USB is up and configured from the boot on (a host is there: MIDI out flows, SysEx replies go out). */
 #include "sidou_glue.h"
@@ -22,12 +23,11 @@ void fm1core_sd_usb_attached(void)
 
 int fm1core_sd_midi_in(uint32_t pkt)
 {
-    const uint32_t cin = pkt & 15u;
     if (MQ - (mi_w - mi_r) < EP1_ROOM)
         usb_in_pump();                    /* (the main loop's: the copies SIDOU's ring has taken) */
     if (MQ - (mi_w - mi_r) < EP1_ROOM)
         return 0;
-    if (cin >= 4u && cin <= 7u && ((pkt >> 8) & 0xFFu) == 0xF0u && sx_ready)
+    if (!sx_fits(3u))
         return 0;
     poll_stamp = fm1_ticks();
     if (usb.up)
@@ -55,8 +55,8 @@ int fm1core_sd_midi_out_take(uint32_t *pkt)
 
 void fm1core_sd_midi_dump(void)
 {
-    printf("  midi: %u entries in, %u lost, %u restarts; usb ring in %u out %u, sysex out %u%s; sysex %s\n",
+    printf("  midi: %u entries in, %u lost, %u restarts; usb ring in %u out %u, sysex out %u, %u update frames waiting; sysex %s\n",
            (unsigned)midi_stats.entries, (unsigned)midi_stats.lost, (unsigned)midi_stats.restarts,
            (unsigned)(mi_w - mi_r), (unsigned)(mo_w - mo_r), (unsigned)(so_w - so_r),
-           sx_ready ? ", an update frame waiting" : "", midi_sysex_running ? "running" : "idle");
+           (unsigned)(sx_made - sx_taken), midi_sysex_running ? "running" : "idle");
 }

@@ -1,10 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# SIDOU (https://github.com/dsablic/sidou, tag v1.7.0 = a2a5c76; GPL-3.0-or-later, the image GPL-3.0-only), a C64 SID
-# machine: bare-metal firmware on Felucca's HAL, its own glue family (core-glue/sidou/README.md) over the unmodified
-# submodule. Built as the firmware's CMake builds it: the portable instrument (app/, core/: their add_library lists,
-# read here) as their own units, the device layer (platform/fm1: main.c, midi.c with Felucca's usb.c and ota.c,
-# audio.c, store_fm1.c, input.c, ui.c) over this folder's hal/, lcd.c replaced by sidou_lcd.c. Every table and the
-# demo song are committed (NO_GEN). The identity is the release's (ci.yml: a v* tag builds SIDOU_PRODUCT FM-1_964).
+# SIDOU (https://github.com/dsablic/sidou, tag v1.9.0 = 63b0bea5; GPL-3.0-or-later, the image GPL-3.0-only), a C64 SID
+# machine: bare-metal firmware on felucca-bsp (1.8 on; Felucca's HAL before), its own glue family
+# (core-glue/sidou/README.md) over the unmodified submodule. Built as the firmware's CMake builds it: the portable
+# instrument (app/, core/: their add_library lists, read here) as their own units, the device layer (platform/fm1:
+# main.c, midi.c with felucca-bsp's bsp/chip/usb.c and ota.c (MPL-2.0), audio.c, store_fm1.c, input.c, ui.c) over
+# this folder's hal/, lcd.c replaced by sidou_lcd.c. Every table and the demo song are committed (NO_GEN). Bluetooth
+# MIDI (SIDOU_BLE, on in the firmware's own build) is left out: a host has no radio, so main.c, midi.c, ui.c and
+# app/ build as the firmware does with SIDOU_BLE=OFF (the status line reads READY., no radio report). The identity
+# is the release's (ci.yml: a v* tag builds SIDOU_PRODUCT FM-1_964).
 set(_sd ${CMAKE_SOURCE_DIR}/cores/sidou)
 set(_sd_fm1 ${_sd}/platform/fm1)
 set(_sd_glue ${CMAKE_CURRENT_LIST_DIR})
@@ -36,7 +39,7 @@ sidou_lib_sources(${_sd}/app/CMakeLists.txt sidou_live ${_sd_rel}/app _sd_app)
 sidou_lib_sources(${_sd}/core/CMakeLists.txt sidou_core ${_sd_rel}/core _sd_core)
 
 # ---- the overlays: the submodule's file, these lines changed (string(REPLACE), each checked), into the build folder,
-# read in its place through a clang VFS overlay; with them every HAL header (platform/fm1/hal/fm1_*.h, also where
+# read in its place through a clang VFS overlay; with them every HAL header (platform/fm1/bsp/chip, bsp/boards/fm1, hal: fm1_*.h, also where
 # usb.c and midi_uart.c include it by a relative path) is read as this folder's hal/
 file(MAKE_DIRECTORY ${_sd_bin})
 function(sidou_overlay src dst)           # ARGN: old new old new .. (each ";" written <SC>)
@@ -101,11 +104,19 @@ set(_v "{ \"version\": 0, \"case-sensitive\": \"true\", \"use-external-names\": 
 foreach(_f main.c audio.c store_fm1.c input.c)
     string(APPEND _v "  { \"type\": \"file\", \"name\": \"${_sd_fm1}/${_f}\", \"external-contents\": \"${_sd_bin}/${_f}\" },\n")
 endforeach()
+# felucca-bsp's layout (1.8 on): the chip's headers in bsp/chip, the board's in bsp/boards/fm1, and hal/ keeps the
+# update loader's copies; a shim stands in for its header wherever the firmware has one
 foreach(_h IN LISTS _sd_hal)
-    if(NOT EXISTS ${_sd_fm1}/hal/${_h})
-        message(FATAL_ERROR "sidou: hal/${_h} shims a header the firmware no longer has (${_sd_fm1}/hal)")
+    set(_found 0)
+    foreach(_d bsp/chip bsp/boards/fm1 hal)
+        if(EXISTS ${_sd_fm1}/${_d}/${_h})
+            set(_found 1)
+            string(APPEND _v "  { \"type\": \"file\", \"name\": \"${_sd_fm1}/${_d}/${_h}\", \"external-contents\": \"${_sd_glue}/hal/${_h}\" },\n")
+        endif()
+    endforeach()
+    if(NOT _found)
+        message(FATAL_ERROR "sidou: hal/${_h} shims a header the firmware no longer has (${_sd_fm1}/bsp/chip, bsp/boards/fm1, hal)")
     endif()
-    string(APPEND _v "  { \"type\": \"file\", \"name\": \"${_sd_fm1}/hal/${_h}\", \"external-contents\": \"${_sd_glue}/hal/${_h}\" },\n")
 endforeach()
 string(REGEX REPLACE ",\n$" " ] }\n" _v "${_v}")
 set(_sd_vfs ${_sd_bin}/sidou_vfs.yaml)
@@ -117,7 +128,7 @@ fm1_add_core(sidou ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_sd} UNIT core_sidou.c DES
              EXTRA_SOURCES sidou_midi.c sidou_audio.c sidou_store.c sidou_input.c sidou_lcd.c ${_sd_platform}
                            ${_sd_app} ${_sd_core}
              FAMILY sidou LICENSE GPL-3.0-only
-             CREDITS "SIDOU by SIDOU contributors (Denis Sablić, github.com/dsablic/sidou), GPL-3.0-or-later, the firmware image GPL-3.0-only with Felucca's HAL, USB stack, MIDI driver and update protocol (Leo Kuroshita, Hügelton Instruments).\nThe SID's combined waveforms, filter curves, voice DACs, oscillator and envelope follow reSIDfp (Antti S. Lankila, Leandro Nini, Dag Lem, the VICE Project), GPL-2.0-or-later. The song player carries GoatTracker 2 forward (Lasse Öörni and its contributors), GPL-2.0-or-later. The PSID player follows FM-1 SID's (Joakim Eriksson), BSD-2-Clause. The light reverb is a C port of Mutable Instruments Rings (Emilie Gillet), MIT.\nThe tune SIDOU LOOP, the drum kit and the digi drums are SIDOU's own (GPL-3.0-or-later)."
+             CREDITS "SIDOU by SIDOU contributors (Denis Sablić, github.com/dsablic/sidou), GPL-3.0-or-later, the firmware image GPL-3.0-only with felucca-bsp's USB stack and update protocol (MPL-2.0, by Leo Kuroshita, Hügelton Instruments, Kerem Kilic and its contributors) and Felucca's TRS MIDI driver (Leo Kuroshita, Hügelton Instruments).\nThe SID's combined waveforms, filter curves, voice DACs, oscillator and envelope follow reSIDfp (Antti S. Lankila, Leandro Nini, Dag Lem, the VICE Project), GPL-2.0-or-later. The song player carries GoatTracker 2 forward (Lasse Öörni and its contributors), GPL-2.0-or-later. The PSID player follows FM-1 SID's (Joakim Eriksson), BSD-2-Clause. The light reverb is a C port of Mutable Instruments Rings (Emilie Gillet), MIT.\nThe tune SIDOU LOOP, the drum kit and the digi drums are SIDOU's own (GPL-3.0-or-later)."
              VERSION ${_sd_ver}
              SUBMODULES_RECURSIVE
              NO_GEN
@@ -147,12 +158,14 @@ if(TARGET core_sidou_obj)
 endif()
 
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: what the firmware ships for what is
-# compiled in (its LICENSES/: GPL-3.0 for the image and SIDOU's own, GPL-2.0-or-later for reSIDfp's and GoatTracker's
-# parts, BSD-2-Clause for FM-1 SID's PSID design, MIT for Rings' reverb, GoatTracker's playroutine notice for the
+# compiled in (its LICENSES/: GPL-3.0 for the image and SIDOU's own, MPL-2.0 and felucca-bsp's NOTICE for its usb.c and
+# ota.c, GPL-2.0-or-later for reSIDfp's and GoatTracker's parts, BSD-2-Clause for FM-1 SID's PSID design, MIT for Rings' reverb, GoatTracker's playroutine notice for the
 # starter tunes' players) and its LICENSING.md
 fm1_add_rfm1(sidou AUTHORS "SIDOU contributors (Denis Sablić)"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSES/GPL-3.0-only.txt"
                            "GPL-3.0-or-later ({name})=LICENSES/GPL-3.0-or-later.txt"
+                           "MPL-2.0 (felucca-bsp's USB stack and update protocol in {name})=LICENSES/MPL-2.0.txt"
+                           "felucca-bsp NOTICE ({name})=platform/fm1/bsp/NOTICE"
                            "GPL-2.0-or-later (reSIDfp and GoatTracker 2 in {name})=LICENSES/GPL-2.0-or-later.txt"
                            "BSD-2-Clause (FM-1 SID's PSID player in {name})=LICENSES/BSD-2-Clause.txt"
                            "MIT (Mutable Instruments Rings' reverb in {name})=LICENSES/MIT.txt"

@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* SIDOU (https://github.com/dsablic/sidou, the pinned submodule cores/sidou): the core unit. SIDOU is bare-metal
- * firmware on Felucca's HAL (platform/fm1/hal, vendored): its portable instrument (app/, core/) is built as it is,
+ * firmware on felucca-bsp (platform/fm1/bsp, vendored): its portable instrument (app/, core/) is built as it is,
  * its device layer (platform/fm1) over this folder's hal/ (core_sidou.cmake reads every HAL header as this folder's).
  * This unit is platform/fm1/main.c (the boot, the song's and the tunes' glue, the main loop), unmodified but for two
  * places (core_sidou.cmake's overlay: the main loop's wait for the next interrupt is a yield, and an update request

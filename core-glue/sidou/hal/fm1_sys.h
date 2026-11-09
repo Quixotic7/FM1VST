@@ -12,6 +12,7 @@
 #endif
 #define FM1_RESET_PREP() ((void)0)
 FM1_INLINE void fm1_cpu1_halt(void) {}
+FM1_INLINE void fm1_cpu1_stop(void) {}    /* (felucca-bsp's fm1_cpu1_stop.h: no second core to hold) */
 static uint32_t fm1_p33_timeouts;
 static uint8_t fm1_p33_read(uint32_t a)
 {
