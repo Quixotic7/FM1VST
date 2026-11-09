@@ -252,6 +252,10 @@ static int st_prog(uint32_t off, const void *src, uint32_t n) { return fm1nor_pr
 static uint32_t irq_save(void) { return 0; }
 static void irq_restore(uint32_t f) { (void)f; }
 static uint32_t fl_jedec_ram(void) { return 0x856014u; }   /* the FM-1's part (ui.c settings_boot) */
+/* 2.0.5's fm1_flash.h, as its own web/emu/emu.c has them: either FM-1 flash chip, and a host build is not the
+ * chip-level emulated FM-1 (fm1-emu) that fl_emulated lightens the load for */
+static int fl_id_ok(uint32_t id) { return id == 0x856014u || id == 0xB36014u; }
+static int fl_emulated(void) { return 0; }
 #define FL_FAR(fn) (fn)
 #include "../../cores/hawk-chua/firmware/src/storage.c"
 
