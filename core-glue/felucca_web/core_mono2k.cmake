@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# MONO2K 1.9 (https://github.com/InigoHernandez/mono2k, tag v1.9 = b443b00): Sequencist's six mono machines after
+# MONO2K 1.9.1 (https://github.com/InigoHernandez/mono2k, tag v1.9.1 = 95d5763): Sequencist's six mono machines after
 # the Monomachine. Not Felucca's web/emu/felucca_web.c (MONO2K has none, so not fw_core.h either): its core
 # (firmware/src/m2k_core.c, the unity build behind m2k.h) driven by core_mono2k.c as the FM-1 build's
 # firmware/fm1/m2k_fm1.c drives it, with that build's own store and Patch Editor link (firmware/fm1/m2k_link.c) and
@@ -19,7 +19,7 @@ fm1_add_core(mono2k ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/m
              VERSION_FILE web/firmware/mono2k.json VERSION_REGEX "\"version\": *\"([^\"]*)\""
              INCLUDES ${CMAKE_SOURCE_DIR}/cores/mono2k/firmware/gen
              DEFINES M2K_FW=1 M2K_PATTERNS=64 M2K_PAT_SLOTS=2 M2K_PROJECTS=1 M2K_IMG_DATA=47104 POOL=
-                     M2K_VER="1.9" APP_VER="1.9")
+                     M2K_VER="1.9.1" APP_VER="1.9.1")
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: what is compiled in, MONO2K's GPL,
 # the platform's licensing notes (CS-1's, kept in firmware/fm1/LICENSES: ota.c's), the pixel font's CC BY-SA
 # (its adaptation note and the original's licence), Orbitron's OFL (the wordmark). Not the Terminus font
