@@ -4,13 +4,15 @@
  * with fm1-base and felucca-bsp (MPL-2.0) and Mutable Instruments' code (MIT) vendored in it) built with the fm1-base
  * glue (core-glue/fm1base/README.md). The include list follows fm1-base's device unity build (base/device/unity.c)
  * with the hardware left out, as LOOM-8's core does (core_loom.c): plat.h, the app's header, gfx.c, fm1-base's
- * defaults (fm1b_config.h), the store (storage.c on the NOR image, the app's APP_STORE_MAP: the live Biome, the
+ * defaults (fm1b_config.h), the platform's screen faces (sys_text.c), the store (storage.c on the NOR image, the app's APP_STORE_MAP: the live Biome, the
  * prefs, the User Banks), the updater's framing (felucca-bsp's chip/ota.c: the M-UPGRADE identity, and the pulls of
  * a restore), the screen reader (announce.c), the panel calibration (panel.c), the build with no radio
- * (radio_none.c, fm1.toml ble = false), the device's plat.h implementation (plat_fm1.c), backup and restore
- * (backup.c, fm1.toml backup = true: the .mddb of the project, the prefs and the User Banks) and the app (app.c: the
- * pages, the banks, the live editor's transfer, the diagnostics). The engine (app/dsp/dreams.cpp on Plaits, Rings,
- * Elements and stmlib) is C++, its own units (core_mutabledreams.cmake, fm1.toml "o2").
+ * (radio_none.c: fm1.toml ble = true, the base's own stack, is not built here; BLE MIDI is off, the WIRELESS MIDI page
+ * finds no device), the device's plat.h implementation (plat_fm1.c), backup and restore (backup.c, fm1.toml
+ * backup = true: the .mddb of the project, the prefs and the User Banks), the Bluetooth device list (btdev.c,
+ * APP_BTDEV) and the app (app.c: the pages, the banks, the live editor's transfer, the diagnostics). The engine
+ * (app/dsp/dreams.cpp on Plaits, Rings, Elements and stmlib) is C++, its own units (core_mutabledreams.cmake, fm1.toml
+ * "o2").
  *
  * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 1.4.0's: "1.4.0" and
  * FM-1_710010400 (fm1.toml id_prefix FM-1_710 + 01 04 00; DEVICE-TEST-REPORT-1.4.txt), from core_mutabledreams.cmake.
@@ -23,7 +25,7 @@
  * then RESTORE FROM USB? SEL / HOME) of the app's objects (backup.c, tools/dreams_backup.py). Here the same, in that
  * order, from the submodule's files; the restore waits as on the device: the service runs on a coroutine
  * (FM1CORE_PL_SX_CORO) that yields where the device feeds its watchdog. The log readout says what an emulated unit
- * has: no crash recorded, then "end". The remote control (7D 4C 43: the browser editor's panel and its lease, op 5)
+ * has: no crash recorded, then "end". The remote control (7D 4C 43: the browser editor's panel)
  * as main_fm1.c remote_frame, on plat_fm1.c's remote state, acked F0 7D 4C 43 op F7. The update key F0 22 24 35 7F F7
  * and UBOOT's F0 22 24 35 7D F7 are not taken (plat_sx.h): an installer gets the identity, no read requests (it
  * times out), and nothing is written. */
@@ -50,6 +52,7 @@
 #define FM1B_BACKUP 1                     /* fm1.toml backup = true (build.py opt_flags) */
 #define FM1CORE_PL_SX 1                   /* the managers' SysEx (core-glue/plat/plat_sx.h) */
 #define FM1CORE_PL_SX_CORO 1              /* (a restore waits for the host and for SEL: the service's coroutine) */
+#define FM1CORE_FB_MIRROR_DIM 1           /* (Mutable Dreams 1.5's fm1-base: mirror_leds with the glow's LEDs; mirror_mid) */
 #include "fm1base_hal.h"
 #include "../plat/plat_sx.h"
 
@@ -59,6 +62,7 @@
 #include "app.h"
 #include "gfx.c"
 #include "fm1b_config.h"
+#include "sys_text.c"
 #include "storage.c"
 
 /* felucca-bsp's chip/ota.c on the glue's transport (plat_sx.h), with unity.c's hooks on the core's HAL: the device's
@@ -105,7 +109,21 @@ static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room
 }
 #include "panel.c"
 #include "radio_none.c"
+/* plat_fm1.c's SysEx stream (APP_SYSEX: plat_sysex_begin / put / end, plat_sysex_room) writes USB-MIDI packets into
+ * usb.c's SysEx ring: here the managers' out ring (plat_sx.h fm1core_pl_sxo, the same CIN 4..7 packets), as LOOM-8's
+ * core (core_loom.c); the stream holds it (sx_busy) from begin to end */
+static uint8_t sx_busy;
+#define SXQ FM1SX_OUT_PKTS
+#define sx_out_q fm1core_pl_sxo.q
+#define so_w fm1core_pl_sxo.w
+#define so_r fm1core_pl_sxo.r
+static volatile uint8_t midi_usb_lost;   /* (usb.c's: the host's link never drops here; plat_usb_lost says 0) */
+static void fm1_guard_pc_extend(uint32_t end) { (void)end; }   /* (the guard's code window, plat_code_window: no meaning here) */
 #include "plat_fm1.c"
+#undef SXQ
+#undef sx_out_q
+#undef so_w
+#undef so_r
 #include "backup.c"
 /* unity.c's hooks for backup.c (fm1-base's "backup and restore" section, on the core's HAL: the same statements) */
 static uint8_t backup_streaming(void) { return bu.on; }
@@ -178,6 +196,7 @@ static int bu_room(void)                            /* the SysEx ring empty: a f
 static int bu_send(const uint8_t *p, uint32_t n) { return ota_wire_send(p, n); }
 static void bu_flush(void) { app_backup_flush(); }
 static void bu_hold(int on) { app_backup_hold(on); }
+#include "btdev.c"                        /* the WIRELESS MIDI page's devices (APP_BTDEV; on radio_none.c: none found) */
 #include "app.c"
 #undef __attribute__
 
@@ -230,8 +249,7 @@ static void fm1core_md_usb_cmd(uint32_t d)
                 !rc ? "RESTORED" : rc == RS_E_PLAYING ? "then restore" : rc == RS_E_NO ? "NOTHING CHANGED" : "NOT RESTORED");
     }
 }
-#define FM1CORE_FB_REMOTE_LEASE 1        /* (Mutable Dreams' fm1-base: plat_fm1.c remote_lease, op 5) */
-#include "fm1base_remote.h"           /* the remote control, 7D 4C 43 */
+#include "fm1base_remote.h"           /* the remote control, 7D 4C 43 (Mutable Dreams 1.5's fm1-base: no lease) */
 static int fm1core_md_sx_accept(const uint8_t *f, uint32_t n)   /* the frames a service of fm1_main reads */
 {
     return fm1sx_is_mupg(f, n) || FM1CORE_PL_SX_READER(f, n) || fm1core_pl_sx_is(f, n, 0x4Cu, 0x47u) ||
@@ -261,6 +279,7 @@ static void fm1core_md_sx_service(void)
 #define FM1CORE_PL_UI_INPUT() app_input_only()
 #define FM1CORE_PL_DIM_LEVEL (fm1core_fb_dim_lo ? FM1P_LED_FAINT : FM1P_LED_DIM)   /* the glow: DIM LO / HI */
 #define FM1CORE_PL_DIM_ON 1               /* (plat_lights fills the dim plane only while glowing) */
+#define FM1CORE_PL_MID_PLANE fm1_led_mid  /* plat_lights_mid's steady mid level */
 #define FM1CORE_PL_PALETTE APP_PALETTE
 #define FM1CORE_PL_DEFAULT_MASTER 512     /* -> master_pos 2048, plat_fm1.c's (the gain APP_GAIN(2048)) */
 
