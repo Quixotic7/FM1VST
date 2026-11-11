@@ -179,7 +179,7 @@ static void fm1_perf_set(uint32_t m, int32_t p, int32_t v)
     if (k >= 0)
         cu_layer_knob(L_PERF, (uint32_t)k, s);     /* the PERF layer's KNOB k+1 */
     else
-        cu_param_turn(m, p, s, 0);                 /* the same function, no knob carries it */
+        cu_param_turn(0, m, p, s, 0);               /* the same function, no knob carries it */
     fm1_kn_back();
     if (other) {
         cs.perf_sel = sel;
@@ -1150,7 +1150,7 @@ static int32_t fm1_layer_knob_target(uint32_t l, uint32_t k)   /* cu_layer_knob(
     k &= 3u;
     switch (l) {
     case L_KEY: return fm1_idx_get(KEY[cu.kpage ? 1 : 0][k]);
-    case L_PERF: return fm1_idx_perf(cu_perf_mode(), CU_PERF_KNOB[cu_perf_mode()][k]);
+    case L_PERF: return fm1_idx_perf(cu_perf_mode(0), CU_PERF_KNOB[cu_perf_mode(0)][k]);
     case L_FX: return fm1_fx_target(k);
     case L_BASS: return BASS[k] ? fm1_idx_get(BASS[k]) : -1;   /* KNOB 3: the bass sound, a list: turned */
     case L_LOOP:
@@ -1216,7 +1216,7 @@ static int32_t fm1_knob_compute(uint32_t role)    /* cu_knob(role, ..) without t
     switch (role) {
     case EN_K1: return fm1_idx_get(fm1_g_voicing);
     case EN_K2: return fm1_idx_get(fm1_g_bass_reg);
-    case EN_K3: return fm1_idx_perf(cu_perf_mode(), CU_PERF_KNOB[cu_perf_mode()][0]);
+    case EN_K3: return fm1_idx_perf(cu_perf_mode(0), CU_PERF_KNOB[cu_perf_mode(0)][0]);
     case EN_K4: return fm1_idx_src(FM1K_AMT, (int32_t)(cs.fx_sel % CU_NFX), 0);
     case EN_SELECT: return fm1_idx_get(fm1_g_tempo);
     default: return -1;                            /* PRESETS / ALGORITHM: the parts' sound lists (wrapping) */
