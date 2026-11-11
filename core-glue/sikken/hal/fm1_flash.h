@@ -40,6 +40,11 @@
 #endif
 
 static uint32_t fl_jedec_ram(void) { return 0x856014u; }   /* the FM-1's 1 MiB part */
+#ifndef FL_JEDEC_OK                       /* (RUPTURE 1.85.2: hal/fm1_flash_id.h, through the HAL this replaces) */
+#define FL_JEDEC_P25Q80 0x856014u
+#define FL_JEDEC_UC25HQ80 0xB36014u
+#define FL_JEDEC_OK(id) ((uint32_t)(id) == FL_JEDEC_P25Q80 || (uint32_t)(id) == FL_JEDEC_UC25HQ80)
+#endif
 static uint32_t fl_status_ram(void) { return 0; }
 static int fl_read_ram(uint32_t off, uint8_t *dst, uint32_t n)
 {
