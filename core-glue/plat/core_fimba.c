@@ -23,7 +23,7 @@
 
 #define OM_HOST 1                         /* the device's .pool section off (plat.h OM_POOL) */
 #define OM_VERSION FM1CORE_VERSION
-#define FELUCCA_ID "FM-1_8000601"          /* the package identity: build.py --release 0.6.1 (FM-1_8 00 06 01) */
+#define FELUCCA_ID "FM-1_8000700"          /* the package identity: build.py --release 0.7.0 (FM-1_8 00 06 01) */
 #define FM1CORE_PL_SX 1                   /* the installer's M-UPGRADE identity (plat_sx.h) */
 #include "plat_hal.h"
 #include "plat_sx.h"
