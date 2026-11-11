@@ -44,7 +44,7 @@ static fm1core_du_an_t *fm1core_du_an(void);
 #define fm1_an (*fm1core_du_an())         /* (master.c, main.c: the tick's latest pot and battery readings) */
 static void fm1core_du_keys(void);
 #define FM1CORE_FW_P du
-#define FM1CORE_FW_WEB_C "../../cores/DUELL/felucca-base/web/emu/felucca_web.c"
+#define FM1CORE_FW_WEB_C "../../cores/DUELL/duell/web/emu/felucca_web.c"
 #define FM1CORE_FW_ANIM_IDLE 1
 #define FM1CORE_FW_UI_HOME() 0                /* (DUELL's HOME is a page: ui.page's title says it) */
 #define FM1CORE_FW_AFTER_MS()                                                                                \
@@ -58,8 +58,8 @@ static void fm1core_du_keys(void);
     } while (0)
 #define FM1CORE_FW_LED(c, r, lv) fm1core_du_led((c), (r), &(lv))
 static void fm1core_du_led(uint32_t c, uint32_t r, uint32_t *lv);
-#define FM1CORE_FW_EDITOR_C "../../cores/DUELL/felucca-base/firmware/src/editor.c"   /* the web editor's SysEx */
-#define FM1CORE_FW_OTA_C "../../cores/DUELL/felucca-base/firmware/src/ota.c"         /* the M-UPGRADE identity */
+#define FM1CORE_FW_EDITOR_C "../../cores/DUELL/duell/firmware/src/editor.c"   /* the web editor's SysEx */
+#define FM1CORE_FW_OTA_C "../../cores/DUELL/duell/firmware/src/ota.c"         /* the M-UPGRADE identity */
 #define FELUCCA_ID "FM-1_901"       /* felucca-base/tools/build.py PRODUCT, every DUELL package (the Hub's duell 1.1) */
 #include "fw_core.h"
 

@@ -16,12 +16,12 @@
 # converter readings sense.c reads on the unit (velocity with MENU > CONTROL > KEY VELOCITY ON, aftertouch with AFTERTOUCH).
 include(${CMAKE_CURRENT_LIST_DIR}/fw_common.cmake)
 fm1_add_core(duell ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/DUELL UNIT core_duell.c
-             DESC core_duell_desc.c FAMILY felucca_web LICENSE GPL-3.0-only GEN_ROOT felucca-base
+             DESC core_duell_desc.c FAMILY felucca_web LICENSE GPL-3.0-only GEN_ROOT duell
              CREDITS "An unofficial build: FM1VST compiles the unmodified DUELL v1.0 source as a plugin core. It is not an official DUELL release. DUELL's own notice and credits:"
              CREDITS_FILES NOTICE.md CREDITS.md
              GEN duell_version.h ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h splash_logo.h felucca_tables.h
                  felucca_fm6.h duell_sounds.h duell_multis.h midi_map_defaults.h
-             INCLUDES ${CMAKE_SOURCE_DIR}/cores/DUELL/felucca-base/firmware/src
+             INCLUDES ${CMAKE_SOURCE_DIR}/cores/DUELL/duell/firmware/src
              VERSION 1.1)
 fw_golden(duell ${CMAKE_SOURCE_DIR}/cores/DUELL/felucca-base web/emu/felucca_web.c)
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
