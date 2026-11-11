@@ -1,0 +1,22 @@
+# Drumlab 0.1.3-beta: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the power-on picture stands 1.7 s (lab.c, LAB_BOOT), then the quick start of a fresh flash: OCT- puts it away
+settle_ms 2500
+sound btn OCT- 100
+# the flash round trip: the open project is a setting (labproj.c lab_slot_note, written as it opens; the demo in
+# project 1 is never saved into): HOME held opens the projects, SELECT one on, a HOME tap opens project 2; after the
+# reboot that project shows, not project 1
+save wait 2500
+save btn OCT- 100
+save wait 500
+save btn HOME 900
+save wait 1200
+save knob SELECT +1
+save wait 300
+save btn HOME 100
+save wait 1500
+save quit
+saved wait 3000
+saved quit
+saved-lcd-differs
+# the reboot: the host mode has no reset path (UBOOT is a USB request, the boot guard the device branch's)
+reboot none the host build has no reset path (UBOOT over USB, the boot guard in the device branch only)
