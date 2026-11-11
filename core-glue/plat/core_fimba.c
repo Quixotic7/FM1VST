@@ -38,6 +38,12 @@ static inline int32_t clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ?
 #include "app/panel.c"
 #include "app/plat_fm1.c"
 #include "app/project.c"
+/* 0.7.0's screen reader (fm1-reader, announce.c from fm1-base), as main.c includes it: its SAYs go out on the managers'
+ * SysEx like the updater's replies. No words file: the reader says the screen's text as it is */
+#define ANN_NAME "FiMba-1"
+#include "announce.c"
+static int ota_wire_send(const uint8_t *p, uint32_t n);
+static int ann_wire_send(const uint8_t *p, uint32_t n) { return ota_wire_send(p, n); }
 #include "app/ui.c"
 #undef __attribute__
 
