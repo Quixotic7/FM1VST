@@ -254,3 +254,6 @@
 [submodule "CULTBOX"]
 	path = cores/CULTBOX
 	url = https://github.com/beatcult/CULTBOX
+[submodule "fm1-dx747"]
+	path = cores/fm1-dx747
+	url = https://github.com/esbenvb/fm1-dx747
