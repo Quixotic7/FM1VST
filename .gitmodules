@@ -260,3 +260,6 @@
 [submodule "fm1-dx747"]
 	path = cores/fm1-dx747
 	url = https://github.com/esbenvb/fm1-dx747
+[submodule "m-pyre"]
+	path = cores/m-pyre
+	url = https://github.com/HistoryOfSky/m-pyre
