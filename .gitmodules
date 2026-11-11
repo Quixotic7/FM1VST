@@ -257,3 +257,6 @@
 [submodule "drumlab"]
 	path = cores/drumlab
 	url = https://github.com/pbarilla/drumlab
+[submodule "fm1-dx747"]
+	path = cores/fm1-dx747
+	url = https://github.com/esbenvb/fm1-dx747
