@@ -13,7 +13,7 @@
  * are not Felucca's, so Felucca's map (core_felucca_params.c) is not carried over; the plugin has the panel only, as
  * the other forks.
  * Identity as its releases build it: FELUCCA_ID "FM-1_999" (tools/release_artifacts.py identity: one fixed identity for
- * every Caravel release), FELUCCA_VERSION felucca.c's "v0.11.0". */
+ * every Caravel release), FELUCCA_VERSION felucca.c's "v0.12.0". */
 #define FM1CORE_FW_P cv
 #define FM1CORE_FW_WEB_C "../../cores/caravel/web/emu/felucca_web.c"
 #define FM1CORE_FW_ANIM_IDLE 1
