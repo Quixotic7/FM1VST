@@ -21,7 +21,8 @@ set(_mt_ver 1.11.0)
 set(_mt_vfs ${CMAKE_BINARY_DIR}/core_vfs/matryoshka.yaml)
 set(_mt_roots "")
 foreach(_h fm1_adc fm1_audio fm1_cc fm1_flash fm1_gpio fm1_guard fm1_input fm1_irq fm1_lcd_hw fm1_led_anim fm1_sys
-           fm1_time fm1_timer fm1_uart fm1_usb fm1_xip fm1_flash_step fm1_flash_id fm1_cpu1 fm1_core1_stop)
+           fm1_time fm1_timer fm1_uart fm1_usb fm1_xip fm1_flash_step fm1_flash_id fm1_cpu1 fm1_core1_stop
+           fm1_clock fm1_power)
     if(_mt_roots)
         string(APPEND _mt_roots ", ")
     endif()

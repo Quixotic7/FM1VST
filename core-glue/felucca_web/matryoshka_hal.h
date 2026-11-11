@@ -461,5 +461,13 @@ static inline void fm1_usb_ep4_send(void *p, uint32_t n) { (void)p; (void)n; }
 static inline void fm1_usb_rx_sync(void) {}
 static inline void fm1_usb_ep_enable(uint32_t eps) { (void)eps; }
 static inline uint32_t fm1_usb_sof_take(void) { return 1u; }
+/* fm1_clock.h / fm1_power.h (1.13.0, #735): the CPU clock and the rails read for DIAG page 131, the stock V15 supply
+ * setup at boot. No registers here: the setup counts as done and checked, the probe reads zeros */
+enum { FM1_POWER_NOT_RUN, FM1_POWER_OK, FM1_POWER_FAILED };
+static uint8_t fm1_power_state = FM1_POWER_OK;
+static uint32_t fm1_power_before;
+static inline void fm1_power_boot(void) { fm1_power_state = FM1_POWER_OK; }
+static inline uint32_t fm1_power_report(void) { return (uint32_t)fm1_power_state; }
+static inline void fm1_clock_probe(uint32_t v[8]) { for (int i = 0; i < 8; i++) v[i] = 0; }
 
 #endif
