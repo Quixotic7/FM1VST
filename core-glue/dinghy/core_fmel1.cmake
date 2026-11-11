@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# FMEL-1 1.2 (https://github.com/AntonioAltea/fmel-1, tag v1.2, 2d69b38): the Dinghy family glue (core-glue/dinghy/)
+# FMEL-1 1.3 (https://github.com/AntonioAltea/fmel-1, tag v1.3, 2d69b38): the Dinghy family glue (core-glue/dinghy/)
 # over the unmodified submodule cores/fmel-1, in its host mode (DINGHY_HOST). platform.c includes "../../tests/host.c"
 # by a relative path (a program: script, WAV, main), so clang's -ivfsoverlay maps that path to fmel1_host.c, as
 # core_chipbox.cmake does. Its own browser emulator (web/emu/fm1_web.c, DINGHY_WEB) is not used: the host mode is the
 # same app on the same kind of shim. The headers in firmware/gen are committed (NO_GEN); the version is the tag's
-# (tools/build.py --release 1.2: APP_VER "1.2", identity FM-1_950). The .pool section attribute is the device's only.
+# (tools/build.py --release 1.3: APP_VER "1.3", identity FM-1_950). The .pool section attribute is the device's only.
 #
 # GATED, HOSTED (the owner's call, 2026-11-02): two things compiled into every build are not GPL and not freely
 # redistributable (LICENSING.md, README.md "The tapes"):
@@ -23,7 +23,7 @@ fm1_add_core(fmel1 ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_mel}
              GATED "the Mellotron M400S tapes by Taijiguy (firmware/gen/mel_tapes.h: free to use, not in any commercial software) and the sprites drawn by Javi (firmware/gen/mel_sprites.h: by his permission, not GPL)"
              CREDITS "FMEL-1 (MEL) by AntonioAltea (the app, the tape voices, the effects, the sequencer, the screen, the browser emulator), on Dinghy by zvenson (the wiring platform.c, the host mode), over Felucca's platform by Leo Kuroshita (Hügelton Instruments), with SLOOP's changes by isod89. GPL-3.0-only. The tapes: Mellotron M400S samples by Bernie Kornowicz (Taijiguy, leisureland.us), his, not GPL: free to use but not in any commercial, for-profit software. The drawings on the screen by Javi, used with his permission, not GPL. The PIANO: a Steinway B from Versilian Studios' VCSL (Sam Gossner, CC0 1.0), cut and played as SLOOP (isod89) does. The reverbs: HALL after Felucca's, PLATE Jon Dattorro's after FoMni's (Charles Vestal). The screen's fonts are Terminus (Dimitar Toshkov Zhekov), SIL Open Font License 1.1. The full notices: the release's licences/cores/fmel1/ (LICENSING.md)."
              CREDITS_FILES ${_mel}/assets/fonts/Terminus-LICENSE.txt
-             NO_GEN VERSION 1.2 DEFINES APP_VER="1.2"
+             NO_GEN VERSION 1.3 DEFINES APP_VER="1.3"
              INCLUDES ${_mel}/firmware/src ${_mel}/firmware/gen ${CMAKE_CURRENT_LIST_DIR}
              FLAGS "-Dsection(x)=aligned(4)" "-ivfsoverlay" "${_mel_vfs}")
 if(TARGET core_fmel1_obj)
@@ -35,7 +35,7 @@ dinghy_core(fmel1 core_fmel1.c)
 # the golden check: the same script on its own host sim (tests/host.c, unchanged), the screens compared at 5000 ms
 # (one of its fixed SHOT times)
 dinghy_golden_check(fmel1 SCRIPT golden_fmel1.txt AT 5000 SOURCE ${_mel}/firmware/src/mel.c
-                    DEFINES DINGHY_HOST APP_VER="1.2"
+                    DEFINES DINGHY_HOST APP_VER="1.3"
                     INCLUDES ${_mel}/firmware/src ${_mel}/firmware/gen
                     FLAGS "-Dsection(x)=aligned(4)")
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md; gated, built as a hosted file: HOSTED_DESPITE_GATE):
