@@ -260,3 +260,6 @@
 [submodule "fm1-dx747"]
 	path = cores/fm1-dx747
 	url = https://github.com/esbenvb/fm1-dx747
+[submodule "patchwerk"]
+	path = cores/patchwerk
+	url = https://github.com/MattKuebrich/patchwerk
