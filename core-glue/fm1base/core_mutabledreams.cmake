@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Mutable Dreams 1.4 (https://github.com/kidbee85-beep/mutable-dreams, tag v1.4 = 0321551; GPL-3.0-only as a combined
+# Mutable Dreams 1.5 (https://github.com/kidbee85-beep/mutable-dreams, tag v1.5 = b9897cf; GPL-3.0-only as a combined
 # distribution: the app MIT and GPL-3.0-only, Plaits / Rings / Elements / stmlib MIT (Emilie Gillet), fm1-base and
 # felucca-bsp MPL-2.0, vendored in the repository, no submodules): the fm1-base glue (core-glue/fm1base/README.md)
 # over the unmodified submodule. The C side (app/app.c with the platform) is the unit (core_mutabledreams.c); the
@@ -12,11 +12,11 @@
 # screen reader's words; one Python expression, run in app/ (GEN_ROOT). The presets (presets/*.json) are already
 # compiled into app/dsp/preset_bank.inc and lofi_*.inc in the repository: nothing of presets/ is read or shipped.
 set(_md ${CMAKE_SOURCE_DIR}/cores/mutable-dreams)
-set(_md_ver 1.4)
-# the release's identity and version (DEVICE-TEST-REPORT-1.4.txt: Mutable-Dreams-1.4.0.fwsc, identity FM-1_710010400:
-# build.py --release 1.4.0, fm1.toml id_prefix FM-1_710 + 01 04 00)
-set(_md_app_ver 1.4.0)
-set(_md_id FM-1_710010400)
+set(_md_ver 1.5)
+# the release's identity and version (docs/release-1.5/Release-Notes-1.5.md: identity FM-1_710010500:
+# build.py --release 1.5.0, fm1.toml id_prefix FM-1_710 + 01 05 00)
+set(_md_app_ver 1.5.0)
+set(_md_id FM-1_710010500)
 set(_md_gen "(lambda b: (setattr(b, 'APP', b.Path('.').resolve()), setattr(b, 'CONF', b.read_conf(b.APP / 'fm1.toml')), setattr(b, 'GEN', b.APP / 'build' / 'gen'), b.generate()))(__import__('sys').path.insert(0, '../base/tools') or __import__('build'))")
 # fm1.toml o2, in its order
 set(_md_o2 third_party/elements/dsp/exciter.cc third_party/elements/dsp/resonator.cc third_party/elements/resources.cc
