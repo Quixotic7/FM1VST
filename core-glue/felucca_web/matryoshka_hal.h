@@ -187,6 +187,7 @@ static inline const uint8_t *fm1_xip_ptr(uint32_t off) { return fm1nor_image + o
 #define FL_JEDEC_PUYA 0x856014u
 #define FL_JEDEC_UCUN 0xB36014u
 #define FL_JEDEC_OK(id) ((id) == FL_JEDEC_PUYA || (id) == FL_JEDEC_UCUN)
+static uint8_t fl_uid[16];                 /* (1.13.0: the flash chip's unique ID, main.c's device identity; none here) */
 static uint32_t fl_jedec_ram(void) { return 0x856014u; }   /* the expected 1 MiB part */
 static uint32_t fl_status_ram(void) { return 0; }
 static void fl_inval(uint32_t off, uint32_t n) { (void)off; (void)n; }
