@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# DUELL 1.1 (https://github.com/oscillr/DUELL, tag v1.1, 2026-10-22: its first release that is not a pre-release):
+# DUELL 1.2 (https://github.com/oscillr/DUELL, tag v1.2, 2026-10-22: its first release that is not a pre-release):
 # the felucca_web family's core (fw_core.h over the firmware's own web/emu/felucca_web.c, unmodified;
 # cmake/FM1Cores.cmake fm1_add_core). The golden check: fw_common.cmake.
 # UN-GATED (the owner's call, 2026-10-22; CORES-PLAN.md 6): NOTICE.md, "The names DUELL and OSCILL/R and the logo
@@ -22,7 +22,7 @@ fm1_add_core(duell ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/DU
              GEN duell_version.h ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h splash_logo.h felucca_tables.h
                  felucca_fm6.h duell_sounds.h duell_multis.h midi_map_defaults.h
              INCLUDES ${CMAKE_SOURCE_DIR}/cores/DUELL/duell/firmware/src
-             VERSION 1.1)
+             VERSION 1.2)
 fw_golden(duell ${CMAKE_SOURCE_DIR}/cores/DUELL/felucca-base web/emu/felucca_web.c)
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
 fm1_add_rfm1(duell AUTHORS "oscillr")
