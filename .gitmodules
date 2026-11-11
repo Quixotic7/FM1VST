@@ -263,3 +263,6 @@
 [submodule "patchwerk"]
 	path = cores/patchwerk
 	url = https://github.com/MattKuebrich/patchwerk
+[submodule "m-pyre"]
+	path = cores/m-pyre
+	url = https://github.com/HistoryOfSky/m-pyre
