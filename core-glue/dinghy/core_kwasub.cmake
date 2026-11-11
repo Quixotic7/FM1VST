@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# K-WASUB 1.1.01 (https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1, d7fa87d): the Dinghy family glue
+# K-WASUB 1.1.02 (https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1, d7fa87d): the Dinghy family glue
 # (core-glue/dinghy/) over the unmodified submodule cores/K-WASUB_Firmware_for_FM1, in its host mode (DINGHY_HOST).
 # no tag: pinned at the commit of 1.0.46, the Firmware Hub's latest (the owner's call, 2026-11-02). (The repository
 # has no tags or releases; the Hub's source link names tree/v1.0.46. 03ec546 is the 1.0.46 commit, d7fa87d its tip:
 # the commits after it touch the site and fmhub.json only, source/ is the same.)
 # platform.c includes "../../tests/host.c" by a relative path under DINGHY_HOST, a file K-WASUB's tree no longer has,
 # so clang's -ivfsoverlay maps that path to kwasub_host.c, as core_aurora.cmake does. The headers in firmware/gen are
-# committed (NO_GEN). The version and the package identity are tools/build.py --release 1.1.01's: APP_VER "1.1.01",
+# committed (NO_GEN). The version and the package identity are tools/build.py --release 1.1.02's: APP_VER "1.1.02",
 # FELUCCA_ID "FM-1_1990" (every 1.Y). The .pool section attribute is the device build's only (ksub.c).
 # Public: all of it is GPL-3.0-only, the fonts SIL OFL 1.1 (Terminus, IBM Plex Mono, Atkinson Hyperlegible Mono, Press
 # Start 2P, Outfit, Instrument Sans, Tektur, JetBrains Mono, Big Shoulders) and the DejaVu fonts' licence (DejaVu Sans
@@ -25,7 +25,7 @@ fm1_add_core(kwasub ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_kw}
              UNIT core_kwasub.c DESC core_kwasub_desc.c FAMILY dinghy LICENSE GPL-3.0-only
              CREDITS "K-WASUB by Guizmoh (the bass synthesizer: its engines, the SAMPLE layer, the pages, the DATA page), born from KAWA by Omnipotard, on Dinghy by zvenson (the wiring platform.c, the host mode), over Felucca's platform by Leo Kuroshita (Hügelton Instruments), with SLOOP's changes by isod89. The CS engine after twochannels' CS-1 (GPL-3.0-only, written again). GPL-3.0-only. The screen fonts: Terminus Font (Dimitar Toshkov Zhekov), IBM Plex Mono (IBM Corp.), Atkinson Hyperlegible Mono, Press Start 2P, Outfit, Instrument Sans, Tektur, JetBrains Mono and Big Shoulders (their project authors), SIL Open Font License 1.1, and DejaVu Sans (Bitstream Vera licence). The full notices: the release's licences/cores/kwasub/ (LICENSING.md)."
              CREDITS_FILES ${CMAKE_CURRENT_LIST_DIR}/licences/aurora/Terminus-LICENSE.txt
-             NO_GEN VERSION 1.1.01 DEFINES APP_VER="1.1.01" FELUCCA_ID="FM-1_1990"
+             NO_GEN VERSION 1.1.02 DEFINES APP_VER="1.1.02" FELUCCA_ID="FM-1_1990"
              INCLUDES ${_kw_src}/firmware/src ${_kw_src}/firmware/gen ${CMAKE_CURRENT_LIST_DIR}
              FLAGS "-ivfsoverlay" "${_kw_vfs}")
 if(TARGET core_kwasub_obj)
