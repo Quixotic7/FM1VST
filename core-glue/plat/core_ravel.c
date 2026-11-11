@@ -32,7 +32,7 @@
 #include "exit.h"                         /* exit / atexit -> fm1core_exit / fm1core_atexit (common/exit.h) */
 #include "env.h"                          /* getenv -> NULL: no environment in a core (common/env.h) */
 
-#define FELUCCA_ID "FM-1_82012700"        /* the package identity: tools/build_fm1.py --release 1.27.0 (FM-1_82 01 05 00) */
+#define FELUCCA_ID "FM-1_82013300"        /* the package identity: tools/build_fm1.py --release 1.33.0 (FM-1_82 01 05 00) */
 #define FELUCCA_OTA 1                     /* (ravel_fm1.c: the M-UPGRADE entry; plat_sysex_out sends on its wire) */
 #define FM1CORE_PL_SX 1                   /* the managers' SysEx (plat_sx.h) */
 #include "plat_hal.h"
