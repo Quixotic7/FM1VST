@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# LOOM-8 (https://github.com/charlesvestal/fm1-loom, tag v0.14; GPL-3.0-only as a whole: MPL-2.0 files since 0.8, the
+# LOOM-8 (https://github.com/charlesvestal/fm1-loom, tag v0.15; GPL-3.0-only as a whole: MPL-2.0 files since 0.8, the
 # acid engine and the 909 models GPL-3.0-only; on fm1-base 317cb86 and felucca-bsp 5b0879b, MPL-2.0): the fm1-base
 # glue (core-glue/fm1base/README.md) over the unmodified submodule and its own submodules (base = fm1-base, base/bsp =
 # felucca-bsp). v0.14 (2026-11-06) is the first with fm1.toml usb_audio_channels = 10: the tracks on channels 3..10,
@@ -12,7 +12,7 @@
 # clang VFS overlay (-ivfsoverlay, written below into the build folder) has the compiler read loom_plat.c in its
 # place, the host's version of the same names; every file of the submodule is compiled unmodified.
 set(_loom ${CMAKE_SOURCE_DIR}/cores/fm1-loom)
-set(_loom_ver 0.14)
+set(_loom_ver 0.15)
 # build.py --release: APP_VERSION the release in capitals; the package identity fm1.toml's id_prefix (FM-1_10) + the
 # major, minor and patch as two digits each
 string(TOUPPER "${_loom_ver}" _loom_app_ver)
