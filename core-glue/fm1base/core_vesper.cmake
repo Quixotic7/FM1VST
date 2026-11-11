@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# VESPER 2.0.1 (https://github.com/fatcatstudios-hub/vesper-fm1, tag vesper-2.0.1 = f50977b; Fat Cat Studios' ambient
+# VESPER 2.0.2 (https://github.com/fatcatstudios-hub/vesper-fm1, tag vesper-2.0.2 = faf036f; Fat Cat Studios' ambient
 # worship synth: GPL-3.0-only with M-VAVE's FM1 SDK linking exception, on fm1-base and felucca-bsp, MPL-2.0, its own
 # submodules base = fm1-base @ d8ff8f4, base/bsp = felucca-bsp @ 305c372): the fm1-base glue
 # (core-glue/fm1base/README.md) over the unmodified submodule, from Mutable Dreams' glue (core_mutabledreams.c) without
@@ -16,8 +16,8 @@
 # one voice of M-VAVE's V15 factory DX7 bank repeated (app/vesper/app/fm_factory.inc, Apache-2.0, THIRD_PARTY.md),
 # Open303, DaisySP, stmlib, emu2149, SEA (MIT), MSFA / Dexed (Apache-2.0). Not gated.
 set(_vs ${CMAKE_SOURCE_DIR}/cores/vesper-fm1)
-set(_vs_ver 2.0.1)
-# build.py --release 2.0.1 with tools/identity.patch (fm1.toml id_digits = 3): APP_VERSION "2.0.1", the identity
+set(_vs_ver 2.0.2)
+# build.py --release 2.0.2 with tools/identity.patch (fm1.toml id_digits = 3): APP_VERSION "2.0.2", the identity
 # id_prefix FM-1_8837 + 2 0 1 (README: "Identity: FM-1_8837201")
 set(_vs_id FM-1_8837201)
 set(_vs_gen "(lambda b: (setattr(b, 'APP', b.Path('.').resolve()), setattr(b, 'CONF', b.read_conf(b.APP / 'fm1.toml')), setattr(b, 'GEN', b.APP / 'build' / 'gen'), b.generate()))(__import__('sys').path.insert(0, '../base/tools') or __import__('build'))")

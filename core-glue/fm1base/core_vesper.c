@@ -12,8 +12,8 @@
  * to VESPER's code). VESPER's code (app/vesper/: port.c, the screens, the scenes, LUSH, the open FM1 engine) is
  * fm1.toml's "o2" units, compiled apart (core_vesper.cmake).
  *
- * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 2.0.1's (tools/identity.patch:
- * id_digits = 3): "2.0.1" and FM-1_8837201, from core_vesper.cmake.
+ * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 2.0.2's (tools/identity.patch:
+ * id_digits = 3): "2.0.2" and FM-1_8837201, from core_vesper.cmake.
  * Left out, as in every core: the splash (APP_SPLASH: app_splash tunes the LCD's gamma and clears it; plat_glue.h
  * starts the UI at power-on, and VESPER draws its own start-up screen), the render's own time (APP_OVERLOAD's
  * shedding: simulated time).
