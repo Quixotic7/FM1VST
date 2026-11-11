@@ -31,6 +31,9 @@
 #define FM1CORE_SL_HAS_CPU1 (FM1CORE_SL_FW != FM1CORE_SL_ORBIT && FM1CORE_SL_FW != FM1CORE_SL_KARMA)
 #if FM1CORE_SL_FW == FM1CORE_SL_KARMA
 #define KARMA_DUAL_CORE 0                          /* (one core: fx.c renders every part itself) */
+/* (3.1) editor.c's ED_CRASH reads the hal's crash records (fm1_irq.h, .noinit on the unit): never written here */
+__attribute__((unused)) static struct { uint32_t magic, count, vec, pc, rets, emu, dbg, sp, psr, icfg, uptime_ms, etm[4], early; } fm1_crash;
+__attribute__((unused)) static struct { uint32_t magic, count, cpu, dbg, emu, pc, rets, uptime_ms; } fm1_core1_last;
 #endif
 
 /* ------------------------------------------------------------- the HAL --- */
