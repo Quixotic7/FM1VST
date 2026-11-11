@@ -254,3 +254,6 @@
 [submodule "CULTBOX"]
 	path = cores/CULTBOX
 	url = https://github.com/beatcult/CULTBOX
+[submodule "drumlab"]
+	path = cores/drumlab
+	url = https://github.com/pbarilla/drumlab

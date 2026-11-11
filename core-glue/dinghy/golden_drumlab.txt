@@ -1,0 +1,13 @@
+# Drumlab's golden check (dinghy_golden.c): the script in tests/host.c's format, run by its own host sim and by the
+# core; the screens compared at 5000 ms. After the power-on picture of a fresh flash (the atom and the name, 1.7 s;
+# the host sim with LAB_BOOT) the quick start opens, locked: OCT- puts it away. Then in the PATTERN view of the demo
+# (Korobeiniki, stopped): pads 1 and 6 hit, PRESETS one sound on, KNOB 1 (the tempo) up.
+2500 btn 0
+3000 keys 0x1
+3100 keys 0
+3300 keys 0x80
+3400 keys 0
+3800 enc 6 1
+4200 enc 2 5
+5000 shot
+5010 end
