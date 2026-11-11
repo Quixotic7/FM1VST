@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# FRASIL 3.1 (https://github.com/styvesgoupil/frasil, tag v3.1 = 803e2fe; MPL-2.0): the fm1-base glue
+# FRASIL 3.2 (https://github.com/styvesgoupil/frasil, tag v3.2 = 6bfb1e6; MPL-2.0): the fm1-base glue
 # (core-glue/fm1base/README.md) over the unmodified submodule and its own submodules (base = fm1-base @ 92d6581,
 # Styves Goupil's frasil branch, base/bsp = felucca-bsp @ d14ffd2), from Mutable Dreams' glue (the same fm1-base
 # generation: chip/ota.c, backup.c). The engine (3.0: engine/, its DSP fm1.toml "o2": engine/dsp/*.c) is its own units (frasil_dsp_*.c).
@@ -12,9 +12,9 @@
 # FRASIL's source and packages" (the logo is compiled in). Hosted as .rfm1 despite the gate, as the author ships it,
 # logo unchanged (the owner's call of 2026-11-01): not in the app's public build.
 set(_fr ${CMAKE_SOURCE_DIR}/cores/frasil)
-set(_fr_ver 3.1)
+set(_fr_ver 3.2)
 # build.py --release (./build.sh passes VERSION's): APP_VERSION the release in capitals; the package identity
-# fm1.toml's id_prefix (FM-1_47) + the major, minor and patch as two digits each (3.0: FM-1_47030100, the hub's)
+# fm1.toml's id_prefix (FM-1_47) + the major, minor and patch as two digits each (3.0: FM-1_47030200, the hub's)
 string(TOUPPER "${_fr_ver}" _fr_app_ver)
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)(\\.([0-9]+))?" _m "${_fr_ver}")
 set(_fr_id "FM-1_47")
