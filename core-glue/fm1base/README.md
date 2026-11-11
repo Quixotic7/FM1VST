@@ -11,6 +11,7 @@
 | `modelar` | MODELAR 0.3 (Hirakos) | `cores/MODELAR` @ v0.3 (89475ca), with `base` = fm1-base @ 865bc2f, `base/bsp` = felucca-bsp @ 33cac69 | MPL-2.0 |
 | `ctl1` | CTL-1 1.0.1 | `cores/fm1-ctl` @ v1.0.1 (2b560cf), with `base` = fm1-base @ 698e2cb, `base/bsp` = felucca-bsp @ f878800 | MPL-2.0; Sonivox EAS Apache-2.0 |
 | `echofield` | ECHOFIELD FM-1 0.2.8 (Philip Bos) | `cores/echofield-fm1` @ v0.2.8 (8187473), with `base` = fm1-base @ 4039a8b, `base/bsp` = felucca-bsp @ b0b2428 | MIT; factory sounds CC0-1.0; fm1-base MPL-2.0 |
+| `patchwerk` | PATCHWERK 1.0.3 (Matt Kuebrich) | `cores/patchwerk` @ v1.0.3 (6f91629), fm1-base and felucca-bsp vendored in it under `base/`, its patches applied (no submodules) | GPL-3.0-only (fm1-base, felucca-bsp MPL-2.0; ymfm and MAME uPD933 ports BSD-3-Clause; SEA MIT); app.c built with PLAT_HOST as fm1-base's host build; compiled in: the CZ module's INTERNAL bank (assets/cz/INTERNAL.syx: 64 voices under Casio CZ factory names, 16 PATCHWERK's), the FM-DX bank (assets/dx), the SAMPLER's BREAK (web/break_src.json); not gated |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
