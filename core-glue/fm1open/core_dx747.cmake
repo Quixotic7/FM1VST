@@ -28,6 +28,7 @@ endif()
 fm1_add_core(dx747 ${_dx_glue} SOURCE ${_dx} UNIT core_dx747.c DESC core_dx747_desc.c
              EXTRA_SOURCES ${_dx_units}
              FAMILY fm1open LICENSE GPL-3.0-only
+             GATED "compiles in M-VAVE's 128-voice V15 factory DX7 bank (app/fm_factory.inc), from M-VAVE's recovery image: its Apache-2.0 grant is unverified, and the last 32 voices carry classic DX7 factory names"
              NO_GEN
              VERSION 0.1
              CREDITS "DX747 by Esben von Buchwald, a fork of M-VAVE's open FM1 APP (fm1_open, Copyright (c) 2026 M-VAVE, GPL-3.0-only with the FM1 SDK linking exception), with its open web engine (incorporating contributions by Vikram Rojo).\nThe FM model is a C adaptation of MSFA / Dexed (Google, Pascal Gauthier: Apache-2.0). The 303 after Open303 (Robin Schmidt), 808 and Pluck after DaisySP (Electrosmith, Emilie Gillet), the SVF after stmlib (Emilie Gillet), the PSG after emu2149 (Mitsutaka Okazaki), the SEA codec after Daninet/sea-codec (Dani Biro): MIT.\nThe 128-voice factory DX7 bank is M-VAVE's V15 bank (Apache-2.0, THIRD_PARTY.md). The full notices: LICENSE.md and THIRD_PARTY.md."
@@ -45,5 +46,6 @@ endif()
 # the SDK linking exception) and THIRD_PARTY.md (the MIT and Apache-2.0 components compiled in, the factory bank's
 # source). The built-in keys play the selected part (part 1, MIDI channel 1, at power-on): rfm1_run's chord sounds
 fm1_add_rfm1(dx747 AUTHORS "Esben von Buchwald"
+             HOSTED_DESPITE_GATE "M-VAVE's V15 factory DX7 bank is compiled in: built as the author ships it, hosted on RemoteFM1FW only, the owner call of 2026-11-11"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE.md"
                            "THIRD_PARTY.md ({name})=THIRD_PARTY.md")
