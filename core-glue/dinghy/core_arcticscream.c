@@ -28,6 +28,7 @@
  * Not here: SCREEN OFF's backlight (the shim keeps the screen lit), USB audio, the rescue, the boot guard (the shim
  * has neither). The .pool section attribute Mach-O rejects: core_arcticscream.cmake's FLAGS. */
 #define GRIMM_WEB 1
+#define FM1CORE_GRM_DEVICE_SLOTS 1        /* (2.0: the FM-1's 72 KiB sample slots, not the browser's 1 MiB: grimm_hook) */
 #include "dinghy_pre.h"
 
 #define import_module(x) unused           /* (fm1_web.c's wasm imports: plain declarations here, defined below) */
@@ -42,6 +43,7 @@
 #define FM1CORE_GRM_SAMPLE_AREA 0x00097000u
 static const uint32_t FM1CORE_GRM_SAVE_SECT[SAVE_NSECT] = {0xDF000u, 0xE5000u, 0xE6000u, 0xE7000u, 0xFD000u, 0xFE000u};
 _Static_assert(SAMPLE_AREA_LEN == 0x48000u, "GR!MM's sample area: platform.c's 288 KiB");
+_Static_assert(SMP_SLOT_SIZE == 72u * 1024u, "the FM-1's sample slots (samples.c), not the browser's (grimm_hook)");
 
 /* ---- the shim's imports */
 uint32_t web_ticks(void) { return fm1t_ticks24(); }
