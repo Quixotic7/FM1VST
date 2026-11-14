@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The Mutable Dreams core: Mutable Dreams 1.5 by Kid Bunka / Christoph Link (https://github.com/kidbee85-beep/mutable-dreams,
+/* The Mutable Dreams core: Mutable Dreams 2.1 by Kid Bunka / Christoph Link (https://github.com/kidbee85-beep/mutable-dreams,
  * the pinned, unmodified submodule cores/mutable-dreams: GPL-3.0-only as a combined distribution, the app also MIT,
  * with fm1-base and felucca-bsp (MPL-2.0) and Mutable Instruments' code (MIT) vendored in it) built with the fm1-base
  * glue (core-glue/fm1base/README.md). The include list follows fm1-base's device unity build (base/device/unity.c)
@@ -14,8 +14,8 @@
  * (app/dsp/dreams.cpp on Plaits, Rings, Elements and stmlib) is C++, its own units (core_mutabledreams.cmake, fm1.toml
  * "o2").
  *
- * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 1.5.0's: "1.5.0" and
- * FM-1_710010500 (fm1.toml id_prefix FM-1_710 + 01 05 00; docs/release-1.5/Release-Notes-1.5.md), from core_mutabledreams.cmake.
+ * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 2.1's: "2.1.0" and
+ * FM-1_710020100 (fm1.toml id_prefix FM-1_710 + 02 01 00; SOURCE-PUBLICATION.md), from core_mutabledreams.cmake.
  *
  * THE MANAGERS (core-glue/plat/plat_sx.h): fm1-base's main loop (base/device/main_fm1.c fm1_main, its
  * sysex_dispatch.h) gives a SysEx frame to the screen reader (announce.c, 7D 53 52), the log readout (7D 4C 47), the
@@ -55,6 +55,10 @@
 #define FM1CORE_FB_MIRROR_DIM 1           /* (Mutable Dreams 1.5's fm1-base: mirror_leds with the glow's LEDs; mirror_mid) */
 #include "fm1base_hal.h"
 #include "../plat/plat_sx.h"
+/* felucca-bsp's fm1_input.h fm1_led_dim_ns (Mutable Dreams 2.1's fm1-base: plat_dim_ns, APP_DIM_LEVELS, the app's
+ * own glow width from lights.c): the panel has the two glows only, so a pulse nearer DIM LO's 1600 ns than DIM HI's
+ * 3200 ns shows as DIM LO; plat_fm1.c hands the glow's level back with fm1_led_dim_level */
+static void fm1_led_dim_ns(uint32_t ns) { fm1core_fb_dim_lo = (uint8_t)(ns < 2400u); }
 
 /* ---------------------------------------------------------------- the firmware --- */
 #define __attribute__(x)                  /* (as the host simulator: .noinit / .pool sections) */
