@@ -20,7 +20,7 @@
 # The identity (FELUCCA_ID): fm1-base's build.py --release, fm1.toml's id_prefix FM-1_45 + major, minor, patch as two
 # digits each, checked against the repository's own release index, site/firmware/releases.json.
 set(_eg ${CMAKE_SOURCE_DIR}/cores/evilgenius)
-set(_eg_ver 0.1.0-beta.1)
+set(_eg_ver 0.1.0-beta.3)
 set(_eg_id FM-1_45000100)
 set(_eg_rel ../../cores/evilgenius)
 
@@ -80,7 +80,7 @@ fm1_add_core(evilgenius ${CMAKE_CURRENT_LIST_DIR}
                            third_party/plutovg/source/FTL.TXT assets/fonts/OFL.txt
              NO_GEN
              SUBMODULES_RECURSIVE
-             VERSION 0.1.0-beta.1)
+             VERSION 0.1.0-beta.3)
 # plutovg and SAM are vendored: their own warnings are not ours (tools/Makefile builds them -w too)
 set(_eg_quiet ${_eg_pvg_sources} ${_eg_sam_sources})
 list(TRANSFORM _eg_quiet PREPEND ${CMAKE_CURRENT_LIST_DIR}/)
