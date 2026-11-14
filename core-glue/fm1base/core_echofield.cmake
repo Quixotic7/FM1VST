@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# ECHOFIELD FM-1 0.2.10 (https://github.com/Philip-Bos/echofield-fm1, tag v0.2.10 = 27feb2d; Philip Bos' granular
+# ECHOFIELD FM-1 0.2.12 (https://github.com/Philip-Bos/echofield-fm1, tag v0.2.12 = 0047107; Philip Bos' granular
 # sampler: MIT, its factory sounds CC0-1.0, on fm1-base and felucca-bsp, MPL-2.0, its own submodules base = fm1-base
 # @ 4039a8b, base/bsp = felucca-bsp @ b0b2428): the fm1-base glue (core-glue/fm1base/README.md) over the unmodified
 # submodule, from FRASIL's glue (core_frasil.c: backup.c, the service's coroutine, lib/touch.c), with app.c compiled
@@ -12,7 +12,7 @@
 set(_ef ${CMAKE_SOURCE_DIR}/cores/echofield-fm1)
 # the version: CHANGELOG.md's first "## X.Y.Z" heading (the release's own, 0.2.8 at v0.2.8); build.py --release's
 # APP_VERSION the release in capitals; the package identity fm1.toml's id_prefix (FM-1_3246) + the major, minor and
-# patch as two digits each (0.2.8: FM-1_3246000210)
+# patch as two digits each (0.2.8: FM-1_3246000212)
 set(_ef_vre "^## ([0-9]+\\.[0-9]+(\\.[0-9]+)?)")
 file(STRINGS ${_ef}/CHANGELOG.md _ef_vl REGEX "${_ef_vre}")
 set(_ef_ver 0)
