@@ -26,7 +26,7 @@
 
 #define PEN_HOST 1                        /* the device's .pool section off (plat.h PEN_POOL) */
 #define PEN_VERSION FM1CORE_VERSION
-#define FELUCCA_ID "FM-1_73010300"        /* the package identity: tools/build.py --release 1.3 (FM-1_73 01 01 00) */
+#define FELUCCA_ID "FM-1_73010400"        /* the package identity: tools/build.py --release 1.4 (FM-1_73 01 01 00) */
 #define FM1CORE_PL_SX 1                   /* the installer's M-UPGRADE identity, the screen reader (plat_sx.h) */
 #include "plat_hal.h"
 #include "plat_sx.h"
