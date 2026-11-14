@@ -13,7 +13,10 @@
 #define OBV_HOST 1
 #define OBV_WASM 1
 #include "dinghy_pre.h"
-#include "obervave_mirror_host.h"       /* 3.3.2's FM-1 Mirror (obv_mirror.h): idle here */
+/* 3.5's host no-ops for the transport the FM-1 Mirror (obv_mirror.h) and the backup (obv_backup.h) take frames from:
+ * renamed, so they stay idle and dinghy_glue.h's ota_frame_get / ota_frame_done are the ones ota.c uses */
+#define ota_frame_get fm1core_obv_host_frame_get
+#define ota_frame_done fm1core_obv_host_frame_done
 
 static int fm1core_obv_printf(const char *fmt, ...);
 #define printf(...) fm1core_obv_printf(__VA_ARGS__)
@@ -21,6 +24,8 @@ static int fm1core_obv_printf(const char *fmt, ...);
 #include "obervave.c"
 
 #undef printf
+#undef ota_frame_get
+#undef ota_frame_done
 #include "exit_end.h"
 
 /* platform.c's non-SMK layout (its device branch: not compiled here) */
@@ -174,13 +179,13 @@ static int fm1core_dg_sync(void)
             settings_save(&set, sizeof set);
         set_dirty = 0;
     }
-    /* a pattern save the app has queued (it runs when stopped and quiet): not yet */
-    return !(pat_dirty || pend_slot || copy_to);
+    /* a pattern save MEMORY's SAVE has queued (it runs when stopped and quiet): not yet (3.5.1: no auto-save) */
+    return !pend_slot;
 }
 static void fm1core_dg_info(char *buf, uint32_t n) { snprintf(buf, n, "page %u, program %u", (unsigned)page, (unsigned)set.prog + 1u); }
 
 /* the installer's M-UPGRADE identity: the device's platform_poll runs ota_service every pass (dinghy_glue.h) */
-#define FELUCCA_ID "FM-1_9533"            /* the 3.3.2 release package (tools/build.py: 95XY for X.Y) */
+#define FELUCCA_ID "FM-1_9535"            /* the 3.5.x release package (tools/build.py: 95XY for X.Y) */
 #define FM1CORE_DG_OTA_C "../../cores/obervave/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
 
