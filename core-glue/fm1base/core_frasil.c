@@ -4,7 +4,7 @@
  * fm1-base glue (core-glue/fm1base/README.md), from Mutable Dreams' glue (core_mutabledreams.c: the same fm1-base
  * generation, with felucca-bsp's chip/ota.c and backup.c). The include list follows fm1-base's device unity build
  * (base/device/unity.c) with the hardware left out: plat.h, the app's header, touch.h (APP_TOUCH), gfx.c, fm1-base's
- * defaults (fm1b_config.h), the store (storage.c on the NOR image, the app's APP_STORE_MAP: the settings, the scenes,
+ * defaults (fm1b_config.h), the platform's screen faces (sys_text.c, 3.3), the store (storage.c on the NOR image, the app's APP_STORE_MAP: the settings, the scenes,
  * the bass sequences), the updater's framing (felucca-bsp's chip/ota.c), the screen reader (announce.c), the panel
  * calibration (panel.c), the build with no radio (radio_none.c, fm1.toml ble = false), the device's plat.h
  * implementation (plat_fm1.c), backup and restore (backup.c, fm1.toml backup = true: scenes.frasil), the keys'
@@ -53,7 +53,11 @@
 #define FM1B_BACKUP 1                     /* fm1.toml backup = true (build.py opt_flags) */
 #define FM1CORE_PL_SX 1                   /* the managers' SysEx (core-glue/plat/plat_sx.h) */
 #define FM1CORE_PL_SX_CORO 1              /* (a restore waits for the host and for SEL: the service's coroutine) */
+#define FM1CORE_FB_MIRROR_DIM 1           /* (FRASIL 3.3's fm1-base: mirror_leds with the glow's LEDs; mirror_mid) */
 #include "fm1base_hal.h"
+#ifndef FM1_NENC
+#define FM1_NENC 7u                       /* felucca-bsp's fm1_input.h: the FM-1's encoders (panel.c's calibration, 3.3) */
+#endif
 #include "../plat/plat_sx.h"
 
 /* felucca-bsp's mid level's phase (fm1_input.h fm1__mid_ph: the scan frame, of FM1_LED_MID_N = 8, whose frame lights
@@ -77,6 +81,7 @@ static void fm1core_fr_scan_frame(void)
 #endif
 #include "gfx.c"
 #include "fm1b_config.h"
+#include "sys_text.c"
 #include "storage.c"
 
 /* felucca-bsp's chip/ota.c on the glue's transport (plat_sx.h), with unity.c's hooks on the core's HAL: the device's
@@ -123,7 +128,21 @@ static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room
 }
 #include "panel.c"
 #include "radio_none.c"
+/* plat_fm1.c's SysEx stream (APP_SYSEX: plat_sysex_begin / put / end, plat_sysex_room) writes USB-MIDI packets into
+ * usb.c's SysEx ring: here the managers' out ring (plat_sx.h fm1core_pl_sxo, the same CIN 4..7 packets), as
+ * core_mutabledreams.c maps it; the stream holds it (sx_busy) from begin to end */
+static uint8_t sx_busy;
+#define SXQ FM1SX_OUT_PKTS
+#define sx_out_q fm1core_pl_sxo.q
+#define so_w fm1core_pl_sxo.w
+#define so_r fm1core_pl_sxo.r
+static volatile uint8_t midi_usb_lost;   /* (usb.c's: the host's link never drops here; plat_usb_lost says 0) */
+static void fm1_guard_pc_extend(uint32_t end) { (void)end; }   /* (the guard's code window, plat_code_window: no meaning here) */
 #include "plat_fm1.c"
+#undef SXQ
+#undef sx_out_q
+#undef so_w
+#undef so_r
 #include "backup.c"
 /* unity.c's hooks for backup.c (fm1-base's "backup and restore" section, on the core's HAL: the same statements) */
 static uint8_t backup_streaming(void) { return bu.on; }
