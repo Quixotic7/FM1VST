@@ -14,7 +14,7 @@
  *                  the page's "keep" (CC 4E) write it at once, as on the device; unkept edits stay in RAM
  *   the page       its protocol is CCs on channel 16 (docs/MIDI.md), answered by the app itself (midi_send)
  *   SysEx          in: every frame goes to ota.c's ota_service, as the device's platform_poll hands them (the
- *                  M-UPGRADE identity FM-1_960: tools/build.py --release 1.0.0)
+ *                  M-UPGRADE identity FM-1_960: tools/build.py --release 1.0.1)
  *   the LEDs       fm1_led_key per id (0..13 buttons, 14 + k keys), lit or off
  * MASTER is the glue's (the device's curve, after app_audio). Not here: USB audio, the TRS MIDI in, the rescue, the
  * boot guard (the device branch's). */
@@ -91,7 +91,7 @@ static void fm1core_dg_info(char *buf, uint32_t n)
 }
 
 /* the M-UPGRADE identity: platform.c's platform_poll gives every SysEx frame to ota_service */
-#define FELUCCA_ID "FM-1_960"             /* tools/build.py --release 1.0.0: FM-1_96 + the minor digit */
+#define FELUCCA_ID "FM-1_960"             /* tools/build.py --release 1.0.1: FM-1_96 + the minor digit */
 #define FM1CORE_DG_OTA_C "../../cores/sid-1/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
 
