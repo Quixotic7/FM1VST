@@ -55,6 +55,10 @@
 #define FM1CORE_FB_MIRROR_DIM 1           /* (Mutable Dreams 1.5's fm1-base: mirror_leds with the glow's LEDs; mirror_mid) */
 #include "fm1base_hal.h"
 #include "../plat/plat_sx.h"
+/* felucca-bsp's fm1_input.h fm1_led_dim_ns (Mutable Dreams 2.1's fm1-base: plat_dim_ns, APP_DIM_LEVELS, the app's
+ * own glow width from lights.c): the panel has the two glows only, so a pulse nearer DIM LO's 1600 ns than DIM HI's
+ * 3200 ns shows as DIM LO; plat_fm1.c hands the glow's level back with fm1_led_dim_level */
+static void fm1_led_dim_ns(uint32_t ns) { fm1core_fb_dim_lo = (uint8_t)(ns < 2400u); }
 
 /* ---------------------------------------------------------------- the firmware --- */
 #define __attribute__(x)                  /* (as the host simulator: .noinit / .pool sections) */

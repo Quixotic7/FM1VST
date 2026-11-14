@@ -20,10 +20,10 @@ set(_md_id FM-1_710010500)
 set(_md_gen "(lambda b: (setattr(b, 'APP', b.Path('.').resolve()), setattr(b, 'CONF', b.read_conf(b.APP / 'fm1.toml')), setattr(b, 'GEN', b.APP / 'build' / 'gen'), b.generate()))(__import__('sys').path.insert(0, '../base/tools') or __import__('build'))")
 # fm1.toml o2, in its order
 set(_md_o2 third_party/elements/dsp/exciter.cc third_party/elements/dsp/resonator.cc third_party/elements/resources.cc
-    third_party/plaits/dsp/engine/additive_engine.cc dsp/dreams.cpp third_party/plaits/dsp/engine/fm_engine.cc
+    third_party/plaits/dsp/engine/additive_engine.cc third_party/plaits/dsp/engine/fm_engine.cc
     third_party/plaits/dsp/engine/virtual_analog_engine.cc third_party/plaits/resources.cc
     third_party/rings/dsp/resonator.cc third_party/rings/resources.cc third_party/stmlib/dsp/units.cc
-    third_party/stmlib/utils/random.cc)
+    third_party/stmlib/utils/random.cc dsp/dreams.cpp)
 set(_md_o2_rel "")
 foreach(_f IN LISTS _md_o2)
     list(APPEND _md_o2_rel ../../cores/mutable-dreams/app/${_f})
