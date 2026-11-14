@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The Tessera core: Tessera's firmware (https://github.com/Rastapopolix/tessera, Theo Dainis' generative firmware,
- * grown from Melodee (Tess), a fork of Melodee; the pinned, unmodified submodule cores/tessera at v3.2.2) built as one
+ * grown from Melodee (Tess), a fork of Melodee; the pinned, unmodified submodule cores/tessera at v3.5.3) built as one
  * translation unit with the melodee family's glue:
  *   tessera_fw.c        the emu_fw_* hooks (power-on, the 1 ms tick, the UI frame, audio, MIDI)
  *   tessera_firmware.h  the include list (hostsim.c's sound side, the HAL, audio.c, the UI, storage, the SysEx)
