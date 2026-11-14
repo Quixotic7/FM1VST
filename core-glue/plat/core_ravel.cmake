@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Ravel (https://github.com/De-Pattern/Ravel_FM1, tag v1.34.1 = 227339b; GPL-3.0-only, its sources' SPDX headers), an
+# Ravel (https://github.com/De-Pattern/Ravel_FM1, tag v1.41.2 = 1ee0b2a; GPL-3.0-only, its sources' SPDX headers), an
 # 8-track groovebox on its own portable platform (firmware/app/plat.h) over X0X's Felucca layer, adapted
 # (firmware/fm1): the plat glue (core-glue/plat/README.md) over the unmodified submodule. The device's platform unit
 # (core_ravel.c: storage.c, ota.c, panel.c, plat_fm1.c with projstore.c) on the HAL half; the instrument
@@ -13,7 +13,7 @@ fm1_add_core(ravel ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_rv} UNIT core_ravel.c DES
              CREDITS "Ravel by De-Pattern.\nFelucca's FM-1 hardware layer by Leo Kuroshita (Hügelton Instruments), by way of X0X by Charles Vestal.\nThe CZ engine follows MAME's NEC uPD933 emulation by Devin Acker (BSD-3-Clause, its notice in THIRD_PARTY.md)."
              GEN rv_font.h PYTHON_NEEDS PIL
              GEN_PYTHON "__import__('os').makedirs('build/gen', exist_ok=True) or __import__('gen_rv_font').main('build/gen/rv_font.h')"
-             VERSION 1.34.1
+             VERSION 1.41.2
              FLAGS -ffp-contract=off
              INCLUDES ${_rv}/firmware/app ${_rv}/firmware)
 
