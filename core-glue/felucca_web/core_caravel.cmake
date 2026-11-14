@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Caravel 0.12.0 (https://github.com/bonszaimusic/caravel, tag v0.12.0): bonszaimusic's fork of Felucca 1.6.1, the
+# Caravel 0.13.0 (https://github.com/bonszaimusic/caravel, tag v0.13.0): bonszaimusic's fork of Felucca 1.6.1, the
 # felucca_web family's core (fw_core.h over the firmware's own web/emu/felucca_web.c, unmodified; cmake/FM1Cores.cmake
 # fm1_add_core), with its Felucca-Engines submodule (firmware/engines: SUBMODULES_RECURSIVE). The golden check:
 # fw_common.cmake. Built as web/emu/build.sh builds its browser emulator: build/gen and firmware/src on the include
 # path (the unit includes firmware/hal and experiments/ by relative paths), the profile FELUCCA_HOME_PERF,
 # FELUCCA_PAIR_MORPH, FELUCCA_PERF_HW = 1 and FELUCCA_CPU2 = 0; the generated headers are tools/build.py generate's.
-set(_cv_defs FELUCCA_VERSION="v0.12.0" FELUCCA_HOME_PERF=1 FELUCCA_PAIR_MORPH=1 FELUCCA_PERF_HW=1 FELUCCA_CPU2=0)
+set(_cv_defs FELUCCA_VERSION="v0.13.0" FELUCCA_HOME_PERF=1 FELUCCA_PAIR_MORPH=1 FELUCCA_PERF_HW=1 FELUCCA_CPU2=0)
 include(${CMAKE_CURRENT_LIST_DIR}/fw_common.cmake)
 fm1_add_core(caravel ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/caravel UNIT core_caravel.c
              DESC core_caravel_desc.c FAMILY felucca_web LICENSE GPL-3.0-only SUBMODULES_RECURSIVE
