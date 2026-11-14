@@ -8,7 +8,7 @@
  * orders it, the flash storage, the user presets, the projects and the FM6 store (MELODEE_FLASH 1: storage.c on
  * melodee_hal.h's NOR hooks instead of storage_hw.c's SPI driver), then splash.c (the boot's mosaic).
  *
- * The build options are the 3.2.2 release's (.github/workflows/release.yml: MELODEE_LOOK=1 ./build.sh --release, the
+ * The build options are the 3.5.3 release's (.github/workflows/release.yml: MELODEE_LOOK=1 ./build.sh --release, the
  * dual-core package; tools/build.py build_app's defaults: FM6 1, SID 0, SID KIT 0, PHYS 1, PLAITS 0, HELP_PACKED 1;
  * melodee.c / core.h's for the rest: DUAL_CORE 1, CACHE_RAM 0, RAM_AUDIO 0, ADMISSION 0, TRIO 1, ORACLE 1). The engine
  * flags are core_tessera.cmake's DEFINES (core.h reads them before this file is reached).
@@ -76,13 +76,14 @@ static void lcd_gamma_switch(uint32_t opt) { (void)opt; }   /* (lcd.c: the panel
 /* --------------------------------------------------------------------- UI --- */
 #define MELODEE_FLASH 1                               /* storage.c on the NOR image: settings, projects, presets */
 #ifndef MELODEE_VERSION
-#define MELODEE_VERSION "v3.2.2"                      /* (build.py --release 3.2.2; melodee.c's default is stale) */
+#define MELODEE_VERSION "v3.5.3"                      /* (build.py --release 3.5.3; melodee.c's default is stale) */
 #endif
 #include "../../cores/tessera/firmware/src/gfx.c"
 #include "../../cores/tessera/firmware/src/panel.c"
 #include "../../cores/tessera/firmware/src/ui.c"
 #include "../../cores/tessera/firmware/src/icons.c"   /* parameter icons (MELODEE_ICONS), used by ui_draw.c */
 #include "../../cores/tessera/firmware/src/ui_graph.c"
+#include "../../cores/tessera/firmware/src/page_random.c" /* GEN / TWEAK: page randomize (melodee.c's order) */
 #include "../../cores/tessera/firmware/src/ui_draw.c"
 #include "../../cores/tessera/firmware/src/ui_menu.c"
 #include "../../cores/tessera/firmware/src/ui_input.c"
@@ -110,8 +111,9 @@ static void ota_frame_done(void) { fm1sx_done(&fm1core_me_sxi); }
 #define SXQ FM1SX_OUT_PKTS
 #define so_w (fm1core_me_sxo.w)
 #define so_r (fm1core_me_sxo.r)
+#define sx_out_q (fm1core_me_sxo.q)                   /* (editor.c ed_pn_put: PANEL's CC / note packets, as is) */
 #ifndef MELODEE_ID
-#define MELODEE_ID "FM-1_83773022"                    /* build.py --release 3.2.2: FM-1_8377 + X YY Z */
+#define MELODEE_ID "FM-1_835"                         /* build.py --release 3.5.3: FM-1_8 + X Y (3.3 on) */
 #endif
 #define FM1SX_OTA_C "../../cores/tessera/firmware/src/ota.c"
 #define FM1SX_OTA_IN fm1core_me_sxi
@@ -122,6 +124,7 @@ static void ota_frame_done(void) { fm1sx_done(&fm1core_me_sxi); }
 #include "../../cores/tessera/firmware/src/editor.c"  /* the web editor's SysEx */
 #undef so_w
 #undef so_r
+#undef sx_out_q
 
 /* ------------------------------------------------------------ the boot screen --- */
 #include "../../cores/tessera/firmware/src/splash.c"  /* splash, splash_lay (main.c) */
