@@ -74,6 +74,7 @@ fm1_add_core(evilgenius ${CMAKE_CURRENT_LIST_DIR}
              DEFINES SID_COMB_CONST PLUTOVG_BUILD PLUTOVG_BUILD_STATIC PLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD
                      FELUCCA_ID="${_eg_id}"
              FAMILY evilgenius LICENSE MPL-2.0
+             GATED "compiles in SAM (core/voice/sam: the 1982 Software Automatic Mouth in Sebastian Macke's C port, no licence, SoftVoice's rights) and the VOX words made with it (core/voice/sid/eg_vox_data.h)"
              CREDITS "EVILGENIUS, a SID groovebox that talks, for the FM-1, by Michael P Jones (Quixotic7). MPL-2.0, the source: https://github.com/Quixotic7/evilgenius (LICENSING.md says what is under which licence). Built on FIZZ, the owner's FM TONE step sequencer (MPL-2.0). FM TONE, the effects and the output chain from ChoralRoot FM-1 v0.25.1, the owner's, relicensed MPL-2.0, the parts that came from Felucca rewritten.\nThe SID model: from FM-1 SID by Joakim Eriksson (github.com/joakimeriksson/fm1-sid), BSD-2-Clause, Copyright (c) 2026 Joakim Eriksson.\nThe speech: SAM, the Software Automatic Mouth (Don't Ask Software, 1982, now SoftVoice, Inc.), as Sebastian Macke's C port (github.com/s-macke/SAM), which carries no licence: here by the owner's decision, outside EVILGENIUS's MPL-2.0 (core/voice/sam/README.md).\nDrawn with plutovg v1.3.3 (Samuel Ugochukwu, MIT), which carries stb_truetype, stb_image and stb_image_write (Sean Barrett, MIT or Unlicense). Portions of this software are copyright (c) 2006 The FreeType Project (www.freetype.org). All rights reserved.\nType: Inter Tight (The Inter Project Authors, SIL Open Font License 1.1).\nThe M-UPGRADE identity (the web manager finds the unit by it): felucca-bsp's chip/ota.c (Leo Kuroshita, Hügelton Instruments, MPL-2.0), as on the device, through FM1VST's sysex_ota.h."
              CREDITS_FILES ./LICENSE LICENSES/BSD-2-Clause.txt third_party/plutovg/LICENSE
                            third_party/plutovg/source/FTL.TXT assets/fonts/OFL.txt
@@ -91,6 +92,7 @@ set_source_files_properties(${_eg_quiet} TARGET_DIRECTORY core_evilgenius_obj PR
 # is the test oracles' (core/tests/ref), nothing in this file. No RUN_ARGS: rfm1_run's chord sounds as it is (a key
 # in the step view previews track 1's sound, DRUMS: ZAP, about a second)
 fm1_add_rfm1(evilgenius
+             HOSTED_DESPITE_GATE "SAM (no licence) is compiled in: built as the author ships it, hosted on RemoteFM1FW only, the owner call of 2026-11-14"
              AUTHORS "Michael P Jones (Quixotic7)"
              MEMORY_MIB 16
              FLAGS -ffile-prefix-map=${CMAKE_SOURCE_DIR}=FM1VST
