@@ -607,3 +607,5 @@ from it (subset to Latin) and embeds them. Each bundle carries the licence as
 `Contents/Resources/licenses/InterTight-OFL.txt`.
 
 This project is independent of and unaffiliated with M-VAVE.
+
+Related: try FM-1 firmwares in the browser with the free community [FM-1 Emulator](https://fm1-emulator.atst.tools/).
