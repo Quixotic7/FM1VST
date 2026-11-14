@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# KARMA 3.1.1 (https://github.com/eatyourgreensstudio-dotcom/karma-fm1, tag v3.1.1 = 3c2b877), by Ariel Muchnik: a
+# KARMA 3.1.2 (https://github.com/eatyourgreensstudio-dotcom/karma-fm1, tag v3.1.2 = bb96714), by Ariel Muchnik: a
 # four-track groovebox after SLOOP 2.6, on Felucca. Its felucca.c includes what SLOOP's does (and ui_op.c): the
 # SLOOP-family glue (core-glue/sloop) as FM1CORE_SL_KARMA, on one core (KARMA_DUAL_CORE 0, as its host builds).
 # Plaits' and Elements' models are C++ (firmware/mi, MIT, and plx.cc / elx.cc, its way in): built as EXTRA_SOURCES
