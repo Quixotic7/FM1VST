@@ -4,8 +4,9 @@
  * (core-glue/plat/README.md). The include list follows the device's unity build (firmware/src/main.c) with the
  * hardware left out, as the firmware's own host simulator (host/omni_host.c) does: gfx.c, plat.h, Felucca's storage.c
  * (on the NOR image: the sound and bank A, the panel calibration, banks B and C), the app's header, the key pressure
- * (sense.c), the panel calibration (panel.c), the device's plat.h implementation (plat_fm1.c), the project and the UI.
- * No screen reader. The drone engine (dsp/drone.c, with drone_fx.c) is its own unit (niagaradrift_drone.c).
+ * (sense.c), the panel calibration (panel.c), the device's plat.h implementation (plat_fm1.c), the project and the UI,
+ * with 0.3's screen reader (announce.c) and MIDI packet times (usb.c's midi_in_t, MQ_NOW_US). The drone engine
+ * (dsp/drone.c, with drone_fx.c) is its own unit (niagaradrift_drone.c).
  * Its version is a build-time define (OM_VERSION, "DEV" by default): the hub's version (core_niagaradrift.cmake). */
 #include <math.h>
 #include <stdint.h>
@@ -23,7 +24,7 @@
 
 #define OM_HOST 1                         /* the device's .pool section off (plat.h OM_POOL) */
 #define OM_VERSION FM1CORE_VERSION
-#define FELUCCA_ID "FM-1_8000201"          /* the package identity: build.py --release 0.2.1 (FM-1_8 00 02 00) */
+#define FELUCCA_ID "FM-1_8000300"          /* the package identity: build.py --release 0.3 (FM-1_8 00 03 00) */
 #define FM1CORE_PL_SX 1                   /* the installer's M-UPGRADE identity (plat_sx.h) */
 #include "plat_hal.h"
 #include "plat_sx.h"
@@ -42,6 +43,19 @@ static struct {
 #define FM1_ADC_CON(div, delay) ((uint32_t)((div) & 7u) | 8u | ((uint32_t)((delay) & 15u) << 12))
 static int fm1_jack_phones(void) { return 1; }   /* (a computer's output, no Speaker low cut: as web/emu does) */
 
+/* 0.3's usb.c: each MIDI packet's time in us beside it (midi_in_t, MQ_NOW_US; plat_fm1.c plat_midi_in, plat_us: the
+ * MIDI clock in). Here the simulated us (common/ticks.h: the device ms's start, so to the ms), stamped as the glue
+ * queues the packet (FM1CORE_PL_MIDI_IN_HOOK, before plat_glue.h's push into midi_in_q[mi_w]) */
+#define MQ_NOW_US() fm1t_us()
+static uint32_t midi_in_t[MQ];
+static int fm1core_nd_midi_in(uint32_t pkt)
+{
+    (void)pkt;
+    midi_in_t[mi_w % MQ] = MQ_NOW_US();   /* (a full queue drops the packet: a slot nobody reads) */
+    return 0;                             /* not taken: on to the queue */
+}
+#define FM1CORE_PL_MIDI_IN_HOOK(pkt) fm1core_nd_midi_in(pkt)
+
 /* ---------------------------------------------------------------- the firmware --- */
 #define __attribute__(x)                  /* (as the host simulator) */
 #include "gfx.c"
@@ -49,6 +63,13 @@ static inline int32_t clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ?
 #include "app/plat.h"
 #include "storage.c"
 #include "app/app.h"
+#define ANN_NAME "Niagara Drift " OM_VERSION   /* (main.c's screen reader, as fomni's glue: its SAYs on the managers' SysEx) */
+#include "ann_words.h"
+#include "announce.c"
+static int ann_wire_send(const uint8_t *p, uint32_t n)   /* never waits: no room (nobody reading), not sent */
+{
+    return fm1core_pl_sx_send(p, n);
+}
 #include "app/sense.c"
 #include "app/panel.c"
 #include "app/plat_fm1.c"
@@ -57,10 +78,11 @@ static inline int32_t clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ?
 #undef __attribute__
 
 /* ---------------------------------------------------------------- the managers' SysEx (plat_sx.h) --- */
-/* The installer (the hub's, fm1ota-style) finds the unit by the M-UPGRADE identity: main_fm1.c's loop runs
- * dbg_service (ota.c's frames: the identity; its BACKUP / RESTORE and load commands are main_fm1.c's, not built, so
- * not answered). The update key F0 22 24 35 7F F7 and UBOOT's F0 22 24 35 7D F7 are not taken (plat_sx.h): no read
- * requests follow (the installer times out), nothing is written, the core runs on. */
+/* The installer (the hub's, fm1ota-style) finds the unit by the M-UPGRADE identity: main_fm1.c's loop runs the screen
+ * reader's frame, then dbg_service (ota.c's frames: the identity; its BACKUP / RESTORE, the staged restore (0.3's
+ * 0x74 / 0x75, restore_core.c) and load commands are main_fm1.c's, not built, so not answered). The update key
+ * F0 22 24 35 7F F7 and UBOOT's F0 22 24 35 7D F7 are not taken (plat_sx.h): no read requests follow (the
+ * installer times out), nothing is written, the core runs on. */
 #define FM1SX_OTA_C "../../cores/niagara-drift/firmware/src/ota.c"
 #define FM1SX_OTA_IN fm1core_pl_sxi
 #define FM1SX_OTA_OUT fm1core_pl_sxo
@@ -68,10 +90,14 @@ static inline int32_t clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ?
 #include "sysex_ota.h"
 static int fm1core_niagaradrift_sx_accept(const uint8_t *f, uint32_t n)
 {
-    return fm1sx_is_mupg(f, n);
+    return fm1sx_is_mupg(f, n) || FM1CORE_PL_SX_READER(f, n);
 }
 static void fm1core_niagaradrift_sx_service(void)   /* main_fm1.c fm1_main, each pass (the update key's ota_req: not taken) */
 {
+    const uint8_t *p;
+    uint32_t n;
+    if (fm1sx_frame(&fm1core_pl_sxi, &p, &n) && ann_frame(p, n, fm1_ms))   /* a screen reader's, before the updater */
+        fm1sx_done(&fm1core_pl_sxi);
     ota_service();                        /* M-UPGRADE handshake (other SysEx is dropped) */
 }
 #define FM1CORE_PL_SX_ACCEPT fm1core_niagaradrift_sx_accept
