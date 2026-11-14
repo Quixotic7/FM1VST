@@ -266,3 +266,6 @@
 [submodule "m-pyre"]
 	path = cores/m-pyre
 	url = https://github.com/HistoryOfSky/m-pyre
+[submodule "evilgenius"]
+	path = cores/evilgenius
+	url = https://github.com/Quixotic7/evilgenius
