@@ -1,12 +1,14 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# EVILGENIUS 0.1.1 (https://github.com/Quixotic7/evilgenius, tag v0.1.1 = 4fbc21f, a stable release; MPL-2.0
+# EVILGENIUS 0.1.2 (https://github.com/Quixotic7/evilgenius, tag v0.1.2 = d9892fa, a stable release; MPL-2.0
 # with the SID model BSD-2-Clause and SAM's C port unlicensed: its LICENSING.md), by Michael P Jones (Quixotic7): a
 # six-track SID groovebox that talks. A derivative of FIZZ (the same core/ tree and the same FM1VST glue, kept in its
 # own core/glue: core_quadrille.c, core_quadrille_desc.c), built here as RemoteFM1's tools/rfm1/build_fizz.sh builds
 # FIZZ's .rfm1 (tools/rfm1/fizz/CMakeLists.txt there), from the unmodified submodule:
 #
 #   core_evilgenius.c       the unit: core_quadrille.c unchanged + the M-UPGRADE identity (felucca-bsp's chip/ota.c
-#                           through common/sysex_ota.h, as fizz_unit.c), which the web manager finds the unit by
+#                           through common/sysex_ota.h, as fizz_unit.c), which the web manager finds the unit by; from
+#                           0.1.2 the frames after it to the glue's backup and restore (core/glue/qd_bulk.c), the store
+#                           in the Bluetooth package's layout (QD_STORE_BLE), so the unit's backups restore here
 #   core_evilgenius_desc.c  core_quadrille_desc.c with the name EVILGENIUS and the public source_url
 #   conformance.txt         FIZZ's, the same gestures (REC opens the keyboard; HOME + F3 for the flash round trip)
 #
@@ -20,8 +22,8 @@
 # The identity (FELUCCA_ID): fm1-base's build.py --release, fm1.toml's id_prefix FM-1_45 + major, minor, patch as two
 # digits each, checked against the repository's own release index, site/firmware/releases.json.
 set(_eg ${CMAKE_SOURCE_DIR}/cores/evilgenius)
-set(_eg_ver 0.1.1)
-set(_eg_id FM-1_45000101)
+set(_eg_ver 0.1.2)
+set(_eg_id FM-1_45000102)
 set(_eg_rel ../../cores/evilgenius)
 
 if(NOT EXISTS ${_eg}/core/glue/core_quadrille.c OR NOT EXISTS ${_eg}/firmware/fm1-base/bsp/chip/ota.c)
@@ -60,7 +62,8 @@ set(_eg_sources app/app.c app/ctl.c app/ctl_step.c app/ctl_rec.c app/ctl_leds.c 
                 gfx/qd_gfx_plutovg.c
                 seq/model.c seq/pattern.c seq/seq.c seq/player.c seq/demo.c seq/chord.c seq/scale.c seq/sounds.c
                 seq/clip.c
-                voice/quad/quad_voice.c voice/sid/sid.c voice/pool.c voice/mix.c voice/fx/qd_fx.c voice/sam/say.c)
+                voice/quad/quad_voice.c voice/sid/sid.c voice/pool.c voice/mix.c voice/fx/qd_fx.c voice/sam/say.c
+                glue/qd_bulk.c)
 list(TRANSFORM _eg_sources PREPEND ${_eg_rel}/core/)
 
 fm1_add_core(evilgenius ${CMAKE_CURRENT_LIST_DIR}
@@ -71,7 +74,7 @@ fm1_add_core(evilgenius ${CMAKE_CURRENT_LIST_DIR}
                       ${_eg}/core/voice ${_eg}/core/voice/quad ${_eg}/core/voice/sid ${_eg}/core/voice/fx
                       ${_eg}/core/voice/sam ${_eg}/third_party/plutovg/include ${_eg}/third_party/plutovg/source
                       ${_eg}/firmware/fm1-base/bsp/chip
-             DEFINES SID_COMB_CONST PLUTOVG_BUILD PLUTOVG_BUILD_STATIC PLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD
+             DEFINES SID_COMB_CONST QD_STORE_BLE=1 PLUTOVG_BUILD PLUTOVG_BUILD_STATIC PLUTOVG_DISABLE_FONT_FACE_CACHE_LOAD
                      FELUCCA_ID="${_eg_id}"
              FAMILY evilgenius LICENSE MPL-2.0
              GATED "compiles in SAM (core/voice/sam: the 1982 Software Automatic Mouth in Sebastian Macke's C port, no licence, SoftVoice's rights) and the VOX words made with it (core/voice/sid/eg_vox_data.h)"
@@ -80,7 +83,7 @@ fm1_add_core(evilgenius ${CMAKE_CURRENT_LIST_DIR}
                            third_party/plutovg/source/FTL.TXT assets/fonts/OFL.txt
              NO_GEN
              SUBMODULES_RECURSIVE
-             VERSION 0.1.1)
+             VERSION 0.1.2)
 # plutovg and SAM are vendored: their own warnings are not ours (tools/Makefile builds them -w too)
 set(_eg_quiet ${_eg_pvg_sources} ${_eg_sam_sources})
 list(TRANSFORM _eg_quiet PREPEND ${CMAKE_CURRENT_LIST_DIR}/)

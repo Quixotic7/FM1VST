@@ -9,7 +9,11 @@
  * against the repository's site/firmware/releases.json at configure time). Here the same ota.c, at the commit
  * EVILGENIUS's fm1-base pins (firmware/fm1-base/bsp), through FM1VST's common/sysex_ota.h on the glue's own SysEx
  * transport: the handshake frame is accepted beside EVILGENIUS's 7D 45 47 ones and answered; nothing else of ota.c runs
- * (the update itself is never started: its flash hooks refuse). GPL-3.0-only: it compiles FM1VST's sysex_ota.h
+ * (the update itself is never started: its flash hooks refuse). EVILGENIUS 0.1.2: every other frame in the update's
+ * framing that ota_service decodes goes on to the glue's fm1core_qd_usb_cmd, as the device's main loop gives it to
+ * app_usb_cmd (fm1-base main_fm1.c usb_cmd): the web manager's backup and restore (EVILGENIUS's core/glue/qd_bulk.h:
+ * FZBI, FZBR, FZSR with the answers to its read requests, FZXD), the store in the Bluetooth package's layout
+ * (-DQD_STORE_BLE=1, core_evilgenius.cmake). GPL-3.0-only: it compiles FM1VST's sysex_ota.h
  * (GPL-3.0-only) with EVILGENIUS's glue and felucca-bsp's ota.c (both MPL-2.0, unchanged). */
 #include "sysex.h"
 
@@ -34,13 +38,17 @@ static void fm1core_eg_in_init(fm1sx_in_t *s, fm1sx_accept_fn accept)
     fm1core_eg_accept_eg = accept;
     fm1sx_in_init(s, fm1core_eg_accept);
 }
-/* the waiting frame for EVILGENIUS's app, or 0: an M-UPGRADE frame is ota.c's (the handshake answered, the frame freed) */
+/* the waiting frame for EVILGENIUS's app, or 0: an M-UPGRADE frame is ota.c's (the handshake answered, the frame freed;
+ * any other of its framing to the store's commands) */
 static int fm1core_eg_frame(fm1sx_in_t *s, const uint8_t **p, uint32_t *n)
 {
+    uint32_t d;
     if (!fm1sx_frame(s, p, n))
         return 0;
     if (!fm1sx_is_mupg(*p, *n))
         return 1;
-    (void)ota_service();
+    d = ota_service();
+    if (d)
+        (void)fm1core_qd_usb_cmd(ota_dec, d);
     return 0;
 }
