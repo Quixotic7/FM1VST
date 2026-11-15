@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# EVILGENIUS 0.1.0-beta.1 (https://github.com/Quixotic7/evilgenius, tag v0.1.0-beta.1 = 988a54e, a pre-release; MPL-2.0
+# EVILGENIUS 0.1.1 (https://github.com/Quixotic7/evilgenius, tag v0.1.1 = 4fbc21f, a stable release; MPL-2.0
 # with the SID model BSD-2-Clause and SAM's C port unlicensed: its LICENSING.md), by Michael P Jones (Quixotic7): a
 # six-track SID groovebox that talks. A derivative of FIZZ (the same core/ tree and the same FM1VST glue, kept in its
 # own core/glue: core_quadrille.c, core_quadrille_desc.c), built here as RemoteFM1's tools/rfm1/build_fizz.sh builds
@@ -20,8 +20,8 @@
 # The identity (FELUCCA_ID): fm1-base's build.py --release, fm1.toml's id_prefix FM-1_45 + major, minor, patch as two
 # digits each, checked against the repository's own release index, site/firmware/releases.json.
 set(_eg ${CMAKE_SOURCE_DIR}/cores/evilgenius)
-set(_eg_ver 0.1.0-beta.3)
-set(_eg_id FM-1_45000100)
+set(_eg_ver 0.1.1)
+set(_eg_id FM-1_45000101)
 set(_eg_rel ../../cores/evilgenius)
 
 if(NOT EXISTS ${_eg}/core/glue/core_quadrille.c OR NOT EXISTS ${_eg}/firmware/fm1-base/bsp/chip/ota.c)
@@ -80,7 +80,7 @@ fm1_add_core(evilgenius ${CMAKE_CURRENT_LIST_DIR}
                            third_party/plutovg/source/FTL.TXT assets/fonts/OFL.txt
              NO_GEN
              SUBMODULES_RECURSIVE
-             VERSION 0.1.0-beta.3)
+             VERSION 0.1.1)
 # plutovg and SAM are vendored: their own warnings are not ours (tools/Makefile builds them -w too)
 set(_eg_quiet ${_eg_pvg_sources} ${_eg_sam_sources})
 list(TRANSFORM _eg_quiet PREPEND ${CMAKE_CURRENT_LIST_DIR}/)
