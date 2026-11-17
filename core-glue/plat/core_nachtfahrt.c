@@ -25,7 +25,7 @@
 
 #define EN_HOST 1                         /* the device's .pool section off (plat.h EN_POOL) */
 #define EN_VERSION FM1CORE_VERSION
-#define FELUCCA_ID "FM-1_197010000"       /* the package identity: build.py --release 1.0.0 (FM-1_197 01 00 00) */
+#define FELUCCA_ID "FM-1_197010002"       /* the package identity: build.py --release 1.0.2 (FM-1_197 01 00 00) */
 #define FM1CORE_PL_SX 1                   /* the installer's M-UPGRADE identity (plat_sx.h) */
 #include "plat_hal.h"
 #include "plat_sx.h"
