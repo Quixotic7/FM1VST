@@ -14,8 +14,8 @@
  * (app/dsp/dreams.cpp on Plaits, Rings, Elements and stmlib) is C++, its own units (core_mutabledreams.cmake, fm1.toml
  * "o2").
  *
- * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 2.1's: "2.1.0" and
- * FM-1_710020100 (fm1.toml id_prefix FM-1_710 + 02 01 00; SOURCE-PUBLICATION.md), from core_mutabledreams.cmake.
+ * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 2.3's: "2.3.0" and
+ * FM-1_710020300 (fm1.toml id_prefix FM-1_710 + 02 01 00; SOURCE-PUBLICATION.md), from core_mutabledreams.cmake.
  *
  * THE MANAGERS (core-glue/plat/plat_sx.h): fm1-base's main loop (base/device/main_fm1.c fm1_main, its
  * sysex_dispatch.h) gives a SysEx frame to the screen reader (announce.c, 7D 53 52), the log readout (7D 4C 47), the
