@@ -12,6 +12,7 @@
 | `ctl1` | CTL-1 1.0.1 | `cores/fm1-ctl` @ v1.0.1 (2b560cf), with `base` = fm1-base @ 698e2cb, `base/bsp` = felucca-bsp @ f878800 | MPL-2.0; Sonivox EAS Apache-2.0 |
 | `echofield` | ECHOFIELD FM-1 0.2.8 (Philip Bos) | `cores/echofield-fm1` @ v0.2.8 (8187473), with `base` = fm1-base @ 4039a8b, `base/bsp` = felucca-bsp @ b0b2428 | MIT; factory sounds CC0-1.0; fm1-base MPL-2.0 |
 | `patchwerk` | PATCHWERK 1.0.3 (Matt Kuebrich) | `cores/patchwerk` @ v1.0.3 (6f91629), fm1-base and felucca-bsp vendored in it under `base/`, its patches applied (no submodules) | GPL-3.0-only (fm1-base, felucca-bsp MPL-2.0; ymfm and MAME uPD933 ports BSD-3-Clause; SEA MIT); app.c built with PLAT_HOST as fm1-base's host build; compiled in: the CZ module's INTERNAL bank (assets/cz/INTERNAL.syx: 64 voices under Casio CZ factory names, 16 PATCHWERK's), the FM-DX bank (assets/dx), the SAMPLER's BREAK (web/break_src.json); not gated |
+| `hadal1` | HADAL-1 1.0.1 (Polystellarflow) | `cores/hadal-1` @ v1.0.1 (7909c72), fm1-base and felucca-bsp vendored in it under `base/` (no submodules) | MPL-2.0 |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
@@ -316,6 +317,33 @@ follows `core_frasil.c` (backup.c, the service's coroutine, lib/touch.c's host p
   FM-1_3246000208 (fm1.toml `id_prefix` FM-1_3246 + 00 02 08). USB product: "ECHOFIELD FM-1".
 - Licence texts in the .rfm1: its LICENSE (MIT) and LICENSING.md, the factory sounds' CC0 note
   (`echofield_factory_cc0.txt`), fm1-base's and felucca-bsp's MPL-2.0 with their notes, the Barlow OFL. Not gated.
+
+## HADAL-1
+
+HADAL-1 (Polystellarflow: generative dark ambient, drones, choirs, bells and 135 sound effects that change by themselves
+across 15 worlds, with melting pictures) is pinned at v1.0.1 (7909c72). Its fm1-base (vendored under `base/`) is the
+nearest to VESPER's of the family (plat_fm1.c adds `plat_data_read`, `plat_usb_play_gain`, `plat_store_room`,
+`plat_code_window`); `core_hadal1.c` follows `core_vesper.c` without backup.c (fm1.toml has no `backup`), with
+`sys_text.c`, VESPER's `midi_usb_lost` stand-in and the guard's `fm1_guard_pc_extend` (nothing to extend).
+
+- **The engine and the pictures** are fm1.toml's `o2` units (app/dsp/hadal.c, vis.c), `EXTRA_SOURCES` straight from
+  the submodule with `PLAT_HOST` (their `.pool` section off).
+- **The second core** (fm1.toml `cpu2`): `plat_cpu2_*` are fm1-base's host simulator's, in the core: each job runs at
+  once, in order, so hadal.c's split render gives a two-core unit's sums; the SYSTEM page says 2 CORES.
+- **The render** is main_fm1.c's without USB audio: `app_render` at MASTER's gain, then `app_after_tap` (uac_mix.h:
+  the app's speaker tuning).
+- **The managers' SysEx:** main_fm1.c's order: the screen reader, the log readout, the remote control; no `app_sysex`;
+  then `ota_service` (the M-UPGRADE identity).
+- **Saving:** SAVE's slot and project (store objects) and the GLOBAL notebook (two data-area pages, `plat_data_*`)
+  are written after a fade (`save_when_quiet`); `flash_sync` writes what is pending without the fade.
+- **Not built:** the splash, the overload hook's effect (no audio timing on the host), USB audio in (fm1.toml
+  `usb_audio_in`: the FM-1 recorded by a computer as an audio interface, with its SYSTEM page's USB settings: full
+  level, the split recording, the recording's tone; the core's output is the host's audio). app.c restores the
+  picture's saved brightness (GLOBAL BRIGHT) at power-on in that USB-audio block too, so here, as in HADAL-1's own host
+  and browser builds, a saved BRIGHT applies when it is changed, not at power-on.
+- Version and identity: build.py --release 1.0.1's, "1.0.1" and FM-1_96010001 (fm1.toml `id_prefix` FM-1_96 + 01 00
+  01). Licence texts in the .rfm1: its LICENSE (MPL-2.0), fm1-base's and felucca-bsp's MPL-2.0 with their notes and
+  fm1-base's CREDITS.md, the Barlow OFL. Not gated.
 
 ## A next fm1-base app
 

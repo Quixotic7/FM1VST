@@ -269,3 +269,6 @@
 [submodule "evilgenius"]
 	path = cores/evilgenius
 	url = https://github.com/Quixotic7/evilgenius
+[submodule "hadal-1"]
+	path = cores/hadal-1
+	url = https://github.com/sparky480v/hadal-1
