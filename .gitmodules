@@ -269,3 +269,6 @@
 [submodule "evilgenius"]
 	path = cores/evilgenius
 	url = https://github.com/Quixotic7/evilgenius
+[submodule "yehnah"]
+	path = cores/yehnah
+	url = https://github.com/Mello-D/yehnah
