@@ -272,3 +272,6 @@
 [submodule "yehnah"]
 	path = cores/yehnah
 	url = https://github.com/Mello-D/yehnah
+[submodule "FM1-Mighty-Arp"]
+	path = cores/FM1-Mighty-Arp
+	url = https://github.com/NickCulbertson/FM1-Mighty-Arp

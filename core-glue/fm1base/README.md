@@ -12,6 +12,7 @@
 | `ctl1` | CTL-1 1.0.1 | `cores/fm1-ctl` @ v1.0.1 (2b560cf), with `base` = fm1-base @ 698e2cb, `base/bsp` = felucca-bsp @ f878800 | MPL-2.0; Sonivox EAS Apache-2.0 |
 | `echofield` | ECHOFIELD FM-1 0.2.8 (Philip Bos) | `cores/echofield-fm1` @ v0.2.8 (8187473), with `base` = fm1-base @ 4039a8b, `base/bsp` = felucca-bsp @ b0b2428 | MIT; factory sounds CC0-1.0; fm1-base MPL-2.0 |
 | `patchwerk` | PATCHWERK 1.0.3 (Matt Kuebrich) | `cores/patchwerk` @ v1.0.3 (6f91629), fm1-base and felucca-bsp vendored in it under `base/`, its patches applied (no submodules) | GPL-3.0-only (fm1-base, felucca-bsp MPL-2.0; ymfm and MAME uPD933 ports BSD-3-Clause; SEA MIT); app.c built with PLAT_HOST as fm1-base's host build; compiled in: the CZ module's INTERNAL bank (assets/cz/INTERNAL.syx: 64 voices under Casio CZ factory names, 16 PATCHWERK's), the FM-DX bank (assets/dx), the SAMPLER's BREAK (web/break_src.json); not gated |
+| `mightyarp` | Mighty Arp 1.5 (Nick Culbertson) | `cores/FM1-Mighty-Arp` @ v1.5 (1283d87), with `base` = fm1-base @ b0976f2, `base/bsp` = felucca-bsp @ 5b0879b | MPL-2.0 |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
@@ -316,6 +317,26 @@ follows `core_frasil.c` (backup.c, the service's coroutine, lib/touch.c's host p
   FM-1_3246000208 (fm1.toml `id_prefix` FM-1_3246 + 00 02 08). USB product: "ECHOFIELD FM-1".
 - Licence texts in the .rfm1: its LICENSE (MIT) and LICENSING.md, the factory sounds' CC0 note
   (`echofield_factory_cc0.txt`), fm1-base's and felucca-bsp's MPL-2.0 with their notes, the Barlow OFL. Not gated.
+
+## Mighty Arp
+
+Mighty Arp (Nick Culbertson / Moby Pixel: a 4-op FM and subtractive synth around a chance arpeggiator, 50 sounds and
+RANDOM, a 32-step sequencer, chords, effects) is pinned at v1.5 (1283d87). Its fm1-base (b0976f2) is CTL-1's and
+AMB-1's 3ae2a65 plus usb_audio_channels (`plat_usb_ch`, plat_fm1.c's "no computer recording" here); `core_mightyarp.c`
+follows `core_ctl1.c` (lib/touch.c for `APP_TOUCH`, sys_text.c, ota.c before plat_fm1.c, the `midi_usb_lost` and
+`fm1_guard_pc_extend` stand-ins, the four-argument mirror), without btdev.c and without `app_tick` (no `APP_TICK`).
+
+- **The engine** (fm1.toml `o2`: app/dsp/engine.c) is its own unit (`mightyarp_dsp_engine.c`, `PLAT_HOST`).
+- **Not built:** Bluetooth MIDI (fm1.toml `ble`, `ble_stack = "own"`: `radio_none.c`, GLOBAL's BLUETOOTH switches
+  nothing), the second core (fm1.toml `cpu2`: `plat_cpu2_set` says -1, one core renders every voice, as on a unit
+  whose second core was given up), the splash, the overload hook, USB audio.
+- **The managers' SysEx:** main_fm1.c's order: the screen reader, the log readout, the remote control (no lease), then
+  `ota_service` (the M-UPGRADE identity). No app frames, no backup.
+- **Saving:** only SAVE writes (the settings; on SOUNDS a user sound); `flash_sync` has nothing pending.
+- Version and identity: build.sh --release 1.5's (tools/xxyy.py over build.py: X.Y only, 8 digits): "1.5" and
+  FM-1_62790105 (fm1.toml `id_prefix` FM-1_6279 + 01 05). USB product: "Mighty Arp FM-1".
+- Licence texts in the .rfm1: its LICENSE (MPL-2.0) and LICENSING.md, fm1-base's MPL-2.0, LICENSING.md and CREDITS.md,
+  felucca-bsp's MPL-2.0, LICENSING.md and NOTICE, the Barlow OFL (the only font gen_font.py builds). Not gated.
 
 ## A next fm1-base app
 
