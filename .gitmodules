@@ -269,3 +269,6 @@
 [submodule "evilgenius"]
 	path = cores/evilgenius
 	url = https://github.com/Quixotic7/evilgenius
+[submodule "fm1-sy1"]
+	path = cores/fm1-sy1
+	url = https://github.com/fenderberg/fm1-sy1
