@@ -109,6 +109,11 @@ static int fm1_cpu1_start(void) { return -1; }
 static inline int fm1_cpu1_run(void (*fn)(uint32_t), uint32_t arg) { (void)fn; (void)arg; return 0; }
 static inline int fm1_cpu1_run_mischecked(void (*fn)(uint32_t), uint32_t arg) { (void)fn; (void)arg; return 0; }
 static inline int fm1_cpu1_wait(void) { return 0; }
+/* 1.18's lanes (#802): core 1 never runs a job here, so a poll says "held" (the caller does the rest); the shared
+ * progress words are plain loads and stores on one core */
+static inline int fm1_cpu1_poll(uint32_t t0) { (void)t0; return -1; }
+static inline void fm1_cpu1_put(volatile uint32_t *p, uint32_t x) { *p = x; }
+static inline uint32_t fm1_cpu1_get(const volatile uint32_t *p) { return *p; }
 static uint32_t fm1_cpu1_stack_used(void) { return 0; }
 /* app.ld's core-1 stacks (main.c's DIAG page: the pool left free up to them): a stand-in at the pool's end, so the
  * page reads 0 free beyond the pool */
@@ -132,6 +137,11 @@ static void fm1_guard_pc_open(void) {}
 static uint8_t fm1core_mt_t5_on;
 static inline void fm1_timer5_start(void (*isr)(void), uint32_t prio) { (void)isr; (void)prio; fm1core_mt_t5_on = 1; }
 static inline void fm1_timer5_ack(void) {}
+/* 1.18's TIMER2 one-shot (#803: the end of a split dim pulse in the scan): no scan of the device's here, so it never
+ * fires */
+static inline void fm1_timer2_init(void (*isr)(void), uint32_t prio) { (void)isr; (void)prio; }
+static inline int fm1_timer2_once(uint32_t ticks) { (void)ticks; return 1; }
+static inline void fm1_timer2_stop(void) {}
 
 /* --------------------------------------------------------------- fm1_audio.h --- */
 #define FM1_AUDIO_HALF 0x80u
@@ -386,6 +396,9 @@ static uint32_t fm1core_mt_dim_level;               /* fm1_led_dim_level: 0 the 
 static void fm1_led_dim_level(uint32_t level) { fm1core_mt_dim_level = level; }
 static void fm1_input_init(void) {}
 static void fm1_input_tick(void) {}                 /* (the scan: the glue's fm1core_mt_in) */
+static void fm1_input_tick_end(void) {}             /* (1.18, #803: a split dim pulse's end) */
+/* 1.18's scan diagnostics (#803): only the dim-pulse counts are read (DIAG page 177): at rest */
+static volatile struct { uint32_t dim_n, dim_sum, split_late; } fm1_in_stat;
 static void fm1__led_lines(uint32_t rowmask) { (void)rowmask; }
 static inline uint32_t fm1__lock(void) { return 0; }
 static inline void fm1__unlock(uint32_t v) { (void)v; }
