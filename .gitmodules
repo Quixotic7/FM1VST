@@ -278,3 +278,6 @@
 [submodule "fm1-sy1"]
 	path = cores/fm1-sy1
 	url = https://github.com/fenderberg/fm1-sy1
+[submodule "hadal-1"]
+	path = cores/hadal-1
+	url = https://github.com/sparky480v/hadal-1
