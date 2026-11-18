@@ -296,3 +296,6 @@
 [submodule "fmav1"]
 	path = cores/fmav1
 	url = https://github.com/wootr0p/fmav1
+[submodule "M-Vsynth2"]
+	path = cores/M-Vsynth2
+	url = https://github.com/bk40-home/M-Vsynth2
