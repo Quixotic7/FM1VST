@@ -290,3 +290,6 @@
 [submodule "obssynth-fm1"]
 	path = cores/obssynth-fm1
 	url = https://github.com/orianbsilva/obssynth-fm1
+[submodule "trapstation-os"]
+	path = cores/trapstation-os
+	url = https://github.com/sog-maker/trapstation-os
