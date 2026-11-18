@@ -343,3 +343,6 @@
 [submodule "loaf-breaker"]
 	path = cores/loaf-breaker
 	url = https://github.com/FLEXOR-R/loaf-breaker
+[submodule "ruido"]
+	path = cores/ruido
+	url = https://github.com/miguelhd/ruido
