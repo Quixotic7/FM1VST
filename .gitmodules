@@ -346,3 +346,6 @@
 [submodule "ruido"]
 	path = cores/ruido
 	url = https://github.com/miguelhd/ruido
+[submodule "sloop3-fm1"]
+	path = cores/sloop3-fm1
+	url = https://github.com/isod89/sloop3-fm1

@@ -1,0 +1,15 @@
+# SLOOP 3 3.4.0: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: HOME held, its fifth white key (C4) saves the project now (fw/main.c HK_SAVE: "SAVED"). After
+# the reboot REC, PLAY and SAVE tapped twice end on the project page (PROJECT 3/3), which offers LOAD GO where a
+# fresh unit shows "--" (both checked with rfm1_run on the .rfm1: the same presses, the same times)
+save 3500 btn HOME down
+save 4000 key C4 down
+save 5000 key C4 up
+save 5500 btn HOME up
+save 6500 quit
+saved 3000 btn REC 60
+saved 7500 btn PLAY 60
+saved 8100 btn SAVE 60
+saved 8400 btn SAVE 60
+saved 9500 quit
+saved-lcd-differs
