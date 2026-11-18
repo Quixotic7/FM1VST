@@ -60,6 +60,8 @@
  *   FM1CORE_FW_UI_HOME()      HOME is showing (default ui.home; DUELL has no such flag)
  *   FM1CORE_FW_RESTORE_ON()   the autosave is on (default: !(ui_prefs & PREF_RESTORE_OFF); JIANT: PREF_RESTORE_ON)
  *   FM1CORE_FW_VOICE(t, v)    track t's voice v, for dump()'s count (default trk[t].v[v]; a shared pool: V(&trk[t], v))
+ *   FM1CORE_FW_SYNC_MUSIC()   flash_sync's music for a firmware without project.c's autosave (as, autosave_poll):
+ *                             write it now if it changed and nothing sounds; 1 current, 0 deferred (TRAPSTATION: jam_poll)
  * Then the descriptor (core_<id>_desc.c, fw_desc.h) names the entry points with the same prefix.
  *
  * Macros and statics here are fm1core_-prefixed (the firmware is in this unit: an unprefixed name would collide). */
@@ -654,6 +656,11 @@ int FM1CORE_FW(flash_sync)(void)
     settings_poll();
     if (persist_pending)
         ok = 0;
+#ifdef FM1CORE_FW_SYNC_MUSIC
+    (void)sig;
+    if (!FM1CORE_FW_SYNC_MUSIC())         /* (a firmware without project.c's autosave: its own, 1 = current) */
+        ok = 0;
+#else
     sig = autosave_sig();
     if (sig != as.saved && FM1CORE_FW_RESTORE_ON()) {
         if (!autosave_quiet()) {
@@ -668,6 +675,7 @@ int FM1CORE_FW(flash_sync)(void)
                 ok = 0;                   /* (a failed write: tried again at the next sync) */
         }
     }
+#endif
     fm1core_fw_file_write();
     return ok;
 }

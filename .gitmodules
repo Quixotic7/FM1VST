@@ -317,3 +317,15 @@
 [submodule "CS_FM1"]
 	path = cores/CS_FM1
 	url = https://github.com/cursedsound-music/CS_FM1
+[submodule "obssynth-fm1"]
+	path = cores/obssynth-fm1
+	url = https://github.com/orianbsilva/obssynth-fm1
+[submodule "trapstation-os"]
+	path = cores/trapstation-os
+	url = https://github.com/sog-maker/trapstation-os
+[submodule "fmav1"]
+	path = cores/fmav1
+	url = https://github.com/wootr0p/fmav1
+[submodule "M-Vsynth2"]
+	path = cores/M-Vsynth2
+	url = https://github.com/bk40-home/M-Vsynth2
