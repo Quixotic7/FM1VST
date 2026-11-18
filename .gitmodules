@@ -290,3 +290,6 @@
 [submodule "orgigs"]
 	path = cores/orgigs
 	url = https://github.com/orgelbobo/orgigs
+[submodule "conductor"]
+	path = cores/conductor
+	url = https://github.com/MammothCheese/conductor
