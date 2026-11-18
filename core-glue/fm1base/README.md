@@ -16,6 +16,7 @@
 | `hadal1` | HADAL-1 1.0.1 (Polystellarflow) | `cores/hadal-1` @ v1.0.1 (7909c72), fm1-base and felucca-bsp vendored in it under `base/` (no submodules) | MPL-2.0 |
 | `morse` | MORSE 0.6 (Da-Wei Lee) | `cores/fm1-morse` @ v0.6 (60f76cf), with `fm1-base` = fm1-base @ c8e0599, `fm1-base/bsp` = felucca-bsp @ 18eadad | GPL-3.0-or-later (common/ MIT; fm1-base MPL-2.0) |
 | `golf` | Golf 1.0 (BARNIR) | `cores/golf-fm1` @ v1.0 (8396679), no fm1-base of its own: `cores/golf-fm1-base` = fm1-base @ 68fdaf8 beside it, with `bsp` = felucca-bsp @ 18eadad | MPL-2.0 (wavetables partly GPL-3.0, MIT, CC BY, CC0 by their sources; fm1-base MPL-2.0) |
+| `tekstuur` | Tekstuur 2.0 (BARNIR) | `cores/tekstuur-fm1` @ v2.0 (a9fa86c), its app in `eigen/`; no fm1-base of its own: a second submodule `cores/tekstuur-fm1-base` = fm1-base @ 68fdaf8, its `bsp` = felucca-bsp @ 18eadad | MPL-2.0; sources CC0 (VSCO-2 CE, VCSL) |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
