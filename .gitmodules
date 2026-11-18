@@ -293,3 +293,6 @@
 [submodule "fm-1-chimera-vocal"]
 	path = cores/fm-1-chimera-vocal
 	url = https://github.com/shan-sherif/fm-1-chimera-vocal
+[submodule "loaf-breaker"]
+	path = cores/loaf-breaker
+	url = https://github.com/FLEXOR-R/loaf-breaker
