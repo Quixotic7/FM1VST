@@ -1,0 +1,42 @@
+Golf's wavetables: the MIT notices and the GPL-3.0 tables
+
+Golf's 130 built-in wavetables (eigen/dsp/gf_tables.h) are, by Golf's own credits (TABELLEN.md, "Bronnen en
+naamsvermelding"), Golf's own tables generated from formulas and resyntheses (harmonic levels measured from the source,
+rebuilt as new frames) of CC0, The Unlicense, CC BY, MIT and GPL-3.0 sources. TABELLEN.md names the source and the
+licence of each; it says the GPL-3.0 text and the MIT notices are "in licences/", a folder Golf's repository (tag
+v1.0) does not have. They are gathered here for this module, from the credits TABELLEN.md gives.
+
+GPL-3.0 (Surge XT's factory and third-party wavetables, https://github.com/surge-synthesizer/surge, by Vember Audio /
+Claes Johanson and the Surge Synth Team, Venus Theory, The Emu (J Riley Hill), Philippe Favre, A.Liv, TNMG, Ocean
+Swift Synthesis, Qonundrai): the tables TABELLEN.md credits to them, converted into Golf's table format. The GPL-3.0's
+full text is carried in this module as "GPL-3.0 (the Surge XT wavetables)".
+
+MIT, Mutable Instruments Tides and Plaits wavetable data (https://github.com/pichenettes/eurorack, tides/resources.cc,
+plaits/resources.cc): Digital - Drawbar Steps, Harmonic Stairs, Harmonic Steps.
+
+  Copyright Emilie Gillet (emilie.o.gillet@gmail.com).
+
+MIT, the Spherical Wavetable Navigator firmware's wavetable data (https://github.com/4ms/SWN, inc/spheres): Digital -
+Folded Ring, Ring Lattice, Spiral Partials. (Its maker asks that its company name is not used on derivatives.)
+
+  Copyright (c) 2017 Dan Green.
+
+The MIT licence, for both:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.

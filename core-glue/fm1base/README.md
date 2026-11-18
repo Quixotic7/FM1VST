@@ -15,6 +15,7 @@
 | `mightyarp` | Mighty Arp 1.5 (Nick Culbertson) | `cores/FM1-Mighty-Arp` @ v1.5 (1283d87), with `base` = fm1-base @ b0976f2, `base/bsp` = felucca-bsp @ 5b0879b | MPL-2.0 |
 | `hadal1` | HADAL-1 1.0.1 (Polystellarflow) | `cores/hadal-1` @ v1.0.1 (7909c72), fm1-base and felucca-bsp vendored in it under `base/` (no submodules) | MPL-2.0 |
 | `morse` | MORSE 0.6 (Da-Wei Lee) | `cores/fm1-morse` @ v0.6 (60f76cf), with `fm1-base` = fm1-base @ c8e0599, `fm1-base/bsp` = felucca-bsp @ 18eadad | GPL-3.0-or-later (common/ MIT; fm1-base MPL-2.0) |
+| `golf` | Golf 1.0 (BARNIR) | `cores/golf-fm1` @ v1.0 (8396679), no fm1-base of its own: `cores/golf-fm1-base` = fm1-base @ 68fdaf8 beside it, with `bsp` = felucca-bsp @ 18eadad | MPL-2.0 (wavetables partly GPL-3.0, MIT, CC BY, CC0 by their sources; fm1-base MPL-2.0) |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
@@ -390,6 +391,39 @@ generate step (run in the root, `fm1-base/tools` on the path) and the licence pa
 - Licence texts in the .rfm1: its LICENSE (GPL-3.0), fm1-base's MPL-2.0, LICENSING.md and CREDITS.md, felucca-bsp's
   MPL-2.0, LICENSING.md and NOTICE, the Barlow OFL. common/ (hostlink, ledfx) is MIT by SPDX header only (no MIT text
   in the repository). Not gated.
+
+## Golf
+
+Golf (BARNIR: a wavetable synthesizer, two oscillators morphing through 130 built-in tables with unison and warps, a
+ladder filter, two LFOs and a modulation matrix, a 32-step sequencer inside the engine, an arpeggiator, effects) is
+pinned at v1.0 (8396679). The app is `eigen/`. **The repository has no fm1-base:** `eigen/bouw.sh` copies the app into
+any `$FM1_BASE` checkout. The glue pins one beside it, `cores/golf-fm1-base` = fm1-base @ 68fdaf8 (its main at Golf
+1.0's tag, 2026-11-14: SY1's c8e0599 plus uac_mix.h's MASTER slide), unmodified; `core_golf.cmake` stops at configure
+when it is not checked out, and an update of Golf's pin leaves this one as it is. `core_golf.c` follows `core_sy1.c`
+(the second core simulated, lib/touch.c for `APP_TOUCH`).
+
+- **The engine** (fm1.toml `o2`: eigen/dsp/gf_engine.c) is its own unit with `PLAT_HOST`. Its voice code asks for the
+  device's `.app_ram` section on every compiler but the Mac's, Linux's and Windows' (`GF_HOT`): `-Dsection(x)=aligned(4)`
+  on that unit (emcc).
+- **The render** is main_fm1.c's with USB AUDIO full (app.c asks `plat_usb_audio_full(1)`): the render at 4096, then
+  MASTER after it (uac_mix.h, its slide across the block); no USB audio in or out.
+- **The managers' SysEx:** main_fm1.c's order: the screen reader, the log readout, the remote control; no `app_sysex`;
+  then `ota_service` and usb_cmd: the app's (`APP_USB_CMD`, 0x61: tools/golf_tabellen.py's wavetable bank, pulled
+  from the host with ota.c's read requests) on the service's coroutine (`FM1CORE_PL_SX_CORO`). No backup, no mirror
+  (fm1.toml `mirror`: not built).
+- **Saving:** only SAVE writes (a user preset and the pattern, store objects); the bank's upload writes the data area
+  at once; `flash_sync` has nothing pending.
+- **Not built:** the splash (`APP_SPLASH`), the overload hook (`APP_OVERLOAD`: no audio timing on the host; the voices'
+  unison cap never drops), the screen mirror, USB audio.
+- Version and identity: build.py --release 1.0's, "1.0" and FM-1_28010000 (LEARNINGS.md). USB product: "Golf FM-1".
+- **Licence.** LICENSE, README and fm1.toml say MPL-2.0; the source files' headers say "Copyright (C) 2026 BARNIR. Alle
+  rechten voorbehouden." (all rights reserved), a question for the owner. The wavetables are, by TABELLEN.md, Golf's
+  own and resyntheses of CC0, The Unlicense, CC BY (credits in TABELLEN.md), MIT (Mutable Instruments Tides / Plaits,
+  4ms SWN) and GPL-3.0 (Surge XT) sources; TABELLEN.md puts the GPL-3.0 text and MIT notices in a `licences/` folder the
+  repository does not have, so the .rfm1 carries `golf_third_party.txt` (the MIT notices, gathered from TABELLEN.md's
+  credits) and FM1VST's own GPL-3.0 text. Also in the .rfm1: Golf's LICENSE, TABELLEN.md, fm1-base's MPL-2.0,
+  LICENSING.md and CREDITS.md, felucca-bsp's MPL-2.0, LICENSING.md and NOTICE, the Barlow OFL. 96 presets are
+  converted from BARNIR's own Golf plug-in. Not gated.
 
 ## A next fm1-base app
 
