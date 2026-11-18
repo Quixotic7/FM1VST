@@ -293,3 +293,9 @@
 [submodule "CS_FM1"]
 	path = cores/CS_FM1
 	url = https://github.com/cursedsound-music/CS_FM1
+[submodule "tekstuur-fm1"]
+	path = cores/tekstuur-fm1
+	url = https://github.com/barnierg76/tekstuur-fm1
+[submodule "tekstuur-fm1-base"]
+	path = cores/tekstuur-fm1-base
+	url = https://github.com/charlesvestal/fm1-base

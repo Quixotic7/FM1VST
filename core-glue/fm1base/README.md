@@ -14,6 +14,7 @@
 | `patchwerk` | PATCHWERK 1.0.3 (Matt Kuebrich) | `cores/patchwerk` @ v1.0.3 (6f91629), fm1-base and felucca-bsp vendored in it under `base/`, its patches applied (no submodules) | GPL-3.0-only (fm1-base, felucca-bsp MPL-2.0; ymfm and MAME uPD933 ports BSD-3-Clause; SEA MIT); app.c built with PLAT_HOST as fm1-base's host build; compiled in: the CZ module's INTERNAL bank (assets/cz/INTERNAL.syx: 64 voices under Casio CZ factory names, 16 PATCHWERK's), the FM-DX bank (assets/dx), the SAMPLER's BREAK (web/break_src.json); not gated |
 | `mightyarp` | Mighty Arp 1.5 (Nick Culbertson) | `cores/FM1-Mighty-Arp` @ v1.5 (1283d87), with `base` = fm1-base @ b0976f2, `base/bsp` = felucca-bsp @ 5b0879b | MPL-2.0 |
 | `hadal1` | HADAL-1 1.0.1 (Polystellarflow) | `cores/hadal-1` @ v1.0.1 (7909c72), fm1-base and felucca-bsp vendored in it under `base/` (no submodules) | MPL-2.0 |
+| `tekstuur` | Tekstuur 2.0 (BARNIR) | `cores/tekstuur-fm1` @ v2.0 (a9fa86c), its app in `eigen/`; no fm1-base of its own: a second submodule `cores/tekstuur-fm1-base` = fm1-base @ 68fdaf8, its `bsp` = felucca-bsp @ 18eadad | MPL-2.0; sources CC0 (VSCO-2 CE, VCSL) |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
