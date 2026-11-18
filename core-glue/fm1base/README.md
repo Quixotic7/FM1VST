@@ -14,6 +14,7 @@
 | `patchwerk` | PATCHWERK 1.0.3 (Matt Kuebrich) | `cores/patchwerk` @ v1.0.3 (6f91629), fm1-base and felucca-bsp vendored in it under `base/`, its patches applied (no submodules) | GPL-3.0-only (fm1-base, felucca-bsp MPL-2.0; ymfm and MAME uPD933 ports BSD-3-Clause; SEA MIT); app.c built with PLAT_HOST as fm1-base's host build; compiled in: the CZ module's INTERNAL bank (assets/cz/INTERNAL.syx: 64 voices under Casio CZ factory names, 16 PATCHWERK's), the FM-DX bank (assets/dx), the SAMPLER's BREAK (web/break_src.json); not gated |
 | `mightyarp` | Mighty Arp 1.5 (Nick Culbertson) | `cores/FM1-Mighty-Arp` @ v1.5 (1283d87), with `base` = fm1-base @ b0976f2, `base/bsp` = felucca-bsp @ 5b0879b | MPL-2.0 |
 | `hadal1` | HADAL-1 1.0.1 (Polystellarflow) | `cores/hadal-1` @ v1.0.1 (7909c72), fm1-base and felucca-bsp vendored in it under `base/` (no submodules) | MPL-2.0 |
+| `morse` | MORSE 0.6 (Da-Wei Lee) | `cores/fm1-morse` @ v0.6 (60f76cf), with `fm1-base` = fm1-base @ c8e0599, `fm1-base/bsp` = felucca-bsp @ 18eadad | GPL-3.0-or-later (common/ MIT; fm1-base MPL-2.0) |
 
 fm1-base is Charles Vestal's platform for FM-1 apps, X0X's `plat.h` generalised (an app is `app.h` + `app.c` and an
 `fm1.toml`). A core uses the plat family's shared core (`core-glue/plat/plat_glue.h`, README there) with:
@@ -365,6 +366,30 @@ nearest to VESPER's of the family (plat_fm1.c adds `plat_data_read`, `plat_usb_p
 - Version and identity: build.py --release 1.0.1's, "1.0.1" and FM-1_96010001 (fm1.toml `id_prefix` FM-1_96 + 01 00
   01). Licence texts in the .rfm1: its LICENSE (MPL-2.0), fm1-base's and felucca-bsp's MPL-2.0 with their notes and
   fm1-base's CREDITS.md, the Barlow OFL. Not gated.
+
+## MORSE
+
+MORSE (Da-Wei Lee: a pocket Morse code machine, a keyer and decoder on the keys, rhythm drills, flash cards in Koch
+order, listening practice, typing on the keys, Vail-format MIDI keying) is pinned at v0.6 (60f76cf). The app is the
+repository's root (app.h, app.c, fm1.toml) with fm1-base in `fm1-base/`, not `app/` and `base/`: the includes, the
+generate step (run in the root, `fm1-base/tools` on the path) and the licence paths say so. Its fm1-base is SY1's
+(c8e0599); `core_morse.c` follows `core_sy1.c` without the second core and without lib/touch.c, with `app_tick`
+(APP_TICK, `in_tick` around it as main_fm1.c) and the app's own SysEx.
+
+- **No o2 units:** the sidetone (tone.c) is in app.c's unit.
+- **The managers' SysEx:** main_fm1.c's order: the screen reader, the log readout, the remote control, the app's own
+  (`app_sysex`: the host link F0 7D 4D 4F, host/morse and the progress page), then `ota_service`.
+- **Saving:** one record (settings and the cards' progress, store object at 0xDA000) 3 s after a change;
+  `flash_sync` writes it without the wait.
+- **RUN_ARGS:** MORSE starts on PRACTICE, where the keys are silent until a card asks: `--press PLAY@1000` starts the
+  practice and the card's prompt sounds.
+- **Not built:** Bluetooth MIDI (fm1.toml `ble`, `ble_stack = "own"`: `radio_none.c`; SETTINGS > BLUETOOTH says NOT
+  IN THIS BUILD, app.c's own text for a build without it), the splash.
+- Version and identity: build.py --release 0.6's, "0.6" and FM-1_41000600 (fm1.toml `id_prefix` FM-1_41 + 00 06 00).
+  USB product: "MORSE FM-1".
+- Licence texts in the .rfm1: its LICENSE (GPL-3.0), fm1-base's MPL-2.0, LICENSING.md and CREDITS.md, felucca-bsp's
+  MPL-2.0, LICENSING.md and NOTICE, the Barlow OFL. common/ (hostlink, ledfx) is MIT by SPDX header only (no MIT text
+  in the repository). Not gated.
 
 ## A next fm1-base app
 
