@@ -293,3 +293,6 @@
 [submodule "trapstation-os"]
 	path = cores/trapstation-os
 	url = https://github.com/sog-maker/trapstation-os
+[submodule "fmav1"]
+	path = cores/fmav1
+	url = https://github.com/wootr0p/fmav1
