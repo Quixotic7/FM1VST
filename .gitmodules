@@ -290,3 +290,6 @@
 [submodule "Quantum-GammaWave"]
 	path = cores/Quantum-GammaWave
 	url = https://github.com/Guillel51/Quantum-GammaWave
+[submodule "CS_FM1"]
+	path = cores/CS_FM1
+	url = https://github.com/cursedsound-music/CS_FM1
