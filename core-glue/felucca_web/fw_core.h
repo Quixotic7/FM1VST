@@ -59,6 +59,7 @@
  *   FM1CORE_FW_DUMP()         more lines for dump()
  *   FM1CORE_FW_UI_HOME()      HOME is showing (default ui.home; DUELL has no such flag)
  *   FM1CORE_FW_RESTORE_ON()   the autosave is on (default: !(ui_prefs & PREF_RESTORE_OFF); JIANT: PREF_RESTORE_ON)
+ *   FM1CORE_FW_VOICE(t, v)    track t's voice v, for dump()'s count (default trk[t].v[v]; a shared pool: V(&trk[t], v))
  * Then the descriptor (core_<id>_desc.c, fw_desc.h) names the entry points with the same prefix.
  *
  * Macros and statics here are fm1core_-prefixed (the firmware is in this unit: an unprefixed name would collide). */
@@ -210,6 +211,9 @@ static void fm1core_fw_sx_service(void)  /* main.c's loop: ed_service (editor fr
 #endif
 #ifndef FM1CORE_FW_UI_HOME
 #define FM1CORE_FW_UI_HOME() (ui.home != 0)   /* HOME is showing (ui_info, dump) */
+#endif
+#ifndef FM1CORE_FW_VOICE
+#define FM1CORE_FW_VOICE(t, v) (trk[t].v[v])
 #endif
 #ifndef FM1CORE_FW_RESTORE_ON
 #define FM1CORE_FW_RESTORE_ON() (!(ui_prefs & PREF_RESTORE_OFF))   /* MENU > RESTORE LAST: the autosave is written */
@@ -607,7 +611,7 @@ void FM1CORE_FW(dump)(void)
     for (i = 0; i < NTRK; i++) {
         uint32_t v, n = 0;
         for (v = 0; v < NVOICE; v++)
-            n += trk[i].v[v].active;
+            n += FM1CORE_FW_VOICE(i, v).active;
         printf("  part %u%s: %s preset %u, voices %u, level %d\n", (unsigned)i + 1u, i == song.sel ? "*" : "",
                ENGINES[trk[i].engine]->name, (unsigned)trk[i].preset, (unsigned)n, (int)trk[i].p[P_LEVEL]);
     }
