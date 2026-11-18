@@ -340,3 +340,6 @@
 [submodule "tekstuur-fm1-base"]
 	path = cores/tekstuur-fm1-base
 	url = https://github.com/charlesvestal/fm1-base
+[submodule "loaf-breaker"]
+	path = cores/loaf-breaker
+	url = https://github.com/FLEXOR-R/loaf-breaker
