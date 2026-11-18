@@ -296,3 +296,12 @@
 [submodule "fm1-morse"]
 	path = cores/fm1-morse
 	url = https://github.com/daviddwlee84/fm1-morse
+[submodule "orgigs"]
+	path = cores/orgigs
+	url = https://github.com/orgelbobo/orgigs
+[submodule "conductor"]
+	path = cores/conductor
+	url = https://github.com/MammothCheese/conductor
+[submodule "stallion-fm1"]
+	path = cores/stallion-fm1
+	url = https://github.com/EberonLtd/stallion-fm1

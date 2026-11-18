@@ -47,6 +47,9 @@ __attribute__((unused)) static struct { uint32_t magic, count, cpu, dbg, emu, pc
 #undef memcpy
 #undef memcmp
 #include "sloop_hal.h"
+#ifdef FM1CORE_SL_STALLION
+#include "stallion_hal.h"                           /* (Stallion: fm1_clk.h, fm1_an, FL_XIP) */
+#endif
 #include "gfx.c"
 #include "core.h"
 #if FM1CORE_SL_HAS_CPU1
@@ -88,6 +91,9 @@ __attribute__((unused)) static struct { uint32_t magic, count, cpu, dbg, emu, pc
 #endif
 #if FM1CORE_SL_FW != FM1CORE_SL_NMS
 #include "icons.c"
+#endif
+#if defined(FM1CORE_SL_STALLION) && AT_POPUP
+#include "ui_atpop.c"                               /* (Stallion) the AT PRESSURE and VOLUME bar */
 #endif
 #include "ui_draw.c"
 #if FM1CORE_SL_FW == FM1CORE_SL_SLOOP || FM1CORE_SL_FW == FM1CORE_SL_KARMA   /* (ORBIT 1.0 dropped it) */
