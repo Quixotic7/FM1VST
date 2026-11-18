@@ -281,3 +281,6 @@
 [submodule "hadal-1"]
 	path = cores/hadal-1
 	url = https://github.com/sparky480v/hadal-1
+[submodule "modular-koi"]
+	path = cores/modular-koi
+	url = https://github.com/bunglesociety/modular-koi
