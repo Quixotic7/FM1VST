@@ -290,3 +290,6 @@
 [submodule "fm-kick"]
 	path = cores/fm-kick
 	url = https://github.com/davidamomusic/fm-kick
+[submodule "viscera"]
+	path = cores/viscera
+	url = https://github.com/De-Pattern/viscera
