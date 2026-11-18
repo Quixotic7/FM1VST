@@ -287,3 +287,6 @@
 [submodule "glitch"]
 	path = cores/glitch
 	url = https://github.com/saulofilho/glitch
+[submodule "quartz"]
+	path = cores/quartz
+	url = https://github.com/F0nski/quartz
