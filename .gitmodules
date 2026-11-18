@@ -293,3 +293,6 @@
 [submodule "viscera"]
 	path = cores/viscera
 	url = https://github.com/De-Pattern/viscera
+[submodule "ruido"]
+	path = cores/ruido
+	url = https://github.com/miguelhd/ruido
