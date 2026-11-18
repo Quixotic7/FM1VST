@@ -349,3 +349,6 @@
 [submodule "sloop3-fm1"]
 	path = cores/sloop3-fm1
 	url = https://github.com/isod89/sloop3-fm1
+[submodule "dabke"]
+	path = cores/dabke
+	url = https://github.com/wissamsader/dabke
