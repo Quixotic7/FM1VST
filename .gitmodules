@@ -284,3 +284,6 @@
 [submodule "modular-koi"]
 	path = cores/modular-koi
 	url = https://github.com/bunglesociety/modular-koi
+[submodule "glitch"]
+	path = cores/glitch
+	url = https://github.com/saulofilho/glitch
