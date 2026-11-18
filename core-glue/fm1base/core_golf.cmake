@@ -14,9 +14,14 @@
 set(_gf ${CMAKE_SOURCE_DIR}/cores/golf-fm1)
 set(_gf_base ${CMAKE_SOURCE_DIR}/cores/golf-fm1-base)
 set(_gf_ver 1.0)
+# (the manager checks out the core's own submodule only: the configure checks out this one, with its bsp, when empty)
 if(NOT EXISTS ${_gf_base}/device/plat_fm1.c OR NOT EXISTS ${_gf_base}/bsp/chip/ota.c)
-    message(FATAL_ERROR "golf core: cores/golf-fm1-base (fm1-base @ 68fdaf8, with its bsp) is not checked out: run "
-                        "git submodule update --init --recursive cores/golf-fm1-base")
+    execute_process(COMMAND git -C ${CMAKE_SOURCE_DIR} -c protocol.file.allow=always submodule update --init --recursive
+                            cores/golf-fm1-base RESULT_VARIABLE _rc ERROR_VARIABLE _err)
+    if(NOT EXISTS ${_gf_base}/device/plat_fm1.c OR NOT EXISTS ${_gf_base}/bsp/chip/ota.c)
+        message(FATAL_ERROR "golf core: cores/golf-fm1-base (fm1-base @ 68fdaf8, with its bsp) is not checked out: run "
+                            "git submodule update --init --recursive cores/golf-fm1-base (${_err})")
+    endif()
 endif()
 # build.py --release 1.0 (LEARNINGS.md: "--release 1.0 geeft FM-1_28010000"): APP_VERSION the release; the package
 # identity fm1.toml's id_prefix (FM-1_28) + the major, minor and patch as two digits each: FM-1_28010000
