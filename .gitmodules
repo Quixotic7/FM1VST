@@ -293,3 +293,6 @@
 [submodule "conductor"]
 	path = cores/conductor
 	url = https://github.com/MammothCheese/conductor
+[submodule "stallion-fm1"]
+	path = cores/stallion-fm1
+	url = https://github.com/EberonLtd/stallion-fm1

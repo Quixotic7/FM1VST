@@ -325,7 +325,13 @@ void fm1core_sl_fw_idle(void)                     /* main.c: ui_input and ed_ser
     }
 }
 
-void fm1core_sl_fw_master(int32_t m) { fm1core_sl_master = m < 0 ? 0 : m > 1023 ? 1023 : m; }
+void fm1core_sl_fw_master(int32_t m)
+{
+    fm1core_sl_master = m < 0 ? 0 : m > 1023 ? 1023 : m;
+#ifdef FM1CORE_SL_STALLION
+    fm1_an.master = (uint16_t)(fm1core_sl_master ? fm1core_sl_master : 1);   /* (KEY TOUCH on: main.c reads it there) */
+#endif
+}
 
 /* ---------------------------------------------------------------- audio --- */
 void fm1core_sl_fw_audio(int16_t *out, uint32_t frames)
