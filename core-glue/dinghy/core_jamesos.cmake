@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# JamesOS 1.0b by Aaron Grando (https://github.com/aarongrando/JamesOS, commit c630fe1 = JamesOS 1.0b build 3083; the
+# JamesOS 1.0b by Aaron Grando (https://github.com/aarongrando/JamesOS, tag v1.0b = c630fe1, build 3083; the
 # public repository has no release tag): the Dinghy family glue (core-glue/dinghy/) over the unmodified submodule
 # cores/JamesOS, the FM-1 product only (firmware/product.h's default; the tree also builds JamesOS-K for the
 # SMK-37 Pro), in its host mode (DINGHY_HOST) with the device's SAVE screen and project slots
