@@ -1,0 +1,24 @@
+# JamesOS 1.0b: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# the flash round trip: PRESETS three detents on (track 1's sound), then SAVE's screen into project slot 1 (SAVE:
+# the menu, SAVE: choose a slot, SAVE: the name, SAVE: confirm, SAVE: written, with its working copy); the second unit
+# recovers the working copy at boot (dinghy.c br_app_init: br_project_recover), so it shows the changed sound, not
+# the factory one
+save wait 1000
+save knob PRESETS +3
+save wait 500
+save btn SAVE 80
+save wait 400
+save btn SAVE 80
+save wait 400
+save btn SAVE 80
+save wait 400
+save btn SAVE 80
+save wait 400
+save btn SAVE 80
+save wait 1000
+save quit
+saved wait 1500
+saved quit
+saved-lcd-differs
+# the reboot: the host mode has no reset path (UBOOT is a USB request, the boot guard the device branch's)
+reboot none the host build has no reset path (UBOOT over USB, the boot guard in the device branch only)
