@@ -352,3 +352,6 @@
 [submodule "dabke"]
 	path = cores/dabke
 	url = https://github.com/wissamsader/dabke
+[submodule "JamesOS"]
+	path = cores/JamesOS
+	url = https://github.com/aarongrando/JamesOS
