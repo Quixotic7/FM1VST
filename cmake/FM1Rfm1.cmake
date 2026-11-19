@@ -40,6 +40,9 @@
 #                                   readouts (docs/RFM1.md "Readouts (rd1)"): the shim's rfm1_readout record, the
 #                                   Tier 2 map's bridge and knob labels, and FM1_HOST_EXT for every unit
 #                                   (core-api/rfm1_ext.h's macros)
+#       [VERSION <v>]               the .rfm1's version, in place of the firmware's (a rebuild of the same release
+#                                   with new glue: "0.42-r2"); the descriptor's FM1CORE_VERSION in the Wasm build too,
+#                                   the native core's and the FM-1's unchanged
 #       [AUDIO_OUT <n>])            the output channels the core gives in all (aout1: 2, 4, 6, 8 or 10; fm1-base's
 #                                   fm1.toml usb_audio_channels): above 2, the shim exports rfm1_audio_out_info and
 #                                   rfm1_audio_out from the core's fm1core_audio_out_info / fm1core_audio_out
@@ -188,7 +191,7 @@ function(fm1_rfm1_license_files id src license out)
 endfunction()
 
 function(fm1_add_rfm1 id)
-    cmake_parse_arguments(A "VIRTUAL;NO_SKIN;NO_LABELS" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE;METADATA;AUDIO_OUT"
+    cmake_parse_arguments(A "VIRTUAL;NO_SKIN;NO_LABELS" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE;METADATA;AUDIO_OUT;VERSION"
                           "AUTHORS;LICENSE_FILES;DEFINES;FLAGS;INCLUDES;RUN_ARGS;NEEDS;FOLDERS;WANTS" ${ARGN})
     if(A_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR "fm1_add_rfm1(${id}): unknown arguments ${A_UNPARSED_ARGUMENTS}")
@@ -210,6 +213,9 @@ function(fm1_add_rfm1 id)
     foreach(_k VERSION LICENSE SOURCE UNIT GEN_TARGET GEN_HEADERS)
         get_property(_${_k} GLOBAL PROPERTY FM1_CORE_${_k}_${id})
     endforeach()
+    if(A_VERSION)                 # the .rfm1's own version (a rebuild of the same firmware: "0.42-r2"), not the firmware's
+        set(_VERSION ${A_VERSION})
+    endif()
     if(NOT A_MEMORY_MIB)
         set(A_MEMORY_MIB ${FM1_RFM1_MEMORY_MIB})
     endif()
@@ -252,6 +258,10 @@ function(fm1_add_rfm1 id)
     list(FILTER _topt EXCLUDE REGEX "^-O")
     if(A_HOSTED_DESPITE_GATE)   # (a hosted file is the firmware as its author builds it: no "gated" in its descriptor)
         list(FILTER _tdef EXCLUDE REGEX "^FM1CORE_GATED=")
+    endif()
+    if(A_VERSION)                 # (the descriptor says the same as the manifest: hosts check they agree)
+        list(FILTER _tdef EXCLUDE REGEX "^FM1CORE_VERSION=")
+        list(APPEND _tdef "FM1CORE_VERSION=\"${A_VERSION}\"")
     endif()
     if("${_tinc};${_tdef};${_topt}" MATCHES "\\$<")
         message(FATAL_ERROR "fm1_add_rfm1(${id}): a generator expression in core_${id}_obj's includes or "
