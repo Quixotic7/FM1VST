@@ -101,18 +101,29 @@ EXPORT(rfm1_init) void rfm1_init(int32_t demo)
     if (core() && C->init)
         C->init(demo);
 }
+#ifdef RFM1_RD1
+static void rd_note(void);
+static void rd_bridge(void);
+#else
+#define rd_note() ((void)0)
+#define rd_bridge() ((void)0)
+#endif
 EXPORT(rfm1_tick) void rfm1_tick(uint32_t ms)
 {
+    rd_note();
     if (core() && C->tick)
         C->tick(ms);
 }
 EXPORT(rfm1_frame) void rfm1_frame(void)
 {
+    rd_note();
     if (core() && C->frame)
         C->frame();
+    rd_bridge();
 }
 EXPORT(rfm1_idle) void rfm1_idle(void)
 {
+    rd_note();
     if (core() && C->idle)
         C->idle();
 }
@@ -164,6 +175,13 @@ EXPORT(rfm1_ui_info) void rfm1_ui_info(uint32_t buf, uint32_t n)
  * exports both; a core without them: epoch 0, label 0 */
 extern uint32_t fm1core_labels_epoch(void) __attribute__((weak));
 extern const char *fm1core_label(int32_t which) __attribute__((weak));
+#ifdef RFM1_RD1                /* (the readouts' knob labels wrap these: below) */
+#define LBL_EXPORT(name) static
+#define LBL_FN(name) base_##name
+#else
+#define LBL_EXPORT(name) EXPORT(name)
+#define LBL_FN(name) name
+#endif
 #if RFM1_META_LABELS
 /* with the author's static labels (RemoteFM1Metadata.json: RFM1_META_SLOT, knobs and buttons): served while the core
  * has no live labels of its own (no symbols, or its epoch 0); once its epoch is not 0 everything is the core's. The
@@ -171,7 +189,7 @@ extern const char *fm1core_label(int32_t which) __attribute__((weak));
  * misses a change */
 static uint32_t meta_epoch, meta_core_epoch;
 static int meta_src;
-EXPORT(rfm1_labels_epoch) uint32_t rfm1_labels_epoch(void)
+LBL_EXPORT(rfm1_labels_epoch) uint32_t LBL_FN(rfm1_labels_epoch)(void)
 {
     const uint32_t ce = fm1core_labels_epoch ? fm1core_labels_epoch() : 0u;
     const int src = ce ? 2 : 1;
@@ -184,7 +202,7 @@ EXPORT(rfm1_labels_epoch) uint32_t rfm1_labels_epoch(void)
     (void)*(volatile const char *)RFM1_META_TAG;   /* (kept in the data: rfm1_check reports the counts) */
     return meta_epoch;
 }
-EXPORT(rfm1_label) uint32_t rfm1_label(int32_t which)
+LBL_EXPORT(rfm1_label) uint32_t LBL_FN(rfm1_label)(int32_t which)
 {
     if (which < 0 || which >= FM1CORE_LBL_N)
         return 0u;
@@ -193,11 +211,11 @@ EXPORT(rfm1_label) uint32_t rfm1_label(int32_t which)
     return (uint32_t)(uintptr_t)RFM1_META_SLOT[which];
 }
 #else
-EXPORT(rfm1_labels_epoch) uint32_t rfm1_labels_epoch(void)
+LBL_EXPORT(rfm1_labels_epoch) uint32_t LBL_FN(rfm1_labels_epoch)(void)
 {
     return fm1core_labels_epoch ? fm1core_labels_epoch() : 0u;
 }
-EXPORT(rfm1_label) uint32_t rfm1_label(int32_t which)
+LBL_EXPORT(rfm1_label) uint32_t LBL_FN(rfm1_label)(int32_t which)
 {
     return fm1core_label && which >= 0 && which < FM1CORE_LBL_N ? (uint32_t)(uintptr_t)fm1core_label(which) : 0u;
 }
@@ -294,5 +312,174 @@ int rfm1_cpu2_core(void)
 {
     const uint32_t sp = (uint32_t)emscripten_stack_get_current();
     return rfm1_c1_hi && sp > rfm1_c1_lo && sp <= rfm1_c1_hi;
+}
+#endif
+
+/* readouts (docs/RFM1.md "Readouts (rd1)"): only in a module built with rd1 in its fm1_add_rfm1 WANTS (RFM1_RD1; its
+ * units get FM1_HOST_EXT, so core-api/rfm1_ext.h's macros reach rfm1_readout_push). One record at a stable address,
+ * rfm1_readout() -> ptr; the host reads its seq after each rfm1_frame (no call) and shows a new one.
+ *   The firmware's own readouts (RFM1_READOUT, RFM1_PRESET, RFM1_MESSAGE) always win. A core with the Tier 2 map's
+ * knob_target and params gets one without a line of its own: a knob whose detents the core took this frame, and that
+ * the core said nothing about, is read out as its target's name and value text (the bridge).
+ *   Live labels for the knobs too: a core without labels of its own has its knobs named after their targets' names
+ * (knob_target, as of param_epoch), over the static labels of the shim (RemoteFM1Metadata.json) where a knob has a
+ * target; the rest as before. */
+#ifdef RFM1_RD1
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#include "rfm1_ext.h"
+typedef struct {
+    uint16_t version, size;    /* 1, sizeof (48) */
+    uint32_t seq;              /* moves on every new readout; 0: none yet */
+    int8_t control;            /* 0..48: the DYNAMIC-LABELS slot it belongs to; -1: the control in use */
+    uint8_t kind;              /* RFM1_RD_PARAM, _PRESET, _MESSAGE */
+    uint8_t flags;             /* RFM1_RD_BIPOLAR */
+    uint8_t ms10;              /* how long, x 10 ms; 0: the host's default */
+    int16_t frac;              /* 0..1000 a bar; -1 none */
+    char title[17], value[17]; /* printable ASCII, NUL-terminated */
+} rfm1_readout_t;
+typedef char rfm1_readout_size_ok[sizeof(rfm1_readout_t) == 48 ? 1 : -1];
+static rfm1_readout_t RD = {1, sizeof(rfm1_readout_t), 0, -1, 0, 0, 0, -1, "", ""};
+static uint32_t rd_pushes, rd_seen;   /* the core's own readouts; the count the bridge last saw */
+static uint8_t rd_pending;            /* knobs (FM1P_E_SELECT .. K4) with detents waiting for the core */
+
+static void rd_txt(char *d, const char *s, uint32_t n)   /* printable ASCII only, cut at n - 1 */
+{
+    uint32_t i = 0;
+    while (s && *s && i + 1 < n) {
+        const unsigned char c = (unsigned char)*s++;
+        d[i++] = c >= 32 && c < 127 ? (char)c : c == 0xB7 ? '.' : ' ';
+    }
+    d[i] = 0;
+}
+static void rd_set(int ctl, int kind, unsigned flags, int frac, const char *title, const char *value, const char *sub)
+{
+    char v[40];
+    rd_txt(RD.title, title, sizeof RD.title);
+    rd_txt(v, value, sizeof v);
+    if (sub && *sub) {
+        size_t k = strlen(v);
+        if (k && k + 1 < sizeof v)
+            v[k++] = ' ', v[k] = 0;
+        rd_txt(v + k, sub, (uint32_t)(sizeof v - k));
+    }
+    rd_txt(RD.value, v, sizeof RD.value);
+    RD.control = (int8_t)(ctl >= -1 && ctl < FM1CORE_LBL_N ? ctl : -1);
+    RD.kind = (uint8_t)kind;
+    RD.flags = (uint8_t)flags;
+    RD.ms10 = 0;
+    RD.frac = (int16_t)(frac < 0 ? -1 : frac > 1000 ? 1000 : frac);
+    if (++RD.seq == 0)
+        RD.seq = 1;
+}
+void rfm1_readout_push(int ctl, int kind, unsigned flags, int frac, const char *title, const char *value,
+                       const char *sub)
+{
+    rd_set(ctl, kind, flags, frac, title, value, sub);
+    rd_pushes++;
+}
+EXPORT(rfm1_readout) uint32_t rfm1_readout(void) { return (uint32_t)(uintptr_t)&RD; }
+
+static const fm1param_t *rd_target(int role)   /* what knob role turns now, or 0 */
+{
+    int32_t i;
+    if (!core() || !C->knob_target || !C->params || !C->nparams)
+        return 0;
+    i = C->knob_target(role);
+    return i >= 0 && (uint32_t)i < C->nparams ? &C->params[i] : 0;
+}
+static void rd_note(void)                       /* (each call in: the knobs whose detents wait) */
+{
+    const fm1panel_t *P;
+    int r;
+    if (!core() || !(P = C->panel))
+        return;
+    for (r = FM1P_E_SELECT; r <= FM1P_E_K4; r++)
+        if (P->enc[P->enc_id[r]] != 0)
+            rd_pending |= (uint8_t)(1u << r);
+}
+static void rd_bridge(void)                     /* (after a frame: the knobs the core took and said nothing about) */
+{
+    const fm1panel_t *P;
+    int r;
+    if (!rd_pending || !core() || !(P = C->panel))
+        return;
+    if (rd_pushes != rd_seen || !C->knob_target || !C->params) {   /* the core spoke (or has no map): its own wins */
+        rd_seen = rd_pushes;
+        rd_pending = 0;
+        return;
+    }
+    if (C->param_epoch)
+        (void)C->param_epoch();
+    for (r = FM1P_E_SELECT; r <= FM1P_E_K4; r++) {
+        const fm1param_t *p;
+        char t[24];
+        int32_t v;
+        if (!(rd_pending >> r & 1u) || P->enc[P->enc_id[r]] != 0)
+            continue;                           /* (not turned, or not taken yet: the next frame) */
+        rd_pending &= (uint8_t)~(1u << r);
+        if (!(p = rd_target(r)) || !p->get)
+            continue;
+        v = p->get();
+        t[0] = 0;
+        if (p->text)
+            p->text(v, t, sizeof t);
+        else if (p->names && v >= p->min && v <= p->max)
+            rd_txt(t, p->names[v - p->min], sizeof t);
+        else
+            snprintf(t, sizeof t, "%ld%s", (long)v, p->unit ? p->unit : "");
+        rd_set(FM1CORE_LBL_KNOB0 + r, RFM1_RD_PARAM, p->min < 0 && p->max > 0 ? RFM1_RD_BIPOLAR : 0u,
+               p->max > p->min ? (int)(((int64_t)v - p->min) * 1000 / ((int64_t)p->max - p->min)) : -1, p->name, t, 0);
+    }
+    rd_seen = rd_pushes;
+}
+
+/* the knobs' live labels from the map (a core without labels of its own) */
+static char rd_kl[FM1P_E_K4 + 1][FM1CORE_LBL_LEN];
+static uint32_t rd_lbl_epoch, rd_lbl_base;
+static int rd_lbl_src;
+static int rd_knob_labels(void)                 /* 1: changed */
+{
+    char n[FM1P_E_K4 + 1][FM1CORE_LBL_LEN];
+    int r, k;
+    memset(n, 0, sizeof n);
+    if (C && C->knob_target && C->params) {
+        if (C->param_epoch)
+            (void)C->param_epoch();
+        for (r = FM1P_E_SELECT; r <= FM1P_E_K4; r++) {
+            const fm1param_t *p = rd_target(r);
+            if (p && p->name) {
+                rd_txt(n[r], p->name, FM1CORE_LBL_LEN);
+                for (k = 0; n[r][k]; k++)
+                    if (n[r][k] >= 'a' && n[r][k] <= 'z')
+                        n[r][k] = (char)(n[r][k] - 32);
+            }
+        }
+    }
+    if (!memcmp(n, rd_kl, sizeof n))
+        return 0;
+    memcpy(rd_kl, n, sizeof n);
+    return 1;
+}
+EXPORT(rfm1_labels_epoch) uint32_t rfm1_labels_epoch(void)
+{
+    const uint32_t be = base_rfm1_labels_epoch();
+    const int own = fm1core_labels_epoch && fm1core_labels_epoch() != 0;
+    int moved = be != rd_lbl_base || (own ? 2 : 1) != rd_lbl_src;
+    rd_lbl_base = be;
+    rd_lbl_src = own ? 2 : 1;
+    if (!own && core())
+        moved |= rd_knob_labels();
+    if (moved && ++rd_lbl_epoch == 0)
+        rd_lbl_epoch = 1;
+    return rd_lbl_epoch;
+}
+EXPORT(rfm1_label) uint32_t rfm1_label(int32_t which)
+{
+    const int own = fm1core_labels_epoch && fm1core_labels_epoch() != 0;
+    if (!own && which >= FM1CORE_LBL_KNOB0 && which <= FM1CORE_LBL_KNOB0 + FM1P_E_K4 && rd_kl[which][0])
+        return (uint32_t)(uintptr_t)rd_kl[which];
+    return base_rfm1_label(which);
 }
 #endif

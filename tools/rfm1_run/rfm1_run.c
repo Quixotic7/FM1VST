@@ -26,6 +26,9 @@
  *     --press B@MS[+D]  button B (its label: PLAY, OCT+, HOME ..) held from device ms MS for D ms (default 60);
  *                    repeat for more
  *     --info-at MS   ui_info printed at device ms MS (repeat)
+ *     --turn R@MS[:N] knob R (SELECT ALGO PRESETS K1..K4) turned N detents (default 1, - anticlockwise) at device ms MS
+ *     --readouts     each new readout (rd1, docs/RFM1.md "Readouts (rd1)": seq, control, kind, bar, title, value) and
+ *                    the knobs' live labels when their epoch moves, after each frame
  *     --expect-ui S  fail unless the final ui_info contains S (repeat)
  *     --flash-in F   boot from this flash image (a save) instead of a fresh flash
  *     --flash-out F  the flash image after the run (flash_sync first): a save
@@ -88,6 +91,7 @@ enum {
     F_AUDIO_IN, F_AUDIO_IN_INFO,           /* (optional: docs/VIRTUAL-CARTS.md 8, a cart with ain1) */
     F_LABELS_EPOCH, F_LABEL,               /* (optional: docs/DYNAMIC-LABELS.md) */
     F_AUDIO_OUT_INFO, F_AUDIO_OUT,         /* (optional: aout1, more output channels) */
+    F_READOUT,                             /* (optional: rd1, docs/RFM1.md "Readouts (rd1)") */
     F_N
 };
 static const struct {
@@ -103,6 +107,7 @@ static const struct {
     {"rfm1_audio_in", 2, 0},   {"rfm1_audio_in_info", 2, 0},
     {"rfm1_labels_epoch", 0, 1}, {"rfm1_label", 1, 1},
     {"rfm1_audio_out_info", 0, 1}, {"rfm1_audio_out", 2, 0},
+    {"rfm1_readout", 0, 1},
 };
 
 static IM3Environment g_env;
@@ -1005,7 +1010,7 @@ static void usage(void)
           "                [--profile] [--frame-ms N] [--helpers]\n"
           "                [--audio-in FILE.wav [--audio-in-once] [--audio-in-latency N] [--audio-in-off-at MS]]\n"
           "                [--no-aout] [--aout-wav FILE] [--expect-aout N]\n"
-          "                [--verbose] [--describe [--labels] [--out FILE]] <file.rfm1>\n", stderr);
+          "                [--turn ROLE@MS[:N]].. [--readouts] [--verbose] [--describe [--labels] [--out FILE]] <file.rfm1>\n", stderr);
 }
 
 int main(int argc, char **argv)
@@ -1016,7 +1021,9 @@ int main(int argc, char **argv)
 #ifdef RFM1_FPROF
     int fprofile = 0;
 #endif
-    int describe = 0, labels = 0;
+    int describe = 0, labels = 0, readouts = 0, nturn = 0;
+    struct { int r, n; uint32_t at; } turn[256];
+    uint32_t rd_ptr = 0, rd_last = 0, lb_last = 0;
     const char *out_path = NULL, *wav_path = NULL, *sysex_path = NULL, *path = NULL, *midi_out_path = NULL;
     int keys[FM1P_NKEY], nkeys = 0, vel = 100, lean = 0;
     uint32_t taps = 0;                           /* (label bits: --tap) */
@@ -1045,6 +1052,7 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--out") && more) out_path = argv[++i];
         else if (!strcmp(a, "--describe")) describe = 1;
         else if (!strcmp(a, "--labels")) labels = 1;
+        else if (!strcmp(a, "--readouts")) readouts = 1;
         else if (!strcmp(a, "--audio-in") && more) ain_path = argv[++i];
         else if (!strcmp(a, "--audio-in-once")) ain_once = 1;
         else if (!strcmp(a, "--audio-in-latency") && more) ain_latency = (uint32_t)strtoul(argv[++i], NULL, 10);
@@ -1085,6 +1093,27 @@ int main(int argc, char **argv)
             press[npress].at = (uint32_t)strtoul(at + 1, &e, 10);
             press[npress].dur = *e == '+' ? (uint32_t)strtoul(e + 1, NULL, 10) : 60u;
             npress++;
+        }
+        else if (!strcmp(a, "--turn") && more && nturn < 256) {   /* --turn ROLE@MS[:N]: N detents (default 1) */
+            static const char *const ROLE[] = {"SELECT", "ALGO", "PRESETS", "K1", "K2", "K3", "K4"};
+            char lab[16], *at = strchr(argv[++i], '@'), *e;
+            const size_t ln = at ? (size_t)(at - argv[i]) : 0;
+            int r = -1;
+            if (at && ln < sizeof lab) {
+                memcpy(lab, argv[i], ln);
+                lab[ln] = 0;
+                for (int k = 0; k < 7; k++)
+                    if (!strcmp(ROLE[k], lab))
+                        r = k;
+            }
+            if (r < 0) {
+                usage();
+                return 2;
+            }
+            turn[nturn].r = r;
+            turn[nturn].at = (uint32_t)strtoul(at + 1, &e, 10);
+            turn[nturn].n = *e == ':' ? (int)strtol(e + 1, NULL, 10) : 1;
+            nturn++;
         }
         else if (!strcmp(a, "--tap") && more) {
             char *s = argv[++i];
@@ -1198,7 +1227,7 @@ int main(int argc, char **argv)
         if (r) {
             g_fn[f] = NULL;
             if (f == F_INITIALIZE || f == F_AUDIO_IN || f == F_AUDIO_IN_INFO || f == F_LABELS_EPOCH || f == F_LABEL ||
-                f == F_AUDIO_OUT_INFO || f == F_AUDIO_OUT)
+                f == F_AUDIO_OUT_INFO || f == F_AUDIO_OUT || f == F_READOUT)
                 continue;
             return fail("export %s: %s", FN[f].name, r);
         }
@@ -1520,6 +1549,12 @@ int main(int argc, char **argv)
             } else if (ms == press[k].at + press[k].dur)
                 wr32(P(buttons), rd32(P(buttons)) & ~m);
         }
+        for (int k = 0; k < nturn; k++)   /* --turn: the role's detents, as a host turns a knob (enc_id, enc_dir) */
+            if (ms == turn[k].at) {
+                const uint32_t e = P(enc) + 4u * rd8(P(enc_id) + (uint32_t)turn[k].r);
+                const int dir = (int8_t)rd8(P(enc_dir) + (uint32_t)turn[k].r);
+                wr32(e, rd32(e) + (uint32_t)(turn[k].n * (dir ? dir : 1)));
+            }
         for (int k = 0; k < ninfo; k++)
             if (ms == info_at[k]) {
                 C2(F_UI_INFO, s_str, 1024);
@@ -1530,6 +1565,37 @@ int main(int argc, char **argv)
         if (ms == 0 || ms - last_frame >= frame_ms) {
             last_frame = ms;
             C0(F_FRAME);
+            if (readouts) {   /* --readouts: each new readout (rd1), and the knobs' live labels when they move */
+                uint32_t sz = 0;
+                const uint8_t *m;
+                if (g_fn[F_READOUT] && !rd_ptr)
+                    rd_ptr = C0(F_READOUT);
+                m = mem(&sz);
+                if (rd_ptr && (uint64_t)rd_ptr + 48u <= sz) {
+                    uint32_t seq;
+                    memcpy(&seq, m + rd_ptr + 4, 4);
+                    if (seq != rd_last) {
+                        int16_t frac;
+                        memcpy(&frac, m + rd_ptr + 12, 2);
+                        rd_last = seq;
+                        printf("readout@%u: seq %u ctl %d kind %u flags %u frac %d \"%.16s\" \"%.16s\"\n", ms, seq,
+                               (int)(int8_t)m[rd_ptr + 8], m[rd_ptr + 9], m[rd_ptr + 10], frac,
+                               (const char *)m + rd_ptr + 14, (const char *)m + rd_ptr + 31);
+                    }
+                }
+                if (g_fn[F_LABELS_EPOCH]) {
+                    const uint32_t e = C0(F_LABELS_EPOCH);
+                    if (e != lb_last) {
+                        lb_last = e;
+                        printf("labels@%u: epoch %u knobs", ms, e);
+                        for (int k = 0; k < 8; k++) {
+                            const char *l = str(C1(F_LABEL, k));
+                            printf(" \"%s\"", l ? l : "");
+                        }
+                        printf("\n");
+                    }
+                }
+            }
         } else
             C0(F_IDLE);
         if (ain_on && ms >= ain_off_at) {        /* --audio-in-off-at: the input off (unplugged, denied) */

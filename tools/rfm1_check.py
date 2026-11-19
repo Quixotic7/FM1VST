@@ -70,6 +70,8 @@ AIN_EXPORTS = {"rfm1_audio_in": (2, 0), "rfm1_audio_in_info": (2, 0)}
 # docs/RFM1.md "cpu2": core 1 on a host thread, all three or none, with "cpu2" in "wants" (no import: hosts without it
 # never call them, and the module runs its core-1 jobs itself)
 CPU2_EXPORTS = {"rfm1_cpu2": (0, 1), "rfm1_c1_stack": (1, 0), "rfm1_c1_call": (2, 0)}
+# docs/RFM1.md "Readouts (rd1)": the readout record, with "rd1" in "wants"
+RD1_EXPORTS = {"rfm1_readout": (0, 1)}
 # section 2: the exports, (params, results); all i32
 EXPORTS = {
     "rfm1_version": (0, 1), "rfm1_get": (1, 1), "rfm1_layout": (1, 1), "rfm1_alloc": (1, 1), "rfm1_free": (1, 0),
@@ -487,9 +489,9 @@ class Check:
 
         if exports.get("memory", (None,))[0] != 2:
             self.err("no memory exported as \"memory\"")
-        for nm, (na, nr) in list(EXPORTS.items()) + list(OPTIONAL_EXPORTS.items()) + list(AIN_EXPORTS.items()) + list(CPU2_EXPORTS.items()):
+        for nm, (na, nr) in list(EXPORTS.items()) + list(OPTIONAL_EXPORTS.items()) + list(AIN_EXPORTS.items()) + list(CPU2_EXPORTS.items()) + list(RD1_EXPORTS.items()):
             if nm not in exports:
-                if nm not in OPTIONAL_EXPORTS and nm not in AIN_EXPORTS and nm not in CPU2_EXPORTS:
+                if nm not in OPTIONAL_EXPORTS and nm not in AIN_EXPORTS and nm not in CPU2_EXPORTS and nm not in RD1_EXPORTS:
                     self.err("no export %s" % nm)
                 continue
             kind, idx = exports[nm]
@@ -505,6 +507,7 @@ class Check:
         self.info["exports"] = len(exports)
         self.info["ain_exports"] = sorted(n for n in AIN_EXPORTS if n in exports)
         self.info["cpu2_exports"] = sorted(n for n in CPU2_EXPORTS if n in exports)
+        self.info["rd1"] = "rfm1_readout" in exports
 
         # the custom sections (sections 1 and 4)
         if "rfm1" not in custom:
@@ -594,6 +597,8 @@ class Check:
         if c2 and "cpu2" not in wants:
             self.err("exports %s but the manifest has no \"cpu2\" in wants (docs/RFM1.md \"cpu2\")" % " and ".join(c2))
         self.info["cpu2"] = bool(c2)
+        if self.info.get("rd1") and "rd1" not in wants:
+            self.err("exports rfm1_readout but the manifest has no \"rd1\" in wants (docs/RFM1.md \"Readouts (rd1)\")")
         host = False
         for mod, nm, ti in func_imports:
             what = "%s.%s" % (mod, nm)
@@ -694,13 +699,14 @@ def main(argv):
             print("%s: FAILED (%d errors)" % (p, len(c.errors)))
         elif not quiet:
             m = c.info.get("manifest", {})
-            print("%s: ok: %s %s (%s)%s%s%s, %d bytes, %g MiB memory, %d exports, %d licence texts%s%s%s" % (
+            print("%s: ok: %s %s (%s)%s%s%s%s, %d bytes, %g MiB memory, %d exports, %d licence texts%s%s%s" % (
                 p, m.get("id"), m.get("version"), m.get("license"),
                 ", virtual (Fantasy CFW, needs %s%s)" % (",".join(m.get("needs", [])) or "nothing",
                                                         ", imports rfm1_host_1" if c.info.get("host_imports") else "")
                 if c.info.get("virtual") else "",
                 ", audio input (ain1)" if c.info.get("ain") else "",
                 ", core 1 (cpu2)" if c.info.get("cpu2") else "",
+                ", readouts (rd1)" if c.info.get("rd1") else "",
                 c.size, c.info.get("memory", 0) / 1048576, c.info.get("exports", 0), c.info.get("licenses", 0),
                 ", skin: %s" % c.info["skin"] if c.info.get("skin") else "",
                 ", labels: %s" % c.info["labels"] if c.info.get("labels") else "",

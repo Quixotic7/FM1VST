@@ -36,7 +36,10 @@
 #                                   core's fm1core_audio_in / fm1core_audio_in_info. cpu2 in WANTS: core 1 on a host
 #                                   thread where the host has one (docs/RFM1.md "cpu2"): the shim's rfm1_cpu2 record
 #                                   and rfm1_c1_stack / rfm1_c1_call, and FM1CORE_RFM1_CPU2 for every unit
-#                                   (core-glue/common/rfm1_cpu2.h: rfm1_cpu2_run / wait / core)
+#                                   (core-glue/common/rfm1_cpu2.h: rfm1_cpu2_run / wait / core). rd1 in WANTS:
+#                                   readouts (docs/RFM1.md "Readouts (rd1)"): the shim's rfm1_readout record, the
+#                                   Tier 2 map's bridge and knob labels, and FM1_HOST_EXT for every unit
+#                                   (core-api/rfm1_ext.h's macros)
 #       [AUDIO_OUT <n>])            the output channels the core gives in all (aout1: 2, 4, 6, 8 or 10; fm1-base's
 #                                   fm1.toml usb_audio_channels): above 2, the shim exports rfm1_audio_out_info and
 #                                   rfm1_audio_out from the core's fm1core_audio_out_info / fm1core_audio_out
@@ -264,6 +267,9 @@ function(fm1_add_rfm1 id)
     if("cpu2" IN_LIST A_WANTS)    # core 1 on a host thread (docs/RFM1.md "cpu2"): every unit sees it (rfm1_cpu2.h)
         list(APPEND _base -DFM1CORE_RFM1_CPU2=1)
     endif()
+    if("rd1" IN_LIST A_WANTS)     # readouts (docs/RFM1.md "Readouts (rd1)"): core-api/rfm1_ext.h's macros reach the shim
+        list(APPEND _base -DFM1_HOST_EXT=1)
+    endif()
     foreach(_i IN LISTS _tinc A_INCLUDES)
         list(APPEND _base -I${_i})
     endforeach()
@@ -316,6 +322,9 @@ function(fm1_add_rfm1 id)
     endif()
     if("cpu2" IN_LIST A_WANTS)    # core 1 (docs/RFM1.md "cpu2"): the shim's record, rfm1_c1_stack, rfm1_c1_call
         list(APPEND _shim_opt -DRFM1_CPU2=1)
+    endif()
+    if("rd1" IN_LIST A_WANTS)     # readouts: the shim's record, rfm1_readout, the map's bridge and knob labels
+        list(APPEND _shim_opt -DRFM1_RD1=1)
     endif()
     if(A_AUDIO_OUT)               # more output channels (aout1): the shim's two exports, only for a core that gives some
         if(NOT A_AUDIO_OUT MATCHES "^(2|4|6|8|10)$")

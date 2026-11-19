@@ -54,7 +54,7 @@ your descriptor, so they always match. Its options (cmake/FM1Rfm1.cmake has them
 | `VIRTUAL` | a Fantasy CFW, host-only ([VIRTUAL-CARTS.md](VIRTUAL-CARTS.md)): the manifest says `"virtual": true`; `MEMORY_MIB` up to 512, the file under 16 MiB, the `rfm1_host_1` imports allowed |
 | `NEEDS <cap..>`, `FOLDERS <name=r\|rw..>` | (with `VIRTUAL`) the manifest's `needs` (`fs1`: the shared folder's files) and `folders` (`code=r data=rw`) |
 | `AUDIO_OUT <n>` | more output channels (aout1, RemoteFM1's RFM1-FORMAT.md section 9): 4, 6, 8 or 10 in all. The module exports `rfm1_audio_out_info` / `rfm1_audio_out` from the core's `fm1core_audio_out_info` / `fm1core_audio_out` (fm1core.h). An fm1-base app's `usb_audio_channels` gets them through `plat_usb_ch` (core-glue/plat/plat_glue.h): LOOM-8's tracks on 3..10 |
-| `WANTS <cap..>` | host capabilities the module uses where a host has them, the manifest's `wants`: `ain1` (audio input, [VIRTUAL-CARTS.md](VIRTUAL-CARTS.md) 8), `cpu2` (core 1 on a host thread: below) |
+| `WANTS <cap..>` | host capabilities the module uses where a host has them, the manifest's `wants`: `ain1` (audio input, [VIRTUAL-CARTS.md](VIRTUAL-CARTS.md) 8), `cpu2` (core 1 on a host thread: below), `rd1` (readouts: below) |
 | `NO_SKIN` | leave out the skin of your repository's `RemoteFM1Metadata.json` ([RFM1-METADATA.md](RFM1-METADATA.md)) |
 | `NO_LABELS` | leave out its button and knob labels |
 
@@ -114,6 +114,28 @@ job beside the rest, as the unit does, when the module is built with `WANTS cpu2
 - `rfm1_check` requires all three exports or none, and `cpu2` in `wants` with them. The manifest's `wants` is
   informative: hosts ignore names they do not know.
 - Used by ChoralRoot (`cr_cpu1.h`, from 0.42 with its rfm1 branch) and FIZZ (RemoteFM1's `tools/rfm1/fizz/fizz_unit.c`).
+
+### Readouts (`rd1`)
+
+A host can show what a knob controls and its value while it turns, a sound's name and a message (RemoteFM1 on the
+Ableton Move: its knob popup). Built with `WANTS rd1`:
+
+- **The firmware's side** is `core-api/rfm1_ext.h` (MPL-2.0: vendor it): `RFM1_READOUT(ctl, title, value)`,
+  `RFM1_READOUT_BAR(ctl, title, value, v, lo, hi)`, `RFM1_READOUT_SUB(ctl, title, value, sub, v, lo, hi)`,
+  `RFM1_PRESET(title, name)`, `RFM1_MESSAGE(text)`. `ctl` is the DYNAMIC-LABELS slot (0..6 the knobs) or -1 (the
+  control in use). Every unit of an rd1 build has `FM1_HOST_EXT`; without it (the FM-1, a native host) each macro is
+  `((void)0)` and its arguments are not evaluated, so the device image is the same bytes. Call them from the UI.
+- **Without a line:** a core with the Tier 2 map's `knob_target` and `params` (ChoralRoot) gets a readout for each
+  knob whose detents it took in a frame and said nothing about: its target's name, `text(get())`, the bar from the
+  range (the bridge). Its knobs' live labels come from the same targets' names (upper case, 10 characters) when the
+  core has no labels of its own; a knob with no target keeps the static label. The firmware's own readout wins.
+- **The module's side** (the shim, `RFM1_RD1`): `rfm1_readout() -> ptr`, one record at a stable address:
+  `{u16 version 1, u16 size 48, u32 seq, i8 control, u8 kind (1 param, 2 preset, 3 message), u8 flags (1 bipolar),
+  u8 ms10 (0: the host's default), i16 frac (0..1000, -1 none), char title[17], char value[17]}` (printable ASCII,
+  NUL-terminated; `value` holds "value sub"). A host calls `rfm1_readout` once after init and reads `seq` after each
+  `rfm1_frame`: a new one is shown. No import; hosts without rd1 ignore the export. `rfm1_check` wants `rd1` in
+  `wants` with it. `rfm1_run --readouts` prints each readout and the knobs' labels when they move;
+  `rfm1_run --turn K1@2000:3` turns a knob (SELECT ALGO PRESETS K1..K4) by detents at a device ms.
 
 ## Check it
 
