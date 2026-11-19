@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# ChoralRoot 0.42 (https://github.com/Quixotic7/ChoralRootFM1, tag v0.42): its own emulator's unit,
+# ChoralRoot 0.42 (https://github.com/Quixotic7/ChoralRootFM1, tag v0.42 + ad53bc26: cr_cpu1.h's rfm1 cpu2 branch,
+# the FM-1 packages unchanged): its own emulator's unit,
 # tools/emu/emu_fw.c, through core_choralroot.c and the family's glue (crf_glue.h; cmake/FM1Cores.cmake: fm1_add_core)
 include(${CMAKE_CURRENT_LIST_DIR}/crf.cmake)
 set(_cr ${CMAKE_SOURCE_DIR}/cores/ChoralRootFM1)
@@ -32,4 +33,5 @@ fm1_add_core(choralroot ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_cr} UNIT core_choral
 crf_golden(choralroot SCRIPT ${_cr}/tools/emu/scripts/cr_dmaj.txt REF ${_cr}/build/host/emu REF_TARGET reference_emu
            AUDIO)
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
-fm1_add_rfm1(choralroot AUTHORS "Quixotic7" METADATA skins/choralroot/RemoteFM1Metadata.json)
+# cpu2 (docs/RFM1.md): core 1's jobs (fx.c c1_part1_job, c1_fx_job) on a host thread where the host has one (cr_cpu1.h)
+fm1_add_rfm1(choralroot AUTHORS "Quixotic7" METADATA skins/choralroot/RemoteFM1Metadata.json WANTS cpu2)

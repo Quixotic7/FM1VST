@@ -54,6 +54,7 @@ your descriptor, so they always match. Its options (cmake/FM1Rfm1.cmake has them
 | `VIRTUAL` | a Fantasy CFW, host-only ([VIRTUAL-CARTS.md](VIRTUAL-CARTS.md)): the manifest says `"virtual": true`; `MEMORY_MIB` up to 512, the file under 16 MiB, the `rfm1_host_1` imports allowed |
 | `NEEDS <cap..>`, `FOLDERS <name=r\|rw..>` | (with `VIRTUAL`) the manifest's `needs` (`fs1`: the shared folder's files) and `folders` (`code=r data=rw`) |
 | `AUDIO_OUT <n>` | more output channels (aout1, RemoteFM1's RFM1-FORMAT.md section 9): 4, 6, 8 or 10 in all. The module exports `rfm1_audio_out_info` / `rfm1_audio_out` from the core's `fm1core_audio_out_info` / `fm1core_audio_out` (fm1core.h). An fm1-base app's `usb_audio_channels` gets them through `plat_usb_ch` (core-glue/plat/plat_glue.h): LOOM-8's tracks on 3..10 |
+| `WANTS <cap..>` | host capabilities the module uses where a host has them, the manifest's `wants`: `ain1` (audio input, [VIRTUAL-CARTS.md](VIRTUAL-CARTS.md) 8), `cpu2` (core 1 on a host thread: below) |
 | `NO_SKIN` | leave out the skin of your repository's `RemoteFM1Metadata.json` ([RFM1-METADATA.md](RFM1-METADATA.md)) |
 | `NO_LABELS` | leave out its button and knob labels |
 
@@ -87,6 +88,32 @@ threads, reference types, tail calls or exceptions; the build sets the feature f
   (on the include path of .rfm1 builds only). ChoralRoot's `<os/lock.h>` is there.
 - `FM1CORE_RFM1` is defined (to 1) in .rfm1 builds, and `__EMSCRIPTEN__` as always with emcc, if your glue needs to
   tell.
+
+### Core 1 (`cpu2`)
+
+The FM-1 has two cores; an .rfm1 runs on one thread, so a firmware's second-core job (voices into a bus of their own,
+an effect) runs inline in its host build. A host with a thread to spare (RemoteFM1 on the Ableton Move) can run that
+job beside the rest, as the unit does, when the module is built with `WANTS cpu2`:
+
+- **The core's side** is `core-glue/common/rfm1_cpu2.h`, which a core's rfm1 back end calls where the device calls its
+  core 1 (felucca-bsp's `fm1_cpu1_run` / `fm1_cpu1_wait`, fm1-base's `plat_cpu2_run` / `plat_cpu2_wait`):
+  `rfm1_cpu2_run(fn, arg)` (1: handed over; 0: run it yourself), `rfm1_cpu2_wait()` after a 1 (0: done; else run it
+  yourself, in the same block), `rfm1_cpu2_core()` (1 inside a job core 1 runs: for scratch kept per core). Every unit
+  of such a build has `FM1CORE_RFM1_CPU2`; elsewhere the header gives the one-core answers inline. The FM-1's rules
+  hold: one job at a time, core 0 leaves the job's data alone until the wait, a job never hands a job on, never
+  yields an `fm1coro`, never allocates, and the samples must not depend on which side ran it.
+- **The module's side** (the shim, `RFM1_CPU2`): no import, so every host runs the file as before. `rfm1_cpu2() -> ptr`
+  gives a record `{u16 version 1, u16 size 12, u32 run, u32 wait}`: two indices in the module's function table, the
+  entries `rfm1_cpu2_run` / `rfm1_cpu2_wait` call through (`run`: `(i32 fn, i32 arg) -> i32`; `wait`: `() -> i32`). As
+  built they are the one-core answers (run 0). A host with a thread for core 1 puts its own two functions into those
+  table entries of the instance after instantiating it, makes a twin (the same module, instantiated again with the
+  instance's memory: its own globals, so its own stack pointer, and its own table, whose entries stay the one-core
+  answers), gives the twin a stack in the module's memory (`rfm1_c1_stack(top)`, from `rfm1_alloc`; at least 64 KiB)
+  and runs each job on its own thread as `rfm1_c1_call(fn, arg)` on the twin. A job that traps is reported not done:
+  the module runs it itself.
+- `rfm1_check` requires all three exports or none, and `cpu2` in `wants` with them. The manifest's `wants` is
+  informative: hosts ignore names they do not know.
+- Used by ChoralRoot (`cr_cpu1.h`, from 0.42 with its rfm1 branch) and FIZZ (RemoteFM1's `tools/rfm1/fizz/fizz_unit.c`).
 
 ## Check it
 

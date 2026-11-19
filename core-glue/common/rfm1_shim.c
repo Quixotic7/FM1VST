@@ -238,3 +238,61 @@ EXPORT(rfm1_audio_out) void rfm1_audio_out(uint32_t buf, uint32_t frames)
         fm1core_audio_out((int16_t *)(uintptr_t)buf, frames);
 }
 #endif
+
+/* core 1 (docs/RFM1.md "cpu2"): only in a module built with cpu2 in its fm1_add_rfm1 WANTS (RFM1_CPU2). No import: the
+ * module's rfm1_cpu2_run / rfm1_cpu2_wait (rfm1_cpu2.h) call through two entries of its own function table, whose
+ * indices the record rfm1_cpu2() gives. As built, the entries are the one-core answers (run 0: run it yourself), so a
+ * host that knows nothing of cpu2 runs the module as any other. A host with a thread for core 1 puts its own run and
+ * wait into those two table entries of the instance (the same signatures), and runs a job by calling rfm1_c1_call on
+ * a twin of the instance (the same module and memory, its own globals and table, so its own stack pointer and its own
+ * one-core answers: a job never hands a job on), after rfm1_c1_stack has put the twin's stack at top. */
+#ifdef RFM1_CPU2
+#include "rfm1_cpu2.h"
+typedef struct {
+    uint16_t version, size;            /* 1, sizeof */
+    volatile uint32_t run;             /* table index: int32_t (uint32_t fn, uint32_t arg); 1 handed over, 0 not */
+    volatile uint32_t wait;            /* table index: int32_t (void); 0 the job is done, else run it yourself */
+} rfm1_cpu2_rec_t;
+static int32_t rfm1_cpu2_run_none(uint32_t fn, uint32_t arg) { (void)fn, (void)arg; return 0; }
+static int32_t rfm1_cpu2_wait_none(void) { return -1; }
+static rfm1_cpu2_rec_t rfm1_cpu2_rec = {1, sizeof(rfm1_cpu2_rec_t), 0, 0};
+static volatile uint32_t rfm1_c1_lo, rfm1_c1_hi;   /* core 1's stack, once a host set it (rfm1_cpu2_core) */
+/* emscripten's stack (system/lib/compiler-rt/stack_ops.S, stack_limits.S) */
+void _emscripten_stack_restore(uintptr_t sp);
+void emscripten_stack_set_limits(void *base, void *end);
+uintptr_t emscripten_stack_get_current(void);
+#define RFM1_C1_STACK_MIN (64u * 1024u)   /* what a host gives core 1 at the least (it gives 256 KiB) */
+
+static rfm1_cpu2_rec_t *cpu2_rec(void)
+{
+    if (!rfm1_cpu2_rec.run) {          /* (the indices are the linker's: set on first use, before any host reads them) */
+        rfm1_cpu2_rec.run = (uint32_t)(uintptr_t)rfm1_cpu2_run_none;
+        rfm1_cpu2_rec.wait = (uint32_t)(uintptr_t)rfm1_cpu2_wait_none;
+    }
+    return &rfm1_cpu2_rec;
+}
+EXPORT(rfm1_cpu2) uint32_t rfm1_cpu2(void) { return (uint32_t)(uintptr_t)cpu2_rec(); }
+EXPORT(rfm1_c1_stack) void rfm1_c1_stack(uint32_t top)
+{
+    top &= ~15u;
+    emscripten_stack_set_limits((void *)(uintptr_t)top, (void *)(uintptr_t)(top - RFM1_C1_STACK_MIN));
+    _emscripten_stack_restore(top);
+    rfm1_c1_lo = top - RFM1_C1_STACK_MIN, rfm1_c1_hi = top;
+}
+EXPORT(rfm1_c1_call) void rfm1_c1_call(uint32_t fn, uint32_t arg) { ((void (*)(uint32_t))(uintptr_t)fn)(arg); }
+int rfm1_cpu2_run(void (*fn)(uint32_t), uint32_t arg)
+{
+    const rfm1_cpu2_rec_t *r = cpu2_rec();
+    return ((int32_t (*)(uint32_t, uint32_t))(uintptr_t)r->run)((uint32_t)(uintptr_t)fn, arg) == 1;
+}
+int rfm1_cpu2_wait(void)
+{
+    const rfm1_cpu2_rec_t *r = cpu2_rec();
+    return (int)((int32_t (*)(void))(uintptr_t)r->wait)();
+}
+int rfm1_cpu2_core(void)
+{
+    const uint32_t sp = (uint32_t)emscripten_stack_get_current();
+    return rfm1_c1_hi && sp > rfm1_c1_lo && sp <= rfm1_c1_hi;
+}
+#endif
