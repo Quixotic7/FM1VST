@@ -35,5 +35,6 @@ crf_golden(choralroot SCRIPT ${_cr}/tools/emu/scripts/cr_dmaj.txt REF ${_cr}/bui
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
 # cpu2 (docs/RFM1.md): core 1's jobs (fx.c c1_part1_job, c1_fx_job) on a host thread where the host has one (cr_cpu1.h)
 # rd1 (docs/RFM1.md): its popups' words (cr_ui.c), the map's bridge and the knobs' labels from knob_target
-# VERSION 0.42-r2: the .rfm1 of 0.42 rebuilt with cpu2 and rd1 (the owner's, 2026-11-19; the firmware and the FM-1 stay 0.42)
-fm1_add_rfm1(choralroot AUTHORS "Quixotic7" METADATA skins/choralroot/RemoteFM1Metadata.json WANTS cpu2 rd1 VERSION 0.42-r2)
+# (published as 0.42 again with these bytes, the owner's choice of 2026-11-19: the apps offer the same version with
+# another sha256 as an update, and rank "0.42-r2" below "0.42" by semver)
+fm1_add_rfm1(choralroot AUTHORS "Quixotic7" METADATA skins/choralroot/RemoteFM1Metadata.json WANTS cpu2 rd1)
