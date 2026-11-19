@@ -355,3 +355,6 @@
 [submodule "JamesOS"]
 	path = cores/JamesOS
 	url = https://github.com/aarongrando/JamesOS
+[submodule "h1"]
+	path = cores/h1
+	url = https://github.com/jakehandy/h1
