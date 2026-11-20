@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""ChoralRoot's Move takeover, "CHORDS" (docs/RFM1-TAKEOVER.md tk1; the firmware's firmware/src/cr_move.c, built into
+"""ChoralRoot's Move takeover, "ChoralRoot" (docs/RFM1-TAKEOVER.md tk1; the firmware's firmware/src/cr_move.c, built into
 choralroot-<v>.rfm1 by core-glue/choralroot/core_choralroot.cmake) through rfm1_run --tk: the record and the manifest,
 then scenarios as a Move host drives it (pads, steps, knobs, buttons), each checked by its words (the screen reader's
 say), its LEDs and its screen. The screens are compared pixel for pixel with the approved design's own drawing
@@ -273,15 +273,15 @@ def main():
     # ---- the record, the manifest, rfm1_check
     r = subprocess.run([A.run, "--tk-info", A.file], capture_output=True, text=True)
     info = json.loads(r.stdout) if r.returncode == 0 else {}
-    ok(info.get("version") == 1 and info.get("size") == 1468 and info.get("name") == "CHORDS",
-       "the record: version 1, size 1468, name CHORDS (%s)" % r.stdout.strip())
+    ok(info.get("version") == 1 and info.get("size") == 1468 and info.get("name") == "ChoralRoot",
+       "the record: version 1, size 1468, name ChoralRoot (%s)" % r.stdout.strip())
     ok(info.get("claims") == 0x5F, "claims 0x5F: all but TRACKS and VOLUME")
     m = custom_rfm1(open(A.file, "rb").read())
     ok("tk1" in m.get("wants", []) and m.get("takeover") == {
-        "name": "CHORDS", "claims": ["screen", "pads", "steps", "knobs", "jog", "buttons"]},
+        "name": "ChoralRoot", "claims": ["screen", "pads", "steps", "knobs", "jog", "buttons"]},
        "the manifest: wants tk1, takeover %s" % m.get("takeover"))
     c = subprocess.run([sys.executable, CHECK, "--run", A.run, A.file], capture_output=True, text=True)
-    ok(c.returncode == 0 and 'takeover (tk1, "CHORDS" claims 0x5f)' in c.stdout, "rfm1_check --run accepts it")
+    ok(c.returncode == 0 and 'takeover (tk1, "ChoralRoot" claims 0x5f)' in c.stdout, "rfm1_check --run accepts it")
 
     # ---- entering: the home view, the Keys layout's LEDs
     e = Run([], 600)

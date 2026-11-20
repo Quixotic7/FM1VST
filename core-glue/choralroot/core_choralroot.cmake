@@ -37,8 +37,8 @@ crf_golden(choralroot SCRIPT ${_cr}/tools/emu/scripts/cr_dmaj.txt REF ${_cr}/bui
 # rd1 (docs/RFM1.md): its popups' words (cr_ui.c), the map's bridge and the knobs' labels from knob_target
 # (published as 0.42 again with these bytes, the owner's choice of 2026-11-19: the apps offer the same version with
 # another sha256 as an update, and rank "0.42-r2" below "0.42" by semver)
-# tk1 (docs/RFM1-TAKEOVER.md): ChoralRoot's own Ableton Move interface, "CHORDS" (the submodule's firmware/src/cr_move.c,
+# tk1 (docs/RFM1-TAKEOVER.md): ChoralRoot's own Ableton Move interface, "ChoralRoot" (the submodule's firmware/src/cr_move.c,
 # which tools/emu/emu_fw.c includes only with FM1_HOST_TK: the FM-1's image is unchanged), claiming all but the Track
 # buttons and the volume knob
 fm1_add_rfm1(choralroot AUTHORS "Quixotic7" METADATA skins/choralroot/RemoteFM1Metadata.json WANTS cpu2 rd1 tk1
-             TAKEOVER_NAME CHORDS TAKEOVER_CLAIMS screen pads steps knobs jog buttons)
+             TAKEOVER_NAME ChoralRoot TAKEOVER_CLAIMS screen pads steps knobs jog buttons)
