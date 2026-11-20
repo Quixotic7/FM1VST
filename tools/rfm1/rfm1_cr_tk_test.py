@@ -256,7 +256,7 @@ def custom_rfm1(b):
     return None
 
 
-KEY_ON = "knob:6@150:12"                           # Key + 12 semitones: the tonic stays C, Key Mode on ("C MAJ")
+KEY_ON = "knob:6@150:48"                           # Key + 12 semitones (4 ticks a semitone): the tonic stays C, Key Mode on ("C MAJ")
 DM7 = ["pad:25@200+700", "pad:17@205+700", "pad:1@300+500"]   # MIN + m7 held, D: Dm7
 
 
@@ -351,7 +351,7 @@ def main():
 
     # ---- the steps: written, cleared, held and edited
     st = Run(DM7 + ["step:0@1500+50", "step:4@1600+50", "step:4@1800+50", "step:8@2000+2000", "pad:24@2100+300",
-                    "pad:1@2150+200", "knob:4@2500:1", "knob:1@2550:1"], 3800)
+                    "pad:1@2150+200", "knob:4@2500:4", "knob:1@2550:1"], 3800)
     ok(st.led(32) == SEQ and st.led(36) == (24, 24, 30), "step 1 tapped: the last chord in (blue); step 5 tapped "
        "twice: written, cleared")
     ok(st.led(40) == HELD and "Step 9, empty" in st.says, "step 9 held: orange, said")
@@ -363,6 +363,10 @@ def main():
     st3 = Run(DM7 + ["pad:21@500+100", "step:5@1500+400", "pad:21@1600+100"], 2300)
     ok(st3.led(37) == SEQ, "a step held + memory 6: the step gets it")
     same(st3, scr_home("FREE", 1, "Dm7", filled=(5,)), "home: the strip shows step 6 filled", png="1b-home-step")
+
+    pe = Run(DM7 + ["button:right@1400+50", "step:0@1500+50"], 2000)
+    ok(not any(w.startswith("Step 17") for w in pe.says) and pe.led(32) != SEQ,
+       "a step past the loop's end (page 2 of a 16-step loop): nothing (%s)" % pe.says[-3:])
 
     # ---- Shift: the slots and the pages
     sh = Run(["button:shift@200+600"], 700)
@@ -380,9 +384,11 @@ def main():
     same(kp, scr_popup("Voicing", "+2", 14 / 24), "Voicing touched and turned: name, then the value big",
          png="6-knob-popup")
     ok(kp.says[:2] == ["Voicing 0", "Voicing plus 2"], "said: %s" % kp.says)
-    pf = Run(["knob:2@200:1"] * 1 + ["knob:2@210:1", "knob:2@220:1", "knob:2@230:1"], 400)
-    same(pf, scr_popup("Perform", "Arp"), "Perform turned four detents: Arp")
-    ap_ = Run(["knob:2@200:1", "knob:2@210:1", "knob:2@220:1", "knob:2@230:1"] + [
+    pf = Run(["knob:2@200:4", "knob:2@210:4", "knob:2@220:4", "knob:2@230:4"], 400)
+    same(pf, scr_popup("Perform", "Arp"), "Perform turned four entries (16 ticks): Arp")
+    p1 = Run(["knob:2@200:1", "knob:2@210:1", "knob:2@220:1"], 400)
+    same(p1, scr_popup("Perform", "Off"), "Perform: three ticks are not an entry yet")
+    ap_ = Run(["knob:2@200:4", "knob:2@210:4", "knob:2@220:4", "knob:2@230:4"] + [
         "pad:25@1500+1500", "pad:17@1500+1500", "pad:1@1600+1400"], 2500)
     ok(ap_.screen[0].startswith("1") and ap_.screen[61] == "1" * 128,
        "Arp running: the hop view (its rule at the foot)")
