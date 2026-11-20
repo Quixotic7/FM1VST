@@ -627,5 +627,11 @@ function(fm1_rfm1_finish)
         add_test(NAME rfm1_tk COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1/rfm1_tk_test.py --run $<TARGET_FILE:rfm1_run>
                                       --file ${_f} --cc ${CMAKE_C_COMPILER})
     endif()
+    # ChoralRoot's own takeover, CHORDS (its cr_move.c): scenarios through rfm1_run --tk, screens against the design's
+    if(TARGET rfm1_choralroot)
+        get_property(_f GLOBAL PROPERTY FM1_RFM1_FILE_choralroot)
+        add_test(NAME rfm1_cr_tk COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1/rfm1_cr_tk_test.py
+                                         --run $<TARGET_FILE:rfm1_run> --file ${_f})
+    endif()
     message(STATUS "rfm1: ${_ids}")
 endfunction()

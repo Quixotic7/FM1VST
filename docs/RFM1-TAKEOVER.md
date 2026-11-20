@@ -3,6 +3,8 @@
 Draft 1, 2026-11-19, approved by the owner. Status: **the module's side is built** in FM1VST (2026-11-20):
 `core-api/rfm1_move.h`, the shim's `RFM1_TK`, `fm1_add_rfm1(... WANTS tk1)`, `rfm1_check`, `rfm1_run --tk` and the
 test firmware `tkdemo` (docs/RFM1.md "The Move takeover (tk1)"). The host's side (section 6) is not.
+ChoralRoot's own takeover, `CHORDS` (its `firmware/src/cr_move.c`, `core-glue/choralroot`), is tested by
+`tools/rfm1/rfm1_cr_tk_test.py` (ctest `rfm1_cr_tk`).
 
 A host that runs `.rfm1` firmwares on an Ableton Move (RemoteFM1 on the Move: remoteFM14Move with
 rfm1cs-abletonmove) normally turns the Move into an FM-1: the pads are the keybed, the knobs the FM-1's encoders, the
