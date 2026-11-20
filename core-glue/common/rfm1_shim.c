@@ -483,3 +483,94 @@ EXPORT(rfm1_label) uint32_t rfm1_label(int32_t which)
     return base_rfm1_label(which);
 }
 #endif
+
+/* the Move takeover (docs/RFM1-TAKEOVER.md, capability tk1): only in a module built with tk1 in its fm1_add_rfm1 WANTS
+ * (RFM1_TK; its units get FM1_HOST_TK, so core-api/rfm1_move.h's calls reach the rfm1_tk__* below). One record at a
+ * stable address, rfm1_tk() -> ptr, which the host reads after each rfm1_frame and rfm1_tk_input; rfm1_tk_input and
+ * rfm1_tk_state call the ops the firmware registered. No import: a host without tk1 never calls them. The seq
+ * counters move only on a real change (a screen or an LED that differs; each say), never 0 once moved. */
+#ifdef RFM1_TK
+#include <stddef.h>
+#include <string.h>
+#include "rfm1_move.h"
+typedef struct {
+    uint16_t version, size;            /* 1, 1468 */
+    uint32_t claims;                   /* RFM1_TK_* bits; 0: no takeover now */
+    uint32_t scr_seq, led_seq, say_seq;
+    uint8_t say_flags;                 /* RFM1_TK_SAY_INTERRUPT */
+    uint8_t reserved[3];
+    char name[RFM1_TK_NAME_LEN];       /* printable ASCII, NUL-terminated */
+    char say[RFM1_TK_SAY_LEN];
+    uint8_t screen[RFM1_TK_SCREEN_BYTES];
+    uint8_t led[RFM1_TK_L_N][3];
+} rfm1_tk_rec_t;
+/* section 4.2's offsets, exactly */
+_Static_assert(offsetof(rfm1_tk_rec_t, version) == 0 && offsetof(rfm1_tk_rec_t, size) == 2, "tk1 record");
+_Static_assert(offsetof(rfm1_tk_rec_t, claims) == 4 && offsetof(rfm1_tk_rec_t, scr_seq) == 8, "tk1 record");
+_Static_assert(offsetof(rfm1_tk_rec_t, led_seq) == 12 && offsetof(rfm1_tk_rec_t, say_seq) == 16, "tk1 record");
+_Static_assert(offsetof(rfm1_tk_rec_t, say_flags) == 20 && offsetof(rfm1_tk_rec_t, reserved) == 21, "tk1 record");
+_Static_assert(offsetof(rfm1_tk_rec_t, name) == 24 && offsetof(rfm1_tk_rec_t, say) == 40, "tk1 record");
+_Static_assert(offsetof(rfm1_tk_rec_t, screen) == 168 && offsetof(rfm1_tk_rec_t, led) == 1192, "tk1 record");
+_Static_assert(sizeof(rfm1_tk_rec_t) == 1468, "tk1 record: 1468 bytes");
+static rfm1_tk_rec_t TK = {1, sizeof(rfm1_tk_rec_t), 0, 0, 0, 0, 0, {0, 0, 0}, "", "", {0}, {{0}}};
+static uint8_t tk_draw[RFM1_TK_SCREEN_BYTES];   /* the firmware draws here; screen_done copies a changed picture */
+static const rfm1_tk_ops_t *tk_ops;
+static int tk_on;
+
+static void tk_txt(char *d, const char *s, uint32_t n)   /* printable ASCII only, cut at n - 1 */
+{
+    uint32_t i = 0;
+    while (s && *s && i + 1 < n) {
+        const unsigned char c = (unsigned char)*s++;
+        d[i++] = c >= 32 && c < 127 ? (char)c : ' ';
+    }
+    while (i < n)
+        d[i++] = 0;
+}
+static uint32_t tk_next(uint32_t s) { return s + 1u ? s + 1u : 1u; }
+
+void rfm1_tk__register(const char *name, unsigned claims, const rfm1_tk_ops_t *ops)
+{
+    tk_txt(TK.name, name, sizeof TK.name);
+    TK.claims = claims & RFM1_TK_ALL;
+    tk_ops = ops;
+}
+uint8_t *rfm1_tk__screen(void) { return tk_draw; }
+void rfm1_tk__screen_done(void)
+{
+    if (memcmp(TK.screen, tk_draw, sizeof tk_draw)) {
+        memcpy(TK.screen, tk_draw, sizeof tk_draw);
+        TK.scr_seq = tk_next(TK.scr_seq);
+    }
+}
+void rfm1_tk__led(int i, uint8_t r, uint8_t g, uint8_t b)
+{
+    if (i < 0 || i >= RFM1_TK_L_N || (TK.led[i][0] == r && TK.led[i][1] == g && TK.led[i][2] == b))
+        return;
+    TK.led[i][0] = r, TK.led[i][1] = g, TK.led[i][2] = b;
+    TK.led_seq = tk_next(TK.led_seq);
+}
+void rfm1_tk__claims(unsigned claims) { TK.claims = claims & RFM1_TK_ALL; }
+void rfm1_tk__say(const char *text, int interrupt)
+{
+    tk_txt(TK.say, text, sizeof TK.say);
+    TK.say_flags = interrupt ? RFM1_TK_SAY_INTERRUPT : 0u;
+    TK.say_seq = tk_next(TK.say_seq);
+}
+int rfm1_tk__shown(void) { return tk_on; }
+
+EXPORT(rfm1_tk) uint32_t rfm1_tk(void) { return (uint32_t)(uintptr_t)&TK; }
+EXPORT(rfm1_tk_input) int32_t rfm1_tk_input(uint32_t pkt)
+{
+    const uint8_t p[4] = {(uint8_t)pkt, (uint8_t)(pkt >> 8), (uint8_t)(pkt >> 16), (uint8_t)(pkt >> 24)};
+    if (tk_ops && tk_ops->input)
+        tk_ops->input(p);
+    return 0;
+}
+EXPORT(rfm1_tk_state) void rfm1_tk_state(uint32_t on, uint32_t claims, uint32_t flags)
+{
+    tk_on = on != 0;
+    if (tk_ops && tk_ops->state)
+        tk_ops->state(tk_on, claims, flags);
+}
+#endif
