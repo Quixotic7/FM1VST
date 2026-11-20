@@ -7,7 +7,7 @@
    "id": "27ysni0g1iit",
    "x": -1296,
    "y": 2240,
-   "w": 3524,
+   "w": 4304,
    "h": 2060,
    "type": "group",
    "title": "ChoralRoot takeover - proposal 2 (the owner's Chord Proposal), 2026-11-20",
@@ -194,13 +194,13 @@
     },
     "menu": {
      "meta": {
-      "label": "KEY MODE",
-      "function": "Key Mode on / off: on, a key plays the key's own chord on that root (C major: D = Dm); off, the chord the mods say (none held: major).",
-      "click": "Key Mode on / off",
-      "shift": "The key's popup (Key, Scale)"
+      "label": "LAYOUT",
+      "function": "The two bottom rows' layout: Keys, Scale (Key Mode), Chromatic, Prog. The mods and memories stay in every layout.",
+      "click": "Quick tap: the previous layout (flips between the last two)",
+      "hold": "Held: the pads become the picker: layouts, the 8 memory banks, the 16 progressions"
      },
      "led": {
-      "brightness": 1
+      "brightness": 0.3
      }
     },
     "wheel": {
@@ -550,7 +550,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -563,7 +563,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -576,7 +576,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -589,7 +589,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -602,7 +602,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -615,7 +615,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#031e22"
@@ -628,7 +628,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#031e22"
@@ -641,7 +641,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#031e22"
@@ -1393,7 +1393,7 @@
    "w": 1048,
    "h": 200,
    "type": "note",
-   "text": "Keys: one octave, C to C on the bottom row, the black keys above (Up / Down: the octave). Mods held + a key: that chord; Menu = Key Mode (the key's own chords).\nMemories (cyan): tap = play the saved chord. Steps: the sequence of the loop slot, 16 a page (Left / Right: up to 64 steps).",
+   "text": "Keys: one octave, C to C on the bottom row, the black keys above (Up / Down: the octave). Mods held + a key: that chord. Menu: the layout (tap: the previous one; held: the picker, E).\nMemories (cyan): tap = play the saved chord. Steps: the sequence of the loop slot, 16 a page (Left / Right: up to 64 steps).",
    "color": "#bff3fa"
   },
   {
@@ -1577,13 +1577,13 @@
     },
     "menu": {
      "meta": {
-      "label": "KEY MODE",
-      "function": "Key Mode on / off: on, a key plays the key's own chord on that root (C major: D = Dm); off, the chord the mods say (none held: major).",
-      "click": "Key Mode on / off",
-      "shift": "The key's popup (Key, Scale)"
+      "label": "LAYOUT",
+      "function": "The two bottom rows' layout: Keys, Scale (Key Mode), Chromatic, Prog. The mods and memories stay in every layout.",
+      "click": "Quick tap: the previous layout (flips between the last two)",
+      "hold": "Held: the pads become the picker: layouts, the 8 memory banks, the 16 progressions"
      },
      "led": {
-      "brightness": 1
+      "brightness": 0.3
      }
     },
     "wheel": {
@@ -1933,7 +1933,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -1946,7 +1946,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -1959,7 +1959,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -1972,7 +1972,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -1985,7 +1985,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -1998,7 +1998,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#ffffff"
@@ -2011,7 +2011,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#031e22"
@@ -2024,7 +2024,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#031e22"
@@ -2685,13 +2685,13 @@
     },
     "menu": {
      "meta": {
-      "label": "KEY MODE",
-      "function": "Key Mode on / off: on, a key plays the key's own chord on that root (C major: D = Dm); off, the chord the mods say (none held: major).",
-      "click": "Key Mode on / off",
-      "shift": "The key's popup (Key, Scale)"
+      "label": "LAYOUT",
+      "function": "The two bottom rows' layout: Keys, Scale (Key Mode), Chromatic, Prog. The mods and memories stay in every layout.",
+      "click": "Quick tap: the previous layout (flips between the last two)",
+      "hold": "Held: the pads become the picker: layouts, the 8 memory banks, the 16 progressions"
      },
      "led": {
-      "brightness": 1
+      "brightness": 0.3
      }
     },
     "wheel": {
@@ -3033,7 +3033,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -3046,7 +3046,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -3059,7 +3059,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -3072,7 +3072,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -3085,7 +3085,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -3098,7 +3098,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#031e22"
@@ -3111,7 +3111,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#031e22"
@@ -3124,7 +3124,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#031e22"
@@ -3785,13 +3785,13 @@
     },
     "menu": {
      "meta": {
-      "label": "KEY MODE",
-      "function": "Key Mode on / off: on, a key plays the key's own chord on that root (C major: D = Dm); off, the chord the mods say (none held: major).",
-      "click": "Key Mode on / off",
-      "shift": "The key's popup (Key, Scale)"
+      "label": "LAYOUT",
+      "function": "The two bottom rows' layout: Keys, Scale (Key Mode), Chromatic, Prog. The mods and memories stay in every layout.",
+      "click": "Quick tap: the previous layout (flips between the last two)",
+      "hold": "Held: the pads become the picker: layouts, the 8 memory banks, the 16 progressions"
      },
      "led": {
-      "brightness": 1
+      "brightness": 0.3
      }
     },
     "wheel": {
@@ -4133,7 +4133,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -4146,7 +4146,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -4159,7 +4159,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -4172,7 +4172,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -4185,7 +4185,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#13abbf"
@@ -4198,7 +4198,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#031e22"
@@ -4211,7 +4211,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#031e22"
@@ -4224,7 +4224,7 @@
       "click": "Play its chord (empty: nothing)",
       "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
       "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
-      "description": "8 memories, kept with the session (the global save). Saved: root, type, extensions and the voicing."
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
      },
      "led": {
       "color": "#031e22"
@@ -4677,10 +4677,2160 @@
    "x": -88,
    "y": 3220,
    "w": 1048,
+   "h": 616,
+   "type": "layout",
+   "name": "E. Menu held: the picker",
+   "description": "Menu held: the mods block picks the layout (Keys now, Scale the previous), the memories block the bank (1 of 8), the bottom rows the 16 progressions. A quick Menu tap flips Keys <-> Scale.",
+   "scope": [
+    "screen",
+    "knob-1",
+    "knob-2",
+    "knob-3",
+    "knob-4",
+    "knob-5",
+    "knob-6",
+    "knob-7",
+    "knob-8",
+    "knobled-1",
+    "knobled-2",
+    "knobled-3",
+    "knobled-4",
+    "knobled-5",
+    "knobled-6",
+    "knobled-7",
+    "knobled-8",
+    "volume",
+    "wheel",
+    "back",
+    "menu",
+    "track-1",
+    "track-2",
+    "track-3",
+    "track-4",
+    "pad-1-1",
+    "pad-1-2",
+    "pad-1-3",
+    "pad-1-4",
+    "pad-1-5",
+    "pad-1-6",
+    "pad-1-7",
+    "pad-1-8",
+    "pad-2-1",
+    "pad-2-2",
+    "pad-2-3",
+    "pad-2-4",
+    "pad-2-5",
+    "pad-2-6",
+    "pad-2-7",
+    "pad-2-8",
+    "pad-3-1",
+    "pad-3-2",
+    "pad-3-3",
+    "pad-3-4",
+    "pad-3-5",
+    "pad-3-6",
+    "pad-3-7",
+    "pad-3-8",
+    "pad-4-1",
+    "pad-4-2",
+    "pad-4-3",
+    "pad-4-4",
+    "pad-4-5",
+    "pad-4-6",
+    "pad-4-7",
+    "pad-4-8",
+    "capture",
+    "sample",
+    "loop",
+    "mute",
+    "delete",
+    "copy",
+    "undo",
+    "shift",
+    "play",
+    "record",
+    "step-1",
+    "step-2",
+    "step-3",
+    "step-4",
+    "step-5",
+    "step-6",
+    "step-7",
+    "step-8",
+    "step-9",
+    "step-10",
+    "step-11",
+    "step-12",
+    "step-13",
+    "step-14",
+    "step-15",
+    "step-16",
+    "stepicon-1",
+    "stepicon-2",
+    "stepicon-3",
+    "stepicon-4",
+    "stepicon-5",
+    "stepicon-6",
+    "stepicon-7",
+    "stepicon-8",
+    "stepicon-9",
+    "stepicon-10",
+    "stepicon-11",
+    "stepicon-12",
+    "stepicon-13",
+    "stepicon-14",
+    "stepicon-15",
+    "stepicon-16",
+    "left",
+    "right",
+    "up",
+    "down",
+    "power"
+   ],
+   "controls": {
+    "track-1": {
+     "meta": {
+      "label": "FM-1 / CHORDS",
+      "function": "RemoteFM1's (not claimed): Track 1 cycles FM-1 mode and this takeover.",
+      "click": "Back to FM-1 mode (again: the takeover)",
+      "hold": "RemoteFM1's Shift layer (FM-1 mode only)"
+     },
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "track-2": {
+     "meta": {
+      "label": "MIDI",
+      "function": "RemoteFM1's (not claimed): Track 2's mode, as ever.",
+      "click": "Midi mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#c8ff2a"
+     }
+    },
+    "track-3": {
+     "meta": {
+      "label": "CONTROL",
+      "function": "RemoteFM1's (not claimed): Track 3's mode, as ever.",
+      "click": "Control mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#1ae4ff"
+     }
+    },
+    "track-4": {
+     "meta": {
+      "label": "SEQ",
+      "function": "RemoteFM1's (not claimed): Track 4's mode, as ever.",
+      "click": "Seq mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#ff2a2a"
+     }
+    },
+    "volume": {
+     "meta": {
+      "label": "MASTER",
+      "function": "RemoteFM1's (not claimed): the master volume.",
+      "turn": "Master volume",
+      "touch": "Touched + Back: out of any takeover to FM-1 mode"
+     }
+    },
+    "back": {
+     "meta": {
+      "label": "BACK",
+      "function": "Closes a popup or the Prog layout. Touch Volume + Back: FM-1 mode.",
+      "click": "Close / up one level (sent at release: Back + Track switches slots)",
+      "description": "ChoralRoot claims the buttons but not the Track buttons, so the host gives Back at its release."
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "menu": {
+     "meta": {
+      "label": "LAYOUT",
+      "function": "The two bottom rows' layout: Keys, Scale (Key Mode), Chromatic, Prog. The mods and memories stay in every layout.",
+      "click": "Quick tap: the previous layout (flips between the last two)",
+      "hold": "Held: the pads become the picker: layouts, the 8 memory banks, the 16 progressions"
+     },
+     "led": {
+      "brightness": 1
+     }
+    },
+    "wheel": {
+     "meta": {
+      "label": "SOUND",
+      "function": "The chord sound, by name (popup).",
+      "turn": "Next / previous sound",
+      "shiftTurn": "The engine (FM6, FM TONE, VA, CZ-1, P5, WHEEL, GRAIN)",
+      "click": "Favourite on / off",
+      "touch": "The sound's name"
+     }
+    },
+    "play": {
+     "meta": {
+      "label": "SEQ PLAY",
+      "function": "The sequencer (the looper's slot): play / stop from step 1.",
+      "click": "Play / stop",
+      "shift": "Shift + Play: restart from step 1"
+     },
+     "led": {
+      "color": "#00c800"
+     }
+    },
+    "record": {
+     "meta": {
+      "label": "SEQ REC",
+      "function": "Records what is played into the loop, live, in the record mode (Overwrite, Advance, Overdub, Replace, Step).",
+      "click": "Record / stop recording",
+      "shift": "Shift + Rec: the next record mode"
+     },
+     "led": {
+      "color": "#440000"
+     }
+    },
+    "loop": {
+     "meta": {
+      "label": "LATCH",
+      "function": "LATCH: chords keep sounding after the pads are let go.",
+      "click": "Latch on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "copy": {
+     "meta": {
+      "label": "LOCK",
+      "function": "LOCK: the chord keys held now stay lit (latched); the roots play them.",
+      "click": "Lock on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "mute": {
+     "meta": {
+      "label": "BASS",
+      "function": "The bass part on / off.",
+      "click": "Bass on / off",
+      "shift": "The bass sound's popup"
+     },
+     "led": {
+      "brightness": 1
+     }
+    },
+    "delete": {
+     "meta": {
+      "label": "CLEAR / PANIC",
+      "function": "Held + a step: clears it. Held + a memory pad: clears it. Tapped alone: PANIC (all notes off, here and to every routed firmware).",
+      "click": "Panic",
+      "hold": "Delete held + step / memory: clear it"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "shift": {
+     "meta": {
+      "label": "SHIFT",
+      "function": "Held: the knobs' second page.",
+      "hold": "Knobs page 2 on the screen"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "up": {
+     "meta": {
+      "label": "OCT +",
+      "function": "The root pads an octave up (-2..+2).",
+      "click": "Octave up"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "down": {
+     "meta": {
+      "label": "OCT -",
+      "function": "The root pads an octave down (-2..+2).",
+      "click": "Octave down"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "left": {
+     "meta": {
+      "label": "PAGE <",
+      "function": "The sequencer's page: steps 1-16, 17-32, 33-48, 49-64 (the step icons show which).",
+      "click": "Previous page"
+     }
+    },
+    "right": {
+     "meta": {
+      "label": "PAGE >",
+      "function": "The next page of 16 steps (a loop of 64 steps at most).",
+      "click": "Next page"
+     }
+    },
+    "capture": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "sample": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "undo": {
+     "meta": {
+      "label": "UNDO",
+      "function": "The looper's undo: the layer in progress, else the last layer.",
+      "click": "Undo"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "knob-1": {
+     "meta": {
+      "label": "VOICING",
+      "function": "Revoice: up moves the lowest note an octave up, down the highest down (-12..+12)",
+      "turn": "Change Voicing",
+      "touch": "Fullscreen popup: Voicing and its value",
+      "shiftTurn": "Sound"
+     }
+    },
+    "knobled-1": {
+     "led": {
+      "color": "#ff7800"
+     }
+    },
+    "knob-2": {
+     "meta": {
+      "label": "PERFORM",
+      "function": "Off, Strum, Strum 2, Slop, Arp, Arp 2, Pattern, Harp",
+      "turn": "Change Perform",
+      "touch": "Fullscreen popup: Perform and its value",
+      "shiftTurn": "Bass sound"
+     }
+    },
+    "knobled-2": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-3": {
+     "meta": {
+      "label": "RATE",
+      "function": "The mode's first value: strum rate, slop amount, arp division, pattern, harp rate",
+      "turn": "Change Rate",
+      "touch": "Fullscreen popup: Rate and its value",
+      "shiftTurn": "Gate"
+     }
+    },
+    "knobled-3": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-4": {
+     "meta": {
+      "label": "DIRECTION",
+      "function": "The mode's second value (Direction; Pattern: its division)",
+      "turn": "Change Direction",
+      "touch": "Fullscreen popup: Direction and its value",
+      "shiftTurn": "Swing"
+     }
+    },
+    "knobled-4": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-5": {
+     "meta": {
+      "label": "BASS REG.",
+      "function": "The bass register, -2..+4 octaves",
+      "turn": "Change Bass reg.",
+      "touch": "Fullscreen popup: Bass reg. and its value",
+      "shiftTurn": "Bass level"
+     }
+    },
+    "knobled-5": {
+     "led": {
+      "color": "#ff5a1e"
+     }
+    },
+    "knob-6": {
+     "meta": {
+      "label": "KEY",
+      "function": "The tonic (Key Mode on)",
+      "turn": "Change Key",
+      "touch": "Fullscreen popup: Key and its value",
+      "shiftTurn": "Velocity"
+     }
+    },
+    "knobled-6": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "knob-7": {
+     "meta": {
+      "label": "SCALE",
+      "function": "Major / Minor",
+      "turn": "Change Scale",
+      "touch": "Fullscreen popup: Scale and its value",
+      "shiftTurn": "Humanize"
+     }
+    },
+    "knobled-7": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "knob-8": {
+     "meta": {
+      "label": "TRANSPOSE",
+      "function": "-24..+24 semitones, everything played",
+      "turn": "Change Transpose",
+      "touch": "Fullscreen popup: Transpose and its value",
+      "shiftTurn": "Tempo"
+     }
+    },
+    "knobled-8": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-1-1": {
+     "meta": {
+      "label": "KEYS",
+      "function": "Menu held + this pad: the Keys layout on the two bottom rows",
+      "click": "Pick it (Menu let go: it plays)"
+     },
+     "led": {
+      "color": "#ffffff"
+     }
+    },
+    "pad-1-2": {
+     "meta": {
+      "label": "SCALE",
+      "function": "Menu held + this pad: the Scale layout on the two bottom rows",
+      "click": "Pick it (Menu let go: it plays)"
+     },
+     "led": {
+      "color": "#727272"
+     }
+    },
+    "pad-1-3": {
+     "meta": {
+      "label": "CHROM",
+      "function": "Menu held + this pad: the Chrom layout on the two bottom rows",
+      "click": "Pick it (Menu let go: it plays)"
+     },
+     "led": {
+      "color": "#262626"
+     }
+    },
+    "pad-1-4": {
+     "meta": {
+      "label": "PROG",
+      "function": "Menu held + this pad: the Prog layout on the two bottom rows",
+      "click": "Pick it (Menu let go: it plays)"
+     },
+     "led": {
+      "color": "#262626"
+     }
+    },
+    "pad-2-1": {
+     "meta": {
+      "label": "",
+      "function": "Free (a later layout)"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "pad-2-2": {
+     "meta": {
+      "label": "",
+      "function": "Free (a later layout)"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "pad-2-3": {
+     "meta": {
+      "label": "",
+      "function": "Free (a later layout)"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "pad-2-4": {
+     "meta": {
+      "label": "",
+      "function": "Free (a later layout)"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "pad-1-5": {
+     "meta": {
+      "label": "Bank 1",
+      "function": "Menu held + this pad: memory bank 1 (8 memories each, 64 in all)",
+      "click": "Pick the bank (lit: it holds chords)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-1-6": {
+     "meta": {
+      "label": "Bank 2",
+      "function": "Menu held + this pad: memory bank 2 (8 memories each, 64 in all)",
+      "click": "Pick the bank (lit: it holds chords)"
+     },
+     "led": {
+      "color": "#09555f"
+     }
+    },
+    "pad-1-7": {
+     "meta": {
+      "label": "Bank 3",
+      "function": "Menu held + this pad: memory bank 3 (8 memories each, 64 in all)",
+      "click": "Pick the bank (lit: it holds chords)"
+     },
+     "led": {
+      "color": "#09555f"
+     }
+    },
+    "pad-1-8": {
+     "meta": {
+      "label": "Bank 4",
+      "function": "Menu held + this pad: memory bank 4 (8 memories each, 64 in all)",
+      "click": "Pick the bank (lit: it holds chords)"
+     },
+     "led": {
+      "color": "#02191c"
+     }
+    },
+    "pad-2-5": {
+     "meta": {
+      "label": "Bank 5",
+      "function": "Menu held + this pad: memory bank 5 (8 memories each, 64 in all)",
+      "click": "Pick the bank (lit: it holds chords)"
+     },
+     "led": {
+      "color": "#02191c"
+     }
+    },
+    "pad-2-6": {
+     "meta": {
+      "label": "Bank 6",
+      "function": "Menu held + this pad: memory bank 6 (8 memories each, 64 in all)",
+      "click": "Pick the bank (lit: it holds chords)"
+     },
+     "led": {
+      "color": "#02191c"
+     }
+    },
+    "pad-2-7": {
+     "meta": {
+      "label": "Bank 7",
+      "function": "Menu held + this pad: memory bank 7 (8 memories each, 64 in all)",
+      "click": "Pick the bank (lit: it holds chords)"
+     },
+     "led": {
+      "color": "#02191c"
+     }
+    },
+    "pad-2-8": {
+     "meta": {
+      "label": "Bank 8",
+      "function": "Menu held + this pad: memory bank 8 (8 memories each, 64 in all)",
+      "click": "Pick the bank (lit: it holds chords)"
+     },
+     "led": {
+      "color": "#02191c"
+     }
+    },
+    "pad-3-1": {
+     "meta": {
+      "label": "Prog 1",
+      "function": "Menu held + this pad: progression 1; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-3-2": {
+     "meta": {
+      "label": "Prog 2",
+      "function": "Menu held + this pad: progression 2; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-3-3": {
+     "meta": {
+      "label": "Prog 3",
+      "function": "Menu held + this pad: progression 3; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-3-4": {
+     "meta": {
+      "label": "Prog 4",
+      "function": "Menu held + this pad: progression 4; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-3-5": {
+     "meta": {
+      "label": "Prog 5",
+      "function": "Menu held + this pad: progression 5; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-3-6": {
+     "meta": {
+      "label": "Prog 6",
+      "function": "Menu held + this pad: progression 6; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-3-7": {
+     "meta": {
+      "label": "Prog 7",
+      "function": "Menu held + this pad: progression 7; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#120a1e"
+     }
+    },
+    "pad-3-8": {
+     "meta": {
+      "label": "Prog 8",
+      "function": "Menu held + this pad: progression 8; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#120a1e"
+     }
+    },
+    "pad-4-1": {
+     "meta": {
+      "label": "Prog 9",
+      "function": "Menu held + this pad: progression 9; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#120a1e"
+     }
+    },
+    "pad-4-2": {
+     "meta": {
+      "label": "Prog 10",
+      "function": "Menu held + this pad: progression 10; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#120a1e"
+     }
+    },
+    "pad-4-3": {
+     "meta": {
+      "label": "Prog 11",
+      "function": "Menu held + this pad: progression 11; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#120a1e"
+     }
+    },
+    "pad-4-4": {
+     "meta": {
+      "label": "Prog 12",
+      "function": "Menu held + this pad: progression 12; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#120a1e"
+     }
+    },
+    "pad-4-5": {
+     "meta": {
+      "label": "Prog 13",
+      "function": "Menu held + this pad: progression 13; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#120a1e"
+     }
+    },
+    "pad-4-6": {
+     "meta": {
+      "label": "Prog 14",
+      "function": "Menu held + this pad: progression 14; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#120a1e"
+     }
+    },
+    "pad-4-7": {
+     "meta": {
+      "label": "Prog 15",
+      "function": "Menu held + this pad: progression 15; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#120a1e"
+     }
+    },
+    "pad-4-8": {
+     "meta": {
+      "label": "Prog 16",
+      "function": "Menu held + this pad: progression 16; the layout becomes Prog with it",
+      "click": "Pick it (dim: empty)"
+     },
+     "led": {
+      "color": "#120a1e"
+     }
+    },
+    "step-1": {
+     "meta": {
+      "label": "Dm7",
+      "function": "Step 1 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#286eff"
+     }
+    },
+    "stepicon-1": {
+     "led": {
+      "brightness": 1
+     }
+    },
+    "step-2": {
+     "meta": {
+      "label": "2",
+      "function": "Step 2 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-2": {
+     "led": {
+      "brightness": 0.25
+     }
+    },
+    "step-3": {
+     "meta": {
+      "label": "3",
+      "function": "Step 3 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-3": {
+     "led": {
+      "brightness": 0.25
+     }
+    },
+    "step-4": {
+     "meta": {
+      "label": "4",
+      "function": "Step 4 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-4": {
+     "led": {
+      "brightness": 0.25
+     }
+    },
+    "step-5": {
+     "meta": {
+      "label": "G7",
+      "function": "Step 5 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#ffffff"
+     }
+    },
+    "stepicon-5": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-6": {
+     "meta": {
+      "label": "6",
+      "function": "Step 6 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-6": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-7": {
+     "meta": {
+      "label": "7",
+      "function": "Step 7 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-7": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-8": {
+     "meta": {
+      "label": "8",
+      "function": "Step 8 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-8": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-9": {
+     "meta": {
+      "label": "Cmaj7",
+      "function": "Step 9 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#286eff"
+     }
+    },
+    "stepicon-9": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-10": {
+     "meta": {
+      "label": "10",
+      "function": "Step 10 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-10": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-11": {
+     "meta": {
+      "label": "11",
+      "function": "Step 11 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-11": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-12": {
+     "meta": {
+      "label": "12",
+      "function": "Step 12 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-12": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-13": {
+     "meta": {
+      "label": "Am9",
+      "function": "Step 13 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#286eff"
+     }
+    },
+    "stepicon-13": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-14": {
+     "meta": {
+      "label": "14",
+      "function": "Step 14 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-14": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-15": {
+     "meta": {
+      "label": "Fsus",
+      "function": "Step 15 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#286eff"
+     }
+    },
+    "stepicon-15": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-16": {
+     "meta": {
+      "label": "16",
+      "function": "Step 16 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-16": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "screen": {
+     "meta": {
+      "label": "Layout picker",
+      "function": "LAYOUT and the bank in the bar, the current layout big, the previous one at the foot."
+     }
+    }
+   },
+   "screen": "/////////////////////5/+B5+eB5+YAf+Aefn//5+f/gefngefmAH/gHn5//+fn/n5n5n5n5+f/5+Z5//+H5/5+Z+Z+Z+fn/+fmef//h+f+fmfmfmfn5//n5mf//+fn/n5n5n5n5+f/5+Zn///n5/5+eZ5+Z+fn/+AeH///5+f+fnmefmfn5//gHh///+fn/gB+fn5n5+f/5+Zn///n5/4Afn5+Z+fn/+fmZ///5+f+fn5+fmfn5//n5nn//+fn/n5+fn5n5+f/5+Z5///n4AZ+fn+B+B/n/+Aefn//geAGfn5/gfgf5//gHn5//4H/////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAA8P//8PAA8A//8AAAAADwAPD///DwAPAP//AAAAAA8ADw///w8ADwD//wAAAAAPAA8P//8PAA8A//8AAAAADwDwDwAADwAPDwAAAAAAAA8A8A8AAA8ADw8AAAAAAAAPAPAPAAAPAA8PAAAAAAAADwDwDwAADwAPDwAAAAAAAA8PAA8AAA8ADw8AAAAAAAAPDwAPAAAPAA8PAAAAAAAADw8ADwAADwAPDwAAAAAAAA8PAA8AAA8ADw8AAAAAAAAP8AAP//AA8PAA//AAAAAAD/AAD//wAPDwAP/wAAAAAA/wAA//8ADw8AD/8AAAAAAP8AAP//AA8PAA//AAAAAADw8ADwAAAA8AAAAPAAAAAA8PAA8AAAAPAAAADwAAAAAPDwAPAAAADwAAAA8AAAAADw8ADwAAAA8AAAAPAAAAAA8A8A8AAAAPAAAADwAAAAAPAPAPAAAADwAAAA8AAAAADwDwDwAAAA8AAAAPAAAAAA8A8A8AAAAPAAAADwAAAAAPAA8P//8ADwAP//AAAAAADwAPD///AA8AD//wAAAAAA8ADw///wAPAA//8AAAAAAPAA8P//8ADwAP//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf4fgfhgB/4AAAAAAAAAAAH+H4H4YAf+AAAAAAAAAAAGAGBmBmAGAAAAAAAAAAAABgBgZgZgBgAAf4Z4H4YGAAYAYAYGYAYAAH+GeB+GBgAGAGAGBmAGAABgZ4ZgZgYAAfhgBgZgB/gAYGeGYGYGAAH4YAYGYAf4AGBmAH/mBgAABmAH/mAGAABgZgB/5gYAAAZgB/5gBgAAf4YAYAGYAAAGYGYGYAYAAH+GAGABmAAABmBmBmAGAABgBgAfgGAAB/gfhgZ/5/4AYAYAH4BgAAf4H4YGf+f+AA=="
+  },
+  {
+   "id": "p32qhs0tmztc",
+   "x": -88,
+   "y": 3860,
+   "w": 1048,
+   "h": 200,
+   "type": "note",
+   "text": "Menu held: picker; let go: back to playing. Picking a progression opens the Prog layout with it. Quick Menu tap (no pad): the previous layout, so two layouts are one tap apart.\nOnly the bottom rows change with the layout; the mods and the memories (of the bank picked) stay.",
+   "color": "#bff3fa"
+  },
+  {
+   "id": "rcxz28c7k3ej",
+   "x": 1060,
+   "y": 3220,
+   "w": 1048,
+   "h": 616,
+   "type": "layout",
+   "name": "F. Prog layout",
+   "description": "Progression 3 (Neo Soul) picked: the bottom rows are its chords 1-16. Chord 4 pressed: Am11. Mods and memories as ever.",
+   "scope": [
+    "screen",
+    "knob-1",
+    "knob-2",
+    "knob-3",
+    "knob-4",
+    "knob-5",
+    "knob-6",
+    "knob-7",
+    "knob-8",
+    "knobled-1",
+    "knobled-2",
+    "knobled-3",
+    "knobled-4",
+    "knobled-5",
+    "knobled-6",
+    "knobled-7",
+    "knobled-8",
+    "volume",
+    "wheel",
+    "back",
+    "menu",
+    "track-1",
+    "track-2",
+    "track-3",
+    "track-4",
+    "pad-1-1",
+    "pad-1-2",
+    "pad-1-3",
+    "pad-1-4",
+    "pad-1-5",
+    "pad-1-6",
+    "pad-1-7",
+    "pad-1-8",
+    "pad-2-1",
+    "pad-2-2",
+    "pad-2-3",
+    "pad-2-4",
+    "pad-2-5",
+    "pad-2-6",
+    "pad-2-7",
+    "pad-2-8",
+    "pad-3-1",
+    "pad-3-2",
+    "pad-3-3",
+    "pad-3-4",
+    "pad-3-5",
+    "pad-3-6",
+    "pad-3-7",
+    "pad-3-8",
+    "pad-4-1",
+    "pad-4-2",
+    "pad-4-3",
+    "pad-4-4",
+    "pad-4-5",
+    "pad-4-6",
+    "pad-4-7",
+    "pad-4-8",
+    "capture",
+    "sample",
+    "loop",
+    "mute",
+    "delete",
+    "copy",
+    "undo",
+    "shift",
+    "play",
+    "record",
+    "step-1",
+    "step-2",
+    "step-3",
+    "step-4",
+    "step-5",
+    "step-6",
+    "step-7",
+    "step-8",
+    "step-9",
+    "step-10",
+    "step-11",
+    "step-12",
+    "step-13",
+    "step-14",
+    "step-15",
+    "step-16",
+    "stepicon-1",
+    "stepicon-2",
+    "stepicon-3",
+    "stepicon-4",
+    "stepicon-5",
+    "stepicon-6",
+    "stepicon-7",
+    "stepicon-8",
+    "stepicon-9",
+    "stepicon-10",
+    "stepicon-11",
+    "stepicon-12",
+    "stepicon-13",
+    "stepicon-14",
+    "stepicon-15",
+    "stepicon-16",
+    "left",
+    "right",
+    "up",
+    "down",
+    "power"
+   ],
+   "controls": {
+    "track-1": {
+     "meta": {
+      "label": "FM-1 / CHORDS",
+      "function": "RemoteFM1's (not claimed): Track 1 cycles FM-1 mode and this takeover.",
+      "click": "Back to FM-1 mode (again: the takeover)",
+      "hold": "RemoteFM1's Shift layer (FM-1 mode only)"
+     },
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "track-2": {
+     "meta": {
+      "label": "MIDI",
+      "function": "RemoteFM1's (not claimed): Track 2's mode, as ever.",
+      "click": "Midi mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#c8ff2a"
+     }
+    },
+    "track-3": {
+     "meta": {
+      "label": "CONTROL",
+      "function": "RemoteFM1's (not claimed): Track 3's mode, as ever.",
+      "click": "Control mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#1ae4ff"
+     }
+    },
+    "track-4": {
+     "meta": {
+      "label": "SEQ",
+      "function": "RemoteFM1's (not claimed): Track 4's mode, as ever.",
+      "click": "Seq mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#ff2a2a"
+     }
+    },
+    "volume": {
+     "meta": {
+      "label": "MASTER",
+      "function": "RemoteFM1's (not claimed): the master volume.",
+      "turn": "Master volume",
+      "touch": "Touched + Back: out of any takeover to FM-1 mode"
+     }
+    },
+    "back": {
+     "meta": {
+      "label": "BACK",
+      "function": "Closes a popup or the Prog layout. Touch Volume + Back: FM-1 mode.",
+      "click": "Close / up one level (sent at release: Back + Track switches slots)",
+      "description": "ChoralRoot claims the buttons but not the Track buttons, so the host gives Back at its release."
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "menu": {
+     "meta": {
+      "label": "LAYOUT",
+      "function": "The two bottom rows' layout: Keys, Scale (Key Mode), Chromatic, Prog. The mods and memories stay in every layout.",
+      "click": "Quick tap: the previous layout (flips between the last two)",
+      "hold": "Held: the pads become the picker: layouts, the 8 memory banks, the 16 progressions"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "wheel": {
+     "meta": {
+      "label": "SOUND",
+      "function": "The chord sound, by name (popup).",
+      "turn": "Next / previous sound",
+      "shiftTurn": "The engine (FM6, FM TONE, VA, CZ-1, P5, WHEEL, GRAIN)",
+      "click": "Favourite on / off",
+      "touch": "The sound's name"
+     }
+    },
+    "play": {
+     "meta": {
+      "label": "SEQ PLAY",
+      "function": "The sequencer (the looper's slot): play / stop from step 1.",
+      "click": "Play / stop",
+      "shift": "Shift + Play: restart from step 1"
+     },
+     "led": {
+      "color": "#00c800"
+     }
+    },
+    "record": {
+     "meta": {
+      "label": "SEQ REC",
+      "function": "Records what is played into the loop, live, in the record mode (Overwrite, Advance, Overdub, Replace, Step).",
+      "click": "Record / stop recording",
+      "shift": "Shift + Rec: the next record mode"
+     },
+     "led": {
+      "color": "#440000"
+     }
+    },
+    "loop": {
+     "meta": {
+      "label": "LATCH",
+      "function": "LATCH: chords keep sounding after the pads are let go.",
+      "click": "Latch on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "copy": {
+     "meta": {
+      "label": "LOCK",
+      "function": "LOCK: the chord keys held now stay lit (latched); the roots play them.",
+      "click": "Lock on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "mute": {
+     "meta": {
+      "label": "BASS",
+      "function": "The bass part on / off.",
+      "click": "Bass on / off",
+      "shift": "The bass sound's popup"
+     },
+     "led": {
+      "brightness": 1
+     }
+    },
+    "delete": {
+     "meta": {
+      "label": "CLEAR / PANIC",
+      "function": "Held + a step: clears it. Held + a memory pad: clears it. Tapped alone: PANIC (all notes off, here and to every routed firmware).",
+      "click": "Panic",
+      "hold": "Delete held + step / memory: clear it"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "shift": {
+     "meta": {
+      "label": "SHIFT",
+      "function": "Held: the knobs' second page.",
+      "hold": "Knobs page 2 on the screen"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "up": {
+     "meta": {
+      "label": "OCT +",
+      "function": "The root pads an octave up (-2..+2).",
+      "click": "Octave up"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "down": {
+     "meta": {
+      "label": "OCT -",
+      "function": "The root pads an octave down (-2..+2).",
+      "click": "Octave down"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "left": {
+     "meta": {
+      "label": "PAGE <",
+      "function": "The sequencer's page: steps 1-16, 17-32, 33-48, 49-64 (the step icons show which).",
+      "click": "Previous page"
+     }
+    },
+    "right": {
+     "meta": {
+      "label": "PAGE >",
+      "function": "The next page of 16 steps (a loop of 64 steps at most).",
+      "click": "Next page"
+     }
+    },
+    "capture": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "sample": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "undo": {
+     "meta": {
+      "label": "UNDO",
+      "function": "The looper's undo: the layer in progress, else the last layer.",
+      "click": "Undo"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "knob-1": {
+     "meta": {
+      "label": "VOICING",
+      "function": "Revoice: up moves the lowest note an octave up, down the highest down (-12..+12)",
+      "turn": "Change Voicing",
+      "touch": "Fullscreen popup: Voicing and its value",
+      "shiftTurn": "Sound"
+     }
+    },
+    "knobled-1": {
+     "led": {
+      "color": "#ff7800"
+     }
+    },
+    "knob-2": {
+     "meta": {
+      "label": "PERFORM",
+      "function": "Off, Strum, Strum 2, Slop, Arp, Arp 2, Pattern, Harp",
+      "turn": "Change Perform",
+      "touch": "Fullscreen popup: Perform and its value",
+      "shiftTurn": "Bass sound"
+     }
+    },
+    "knobled-2": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-3": {
+     "meta": {
+      "label": "RATE",
+      "function": "The mode's first value: strum rate, slop amount, arp division, pattern, harp rate",
+      "turn": "Change Rate",
+      "touch": "Fullscreen popup: Rate and its value",
+      "shiftTurn": "Gate"
+     }
+    },
+    "knobled-3": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-4": {
+     "meta": {
+      "label": "DIRECTION",
+      "function": "The mode's second value (Direction; Pattern: its division)",
+      "turn": "Change Direction",
+      "touch": "Fullscreen popup: Direction and its value",
+      "shiftTurn": "Swing"
+     }
+    },
+    "knobled-4": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-5": {
+     "meta": {
+      "label": "BASS REG.",
+      "function": "The bass register, -2..+4 octaves",
+      "turn": "Change Bass reg.",
+      "touch": "Fullscreen popup: Bass reg. and its value",
+      "shiftTurn": "Bass level"
+     }
+    },
+    "knobled-5": {
+     "led": {
+      "color": "#ff5a1e"
+     }
+    },
+    "knob-6": {
+     "meta": {
+      "label": "KEY",
+      "function": "The tonic (Key Mode on)",
+      "turn": "Change Key",
+      "touch": "Fullscreen popup: Key and its value",
+      "shiftTurn": "Velocity"
+     }
+    },
+    "knobled-6": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "knob-7": {
+     "meta": {
+      "label": "SCALE",
+      "function": "Major / Minor",
+      "turn": "Change Scale",
+      "touch": "Fullscreen popup: Scale and its value",
+      "shiftTurn": "Humanize"
+     }
+    },
+    "knobled-7": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "knob-8": {
+     "meta": {
+      "label": "TRANSPOSE",
+      "function": "-24..+24 semitones, everything played",
+      "turn": "Change Transpose",
+      "touch": "Fullscreen popup: Transpose and its value",
+      "shiftTurn": "Tempo"
+     }
+    },
+    "knobled-8": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-1-1": {
+     "meta": {
+      "label": "DIM",
+      "function": "Chord type DIM: held + a key plays that chord; mods stack (MIN + MAJ = SUS)",
+      "click": "Held: the next key plays it",
+      "shift": "Shift + mod: LOCK it (stays held)"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-2": {
+     "meta": {
+      "label": "MIN",
+      "function": "Chord type MIN: held + a key plays that chord; mods stack (MIN + MAJ = SUS)",
+      "click": "Held: the next key plays it",
+      "shift": "Shift + mod: LOCK it (stays held)"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-3": {
+     "meta": {
+      "label": "MAJ",
+      "function": "Chord type MAJ: held + a key plays that chord; mods stack (MIN + MAJ = SUS)",
+      "click": "Held: the next key plays it",
+      "shift": "Shift + mod: LOCK it (stays held)"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-4": {
+     "meta": {
+      "label": "SUS",
+      "function": "Chord type SUS: held + a key plays that chord; mods stack (MIN + MAJ = SUS)",
+      "click": "Held: the next key plays it",
+      "shift": "Shift + mod: LOCK it (stays held)"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-2-1": {
+     "meta": {
+      "label": "6",
+      "function": "Extension 6: held + a key plays that chord; mods stack (MIN + MAJ = SUS)",
+      "click": "Held: the next key plays it",
+      "shift": "Shift + mod: LOCK it (stays held)"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-2-2": {
+     "meta": {
+      "label": "m7",
+      "function": "Extension m7: held + a key plays that chord; mods stack (MIN + MAJ = SUS)",
+      "click": "Held: the next key plays it",
+      "shift": "Shift + mod: LOCK it (stays held)"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-2-3": {
+     "meta": {
+      "label": "M7",
+      "function": "Extension M7: held + a key plays that chord; mods stack (MIN + MAJ = SUS)",
+      "click": "Held: the next key plays it",
+      "shift": "Shift + mod: LOCK it (stays held)"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-2-4": {
+     "meta": {
+      "label": "9",
+      "function": "Extension 9: held + a key plays that chord; mods stack (MIN + MAJ = SUS)",
+      "click": "Held: the next key plays it",
+      "shift": "Shift + mod: LOCK it (stays held)"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-5": {
+     "meta": {
+      "label": "1 Dm7",
+      "function": "Chord memory 1: plays the chord saved in it, like a key (velocity, pressure, perform, bass).",
+      "click": "Play its chord (empty: nothing)",
+      "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
+      "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-1-6": {
+     "meta": {
+      "label": "2 G7",
+      "function": "Chord memory 2: plays the chord saved in it, like a key (velocity, pressure, perform, bass).",
+      "click": "Play its chord (empty: nothing)",
+      "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
+      "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-1-7": {
+     "meta": {
+      "label": "3 Cmaj7",
+      "function": "Chord memory 3: plays the chord saved in it, like a key (velocity, pressure, perform, bass).",
+      "click": "Play its chord (empty: nothing)",
+      "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
+      "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-1-8": {
+     "meta": {
+      "label": "4 Am9",
+      "function": "Chord memory 4: plays the chord saved in it, like a key (velocity, pressure, perform, bass).",
+      "click": "Play its chord (empty: nothing)",
+      "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
+      "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-2-5": {
+     "meta": {
+      "label": "5 Fsus",
+      "function": "Chord memory 5: plays the chord saved in it, like a key (velocity, pressure, perform, bass).",
+      "click": "Play its chord (empty: nothing)",
+      "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
+      "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-2-6": {
+     "meta": {
+      "label": "6",
+      "function": "Chord memory 6: plays the chord saved in it, like a key (velocity, pressure, perform, bass).",
+      "click": "Play its chord (empty: nothing)",
+      "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
+      "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
+     },
+     "led": {
+      "color": "#031e22"
+     }
+    },
+    "pad-2-7": {
+     "meta": {
+      "label": "7",
+      "function": "Chord memory 7: plays the chord saved in it, like a key (velocity, pressure, perform, bass).",
+      "click": "Play its chord (empty: nothing)",
+      "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
+      "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
+     },
+     "led": {
+      "color": "#031e22"
+     }
+    },
+    "pad-2-8": {
+     "meta": {
+      "label": "8",
+      "function": "Chord memory 8: plays the chord saved in it, like a key (velocity, pressure, perform, bass).",
+      "click": "Play its chord (empty: nothing)",
+      "hold": "A KEY held (with any mods) + this pad: the chord sounding is saved here (white flash, \"Memory n saved\")",
+      "shift": "Delete held + pad: clear it. A step held + pad: the step gets this chord",
+      "description": "8 memories a bank, 8 banks (Menu held + a memory pad: the bank), kept with the session (the global save). Saved: root, type, extensions and the voicing."
+     },
+     "led": {
+      "color": "#031e22"
+     }
+    },
+    "pad-4-1": {
+     "meta": {
+      "label": "Chord 1",
+      "function": "Prog layout: the progression's chord 1 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-4-2": {
+     "meta": {
+      "label": "Chord 2",
+      "function": "Prog layout: the progression's chord 2 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-4-3": {
+     "meta": {
+      "label": "Chord 3",
+      "function": "Prog layout: the progression's chord 3 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-4-4": {
+     "meta": {
+      "label": "Chord 4",
+      "function": "Prog layout: the progression's chord 4 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#ffffff"
+     }
+    },
+    "pad-4-5": {
+     "meta": {
+      "label": "Chord 5",
+      "function": "Prog layout: the progression's chord 5 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-4-6": {
+     "meta": {
+      "label": "Chord 6",
+      "function": "Prog layout: the progression's chord 6 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-4-7": {
+     "meta": {
+      "label": "Chord 7",
+      "function": "Prog layout: the progression's chord 7 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-4-8": {
+     "meta": {
+      "label": "Chord 8",
+      "function": "Prog layout: the progression's chord 8 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-3-1": {
+     "meta": {
+      "label": "Chord 9",
+      "function": "Prog layout: the progression's chord 9 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-3-2": {
+     "meta": {
+      "label": "Chord 10",
+      "function": "Prog layout: the progression's chord 10 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-3-3": {
+     "meta": {
+      "label": "Chord 11",
+      "function": "Prog layout: the progression's chord 11 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-3-4": {
+     "meta": {
+      "label": "Chord 12",
+      "function": "Prog layout: the progression's chord 12 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-3-5": {
+     "meta": {
+      "label": "Chord 13",
+      "function": "Prog layout: the progression's chord 13 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-3-6": {
+     "meta": {
+      "label": "Chord 14",
+      "function": "Prog layout: the progression's chord 14 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-3-7": {
+     "meta": {
+      "label": "Chord 15",
+      "function": "Prog layout: the progression's chord 15 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-3-8": {
+     "meta": {
+      "label": "Chord 16",
+      "function": "Prog layout: the progression's chord 16 (Shift + Left / Right: chords 17-32, 33-48)",
+      "click": "Play it (a mod held: your own type on its root)",
+      "hold": "Held + a memory pad: saved there; held + a step: the step gets it"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "step-1": {
+     "meta": {
+      "label": "Dm7",
+      "function": "Step 1 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#286eff"
+     }
+    },
+    "stepicon-1": {
+     "led": {
+      "brightness": 1
+     }
+    },
+    "step-2": {
+     "meta": {
+      "label": "2",
+      "function": "Step 2 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-2": {
+     "led": {
+      "brightness": 0.25
+     }
+    },
+    "step-3": {
+     "meta": {
+      "label": "3",
+      "function": "Step 3 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-3": {
+     "led": {
+      "brightness": 0.25
+     }
+    },
+    "step-4": {
+     "meta": {
+      "label": "4",
+      "function": "Step 4 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-4": {
+     "led": {
+      "brightness": 0.25
+     }
+    },
+    "step-5": {
+     "meta": {
+      "label": "G7",
+      "function": "Step 5 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#ffffff"
+     }
+    },
+    "stepicon-5": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-6": {
+     "meta": {
+      "label": "6",
+      "function": "Step 6 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-6": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-7": {
+     "meta": {
+      "label": "7",
+      "function": "Step 7 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-7": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-8": {
+     "meta": {
+      "label": "8",
+      "function": "Step 8 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-8": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-9": {
+     "meta": {
+      "label": "Cmaj7",
+      "function": "Step 9 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#286eff"
+     }
+    },
+    "stepicon-9": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-10": {
+     "meta": {
+      "label": "10",
+      "function": "Step 10 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-10": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-11": {
+     "meta": {
+      "label": "11",
+      "function": "Step 11 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-11": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-12": {
+     "meta": {
+      "label": "12",
+      "function": "Step 12 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-12": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-13": {
+     "meta": {
+      "label": "Am9",
+      "function": "Step 13 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#286eff"
+     }
+    },
+    "stepicon-13": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-14": {
+     "meta": {
+      "label": "14",
+      "function": "Step 14 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-14": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-15": {
+     "meta": {
+      "label": "Fsus",
+      "function": "Step 15 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#286eff"
+     }
+    },
+    "stepicon-15": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-16": {
+     "meta": {
+      "label": "16",
+      "function": "Step 16 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
+      "click": "Empty: the last chord played goes in. Holding a chord: cleared",
+      "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
+      "shift": "Shift + step: a loop slot (1-10) or a page (13-16)"
+     },
+     "led": {
+      "color": "#18181e"
+     }
+    },
+    "stepicon-16": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "screen": {
+     "meta": {
+      "label": "Prog view",
+      "function": "The progression's name and the chord's number in the bar, the chord big, its 16 chords (filled: has one), the last played marked."
+     }
+    }
+   },
+   "screen": "/////////////////////5+YAeB//+AeB5+Z/////+efmAHgf//gHgefmf/////nn5n/n5//n/n5n5n/////h5+Z/5+f/5/5+Z+Z/////4eHmf+fn/+f+fmfmf////5nh5n/n5//n/n5n5n////+Z5mYB5+f/+B5+Z+Z////+eeZmAefn//gefmfmf////nnnhn/n5///5n5n5n////4AZ4Z/5+f//+Z+Z+Z////+AGfmf+fn///mfmfmf/////nn5n/n5///5n5n5n/////55+YAeB//4B+B+B4Af///+efmAHgf/+AfgfgeAH////n/////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/gAAAAAB4AAB4AAAAAAAH/4AAAAAAeAAAeAAAAAAAB/+AAAAAAHgAAHgAAAAAAAf/gAAAAAB4AAB4AAAAAAB4AHgAAAAH+AAH+AAAAAAAeAB4AAAAB/gAB/gAAAAAAHgAeAAAAAf4AAf4AAAAAAB4AHgAAAAH+AAH+AAAAAAAeAB4f4eAAHgAAHgAAAAAAHgAeH+HgAB4AAB4AAAAAAB4AHh/h4AAeAAAeAAAAAAAeAB4f4eAAHgAAHgAAAAAAHgAeHh4eAB4AAB4AAAAAAB4AHh4eHgAeAAAeAAAAAAAeAB4eHh4AHgAAHgAAAAAAHgAeHh4eAB4AAB4AAAAAAB///h4eHgAeAAAeAAAAAAAf//4eHh4AHgAAHgAAAAAAH//+Hh4eAB4AAB4AAAAAAB///h4eHgAeAAAeAAAAAAAeAB4eAB4AHgAAHgAAAAAAHgAeHgAeAB4AAB4AAAAAAB4AHh4AHgAeAAAeAAAAAAAeAB4eAB4AHgAAHgAAAAAAHgAeHgAeAf/gAf/gAAAAAB4AHh4AHgH/4AH/4AAAAAAeAB4eAB4B/+AB/+AAAAAAHgAeHgAeAf/gAf/gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH9/f39/f39/a2tra2tra2t/f39/f39/fwAAAAAAAAAAf39/f39/f39BQUFBQUFBQX9/f39/f39/AAAAAAAAAAB/f39/f39/f0FBQUFBQUFBf39/f39/f38AAAAAAAAAAH9/f39/f39/a2tra2tra2sAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH8AAAAAAAAAAAAAAAAAAAB/AAAAAAAAAAAAAAAAAAAAfwAAAAAAAAAAAAAAAA=="
+  },
+  {
+   "id": "xfmuemoxe4bx",
+   "x": 1060,
+   "y": 3860,
+   "w": 1048,
+   "h": 200,
+   "type": "note",
+   "text": "Shift + Left / Right: chords 17-32, 33-48 (Left / Right alone stay the sequencer's pages). A mod held + a chord pad: your own type on its root, as the FM-1's Prog keyboard.",
+   "color": "#bff3fa"
+  },
+  {
+   "id": "dg672bmv71xk",
+   "x": 2208,
+   "y": 2300,
+   "w": 700,
    "h": 300,
    "type": "note",
    "color": "#ffb3a7",
-   "text": "QUESTIONS (proposal 2)\n1. The 16 progressions lose the steps: drop them here (they stay on the FM-1 side), or put them somewhere (Shift + a memory pad = progressions bank?)\n2. Memories: 8, kept with the session. Should they also be per loop slot, or one set?\n3. Capture and Sample are free: ideas (Capture = save the session?)"
+   "text": "DECIDED (2026-11-20)\n- Progressions and layouts: Menu held = the picker (E); a quick tap flips the last two layouts.\n- Memories: 8 banks of 8, one set for ChoralRoot; the bank is picked with Menu held.\n- MIDI: as the FM-1 firmware's Options (Perform ch 1, Bass ch 2, Raw Chord off); one route.\n\nOPEN\n- Capture and Sample are free: ideas?"
   }
  ]
 }
