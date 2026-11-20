@@ -1,6 +1,8 @@
 # Move takeover (`tk1`): a firmware's own Ableton Move interface
 
-Draft 1, 2026-11-19. Status: **a proposal for the owner**, nothing built yet.
+Draft 1, 2026-11-19, approved by the owner. Status: **the module's side is built** in FM1VST (2026-11-20):
+`core-api/rfm1_move.h`, the shim's `RFM1_TK`, `fm1_add_rfm1(... WANTS tk1)`, `rfm1_check`, `rfm1_run --tk` and the
+test firmware `tkdemo` (docs/RFM1.md "The Move takeover (tk1)"). The host's side (section 6) is not.
 
 A host that runs `.rfm1` firmwares on an Ableton Move (RemoteFM1 on the Move: remoteFM14Move with
 rfm1cs-abletonmove) normally turns the Move into an FM-1: the pads are the keybed, the knobs the FM-1's encoders, the
@@ -149,7 +151,11 @@ int shown = rfm1_tk_shown();                             /* 1 while the takeover
 ```
 
 Constants: `RFM1_TK_SCREEN` .. `RFM1_TK_ALL` (section 2), `RFM1_TK_L_*` (section 4.2's indices), and the Move's
-numbers for decoding (`RFM1_TK_NOTE_PAD0` 68, `RFM1_TK_CC_BACK` 51 ..).
+numbers for decoding (`RFM1_TK_NOTE_PAD0` 68, `RFM1_TK_CC_BACK` 51 ..), `RFM1_TK_REL(v)` (a relative CC's signed step)
+and `rfm1_tk_claim_of(pkt)` (the claim that covers a packet). `rfm1_tk_white(i, v)` writes `v` into r, g and b (a host
+reads r). `ops.state` may be NULL. Without `FM1_HOST_TK` every call is an inline no-op and `rfm1_tk_screen()` returns
+0. The firmware draws into a buffer of the shim's; `rfm1_tk_screen_done` copies it into the record only when it
+changed, so `scr_seq` moves only on a real change (and `led_seq` likewise).
 
 The shim (`RFM1_TK` in `core-glue/common`) holds the record and makes the three exports call the registered ops.
 

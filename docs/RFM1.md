@@ -54,7 +54,8 @@ your descriptor, so they always match. Its options (cmake/FM1Rfm1.cmake has them
 | `VIRTUAL` | a Fantasy CFW, host-only ([VIRTUAL-CARTS.md](VIRTUAL-CARTS.md)): the manifest says `"virtual": true`; `MEMORY_MIB` up to 512, the file under 16 MiB, the `rfm1_host_1` imports allowed |
 | `NEEDS <cap..>`, `FOLDERS <name=r\|rw..>` | (with `VIRTUAL`) the manifest's `needs` (`fs1`: the shared folder's files) and `folders` (`code=r data=rw`) |
 | `AUDIO_OUT <n>` | more output channels (aout1, RemoteFM1's RFM1-FORMAT.md section 9): 4, 6, 8 or 10 in all. The module exports `rfm1_audio_out_info` / `rfm1_audio_out` from the core's `fm1core_audio_out_info` / `fm1core_audio_out` (fm1core.h). An fm1-base app's `usb_audio_channels` gets them through `plat_usb_ch` (core-glue/plat/plat_glue.h): LOOM-8's tracks on 3..10 |
-| `WANTS <cap..>` | host capabilities the module uses where a host has them, the manifest's `wants`: `ain1` (audio input, [VIRTUAL-CARTS.md](VIRTUAL-CARTS.md) 8), `cpu2` (core 1 on a host thread: below), `rd1` (readouts: below) |
+| `WANTS <cap..>` | host capabilities the module uses where a host has them, the manifest's `wants`: `ain1` (audio input, [VIRTUAL-CARTS.md](VIRTUAL-CARTS.md) 8), `cpu2` (core 1 on a host thread: below), `rd1` (readouts: below), `tk1` (the Move takeover: below) |
+| `TAKEOVER_NAME <name>`, `TAKEOVER_CLAIMS <claims..>` | (with `WANTS tk1`) the manifest's informative `"takeover": {name, claims}` ([RFM1-TAKEOVER.md](RFM1-TAKEOVER.md) 3) |
 | `NO_SKIN` | leave out the skin of your repository's `RemoteFM1Metadata.json` ([RFM1-METADATA.md](RFM1-METADATA.md)) |
 | `NO_LABELS` | leave out its button and knob labels |
 
@@ -136,6 +137,39 @@ Ableton Move: its knob popup). Built with `WANTS rd1`:
   `rfm1_frame`: a new one is shown. No import; hosts without rd1 ignore the export. `rfm1_check` wants `rd1` in
   `wants` with it. `rfm1_run --readouts` prints each readout and the knobs' labels when they move;
   `rfm1_run --turn K1@2000:3` turns a knob (SELECT ALGO PRESETS K1..K4) by detents at a device ms.
+
+### The Move takeover (`tk1`)
+
+A firmware's own Ableton Move interface ([RFM1-TAKEOVER.md](RFM1-TAKEOVER.md)): it draws the Move's 128 x 64 screen
+and its LEDs and gets the Move's raw input for the parts it claims. Built with `WANTS tk1`:
+
+- **The firmware's side** is `core-api/rfm1_move.h` (MPL-2.0: vendor it): `rfm1_tk_register(name, claims, &ops)` once
+  from init (`ops`: `input(pkt[4])`, `state(on, claims, flags)`), `rfm1_tk_screen()` / `rfm1_tk_screen_done()`,
+  `rfm1_tk_led`, `rfm1_tk_white`, `rfm1_tk_claims`, `rfm1_tk_say`, `rfm1_tk_shown`, the claim bits `RFM1_TK_*`, the LED
+  indices `RFM1_TK_L_*`, the Move's surface numbers (`RFM1_TK_NOTE_PAD0`, `RFM1_TK_CC_SHIFT` ..) and
+  `rfm1_tk_claim_of(pkt)`. Every unit of a tk1 build has `FM1_HOST_TK`; without it (the FM-1, a native host) each call
+  is an inline no-op (`rfm1_tk_screen()` is 0), so the device image is the same bytes. Keep the Move interface in its
+  own source files (or behind `#ifdef FM1_HOST_TK`).
+- **The module's side** (the shim, `RFM1_TK`): `rfm1_tk() -> ptr`, the 1468-byte record of RFM1-TAKEOVER.md 4.2
+  (version 1; its offsets are static asserts in `rfm1_shim.c`), `rfm1_tk_input(pkt) -> i32` and
+  `rfm1_tk_state(on, claims, flags)`, which call the registered ops. The firmware draws into a buffer of its own;
+  `rfm1_tk_screen_done` copies it into the record and moves `scr_seq` only when the picture changed, `rfm1_tk_led`
+  moves `led_seq` only when the colour changed, each `rfm1_tk_say` moves `say_seq`. No import: hosts without tk1
+  ignore the exports.
+- `rfm1_check` requires all three exports or none, `tk1` in `wants` with them, and a well-formed `takeover` entry when
+  there is one; with `--run <rfm1_run>` (the build and the `rfm1_<id>` test pass it) it boots the module and checks
+  the record after init (version, size, a printable NUL-terminated name, claims within 0xFF). `rfm1_run` checks the
+  record of every module that exports `rfm1_tk`; `rfm1_run --tk-info` prints it as JSON.
+- `rfm1_run --tk` drives the takeover as a Move host does: `rfm1_tk_state(1, claims, flags)` at `--tk-at` (100 ms;
+  `--tk-speech`: flags bit 0), Move surface events from `--tk-ev` / `--tk-script` (`pad:5@200+50`,
+  `button:shift@400`, `knob:1@320:3`, `step:`, `touch:`, `note:`, `cc:`, `raw:`; only the claimed controls' reach the
+  firmware), the release of everything held and `rfm1_tk_state(0, ..)` at `--tk-off-at`; it prints each change of the
+  record (`tk-claims@MS`, `tk-screen@MS`, `tk-led@MS: I R G B`, `tk-say@MS`) and `--tk-screen F` (`-`: stdout) saves
+  the screen as a PBM. `--help` has the grammar.
+- `tkdemo` (`tools/rfm1/tkdemo`), the test firmware: `build/rfm1/tkdemo-1.0.rfm1` in every `-DFM1_RFM1=ON` build
+  (not a plugin core; `-DFM1_RFM1_TKDEMO=OFF` leaves it out). It claims all but Track and Volume, shows the last input
+  ("PAD 5", "CC 50", "K1 +3"), lights a pad while pressed, says "pad N", and toggles its claims to ALL with Shift.
+  `ctest -R rfm1_tk` runs it through all of the above (`tools/rfm1/rfm1_tk_test.py`).
 
 ## Check it
 
