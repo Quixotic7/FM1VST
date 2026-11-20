@@ -6,7 +6,8 @@
  *   rfm1_run [options] <file.rfm1>
  *     --seconds S    the chord held for S device seconds (default 5)
  *     --settle MS    device ms after init before the chord (default 4000)
- *     --keys K,K,..  the chord's key numbers (default 9,13,16: D4 F#4 A4, as core_bench / core_conformance)
+ *     --keys K,K,..  the chord's key numbers (default 9,13,16: D4 F#4 A4, as core_bench / core_conformance); "none":
+ *                    no key at all (the run keeps its timing; a takeover's scenario: with --min-rms 0)
  *     --vel V        the chord's velocity, key_vel (default 100; 0: none given, the core's default)
  *     --lean L       the chord's aftertouch, key_lean 0..100 % (default 0)
  *     --tap B,B,..   buttons tapped 1 s before the chord, by label (fm1core.h FM1P_B_*: PLAY 10): a firmware that
@@ -85,6 +86,8 @@
  *                      raw:XXXXXXXX@MS    a packet as hex (byte 0 the CIN, little-endian)
  *     --tk-script F  more events, one SPEC per line or space-separated ('#' starts a comment)
  *     --tk-screen F  the takeover's screen at the end as a PBM (P1, text) image; "-": to stdout, after the run
+ *     --tk-leds      every LED of the record at the end, "tk-led-end: I R G B" (92 lines, after the run): the state,
+ *                    where tk-led@ shows only the changes since init
  *
  * Prints one line: id version, the chord's RMS and peak, LCD writes, x real time, load and boot times. Exits 0 when
  * the module loaded, its layout and manifest agree, it booted, drew and sounded, and never trapped or halted; 1 on a
@@ -1324,7 +1327,7 @@ static void usage(void)
           "                [--no-aout] [--aout-wav FILE] [--expect-aout N]\n"
           "                [--turn ROLE@MS[:N]].. [--readouts] [--verbose] [--describe [--labels] [--out FILE]]\n"
           "                [--tk-info] [--tk [--tk-at MS] [--tk-off-at MS] [--tk-speech] [--tk-ev SPEC].. [--tk-script FILE]\n"
-          "                 [--tk-screen FILE.pbm|-]] <file.rfm1>\n", stderr);
+          "                 [--tk-screen FILE.pbm|-] [--tk-leds]] <file.rfm1>\n", stderr);
 }
 
 int main(int argc, char **argv)
@@ -1355,6 +1358,7 @@ int main(int argc, char **argv)
     int tk_info = 0, tk_next = 0;                /* --tk-info; the next --tk-ev due */
     uint32_t tk_on_at = 100, tk_off_at = UINT32_MAX;
     const char *tk_screen = NULL;
+    int tk_leds = 0;                             /* --tk-leds */
     for (int i = 1; i < argc; i++) {
         const char *a = argv[i];
         const int more = i + 1 < argc;
@@ -1438,6 +1442,7 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--tk-at") && more) tk_on_at = (uint32_t)strtoul(argv[++i], NULL, 10);
         else if (!strcmp(a, "--tk-off-at") && more) tk_off_at = (uint32_t)strtoul(argv[++i], NULL, 10);
         else if (!strcmp(a, "--tk-screen") && more) tk_screen = argv[++i];
+        else if (!strcmp(a, "--tk-leds")) tk_leds = 1;
         else if (!strcmp(a, "--tk-ev") && more) {
             if (tk_parse(argv[++i])) {
                 fprintf(stderr, "rfm1_run: --tk-ev \"%s\" does not parse\n", argv[i]);
@@ -1465,6 +1470,10 @@ int main(int argc, char **argv)
         } else if (!strcmp(a, "--keys") && more) {
             char *s = argv[++i];
             nkeys = 0;
+            if (!strcmp(s, "none")) {
+                nkeys = -1;                      /* (no chord: below) */
+                continue;
+            }
             while (*s && nkeys < FM1P_NKEY) {
                 const long k = strtol(s, &s, 10);
                 if (k < 0 || k >= FM1P_NKEY) {
@@ -1489,6 +1498,8 @@ int main(int argc, char **argv)
         keys[0] = 9; keys[1] = 13; keys[2] = 16;   /* D4 F#4 A4 */
         nkeys = 3;
     }
+    if (nkeys < 0)                               /* --keys none */
+        nkeys = 0;
     g_file = path;
     size_t n = 0;
     uint8_t *bytes = read_file(path, &n);
@@ -2108,6 +2119,11 @@ int main(int argc, char **argv)
                         fclose(o);
                 } else
                     fprintf(stderr, "rfm1_run: --tk-screen %s: not written\n", tk_screen);
+            }
+            if (tk_leds) {
+                const uint8_t *l = mem(NULL) + g_tk.rec + TK_O_LED;
+                for (unsigned i = 0; i < TK_NLED; i++)
+                    printf("tk-led-end: %u %u %u %u\n", i, l[3u * i], l[3u * i + 1], l[3u * i + 2]);
             }
             printf("tk: %u inputs, %u skipped, scr_seq %u, led_seq %u, say_seq %u, claims 0x%02x, %s\n", g_tk.inputs,
                    g_tk.skipped, g_tk.scr_seq, g_tk.led_seq, g_tk.say_seq, g_tk.claims, g_tk.shown ? "shown" : "not shown");
