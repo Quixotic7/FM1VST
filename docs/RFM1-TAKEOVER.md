@@ -144,7 +144,7 @@ rfm1_tk_register("CHORDS", RFM1_TK_ALL & ~RFM1_TK_TRACKS, &OPS);   /* once, from
 uint8_t *px = rfm1_tk_screen();                          /* the 1024 bytes; draw, then */
 rfm1_tk_screen_done();                                   /* scr_seq moves */
 rfm1_tk_led(RFM1_TK_L_PAD0 + 5, 255, 120, 0);           /* led_seq moves if it changed */
-rfm1_tk_white(RFM1_TK_L_SHIFT, 127);
+rfm1_tk_white(RFM1_TK_L_SHIFT, 255);
 rfm1_tk_claims(RFM1_TK_ALL);                             /* a view that takes the Track buttons too */
 rfm1_tk_say("Chord D minor seven", 1);
 int shown = rfm1_tk_shown();                             /* 1 while the takeover is on screen */

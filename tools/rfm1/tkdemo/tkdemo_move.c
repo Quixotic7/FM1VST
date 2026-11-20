@@ -84,7 +84,7 @@ static void input(const uint8_t p[4])
             if (d == RFM1_TK_CC_SHIFT) {
                 claims = claims == RFM1_TK_ALL ? TKD_BASE : RFM1_TK_ALL;
                 rfm1_tk_claims(claims);
-                rfm1_tk_white(RFM1_TK_L_SHIFT, claims == RFM1_TK_ALL ? 127 : 0);
+                rfm1_tk_white(RFM1_TK_L_SHIFT, claims == RFM1_TK_ALL ? 255 : 0);
             }
         } else
             return;                                /* (a button's release) */

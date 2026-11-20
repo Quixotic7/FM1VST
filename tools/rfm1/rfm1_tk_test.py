@@ -184,7 +184,7 @@ def main():
         "tk-in@345: 0032b00b",
         "tk-in@350: 7f32b00b",
         "tk-in@355: 0032b00b",
-        "tk-in@400: 7f31b00b", "tk-claims@400: 0xff", "tk-screen@400: seq 6", "tk-led@400: 63 127 127 127",
+        "tk-in@400: 7f31b00b", "tk-claims@400: 0xff", "tk-screen@400: seq 6", "tk-led@400: 63 255 255 255",
         "tk-in@420: 0031b00b",
         "tk-in@500: 7f2bb00b", "tk-screen@500: seq 7",
         "tk-in@550: 64449009", "tk-screen@550: seq 8", "tk-led@550: 0 255 120 0", 'tk-say@550: interrupt 1 "pad 0"',

@@ -17,7 +17,7 @@
  *   uint8_t *px = rfm1_tk_screen();     the 1024 bytes (8 pages of 128 columns, a byte 8 pixels down, bit 0 the top);
  *   rfm1_tk_screen_done();              draw, then this: scr_seq moves if the picture changed
  *   rfm1_tk_led(RFM1_TK_L_PAD0 + 5, 255, 120, 0);   an LED's colour (led_seq moves if it changed)
- *   rfm1_tk_white(RFM1_TK_L_SHIFT, 127);            a white LED's brightness
+ *   rfm1_tk_white(RFM1_TK_L_SHIFT, 255);            a white LED's brightness, 0..255
  *   rfm1_tk_claims(RFM1_TK_ALL);        the parts taken from now on (0: no takeover now)
  *   rfm1_tk_say("Chord D minor seven", 1);          words for the screen reader (1: interrupt what is being said)
  *   rfm1_tk_shown()                     1 while the takeover is on the Move
