@@ -408,6 +408,22 @@ def main():
     rm = Run(["button:shift@200+300", "button:rec@300+50"], 600)
     ok("Rec mode, Advance" in rm.says, "Shift + Rec: the next record mode (%s)" % rm.says)
 
+    # ---- the global save (Capture): the memories, the bank and the session kept over a power cycle
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix="rfm1_cr_tk") as tmp:
+        fl = os.path.join(tmp, "flash.bin")
+        sv = Run(DM7 + ["pad:21@500+100", "knob:1@1200:3", "button:menu@1500+600", "pad:29@1700+50",
+                        "button:capture@2500+50"], 3000, ("--flash-out", fl))
+        ok("saved" in sv.says, "Capture: the global save (%s)" % sv.says[-1:])
+        rb = Run(["button:menu@200+600"], 700, ("--flash-in", fl))
+        same(rb, scr_layout(bank=2), "after a power cycle: bank 2 still picked")
+        ok(rb.led(pad(1, 5)) == pct(MEM, 50) and rb.led(pad(1, 6)) == MEM,
+           "after a power cycle: bank 1 holds a chord (memory 6), bank 2 picked")
+        rb2 = Run(["button:menu@200+300", "pad:28@300+50", "pad:21@800+100", "touch:0@1500+100"], 1700,
+                  ("--flash-in", fl))
+        ok(rb2.says[1:3] == ["Memory 6, D minor seven", "Voicing plus 3"],
+           "after a power cycle: bank 1's memory 6 plays Dm7, the voicing (the session's) +3 (%s)" % rb2.says)
+
     if A.png and PNGS:
         try:
             from PIL import Image
