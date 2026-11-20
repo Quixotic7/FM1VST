@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
 # ChoralRoot 0.42 (https://github.com/Quixotic7/ChoralRootFM1, tag v0.42 + faa0af9e: cr_cpu1.h's rfm1 cpu2 branch, cr_ui.c's readouts;
-# + 63403323, branch move-takeover: cr_move.c, the Move takeover; the FM-1 packages unchanged): its own emulator's unit,
+# + d0895d10, branch move-takeover: cr_move.c, the Move takeover; the FM-1 packages unchanged): its own emulator's unit,
 # tools/emu/emu_fw.c, through core_choralroot.c and the family's glue (crf_glue.h; cmake/FM1Cores.cmake: fm1_add_core)
 include(${CMAKE_CURRENT_LIST_DIR}/crf.cmake)
 set(_cr ${CMAKE_SOURCE_DIR}/cores/ChoralRootFM1)
