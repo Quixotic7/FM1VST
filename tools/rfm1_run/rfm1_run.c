@@ -60,6 +60,31 @@
  *     --no-aout      a host that does not take them: no rfm1_audio_out calls
  *     --aout-wav F   all the channels (the master on 1 and 2, then 3..N) as an N-channel WAV
  *     --expect-aout N   fail unless the module gives N channels and channels 3..N sounded (some RMS above --min-rms)
+ *     the Move takeover (tk1, docs/RFM1-TAKEOVER.md): a module that exports rfm1_tk has its record checked after init
+ *                    (version 1, size 1468, a NUL-terminated name), always; a bad one fails the run
+ *     --tk-info      no run: boot, init, then the record's header as JSON (version, size, name, claims; rfm1_check)
+ *     --tk           drive the takeover as a Move host does: rfm1_tk_state(1, the record's claims, flags) at --tk-at,
+ *                    the --tk-ev events through rfm1_tk_input (only the claimed controls'; the others are printed
+ *                    "tk-skip"), the record read after each rfm1_tk_input and rfm1_frame: printed to stdout as
+ *                    "tk-claims@MS: 0x..", "tk-screen@MS: seq N", "tk-led@MS: I R G B" (each changed LED),
+ *                    "tk-say@MS: interrupt F \"..\"", "tk-state@MS: on|off claims 0x.."; claims of 0 close it
+ *     --tk-at MS     when the takeover is shown (default 100)
+ *     --tk-off-at MS when it is left: the release of everything held first, then rfm1_tk_state(0, ..)
+ *     --tk-speech    the screen reader on (flags bit 0)
+ *     --tk-ev SPEC   a Move surface event (repeat), at a device ms; D: held for D ms (default 100):
+ *                      pad:N@MS[+D]       pad N (0..31, bottom-left first: note 68 + N), velocity 100
+ *                      step:N@MS[+D]      step button N (0..15: note 16 + N)
+ *                      touch:N@MS[+D]     a touch note (0..7 the knobs, 8 volume, 9 the jog wheel)
+ *                      note:N@MS[+D]      any note
+ *                      button:B@MS[+D]    a button by CC number or name (shift menu back capture down up undo loop
+ *                                         copy left right mute delete play rec sample track1..track4 jogclick):
+ *                                         CC 127, then 0
+ *                      knob:K@MS:DELTA    knob K (1..8: CC 70 + K; 9 the volume knob, CC 79; 0 the jog wheel, CC
+ *                                         14) turned by DELTA (relative: 1..63, 127 = -1)
+ *                      cc:N@MS:V          any CC with value V
+ *                      raw:XXXXXXXX@MS    a packet as hex (byte 0 the CIN, little-endian)
+ *     --tk-script F  more events, one SPEC per line or space-separated ('#' starts a comment)
+ *     --tk-screen F  the takeover's screen at the end as a PBM (P1, text) image; "-": to stdout, after the run
  *
  * Prints one line: id version, the chord's RMS and peak, LCD writes, x real time, load and boot times. Exits 0 when
  * the module loaded, its layout and manifest agree, it booted, drew and sounded, and never trapped or halted; 1 on a
@@ -80,6 +105,7 @@
 #include <unistd.h>
 
 #include "fm1core.h"
+#include "rfm1_move.h"
 #include "wasm3.h"
 #include "m3_env.h"                    /* (--helpers: IM3Function's module, LinkRawFunction) */
 
@@ -92,6 +118,7 @@ enum {
     F_LABELS_EPOCH, F_LABEL,               /* (optional: docs/DYNAMIC-LABELS.md) */
     F_AUDIO_OUT_INFO, F_AUDIO_OUT,         /* (optional: aout1, more output channels) */
     F_READOUT,                             /* (optional: rd1, docs/RFM1.md "Readouts (rd1)") */
+    F_TK, F_TK_INPUT, F_TK_STATE,          /* (optional: tk1, docs/RFM1-TAKEOVER.md) */
     F_N
 };
 static const struct {
@@ -108,6 +135,7 @@ static const struct {
     {"rfm1_labels_epoch", 0, 1}, {"rfm1_label", 1, 1},
     {"rfm1_audio_out_info", 0, 1}, {"rfm1_audio_out", 2, 0},
     {"rfm1_readout", 0, 1},
+    {"rfm1_tk", 0, 1}, {"rfm1_tk_input", 1, 1}, {"rfm1_tk_state", 3, 0},
 };
 
 static IM3Environment g_env;
@@ -871,6 +899,290 @@ static const int32_t LAYOUT[] = {
 #define D(field) (desc + (uint32_t)offsetof(core_w32, field))
 #define P(field) (panel + (uint32_t)offsetof(fm1panel_t, field))
 
+/* ------------------------------------------------------------------------------------- the takeover (tk1) ------- */
+/* docs/RFM1-TAKEOVER.md: the record at rfm1_tk(), read by its offsets (section 4.2), not through the shim's struct */
+#define TK_VERSION 1u
+#define TK_SIZE 1468u
+#define TK_O_CLAIMS 4u
+#define TK_O_SCR_SEQ 8u
+#define TK_O_LED_SEQ 12u
+#define TK_O_SAY_SEQ 16u
+#define TK_O_SAY_FLAGS 20u
+#define TK_O_NAME 24u
+#define TK_O_SAY 40u
+#define TK_O_SCREEN 168u
+#define TK_O_LED 1192u
+#define TK_NLED 92u
+#define TK_MAXEV 1024
+static struct {
+    uint32_t rec;                      /* the record's address, 0 none */
+    int drive, shown, speech;          /* --tk; shown now; --tk-speech */
+    uint32_t claims, scr_seq, led_seq, say_seq;
+    uint8_t led[TK_NLED][3];           /* the LEDs as last read */
+    uint8_t held[2][128];              /* notes / CCs sent as held (released before rfm1_tk_state(0, ..)) */
+    struct { uint32_t at, pkt; } ev[TK_MAXEV];
+    int nev;
+    uint32_t inputs, skipped;
+} g_tk;
+
+static uint8_t *read_file(const char *path, size_t *n);
+static uint16_t rd16(uint32_t off)
+{
+    uint16_t v = 0;
+    if (in_mem(off, 2))
+        memcpy(&v, mem(NULL) + off, 2);
+    return v;
+}
+
+/* the record's header after init: "" when it is good, else what is wrong */
+static const char *tk_bad(uint32_t rec)
+{
+    static char why[128];
+    if (!in_mem(rec, TK_SIZE))
+        return "rfm1_tk() is not a record in memory";
+    if (rd16(rec) != TK_VERSION || rd16(rec + 2) != TK_SIZE) {
+        snprintf(why, sizeof why, "the record's version %u, size %u (1, 1468)", rd16(rec), rd16(rec + 2));
+        return why;
+    }
+    if (!memchr(mem(NULL) + rec + TK_O_NAME, 0, 16))
+        return "the record's name is not NUL-terminated within 16 bytes";
+    for (const uint8_t *c = mem(NULL) + rec + TK_O_NAME; *c; c++)
+        if (*c < 32 || *c > 126)
+            return "the record's name is not printable ASCII";
+    if (rd32(rec + TK_O_CLAIMS) & ~0xFFu)
+        return "the record's claims have bits outside 0xFF";
+    return "";
+}
+
+static void tk_add(uint32_t at, uint32_t pkt)
+{
+    if (g_tk.nev < TK_MAXEV) {
+        g_tk.ev[g_tk.nev].at = at;
+        g_tk.ev[g_tk.nev].pkt = pkt;
+        g_tk.nev++;
+    }
+}
+static uint32_t tk_pkt(uint8_t st, uint8_t d1, uint8_t d2)
+{
+    return (uint32_t)(st >> 4) | (uint32_t)st << 8 | (uint32_t)d1 << 16 | (uint32_t)d2 << 24;
+}
+/* one --tk-ev SPEC: 0, or -1 when it does not parse */
+static int tk_parse(const char *spec)
+{
+    static const struct { const char *n; uint8_t cc; } BTN[] = {
+        {"shift", 49}, {"menu", 50}, {"back", 51}, {"capture", 52}, {"down", 54}, {"up", 55}, {"undo", 56},
+        {"loop", 58}, {"copy", 60}, {"left", 62}, {"right", 63}, {"mute", 88}, {"delete", 119}, {"play", 85},
+        {"rec", 86}, {"sample", 118}, {"track1", 43}, {"track2", 42}, {"track3", 41}, {"track4", 40},
+        {"jogclick", 3},
+    };
+    char kind[16], arg[24];
+    const char *colon = strchr(spec, ':'), *at = colon ? strchr(colon, '@') : NULL;
+    if (!colon || !at || (size_t)(colon - spec) >= sizeof kind || (size_t)(at - colon - 1) >= sizeof arg)
+        return -1;
+    memcpy(kind, spec, (size_t)(colon - spec));
+    kind[colon - spec] = 0;
+    memcpy(arg, colon + 1, (size_t)(at - colon - 1));
+    arg[at - colon - 1] = 0;
+    char *e;
+    const uint32_t ms = (uint32_t)strtoul(at + 1, &e, 10);
+    if (e == at + 1)
+        return -1;
+    uint32_t dur = 100, val = 0;
+    int has_val = 0;
+    if (*e == '+')
+        dur = (uint32_t)strtoul(e + 1, &e, 10);
+    if (*e == ':') {
+        val = (uint32_t)strtol(e + 1, &e, 10) & 127u;
+        has_val = 1;
+    }
+    if (*e)
+        return -1;
+    if (!strcmp(kind, "raw")) {
+        tk_add(ms, (uint32_t)strtoul(arg, &e, 16));
+        return *e || !*arg ? -1 : 0;
+    }
+    long n = -1;
+    if (!strcmp(kind, "button")) {
+        for (size_t k = 0; k < sizeof BTN / sizeof BTN[0]; k++)
+            if (!strcmp(BTN[k].n, arg))
+                n = BTN[k].cc;
+    }
+    if (n < 0) {
+        n = strtol(arg, &e, 10);
+        if (*e || !*arg || n < 0 || n > 127)
+            return -1;
+    }
+    if (!strcmp(kind, "pad") || !strcmp(kind, "step") || !strcmp(kind, "touch") || !strcmp(kind, "note")) {
+        const int base = kind[0] == 'p' ? 68 : kind[0] == 's' ? 16 : 0;
+        if ((kind[0] == 'p' && n > 31) || (kind[0] == 's' && n > 15) || (kind[0] == 't' && n > 9) || has_val)
+            return -1;
+        tk_add(ms, tk_pkt(0x90, (uint8_t)(base + n), kind[0] == 't' ? 127 : 100));
+        tk_add(ms + dur, tk_pkt(0x80, (uint8_t)(base + n), 0));
+        return 0;
+    }
+    if (!strcmp(kind, "button")) {
+        if (has_val)
+            return -1;
+        tk_add(ms, tk_pkt(0xB0, (uint8_t)n, 127));
+        tk_add(ms + dur, tk_pkt(0xB0, (uint8_t)n, 0));
+        return 0;
+    }
+    if (!strcmp(kind, "knob")) {
+        if (n > 9 || !has_val)
+            return -1;
+        tk_add(ms, tk_pkt(0xB0, (uint8_t)(n == 0 ? 14 : n == 9 ? 79 : 70 + n), (uint8_t)val));
+        return 0;
+    }
+    if (!strcmp(kind, "cc")) {
+        if (!has_val)
+            return -1;
+        tk_add(ms, tk_pkt(0xB0, (uint8_t)n, (uint8_t)val));
+        return 0;
+    }
+    return -1;
+}
+static int tk_script(const char *path)
+{
+    size_t n = 0;
+    uint8_t *b = read_file(path, &n);
+    if (!b)
+        return -1;
+    char *s = realloc(b, n + 1), *line, *save = NULL;
+    if (!s) {
+        free(b);
+        return -1;
+    }
+    s[n] = 0;
+    int bad = 0;
+    for (line = strtok_r(s, "\n", &save); line && !bad; line = strtok_r(NULL, "\n", &save)) {
+        char *h = strchr(line, '#'), *tok, *s2 = NULL;
+        if (h)
+            *h = 0;
+        for (tok = strtok_r(line, " \t\r", &s2); tok && !bad; tok = strtok_r(NULL, " \t\r", &s2))
+            if (tk_parse(tok)) {
+                fprintf(stderr, "rfm1_run: --tk-script %s: \"%s\" does not parse\n", path, tok);
+                bad = 1;
+            }
+    }
+    free(s);
+    return bad ? -1 : 0;
+}
+static void tk_sort(void)              /* by time; events at the same ms in the order given (insertion: stable) */
+{
+    for (int i = 1; i < g_tk.nev; i++)
+        for (int j = i; j > 0 && g_tk.ev[j - 1].at > g_tk.ev[j].at; j--) {
+            const uint32_t at = g_tk.ev[j].at, pkt = g_tk.ev[j].pkt;
+            g_tk.ev[j] = g_tk.ev[j - 1];
+            g_tk.ev[j - 1].at = at, g_tk.ev[j - 1].pkt = pkt;
+        }
+}
+
+static void tk_poll(uint32_t ms)       /* the record after a call: what moved */
+{
+    const uint32_t rec = g_tk.rec;
+    if (!rec || !in_mem(rec, TK_SIZE))
+        return;
+    const uint32_t claims = rd32(rec + TK_O_CLAIMS), ss = rd32(rec + TK_O_SCR_SEQ), ls = rd32(rec + TK_O_LED_SEQ),
+                   ys = rd32(rec + TK_O_SAY_SEQ);
+    if (claims != g_tk.claims) {
+        g_tk.claims = claims;
+        printf("tk-claims@%u: 0x%02x\n", ms, claims);
+    }
+    if (ss != g_tk.scr_seq) {
+        g_tk.scr_seq = ss;
+        printf("tk-screen@%u: seq %u\n", ms, ss);
+    }
+    if (ls != g_tk.led_seq) {
+        g_tk.led_seq = ls;
+        const uint8_t *l = mem(NULL) + rec + TK_O_LED;
+        for (uint32_t i = 0; i < TK_NLED; i++)
+            if (memcmp(g_tk.led[i], l + 3u * i, 3)) {
+                memcpy(g_tk.led[i], l + 3u * i, 3);
+                printf("tk-led@%u: %u %u %u %u\n", ms, i, l[3u * i], l[3u * i + 1], l[3u * i + 2]);
+            }
+    }
+    if (ys != g_tk.say_seq) {
+        char say[129];
+        g_tk.say_seq = ys;
+        memcpy(say, mem(NULL) + rec + TK_O_SAY, 128);
+        say[128] = 0;
+        printf("tk-say@%u: interrupt %u%s \"%s\"\n", ms, rd8(rec + TK_O_SAY_FLAGS) & 1u,
+               g_tk.speech ? "" : " (speech off: a host would not say it)", say);
+    }
+}
+static void tk_input(uint32_t ms, uint32_t pkt)
+{
+    C1(F_TK_INPUT, pkt);
+    g_tk.inputs++;
+    tk_poll(ms);
+}
+static void tk_off(uint32_t ms)        /* the release of everything held, then gone */
+{
+    for (int k = 0; k < 2; k++)
+        for (int n = 0; n < 128; n++)
+            if (g_tk.held[k][n]) {
+                g_tk.held[k][n] = 0;
+                const uint32_t pkt = k ? tk_pkt(0xB0, (uint8_t)n, 0) : tk_pkt(0x80, (uint8_t)n, 0);
+                printf("tk-in@%u: %08x (release)\n", ms, pkt);
+                tk_input(ms, pkt);
+            }
+    call(F_TK_STATE, 0, g_tk.claims, g_tk.speech ? 1u : 0u, 0);
+    g_tk.shown = 0;
+    printf("tk-state@%u: off\n", ms);
+}
+static void tk_event(uint32_t ms, uint32_t pkt)   /* a surface event: to the firmware when its part is claimed */
+{
+    const uint8_t b[4] = {(uint8_t)pkt, (uint8_t)(pkt >> 8), (uint8_t)(pkt >> 16), (uint8_t)(pkt >> 24)};
+    const unsigned claim = rfm1_tk_claim_of(b);
+    if (!g_tk.shown || !(claim & g_tk.claims)) {
+        g_tk.skipped++;
+        printf("tk-skip@%u: %08x (%s)\n", ms, pkt, !g_tk.shown ? "not shown" : claim ? "unclaimed" : "the host's");
+        return;
+    }
+    const unsigned st = b[1] & 0xF0u;
+    if (st == 0x90u || st == 0x80u)
+        g_tk.held[0][b[2] & 127] = st == 0x90u && b[3];
+    else if (st == 0xB0u && claim & (RFM1_TK_BUTTONS | RFM1_TK_TRACKS | RFM1_TK_JOG) && b[2] != RFM1_TK_CC_JOG)
+        g_tk.held[1][b[2] & 127] = b[3] != 0;
+    printf("tk-in@%u: %08x\n", ms, pkt);
+    tk_input(ms, pkt);
+}
+/* each device ms, before its tick: shown at on_at, the events due, left at off_at; claims of 0 close it */
+static void tk_ms(uint32_t ms, uint32_t on_at, uint32_t off_at, int *next)
+{
+    if (!g_tk.drive || !g_tk.rec)
+        return;
+    if (ms == on_at && !g_tk.shown) {
+        g_tk.claims = rd32(g_tk.rec + TK_O_CLAIMS);
+        if (!g_tk.claims)
+            printf("tk-state@%u: not shown (claims 0)\n", ms);
+        else {
+            g_tk.shown = 1;
+            printf("tk-state@%u: on claims 0x%02x%s\n", ms, g_tk.claims, g_tk.speech ? " speech" : "");
+            call(F_TK_STATE, 1, g_tk.claims, g_tk.speech ? 1u : 0u, 0);
+            tk_poll(ms);
+        }
+    }
+    while (*next < g_tk.nev && g_tk.ev[*next].at <= ms) {
+        tk_event(ms, g_tk.ev[*next].pkt);
+        (*next)++;
+        if (g_tk.shown && !g_tk.claims)
+            tk_off(ms);
+    }
+    if (g_tk.shown && (ms == off_at || !g_tk.claims))
+        tk_off(ms);
+}
+static void tk_pbm(FILE *o)            /* the screen, P1: 8 pages of 128 columns, bit 0 the top */
+{
+    const uint8_t *px = mem(NULL) + g_tk.rec + TK_O_SCREEN;
+    fprintf(o, "P1\n128 64\n");
+    for (int y = 0; y < 64; y++) {
+        for (int x = 0; x < 128; x++)
+            fputc(px[(y >> 3) * 128 + x] >> (y & 7) & 1 ? '1' : '0', o);
+        fputc('\n', o);
+    }
+}
+
 /* ------------------------------------------------------------------------------------------------ the WAV ------- */
 static void wav_header_n(FILE *f, uint32_t frames, uint16_t ch)
 {
@@ -1010,7 +1322,9 @@ static void usage(void)
           "                [--profile] [--frame-ms N] [--helpers]\n"
           "                [--audio-in FILE.wav [--audio-in-once] [--audio-in-latency N] [--audio-in-off-at MS]]\n"
           "                [--no-aout] [--aout-wav FILE] [--expect-aout N]\n"
-          "                [--turn ROLE@MS[:N]].. [--readouts] [--verbose] [--describe [--labels] [--out FILE]] <file.rfm1>\n", stderr);
+          "                [--turn ROLE@MS[:N]].. [--readouts] [--verbose] [--describe [--labels] [--out FILE]]\n"
+          "                [--tk-info] [--tk [--tk-at MS] [--tk-off-at MS] [--tk-speech] [--tk-ev SPEC].. [--tk-script FILE]\n"
+          "                 [--tk-screen FILE.pbm|-]] <file.rfm1>\n", stderr);
 }
 
 int main(int argc, char **argv)
@@ -1038,6 +1352,9 @@ int main(int argc, char **argv)
     uint32_t ain_latency = 0, ain_off_at = UINT32_MAX;
     int aout_off = 0, expect_aout = 0;           /* --no-aout, --expect-aout */
     const char *aout_wav_path = NULL;            /* --aout-wav */
+    int tk_info = 0, tk_next = 0;                /* --tk-info; the next --tk-ev due */
+    uint32_t tk_on_at = 100, tk_off_at = UINT32_MAX;
+    const char *tk_screen = NULL;
     for (int i = 1; i < argc; i++) {
         const char *a = argv[i];
         const int more = i + 1 < argc;
@@ -1114,6 +1431,24 @@ int main(int argc, char **argv)
             turn[nturn].at = (uint32_t)strtoul(at + 1, &e, 10);
             turn[nturn].n = *e == ':' ? (int)strtol(e + 1, NULL, 10) : 1;
             nturn++;
+        }
+        else if (!strcmp(a, "--tk")) g_tk.drive = 1;
+        else if (!strcmp(a, "--tk-info")) tk_info = 1;
+        else if (!strcmp(a, "--tk-speech")) g_tk.speech = 1;
+        else if (!strcmp(a, "--tk-at") && more) tk_on_at = (uint32_t)strtoul(argv[++i], NULL, 10);
+        else if (!strcmp(a, "--tk-off-at") && more) tk_off_at = (uint32_t)strtoul(argv[++i], NULL, 10);
+        else if (!strcmp(a, "--tk-screen") && more) tk_screen = argv[++i];
+        else if (!strcmp(a, "--tk-ev") && more) {
+            if (tk_parse(argv[++i])) {
+                fprintf(stderr, "rfm1_run: --tk-ev \"%s\" does not parse\n", argv[i]);
+                usage();
+                return 2;
+            }
+        } else if (!strcmp(a, "--tk-script") && more) {
+            if (tk_script(argv[++i])) {
+                fprintf(stderr, "rfm1_run: --tk-script %s: not read\n", argv[i]);
+                return 2;
+            }
         }
         else if (!strcmp(a, "--tap") && more) {
             char *s = argv[++i];
@@ -1227,7 +1562,8 @@ int main(int argc, char **argv)
         if (r) {
             g_fn[f] = NULL;
             if (f == F_INITIALIZE || f == F_AUDIO_IN || f == F_AUDIO_IN_INFO || f == F_LABELS_EPOCH || f == F_LABEL ||
-                f == F_AUDIO_OUT_INFO || f == F_AUDIO_OUT || f == F_READOUT)
+                f == F_AUDIO_OUT_INFO || f == F_AUDIO_OUT || f == F_READOUT || f == F_TK || f == F_TK_INPUT ||
+                f == F_TK_STATE)
                 continue;
             return fail("export %s: %s", FN[f].name, r);
         }
@@ -1377,6 +1713,43 @@ int main(int argc, char **argv)
     const double boot_ms = (now_s() - t_boot) * 1000.0;
     if (g_err[0])
         return fail("init trapped: %s", g_err);
+    if (g_fn[F_TK]) {                            /* tk1: the record after init (docs/RFM1-TAKEOVER.md 4.2) */
+        if (!g_fn[F_TK_INPUT] || !g_fn[F_TK_STATE])
+            return fail("tk1: rfm1_tk without rfm1_tk_input and rfm1_tk_state");
+        g_tk.rec = C0(F_TK);
+        const char *why = g_err[0] ? g_err : tk_bad(g_tk.rec);
+        if (tk_info) {
+            if (!in_mem(g_tk.rec, TK_SIZE)) {
+                printf("{\"error\": ");
+                json_str(stdout, why);
+                printf("}\n");
+                return 1;
+            }
+            char nm[17];
+            memcpy(nm, mem(NULL) + g_tk.rec + TK_O_NAME, 16);
+            nm[16] = 0;
+            printf("{\"version\": %u, \"size\": %u, \"name\": ", rd16(g_tk.rec), rd16(g_tk.rec + 2));
+            json_str(stdout, nm);
+            printf(", \"name_terminated\": %s, \"claims\": %u, \"scr_seq\": %u, \"led_seq\": %u, \"say_seq\": %u}\n",
+                   memchr(mem(NULL) + g_tk.rec + TK_O_NAME, 0, 16) ? "true" : "false", rd32(g_tk.rec + TK_O_CLAIMS),
+                   rd32(g_tk.rec + TK_O_SCR_SEQ), rd32(g_tk.rec + TK_O_LED_SEQ), rd32(g_tk.rec + TK_O_SAY_SEQ));
+            return *why ? 1 : 0;
+        }
+        if (*why)
+            return fail("tk1: %s", why);
+        g_tk.claims = rd32(g_tk.rec + TK_O_CLAIMS);
+        g_tk.scr_seq = rd32(g_tk.rec + TK_O_SCR_SEQ);
+        g_tk.led_seq = rd32(g_tk.rec + TK_O_LED_SEQ);
+        g_tk.say_seq = rd32(g_tk.rec + TK_O_SAY_SEQ);
+        memcpy(g_tk.led, mem(NULL) + g_tk.rec + TK_O_LED, sizeof g_tk.led);
+        if (g_tk.drive)
+            printf("tk: \"%s\" claims 0x%02x\n", (const char *)mem(NULL) + g_tk.rec + TK_O_NAME, g_tk.claims);
+    } else if (tk_info) {
+        printf("{\"error\": \"no rfm1_tk export\"}\n");
+        return 1;
+    } else if (g_tk.drive)
+        return fail("--tk: the module exports no rfm1_tk (not built with tk1)");
+    tk_sort();
     if (ain_on) {                                /* (the input buffer: rfm1_alloc'd like the output's) */
         ain_buf = C1(F_ALLOC, FM1P_BLOCK * 4u);
         if (!ain_buf || !in_mem(ain_buf, FM1P_BLOCK * 4u))
@@ -1561,10 +1934,13 @@ int main(int argc, char **argv)
                 const char *ui = str(s_str);
                 printf("ui@%u: %s\n", ms, ui ? ui : "");
             }
+        tk_ms(ms, tk_on_at, tk_off_at, &tk_next);   /* --tk: the takeover's events, between two ticks */
         C1(F_TICK, ms);
         if (ms == 0 || ms - last_frame >= frame_ms) {
             last_frame = ms;
             C0(F_FRAME);
+            if (g_tk.drive)
+                tk_poll(ms);
             if (readouts) {   /* --readouts: each new readout (rd1), and the knobs' live labels when they move */
                 uint32_t sz = 0;
                 const uint8_t *m;
@@ -1722,6 +2098,19 @@ int main(int argc, char **argv)
                 }
                 fclose(o);
             }
+        }
+        if (g_tk.drive && g_tk.rec) {
+            if (tk_screen) {
+                FILE *o = strcmp(tk_screen, "-") ? fopen(tk_screen, "w") : stdout;
+                if (o) {
+                    tk_pbm(o);
+                    if (o != stdout)
+                        fclose(o);
+                } else
+                    fprintf(stderr, "rfm1_run: --tk-screen %s: not written\n", tk_screen);
+            }
+            printf("tk: %u inputs, %u skipped, scr_seq %u, led_seq %u, say_seq %u, claims 0x%02x, %s\n", g_tk.inputs,
+                   g_tk.skipped, g_tk.scr_seq, g_tk.led_seq, g_tk.say_seq, g_tk.claims, g_tk.shown ? "shown" : "not shown");
         }
         C0(F_SHUTDOWN);
     }
