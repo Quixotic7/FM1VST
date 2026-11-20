@@ -411,6 +411,19 @@ def main():
        WHITE in [rc.led(32 + i) for i in range(1, 16)], "Play: the slot plays, Play lit green, the playhead (white) "
        "from step 1 on")
     PNGS["1c-home-playing"] = rc.screen
+    # an empty slot picked while playing: the bar runs on (Play lit, the playhead moving); a step written joins it;
+    # Play stops it (the owner, 2026-11-21)
+    eb = DM7 + ["step:0@1500+50", "button:play@1700+50", "button:shift@2500+400", "step:2@2600+50"]
+    e1 = Run(eb, 7000)
+    heads = {t for t, i, c in e1.led_at if 32 <= i < 48 and c == WHITE and t > 5000}
+    ok(e1.led(48) == (0, 200, 0) and len(heads) >= 8, "an empty slot while playing: the bar runs on (%d playhead "
+       "moves after 5 s)" % len(heads))
+    e2 = Run(eb + ["pad:1@4500+300", "step:8@5000+50"], 8000)
+    ok(e2.led(48) == (0, 200, 0) and e2.led(40) == SEQ and
+       any(c == WHITE for t, i, c in e2.led_at if i == 40 and t > 5500), "a step written in it: the loop plays in "
+       "phase (step 9 lit, the playhead over it)")
+    e3 = Run(eb + ["button:play@5000+50"], 7000)
+    ok(e3.led(48) == (0, 40, 0), "Play: the empty bar stops")
     rm = Run(["button:shift@200+300", "button:rec@300+50"], 600)
     ok("Rec mode, Advance" in rm.says, "Shift + Rec: the next record mode (%s)" % rm.says)
 
