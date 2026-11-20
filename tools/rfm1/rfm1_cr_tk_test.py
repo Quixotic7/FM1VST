@@ -294,7 +294,7 @@ def main():
        "the chord keys: types violet, extensions orange (dim)")
     ok(all(e.led(pad(r, c)) == pct(MEM, 18) for r in (1, 2) for c in range(5, 9)), "eight empty memories, dim cyan")
     ok(all(e.led(32 + i) == (24, 24, 30) for i in range(16)), "the steps: 16 dark (an empty slot: a bar)")
-    ok(e.led(76) == (255,) * 3 and all(e.led(77 + i) == (64,) * 3 for i in range(3)), "the step icons: page 1 of 4")
+    ok(all(e.led(76 + i) == (0, 0, 0) for i in range(16)), "the step icons: off for a loop of one page")
     ok(e.led(55) == ORANGE and e.led(56) == VIOLET and e.led(60) == YELLOW, "the knob rings: Voicing, Perform, Key")
 
     # ---- a chord from the chord keys and a key
@@ -377,7 +377,7 @@ def main():
     ok(any(s.startswith("loop 2") for s in sw.says) and "Page 2" in sw.says, "Shift + step 2: slot 2 (slot 1 saved); "
        "Shift + step 14: page 2 (%s)" % sw.says)
     same(sw, scr_slots(1, (0,), 2), "the slots view: slot 2 current, slot 1 holds a loop, page 2")
-    ok(sw.led(77) == (255,) * 3 and sw.led(76) == (64,) * 3, "the icons: page 2")
+    ok(all(sw.led(76 + i) == (0, 0, 0) for i in range(16)), "the icons: off (slot 2's loop is one page)")
 
     # ---- a knob's popup
     kp = Run(["touch:0@200+300", "knob:1@250:2"], 400)
