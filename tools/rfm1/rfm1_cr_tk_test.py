@@ -468,9 +468,10 @@ def main():
     ok(all(sh.led(pad(r, c)) == (0, 0, 0) for r in (1, 2) for c in (3, 4)) and
        all(sh.led(pad(r, c)) == (0, 0, 0) for r in (3, 4) for c in range(3, 9)) and sh.led(pad(1, 5)) == pct(MEM, 18),
        "Shift held: only the shortcuts and the top right's eight lit, the rest dark")
-    ok(all(sh.led(32 + i) != (0, 0, 0) for i in range(12)) and all(sh.led(44 + i) == (0, 0, 0) for i in range(4)) and
-       all(sh.led(76 + i) == WHITE for i in range(12)) and all(sh.led(88 + i) == (0, 0, 0) for i in range(4)),
-       "Shift held: S1..S12 lit (dim: off), their icons on; S13..S16 dark")
+    JOBS = [i for i in range(16) if i not in (3, 11, 12)]          # the Move's step icons (its manual)
+    ok(all(sh.led(32 + i) != (0, 0, 0) and sh.led(76 + i) == WHITE for i in JOBS) and
+       all(sh.led(32 + i) == (0, 0, 0) and sh.led(76 + i) == (0, 0, 0) for i in (3, 11, 12)),
+       "Shift held: the steps with an icon lit (dim: off), their icons on; S4, S12, S13 (no icon) dark")
     ok(not on[0] and not on[1], "Shift held: Key and Lock off at the start")
     same(sh, scr_shortcuts(on), "Shift held: the eight buttons, inverted = on", png="4-shortcuts")
     kt = Run(["button:shift@200+300", "pad:%d@250+50" % SCP[0], "button:shift@700+300", "pad:%d@750+50" % SCP[1]], 2300)
@@ -616,32 +617,53 @@ def main():
     ok(quiet == 0.0 and heard > 0.01, "stopped: a step tapped is silent, held it is previewed (rms %.4f, %.4f)"
        % (quiet, heard))
 
-    # ---- proposal 6: Shift + steps, the Loop list, the player's chord on a step
+    # ---- proposal 7: Shift + steps by the Move's icons; a toggle a card, a value a popup the wheel turns
     S6 = "button:shift@200+300"
-    fv_ = Run([S6, "step:0@250+50"], 600)
-    ok(fv_.says == ["Fixed velocity, on"] and fv_.led_when(32, 400) == WHITE, "Shift + S1: Fixed velocity on")
-    sw_ = Run([S6, "step:2@250+50", "knob:0@600:5"], 900)
-    ok(sw_.says == ["Loop, editing Swing: 50 percent", "Swing: 55 percent"], "Shift + S3: the Loop list at Swing, "
-       "editing; the wheel 55 %% (%s)" % sw_.says)
-    PNGS["13-loop-swing"] = sw_.screen
-    ok(ink(sw_, 0, 0, 60, 14) and sw_.screen[16] == "1" * 128, "the Loop list: its title, the rule")
-    qn = Run([S6, "step:3@250+50"], 600)
-    rt = Run([S6, "step:4@250+50"], 600)
-    ok(qn.says[0].startswith("Loop, editing Quantize") and rt.says[0].startswith("Loop, editing Rate"),
-       "Shift + S4: Quantize, S5: the loop's Rate (%s, %s)" % (qn.says, rt.says))
-    st_ = Run(DM7 + ["step:0@1200+50", "button:shift@1500+300", "step:5@1550+50", "knob:0@1900:1", "knob:0@2000:1"],
-              2300)
-    ok(st_.says[-3:] == ["Loop, editing Steps: 16", "Steps: 17", "Steps: 18"], "Shift + S6: the loop's steps, the "
-       "wheel 17, 18 (%s)" % st_.says[-3:])
-    lp_ = Run([S6, "step:6@250+50", "knob:0@600:1"], 900)
-    ok(lp_.says[0] == "Loop, Swing: 50 percent" and lp_.says[1].startswith("Quantize"), "Shift + S7: the Loop "
-       "list (the owner's track settings), the wheel its rows (%s)" % lp_.says)
-    tp = Run(["button:shift@200+1500", "step:8@250+50", "step:8@750+50", "step:8@1250+50"], 1700)
-    ok(tp.says[-1] == "Tempo, 120 bpm", "Shift + S9 tapped every 500 ms: tempo 120 (%s)" % tp.says)
-    ex = Run([S6, "step:9@250+50", "button:shift@700+300", "step:10@750+50", "button:shift@1200+300", "step:11@1250+50"],
-             1700)
-    ok(ex.says == ["Rec mode, Advance", "Count-in, off", "Metronome, on"], "Shift + S10 the record mode, S11 "
-       "count-in, S12 the metronome (%s)" % ex.says)
+    def card(t, v):
+        return (lambda x: (clbl(x, 0, t), bigc(x, 18, 30), x)[-1])(Scr())
+    sl1 = Run([S6, "step:0@250+50", "knob:0@600:1", "button:jogclick@800+50", "button:shift@1200+300",
+               "step:0@1250+50"], 1700)
+    ok(sl1.says == ["Slot, playing, Loop 1", "Slot, empty, Loop 2", "Done", "Slot, playing, Loop 2"],
+       "Shift + S1 (Set overview): the slots, the wheel one, a click loads it (%s)" % sl1.says)
+    ci = Run([S6, "step:2@250+50"], 600)
+    same(ci, card("Count-in", "Off"), "Shift + S3 (Workflow): Count-in, a card")
+    ok(ci.says == ["Count-in, off"], "said: %s" % ci.says)
+    te = Run([S6, "step:4@250+50", "knob:0@600:3"], 900)
+    same(te, card("Tempo", "123 bpm"), "Shift + S5 (Tempo): its popup, the wheel 123", png="14-tempo")
+    mt = Run([S6, "step:5@250+50"], 600)
+    ok(mt.says == ["Metronome, on"], "Shift + S6 (Metronome): on, a card (%s)" % mt.says)
+    gr = Run([S6, "step:6@250+50", "knob:0@600:3"], 900)
+    ok(gr.says == ["Groove, 0 percent", "Groove, 6 percent"], "Shift + S7 (Groove): the loop's swing (%s)" % gr.says)
+    ks = Run([S6, "step:8@250+50", "knob:0@600:1", "button:shift@800+300", "knob:0@900:1"], 1300)
+    ok(ks.says == ["Key & Scale, C Major", "Key & Scale, C Minor", "Key & Scale, C# Minor"],
+       "Shift + S9 (Keys & Scales): the wheel the scale, Shift + wheel the key (%s)" % ks.says)
+    fv_ = Run([S6, "step:9@250+50"], 600)
+    same(fv_, card("Fixed velocity", "On"), "Shift + S10 (Full velocity): Fixed velocity, a card")
+    pf_ = Run([S6, "step:10@250+50"], 600)
+    ok(pf_.says == ["Perform, on"], "Shift + S11 (Repeat): Perform on (%s)" % pf_.says)
+    LP = DM7 + ["step:0@1200+50", "step:4@1250+50"]
+    nw = Run(LP + ["button:shift@1500+300", "step:13@1550+50"], 2000)
+    ok(nw.says[-1] == "New, empty, Loop 2", "Shift + S14 (New clip): the next empty slot (%s)" % nw.says[-1:])
+    db = Run(LP + ["button:shift@1500+300", "step:14@1550+50", "button:right@2600+50"], 3000)
+    ok("Loop doubled, 32 steps" in db.says and db.led(32) == SEQ and db.led(36) == SEQ,
+       "Shift + S15 (Double loop): 32 steps, page 2 a copy of page 1 (%s)" % db.says[-2:])
+    qt = Run([S6, "step:15@250+50", "knob:0@600:1", "button:back@900+50"], 1200)
+    ok(qt.says == ["Quantize, none", "Quantize, 1/4", "Home"], "Shift + S16 (Quantize): its popup; Back: home (%s)"
+       % qt.says)
+    st_ = Run(DM7 + ["step:0@1200+50", "button:shift@1500+300", "step:1@1550+50", "knob:0@1900:5",
+                     "button:jogclick@2000+50", "knob:0@2100:1", "knob:0@2200:1"], 2500)
+    ok(st_.says[-3:] == ["Editing Steps: 16", "Steps: 17", "Steps: 18"], "the Settings hold the loop's rows: Steps "
+       "(%s)" % st_.says[-3:])
+    ph = Run(["button:shift@200+1500", "pad:%d@250+700" % SCP[3]], 1400)
+    same(ph, scr_layer("PERF", False, 1, 8), "Shift + the PERF pad held, Shift still held: the settings at once")
+    cpy = Run(DM7 + ["step:0@1200+50", "step:4@1250+50", "button:copy@1500+900", "step:0@1700+50"], 2200)
+    ok(cpy.says[-1] == "Step 1 copied" and ink(cpy, 0, 0, 30, 30) and cpy.screen[37][1:7] == "111111",
+       "Copy held: the copy icon, the steps (no step view)")
+    PNGS["15-copy-held"] = cpy.screen
+    ac = Run([S6, "step:7@250+50", "pad:29@900+50"] + ["knob:1@%d:1" % (1200 + i * 15) for i in range(10)], 3000)
+    sc_ = Run([S6, "step:7@250+50", "pad:29@900+50"] + ["knob:1@%d:1" % (1200 + i * 150) for i in range(10)], 3000)
+    ok(ac.says[-1] == "Algo 32" and sc_.says[-1] == "Algo 15", "the editor's values accelerate: ten fast ticks the "
+       "end, ten slow ten steps (%s, %s)" % (ac.says[-1:], sc_.says[-1:]))
     jt = Run([S6, "step:1@250+50", "touch:9@600+400", "knob:0@700:1"], 1100)
     ok(jt.says == ["Settings, Velocity: Dynamic", "Fixed level: 100"] and ink(jt, 0, 0, 100, 14) and
        jt.screen[16] == "1" * 128, "the Settings: the wheel touched and turned moves the row, no preset (%s)" % jt.says)
