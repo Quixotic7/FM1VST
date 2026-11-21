@@ -195,7 +195,7 @@ def scr_layout(cur=0, bank=1):
     s = Scr()
     rlbl(s, 0, "B%d" % bank)
     bigc(s, 16, 30)
-    dashes(s, 5, cur, 58, 18, 6)
+    dashes(s, 6, cur, 58, 18, 6)
     return s
 
 
@@ -274,6 +274,16 @@ class Run:
             if j == i and at <= t:
                 v = c
         return v
+
+
+def rms(evs, settle, secs):                        # the chord part's level from settle ms on, secs long
+    a = [A.run, "--settle", str(settle), "--seconds", str(secs), "--keys", "none", "--min-rms", "0", "--tk",
+         "--tk-screen", "-"]
+    for e in evs:
+        a += ["--tk-ev", e]
+    r = subprocess.run(a + [A.file], capture_output=True, text=True, errors="replace")
+    m = re.search(r"chord rms ([0-9.]+)", r.stdout + r.stderr)
+    return float(m.group(1)) if m else -1.0
 
 
 def same(run, exp, what, png=None):
@@ -395,8 +405,8 @@ def main():
     mn = Run(["button:menu@200+600"], 700)
     same(mn, scr_layout(), "Menu held: the layout big, a dash each, B1", png="5-layout-picker")
     ok(mn.led(pad(1, 1)) == WHITE and mn.led(pad(1, 2)) == pct(WHITE, 45) and mn.led(pad(1, 3)) == pct(WHITE, 15) and
-       mn.led(pad(2, 1)) == pct(WHITE, 15) and mn.led(pad(2, 2)) == (0, 0, 0),
-       "picker: Keys now, Scale the previous, ISO under Keys, the rest of that row dark")
+       mn.led(pad(2, 1)) == pct(WHITE, 15) and mn.led(pad(2, 2)) == pct(WHITE, 15) and mn.led(pad(2, 3)) == (0, 0, 0),
+       "picker: Keys now, Scale the previous, ISO and Iso Key under Keys, the rest of that row dark")
     ok(mn.led(pad(1, 5)) == MEM and mn.led(pad(1, 6)) == pct(MEM, 15), "picker: bank 1 of 8")
     ok(all(mn.led(pad(3, c)) == pct(PROG, 85) for c in range(1, 7)) and mn.led(pad(3, 7)) == pct(PROG, 12),
        "picker: progressions 1-6 (the factory set) lit, 7.. dim")
@@ -442,47 +452,78 @@ def main():
     ok(not any(w.startswith("Step 17") for w in pe.says) and pe.led(32) != SEQ,
        "a step past the loop's end (page 2 of a 16-step loop): nothing (%s)" % pe.says[-3:])
 
-    # ---- Shift: the FM-1's buttons on the steps (proposal 4, C): tap on / off, held the settings
+    # ---- Shift: the FM-1's buttons on the pads of columns 7-8 (proposal 5), the screen's 2 x 4 grid pad for name
+    SCP = [pad(1 + i // 2, 7 + i % 2) for i in range(8)]       # KEY LOCK / LATCH PERF / B.PRF FX / BASS BEAT
     sh = Run(["button:shift@200+600"], 700)
     COLS = [YELLOW, VIOLET, WHITE, VIOLET, BASS, GREEN, BASS, RED]
-    on = [sh.led(32 + i) == COLS[i] for i in range(8)]
-    ok(all(sh.led(32 + i) in (COLS[i], pct(COLS[i], 18)) for i in range(8)) and sh.led(42) == (0, 0, 0) and
-       sh.led(47) == pct(WHITE, 18), "Shift held: the steps KEY .. BEAT lit when on, dim when off; 11..15 dark, "
-       "16 Options")
+    on = [sh.led(SCP[i]) == COLS[i] for i in range(8)]
+    ok(all(sh.led(SCP[i]) in (COLS[i], pct(COLS[i], 18)) for i in range(8)),
+       "Shift held: the pads of columns 7-8 KEY .. BEAT, lit when on, dim when off")
+    ok(sh.led(33) == pct(WHITE, 30) and sh.led(39) == pct(CYAN, 30) and sh.led(32) == (0, 0, 0) and
+       sh.led(47) == (0, 0, 0) and sh.led(77) == WHITE and sh.led(83) == WHITE and sh.led(76) == (0, 0, 0),
+       "Shift held: S2 (Settings) and S8 (sound editor) lit, their icons on; the other steps dark")
     ok(not on[0] and not on[1], "Shift held: Key and Lock off at the start")
     same(sh, scr_shortcuts(on), "Shift held: the eight buttons, inverted = on", png="4-shortcuts")
-    kt = Run(["button:shift@200+300", "step:0@250+50", "button:shift@700+300", "step:1@750+50"], 2300)
-    ok(kt.says[:2] == ["Key, on", "Lock, on"], "Shift + step 1 tapped: Key Mode on; Shift + step 2: LOCK on (%s)"
+    kt = Run(["button:shift@200+300", "pad:%d@250+50" % SCP[0], "button:shift@700+300", "pad:%d@750+50" % SCP[1]], 2300)
+    ok(kt.says[:2] == ["Key, on", "Lock, on"], "Shift + the KEY pad tapped: Key Mode on; the LOCK pad: LOCK on (%s)"
        % kt.says)
+    ok(not any(t < 2300 and i == 0 for t, i, c in []) and kt.lines and
+       not any("tk-msg" in l for l in kt.lines), "a shortcut tapped: no popup (the inverted name says it)")
     same(kt, scr_home(chord=False, label="Key C", lock=True), 'home: Key C, LOCK on: the LK tag')
-    pl = Run(["button:shift@200+700", "step:3@250+600"], 1100)
-    ok(pl.says == ["PERF, Strum"], "Shift + step 4 held: the PERF settings, said (%s)" % pl.says)
+    pl = Run(["button:shift@200+700", "pad:%d@250+600" % SCP[3]], 1100)
+    ok(pl.says == ["PERF, Strum"], "Shift + the PERF pad held: the PERF settings, said (%s)" % pl.says)
     same(pl, scr_layer("PERF", False, 1, 8), "the PERF settings: off, its mode big, the modes as dashes",
          png="9-perf-settings")
     ok(all(pl.led(55 + k) == VIOLET for k in range(4)) and all(pl.led(59 + k) == (0, 0, 0) for k in range(4)),
        "the PERF settings: knobs 1-4 lit violet, 5-8 dark")
-    pw = Run(["button:shift@200+900", "step:3@250+600", "knob:0@1300:1", "knob:0@1350:1", "knob:1@1500:1"], 1700)
+    pw = Run(["button:shift@200+900", "pad:%d@250+600" % SCP[3], "knob:0@1300:1", "knob:0@1350:1", "knob:1@1500:1"],
+             1700)
     ok(pw.says[1:] == ["PERF, Strum 2 Octaves", "PERF, Slop", "Rate 41 ms"], "the wheel turns its pages (the mode), "
        "knob 1 the page's first (%s)" % pw.says)
-    pk = Run(["button:shift@200+900", "step:0@250+600", "button:back@1500+50", "touch:4@1700+100"], 1900)
-    ok(pk.says[:2] == ["KEY, Key", "Closed"] and pk.says[-1].startswith("Key "), "Shift + step 1 held: KEY; Back "
-       "closes; knob 5 is Key again (%s)" % pk.says)
-    pk2 = Run(["button:shift@200+300", "step:0@250+600", "button:shift@1500+300", "step:0@1550+600"], 2400)
-    ok(pk2.says == ["KEY, Key", "Closed"], "the same step held again: closed (%s)" % pk2.says)
-    fx = Run(["button:shift@200+900", "step:5@250+600", "knob:2@1500:3"], 1700)
+    pk = Run(["button:shift@200+900", "pad:%d@250+600" % SCP[0], "button:back@1500+50", "touch:4@1700+100"], 1900)
+    ok(pk.says[:2] == ["KEY, Key", "Home"] and pk.says[-1].startswith("Key "), "Shift + the KEY pad held: KEY; Back: "
+       "home; knob 5 is Key again (%s)" % pk.says)
+    pk2 = Run(["button:shift@200+300", "pad:%d@250+600" % SCP[0], "button:shift@1500+300",
+               "pad:%d@1550+600" % SCP[0]], 2400)
+    ok(pk2.says == ["KEY, Key", "Closed"], "the same pad held again: closed (%s)" % pk2.says)
+    fx = Run(["button:shift@200+900", "pad:%d@250+600" % SCP[5], "knob:2@1500:3"], 1700)
     ok(fx.says[0] == "FX, Sends" and fx.says[1].startswith("Chorus "), "FX held: the Sends page; knob 2 the "
        "Chorus send (%s)" % fx.says)
-    ed = Run(["button:shift@200+300", "step:8@250+50", "knob:5@700:4", "pad:29@1000+50"], 1300)
-    ok(len(ed.says) == 3 and ed.says[0] == "Editor, chord" and ed.says[1].startswith("Level ") and
-       ed.says[2] == "Filter 1", "Shift + step 9: the editor (OSC); knob 5 the next lane's first, Level; the second "
+    pb = Run(["button:shift@200+900", "pad:%d@250+600" % SCP[3], "button:shift@1300+300", "step:7@1350+50",
+              "button:back@1700+50"], 2000)
+    ok(pb.says[-1] == "Home" and len(pb.screen) == 64 and pb.screen[28][52:76] == "1" * 24,
+       "the editor over a settings layer, Back: home at once (%s)" % pb.says)
+
+    # ---- Shift + S8: the sound editor (proposal 5)
+    ed = Run(["button:shift@200+300", "step:7@250+50", "knob:5@700:4", "pad:29@2000+50"], 2300)
+    ok(len(ed.says) == 3 and ed.says[0] == "Sound editor, chord, Oscillators" and ed.says[1].startswith("Level ") and
+       ed.says[2] == "Filter 1", "Shift + S8: the sound editor (OSC); knob 5 the next lane's first, Level; the second "
        "memory pad: FILT (%s)" % ed.says)
-    ok(ed.led(pad(1, 6)) == WHITE and ed.led(pad(1, 5)) == pct(CYAN, 60) and ed.led(pad(2, 8)) == pct(BASS, 25),
-       "the editor: the memories' pads its groups, FILT white, OSC cyan; the eighth chord / bass")
+    ok(ed.led(pad(1, 6)) == ORANGE and ed.led(pad(1, 5)) == pct(CYAN, 22) and ed.led(pad(2, 8)) == pct(BASS, 25),
+       "the editor: the memories' pads its groups, each its colour, FILT full, OSC dim; the eighth chord / bass")
     ok(ed.led(55) == CYAN, "the editor: its knobs lit cyan")
-    op = Run(["button:shift@200+300", "step:15@250+50", "knob:0@800:1", "button:jogclick@1000+50",
-              "button:back@1300+50", "button:back@1500+50"], 1700)
-    ok(op.says == ["Options", "Chords", "Chords", "Options", "Options closed"],
-       "Shift + step 16: the Options; the wheel a group, the click opens it, Back twice out (%s)" % op.says)
+    ec = Run(["button:shift@200+300", "step:7@250+50"], 700)
+    same(ec, scr_popup("Sound editor"), "entering: a card, Sound editor / Chord", png="10-editor-card")
+    eb_ = Run(["button:shift@200+300", "step:7@250+50", "button:back@2000+50"], 2300)
+    ok(eb_.says[-1] == "Home" and eb_.led(pad(1, 5)) == pct(MEM, 18), "the editor, Back: home (the memories back)")
+
+    # ---- Shift + S2: the Settings, RemoteFM1's list (proposal 5)
+    se = Run(["button:shift@200+300", "step:1@250+50", "knob:0@600:1", "button:jogclick@700+50", "knob:0@800:-30",
+              "button:jogclick@900+50"], 1200)
+    ok(se.says == ["Settings, Velocity: Dynamic", "Fixed level: 100", "Editing Fixed level: 100", "Fixed level: 70",
+                   "Done"], "Shift + S2: the Settings; the wheel a row, a click edits, the wheel the value, a click: "
+       "done (%s)" % se.says)
+    ok(ink(se, 0, 0, 100, 14) and se.screen[16] == "1" * 128 and all(se.led(55 + k) == (0, 0, 0) for k in range(8)),
+       "the Settings: its title, the rule, the list; the knobs dark")
+    PNGS["11-settings"] = se.screen
+    sb = Run(["button:shift@200+300", "step:1@250+50", "knob:0@600:1", "button:jogclick@700+50",
+              "button:back@900+50", "button:back@1100+50"], 1400)
+    ok(sb.says[-2:] == ["Done", "Home"], "Back while editing: done (the value kept); again: home (%s)" % sb.says)
+    FIX1 = ["button:shift@200+300", "step:1@250+50", "button:jogclick@500+50", "knob:0@600:1", "button:jogclick@700+50",
+            "knob:0@800:1", "button:jogclick@900+50", "knob:0@1000:-60", "knob:0@1010:-60", "button:back@1100+50",
+            "button:back@1200+50"]
+    lo, hi = rms(FIX1 + ["pad:4@1500+1500"], 1600, 1.0), rms(["pad:4@1500+1500"], 1600, 1.0)
+    ok(0 < lo < hi * 0.3, "Settings, Velocity Fixed at level 1: the pads quiet (rms %.4f; Dynamic %.4f)" % (lo, hi))
 
     # ---- Loop held: the slots (proposal 4, E)
     lh = Run(["button:loop@200+600"], 700)
@@ -516,7 +557,7 @@ def main():
     ok(kp.says[:2] == ["Voicing 0", "Voicing plus 2"], "said: %s" % kp.says)
     p1 = Run(["knob:5@200:1", "knob:5@210:1", "knob:5@220:1"], 400)
     same(p1, scr_popup("Key"), "Key: three ticks are not an entry yet")
-    ap_ = Run(["button:shift@200+1400", "step:3@250+50", "step:3@500+600", "knob:0@1300:1", "knob:0@1310:1",
+    ap_ = Run(["button:shift@200+1400", "pad:%d@250+50" % SCP[3], "pad:%d@500+600" % SCP[3], "knob:0@1300:1", "knob:0@1310:1",
                "knob:0@1320:1", "button:back@1700+50", "pad:25@1900+1500", "pad:17@1900+1500", "pad:1@2000+1400"], 2900)
     ok(len(ap_.screen) == 64 and ap_.screen[61] == "1" * 128 and ink(ap_, 80, 0, 128, 14) and ink(ap_, 0, 34, 128, 56),
        "Arp running: the hop view (the division top right, the notes, its rule at the foot)")
@@ -525,13 +566,51 @@ def main():
     ok(sp.says[-1].startswith("Tempo 121"), "Shift + knob 8: Tempo, as without Shift (one layer) (%s)" % sp.says)
 
     # ---- the buttons
-    bt = Run(["button:copy@200+50", "button:loop@400+50", "button:mute@600+50", "button:up@800+50"], 1000)
-    ok(bt.says[:4] == ["Lock, on", "Latch, on", "Bass, on", "Octave, plus 1"], "Copy LOCK, Loop LATCH, Mute bass, "
-       "Up the octave: %s" % bt.says)
-    ok(bt.led(71) == (255,) * 3 and bt.led(70) == (255,) * 3 and bt.led(74) == (255,) * 3 and bt.led(68) == (255,) * 3,
-       "their LEDs lit")
-    pn = Run(DM7[:1] + ["button:delete@400+50"], 700)
-    ok("PANIC, all notes off" in pn.says, "Delete tapped alone: PANIC (%s)" % pn.says)
+    bt = Run(["button:loop@400+50", "button:mute@600+50", "button:up@800+50"], 1000)
+    ok(bt.says[:3] == ["Latch, on", "Bass, on", "Octave, plus 1"], "Loop LATCH, Mute bass, Up the octave: %s" % bt.says)
+    ok(bt.led(70) == (255,) * 3 and bt.led(74) == (255,) * 3 and bt.led(68) == (255,) * 3, "their LEDs lit")
+    pn = Run(DM7[:1] + ["button:shift@350+200", "button:delete@400+50"], 700)
+    ok("PANIC, all notes off" in pn.says, "Shift + Delete: PANIC (%s)" % pn.says)
+    same(pn, (lambda s: (s.rect(0, 0, 128, 64), bigc(s, 8, 22), s.ctext(64, 48, "all off", 2, 0), s)[-1])(Scr()),
+         "PANIC: inverted")
+    pn2 = Run(DM7[:1] + ["button:delete@400+50"], 700)
+    ok(not any("PANIC" in t for t in pn2.says) and pn2.says[-1].startswith("Delete: hold"),
+       "Delete tapped alone: no PANIC, a hint (%s)" % pn2.says)
+
+    # ---- the clipboard: Copy / Delete as RemoteFM14Move's sequencer (proposal 5)
+    cp = Run(DM7 + ["step:0@1500+50", "button:copy@1700+600", "step:0@1800+50", "step:2@1900+50"], 2500)
+    ok(cp.says[-2:] == ["Step 1 copied", "Pasted to step 3"] and cp.led(34) == SEQ, "Copy held + step 1: copied; + "
+       "the empty step 3: pasted (%s)" % cp.says[-2:])
+    ca = Run(DM7 + ["step:0@1500+50", "button:copy@1700+300", "step:0@1800+50", "step:5@2300+50"], 2700)
+    ok(ca.says[-2:] == ["Tap a step to paste", "Pasted to step 6"] and ca.led(37) == SEQ,
+       "Copy let go after a copy: the next step tap pastes (%s)" % ca.says[-2:])
+    ok(any(i == 32 and c == WHITE for t, i, c in ca.led_at if 1850 < t < 2300), "the copied step blinks white")
+    cu_ = Run(DM7 + ["step:0@1500+50", "button:delete@1700+800", "step:0@1800+50", "step:3@2000+50"], 2700)
+    ok(cu_.says[-2:] == ["Step 1 cut", "Pasted to step 4"] and cu_.led(32) == (24, 24, 30) and cu_.led(35) == SEQ,
+       "Delete held + step 1: cut; step 4 then: pasted (%s)" % cu_.says[-2:])
+    cr_ = Run(DM7 + ["step:0@1500+50", "button:delete@1700+1200", "step:0@1800+50"], 2800)
+    ok(any(i == 32 and c == RED for t, i, c in cr_.led_at if 1850 < t < 2800), "the cut step blinks red")
+    cd = Run(DM7 + ["step:0@1500+50", "button:copy@1700+300", "step:0@1800+50", "button:copy@2300+50"], 2600)
+    ok(cd.says[-1] == "Paste dropped", "Copy tapped alone with a paste waiting: dropped (%s)" % cd.says[-1:])
+    du = Run(DM7 + ["step:0@1500+50", "button:copy@1700+50"], 2100)
+    ok(du.says[-1] == "Loop copied, slot 2", "Copy tapped alone: the loop into the next empty slot (%s)" % du.says[-1:])
+    dp = Run(DM7 + ["step:0@1500+50", "button:delete@1700+300", "button:play@1800+50"], 2300)
+    ok(dp.says[-1] == "Loop, cleared" and dp.led(32) == (24, 24, 30) and dp.led(48) == (0, 40, 0),
+       "Delete + Play: the loop cleared, not played (%s)" % dp.says[-1:])
+    sh_ = Run(DM7 + ["step:0@1500+50", "step:0@2200+900"], 3000)
+    ok(sh_.led(pad(1, 2)) == WHITE and sh_.led(pad(2, 2)) == WHITE and sh_.led(pad(4, 2)) == WHITE and
+       sh_.led(pad(4, 3)) == KEY_D and sh_.led(32) == HELD, "a step held: its root (D) and keys (MIN, m7) lit white")
+    quiet, heard = (rms(DM7 + ["step:0@1500+50", "step:0@4000+%d" % h], 3900, 1.2) for h in (50, 900))
+    ok(quiet == 0.0 and heard > 0.01, "stopped: a step tapped is silent, held it is previewed (rms %.4f, %.4f)"
+       % (quiet, heard))
+
+    # ---- Iso Key and the Perf amount knob (proposal 5)
+    ik = Run(["button:menu@200+400", "pad:17@300+50", "pad:8@900+300", "pad:9@1300+300"], 1800)
+    ok(ik.says[0] == "Layout Isomorphic, in key" and ik.says[1:3] == ["Chord F", "Chord G"],
+       "Menu + Iso Key: in key, the row above a 4th up (F, then G) (%s)" % ik.says)
+    ok(all(ik.led(n) in (YELLOW, pct(WHITE, 32)) for n in range(32)), "Iso Key: every pad in the key")
+    pa = Run(["knob:3@200:1", "knob:3@220:1", "knob:3@240:1", "knob:3@260:1", "knob:3@280:1", "knob:3@300:1"], 500)
+    ok(len(pa.says) == 2, "Perf amount: three ticks a step (six ticks: two) (%s)" % pa.says)
     lk = Run(["button:shift@200+300", "pad:25@300+100", "pad:1@1000+100", "pad:3@1300+100"], 1600)
     ok("Chord D minor" in lk.says and "Chord F minor" in lk.says, "Shift + MIN: LOCK, MIN latched (%s)" % lk.says)
     rc = Run(DM7 + ["step:0@1500+50", "button:play@1700+50"], 2000)

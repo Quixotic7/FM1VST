@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ChoralRoot takeover as built (2026-11-21): the Move Designer document made from the firmware itself. Every screen
+"""ChoralRoot takeover as built (2026-11-20): the Move Designer document made from the firmware itself. Every screen
 and every LED is the emulator's (rfm1_run --tk, the build under test), so the document and the Move cannot drift;
 the controls' words are proposal 4's (make_cr_v4.py), corrected to what was built.
     python3 make_cr_v5.py <rfm1cs font5x7.c> <out.json> --run <rfm1_run> --file <choralroot.rfm1> [--x0 X --y0 Y]"""
@@ -116,7 +116,7 @@ def main():
     pos = lambda k: (X0 + (k % 3) * DX, Y0 + (k // 3) * DY)
     L = []
     items = [{"id": uid(), "x": X0 - 60, "y": Y0 - 60, "w": 3 * DX + 860, "h": 4 * DY + 220, "type": "group",
-              "title": "ChoralRoot takeover - as built (proposal 4 + proposal 3's screens), from the firmware, 2026-11-21",
+              "title": "ChoralRoot takeover - as built (proposal 4 + proposal 3's screens), from the firmware, 2026-11-20",
               "color": "#28dc5a"}]
     words = V4["KN_HOME_W"]
 
@@ -187,7 +187,7 @@ def main():
               "Steps 1-10 the slots, the knobs Length, Rate, Quantize, Count-in, Level, Beat, Rec mode, Tempo (the FM-1's "
               "PLAY menu). A tap of Loop alone: LATCH.", scr(lh), leds(c, lh), None,
               "A slot picked while playing switches at the loop's end; an empty slot runs a 16-step bar, so playback "
-              "never stops (the owner, 2026-11-21)."))
+              "never stops (the owner, 2026-11-20)."))
 
     # F. Iso
     iso = run(["button:menu@200+400", "pad:16@300+50", "pad:20@900+900"], 1500)
@@ -264,14 +264,14 @@ def main():
          ("panic", DM7[:1] + ["button:delete@400+50"], 700)]
     gy = Y0 + 3 * DY + 40
     items.append({"id": uid(), "x": X0 - 60, "y": gy - 80, "w": 3 * DX + 860, "h": 5 * 380 + 120, "type": "group",
-                  "title": "ChoralRoot takeover - every screen as built (the emulator's), 2026-11-21", "color": "#28dc5a"})
+                  "title": "ChoralRoot takeover - every screen as built (the emulator's), 2026-11-20", "color": "#28dc5a"})
     for k, (name, ev, end) in enumerate(G):
         r = run(ev, end)
         items.append({"id": uid(), "x": X0 + (k % 7) * 600, "y": gy + (k // 7) * 380, "w": 560, "h": 340,
                       "type": "screen", "name": "%d %s" % (k + 1, name), "description": " / ".join(r.says)[-120:],
                       "screen": V["pack"](scr(r))})
     items.append({"id": uid(), "x": X0 + 3 * DX, "y": Y0, "w": 760, "h": 520, "type": "note", "color": "#ffb3a7",
-                  "text": "AS BUILT (2026-11-21), made from the firmware: what differs from proposal 4\n"
+                  "text": "AS BUILT (2026-11-20), made from the firmware: what differs from proposal 4\n"
                           "- The screens are proposal 3's, drawn in ChoralRoot's own bold (Inter Tight, the FM-1's), "
                           "not Arial.\n- Home stopped: the chord and its notes only; the steps show on their LEDs. "
                           "Playing: slot, step, the 16 steps.\n- Key Mode / Iso / a memory: the label top left, the "
