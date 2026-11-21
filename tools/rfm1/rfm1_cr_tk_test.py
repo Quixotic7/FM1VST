@@ -51,6 +51,10 @@ class Scr:
 
     def __init__(self):
         self.px = [[0] * self.W for _ in range(self.H)]
+        self.wild = []                             # big text (AF_CRB, cut to one bit): only where, not each pixel
+
+    def big(self, x0, y0, x1, y1, inv=False):
+        self.wild.append((x0, y0, x1, y1, inv))
 
     def set(self, x, y, v=1):
         if 0 <= x < self.W and 0 <= y < self.H:
@@ -98,79 +102,101 @@ class Scr:
         return ["".join(str(v) for v in r) for r in self.px]
 
 
-# the design's screens (make_cr_v2.py scr_home / scr_saved / scr_step / scr_slots / scr_layout / scr_prog2,
-# make_cr_mockups.py scr_popup), parameterised by what this run holds
-def scr_home(key, slot, name, filled=(), play=None, nsteps=16, lock=False):
+# the design's screens (proposal 3 / 4, docs/takeover/make_cr_v3.py, make_cr_v4.py): labels, tags, boxes and dashes
+# exact; big text (cr_move.c bt: ChoralRoot's bold) a region that must hold ink
+def lbl(s, x, y, t):
+    s.text(x, y, t, 2)
+
+
+def rlbl(s, y, t):
+    s.text(127 - Scr.tw(t, 2), y, t, 2)
+
+
+def clbl(s, y, t):
+    k = 2 if Scr.tw(t, 2) <= 126 else 1
+    s.ctext(64, y, t, k)
+
+
+def tag(s, x, w, t):
+    s.rect(x, 0, w, 14)
+    s.text(x + (w - Scr.tw(t, 2)) // 2, 0, t, 2, 0)
+
+
+def dashes(s, n, cur, y=58, w=10, gap=4):          # cr_move.c px_dashes
+    if n < 2 or n > 24:
+        return
+    while w > 2 and n * w + (n - 1) * gap > 124:
+        w -= 1
+        if gap > 2 and w < 8:
+            gap -= 1
+    x = 64 - (n * w + (n - 1) * gap) // 2
+    for i in range(n):
+        (s.rect if i == cur else s.box)(x + i * (w + gap), y, w, 3)
+
+
+def bigc(s, y, h, desc=True):                      # centred big text, caps' top at y (descenders: 0.3 h)
+    s.big(0, y - 1, 128, y + h + (h * 3 // 10 if desc else 2))
+
+
+def scr_home(chord=True, notes="", x=4, y=6, h=34, label=None, lock=False):
     s = Scr()
-    s.header(key, ("LK S%d" if lock else "SEQ %d") % slot)
-    s.text(1, 19, name, 4)
-    for i in range(16):
-        x = 1 + i * 8
-        if i in filled:
-            s.rect(x, 52, 7, 7)
-        else:
-            s.box(x, 52, 7, 7, 1, dotted=i >= nsteps)
-        if i == play:
-            s.rect(x, 61, 7, 3)
+    if label:
+        lbl(s, 0, 0, label)
+    if chord:
+        s.big(x, y - 1, 128, y + h + 2)
+        if notes:
+            s.text(x, 50, notes, 2)
+    else:
+        s.rect(52, 28, 24, 5)
+    if lock:
+        tag(s, 98, 30, "LK")
     return s
 
 
-def scr_saved(n, name):
+def scr_saved(n):
     s = Scr()
-    s.ctext(64, 0, "Memory %d" % n, 2)
-    s.ctext(64, 17, name, 4)
-    s.ctext(64, 50, "saved", 2)
+    s.big(2, 11, 84, 46)
+    s.rect(84, 8, 44, 48)
+    s.big(85, 13, 127, 34, inv=True)
+    s.text(94, 40, "ok", 2, 0)
     return s
 
 
-def scr_step(n, name, rat="x1", ln="len 1", chance="100%"):
+def scr_step(n, rat="", ln="", chance=""):
     s = Scr()
-    s.header("STEP %d" % n, rat)
-    s.text(1, 19, name, 4)
-    s.text(1, 50, ln, 2)
-    s.text(127 - Scr.tw(chance, 2), 50, chance, 2)
+    lbl(s, 0, 0, "Step %d" % n)
+    if rat:
+        rlbl(s, 0, rat)
+    s.big(4, 17, 128, 48)
+    if ln:
+        lbl(s, 0, 50, ln)
+    if chance:
+        rlbl(s, 50, chance)
     return s
 
 
-def scr_slots(cur, full, page=1):
+def scr_slots(cur, full, bpm=120):
     s = Scr()
-    s.header("SLOTS", "PG %d" % page)
     for i in range(10):
-        x = 1 + (i % 5) * 25
-        y = 20 + (i // 5) * 22
+        x = i * 13
         if i == cur:
-            s.rect(x, y, 24, 20)
-            s.ctext(x + 12, y + 3, str(i + 1), 2, 0)
+            s.rect(x, 0, 11, 11)
+        elif i in full:
+            s.box(x, 0, 11, 11)
+            s.rect(x + 3, 3, 5, 5)
         else:
-            s.box(x, y, 24, 20, 1, dotted=i not in full)
-            s.ctext(x + 12, y + 3, str(i + 1), 2)
+            s.box(x, 0, 11, 11, dotted=True)
+    bigc(s, 18, 22)
+    clbl(s, 50, "%d bpm" % bpm)
     return s
 
 
-def scr_layout(cur="KEYS", prev="SCALE", bank=1):
+def scr_layout(cur=0, bank=1):
     s = Scr()
-    s.header("LAYOUT", "BK %d" % bank)
-    s.ctext(64, 19, cur, 4)
-    s.text(1, 50, "prev " + prev, 2)
+    rlbl(s, 0, "B%d" % bank)
+    bigc(s, 16, 30)
+    dashes(s, 5, cur, 58, 18, 6)
     return s
-
-
-def scr_prog(name, num, chord, filled, last):
-    s = Scr()
-    s.header(name, str(num))
-    s.text(1, 19, chord, 4)
-    for i in range(16):
-        x = 1 + i * 8
-        (s.rect if i in filled else s.box)(x, 52, 7, 7, 1, **({} if i in filled else {"dotted": True}))
-        if i == last:
-            s.rect(x, 61, 7, 3)
-    return s
-
-
-def fit(t, k=4):                                   # cr_move.c px_fit
-    while k > 1 and Scr.tw(t, k) > 126:
-        k -= 1
-    return k
 
 
 SC = ["KEY", "LOCK", "LATCH", "PERF", "B.PRF", "FX", "BASS", "BEAT"]
@@ -188,27 +214,30 @@ def scr_shortcuts(on):                             # proposal 4, C: Shift held
     return s
 
 
-def scr_layer(name, on, page, at, of):             # proposal 4, D: a settings layer
+def scr_layer(name, on, at, of):                   # proposal 4, D: a settings layer
     s = Scr()
-    s.header(name, "on" if on else "off")
-    k = fit(page)
-    s.text(1, 19 + (4 - k) * 3, page, k)
-    if 2 <= of <= 16:
-        x0 = 64 - of * 4
-        for i in range(of):
-            s.rect(x0 + i * 8, 58 if i == at else 60, 6, 5 if i == at else 1)
+    lbl(s, 0, 0, name)
+    if on:
+        tag(s, 98, 30, "on")
+    else:
+        rlbl(s, 0, "off")
+    bigc(s, 18, 30)
+    dashes(s, of, at, 58, 18 if of <= 4 else 10, 6 if of <= 4 else 4)
     return s
 
 
-def scr_popup(title, value, bar=None):
+def scr_popup(title, pm=None):                     # a knob: its name, the value big, a bar (pm: permille)
     s = Scr()
-    s.ctext(64, 2, title, 2)
-    k = 4 if Scr.tw(value, 4) <= 126 else 3
-    s.ctext(64, 24, value, k)
-    if bar is not None:
-        s.box(8, 58, 112, 5)
-        s.rect(9, 59, int(110 * bar), 3)
+    clbl(s, 0, title)
+    bigc(s, 18, 30)
+    if pm is not None:
+        s.box(10, 58, 108, 5)
+        s.rect(11, 59, 106 * pm // 1000, 3)
     return s
+
+
+def ink(run, x0, y0, x1, y1, v="1"):
+    return any(run.screen[y][x] == v for y in range(y0, min(y1, len(run.screen))) for x in range(x0, x1))
 
 
 # ---- a run
@@ -250,10 +279,19 @@ class Run:
 def same(run, exp, what, png=None):
     got = run.screen
     want = exp.rows()
-    good = ok(got == want, "screen: " + what)
+    mask = [[False] * 128 for _ in range(64)]
+    for x0, y0, x1, y1, inv in exp.wild:
+        for y in range(max(0, y0), min(64, y1)):
+            for x in range(max(0, x0), min(128, x1)):
+                mask[y][x] = True
+    bad = [y for y in range(64) if len(got) != 64 or len(got[y]) < 128 or
+           any(got[y][x] != want[y][x] and not mask[y][x] for x in range(128))]
+    inked = len(got) == 64 and all(ink(run, x0, y0, x1, y1, "0" if inv else "1") for x0, y0, x1, y1, inv in exp.wild)
+    good = ok(not bad and inked, "screen: " + what)
     if not good:
-        for y in range(min(len(got), 64)):
-            if got[y] != want[y]:
+        print("  big text inked: %s" % inked)
+        for y in bad[:64]:
+            if y < len(got):
                 print("  row %2d got  %s\n         want %s" % (y, got[y], want[y]))
     if png:
         PNGS[png] = got
@@ -320,7 +358,7 @@ def main():
     # ---- entering: the home view, the Keys layout's LEDs
     e = Run([], 600)
     ok(e.rc == 0 and "tk-state@100: on claims 0x5f speech" in e.lines, "entering: shown with claims 0x5f")
-    same(e, scr_home("FREE", 1, "-"), "home on entering (no chord yet, Key Mode off, the empty slot's bar)")
+    same(e, scr_home(chord=False), "home on entering: no chord yet, a dash (proposal 3)")
     ok(e.led(pad(4, 1)) == YELLOW and e.led(pad(4, 8)) == YELLOW and e.led(pad(4, 2)) == KEY_D and
        e.led(pad(3, 2)) == KEY_D and e.led(pad(3, 1)) == (0, 0, 0) and e.led(pad(3, 4)) == (0, 0, 0),
        "Keys layout: C and the top C yellow, the keys grey, no key above E / B")
@@ -335,7 +373,7 @@ def main():
     # ---- a chord from the chord keys and a key
     c1 = Run([KEY_ON] + DM7, 2000)
     ok("Chord D minor seven" in c1.says, "MIN + m7 + D: said \"Chord D minor seven\" (%s)" % c1.says)
-    same(c1, scr_home("C MAJ", 1, "Dm7"), "home: Dm7 in C major", png="1-home-dm7")
+    same(c1, scr_home(notes="D F A C", x=30, y=15, h=32, label="Key C"), "home: Dm7 in C major (Key C top left, the chord big, its notes)", png="1-home-dm7")
     ok(c1.led_when(pad(1, 2), 400) == WHITE and c1.led_when(pad(2, 2), 400) == WHITE and
        c1.led_when(pad(4, 2), 400) == WHITE, "MIN, m7 and D lit white while held")
     ok(c1.led(pad(1, 2)) == VIOLET_D and c1.led(pad(4, 2)) == KEY_D, ".. and back when let go")
@@ -347,7 +385,7 @@ def main():
     ok("Memory 6, D minor seven" in mm.says, "a key held + memory 6: saved, said (%s)" % mm.says)
     ok(mm.led_when(pad(2, 6), 500) == WHITE and mm.led(pad(2, 6)) == MEM, "memory 6 flashes white, then cyan")
     mm2 = Run(DM7 + ["pad:21@500+100"], 900)
-    same(mm2, scr_saved(6, "Dm7"), "the saved popup", png="2-memory-saved")
+    same(mm2, scr_saved(6), "the saved popup: the chord, a lit block M6 ok", png="2-memory-saved")
     mp = Run(DM7 + ["pad:21@500+100", "pad:21@2500+300", "button:delete@3500+300", "pad:21@3600+100"], 4200)
     ok(mp.says.count("Memory 6, D minor seven") == 2, "memory 6 tapped alone: plays it, said (%s)" % mp.says)
     ok("Memory 6, cleared" in mp.says and mp.led(pad(2, 6)) == pct(MEM, 18), "Delete + memory 6: cleared, dim")
@@ -355,7 +393,7 @@ def main():
 
     # ---- the Menu picker and the layouts
     mn = Run(["button:menu@200+600"], 700)
-    same(mn, scr_layout(), "Menu held: the picker (layout E)", png="5-layout-picker")
+    same(mn, scr_layout(), "Menu held: the layout big, a dash each, B1", png="5-layout-picker")
     ok(mn.led(pad(1, 1)) == WHITE and mn.led(pad(1, 2)) == pct(WHITE, 45) and mn.led(pad(1, 3)) == pct(WHITE, 15) and
        mn.led(pad(2, 1)) == pct(WHITE, 15) and mn.led(pad(2, 2)) == (0, 0, 0),
        "picker: Keys now, Scale the previous, ISO under Keys, the rest of that row dark")
@@ -369,7 +407,7 @@ def main():
     sc = Run(["button:menu@200+400", "pad:25@300+50"], 900)
     ok(sc.led(pad(4, 1)) == YELLOW and sc.led(pad(4, 8)) == YELLOW and sc.led(pad(3, 1)) == YELLOW and
        sc.led(pad(4, 2)) == KEY_D, "Scale: the tonic yellow each octave, the degrees grey")
-    ok(sc.screen[:16] == scr_home("C MAJ", 1, "-").rows()[:16], "Scale: Key Mode on (\"C MAJ\")")
+    same(sc, scr_home(chord=False, label="Key C"), "Scale: Key Mode on (Key C top left)")
     sd = Run(["button:menu@200+400", "pad:25@300+50", "pad:2@800+300"], 1300)
     ok("Chord E minor" in sd.says, "Scale: the third degree plays the key's chord, E minor (%s)" % sd.says)
     ch = Run(["button:menu@200+400", "pad:26@300+50"], 900)
@@ -379,8 +417,8 @@ def main():
     ok(pg.says[0].startswith("Progression 3"), "Menu + progression 3: the Prog layout with it (%s)" % pg.says[:1])
     ok(all(pg.led(pad(4, c)) == pct(PROG, 85) for c in (1, 2, 3)), "Prog: its chords lit purple")
     ok(len(pg.says) >= 2 and pg.says[1].startswith("Chord "), "Prog: chord 4 plays (%s)" % pg.says[1:])
-    ok(pg.screen[16:] and pg.screen[0][:2] == "11" and pg.screen[62][1 + 3 * 8] == "1",
-       "Prog view: its header, chord 4 marked under the strip")
+    ok(len(pg.screen) == 64 and ink(pg, 0, 0, 64, 14) and ink(pg, 4, 17, 128, 48) and ink(pg, 80, 50, 128, 64) and
+       not ink(pg, 0, 50, 70, 64), "Prog view: its name top left, the chord big, chord k / n bottom right")
     PNGS["8-prog"] = pg.screen
     pg2 = Run(["button:menu@200+400", "pad:10@300+50", "button:shift@800+200", "button:right@850+50"], 1300)
     ok(any(s.startswith("Chords 17") for s in pg2.says), "Shift + Right in Prog: chords 17-32 (%s)" % pg2.says)
@@ -391,14 +429,14 @@ def main():
     ok(st.led(32) == SEQ and st.led(36) == (24, 24, 30), "step 1 tapped: the last chord in (blue); step 5 tapped "
        "twice: written, cleared")
     ok(st.led(40) == HELD and "Step 9, empty" in st.says, "step 9 held: orange, said")
-    same(st, scr_step(9, "Ddim", "x2", "len 2"), "step 9 held: Ddim written by D + DIM, Ratchet x2, Note len 2",
+    same(st, scr_step(9, "x2", "2 st"), "step 9 held: Ddim written by D + DIM, Ratchet x2, Note len 2",
          png="3-step-held")
     st2 = Run(DM7 + ["step:0@1500+50", "step:8@2000+300", "pad:21@2100+100", "step:0@3000+50"], 3500)
     ok(st2.led(40) == (24, 24, 30) and st2.led(32) == (24, 24, 30),
        "a step held + an empty memory: nothing; step 1 tapped again: cleared")
     st3 = Run(DM7 + ["pad:21@500+100", "step:5@1500+400", "pad:21@1600+100"], 2300)
     ok(st3.led(37) == SEQ, "a step held + memory 6: the step gets it")
-    same(st3, scr_home("FREE", 1, "Dm7", filled=(5,)), "home: the strip shows step 6 filled", png="1b-home-step")
+    same(st3, scr_home(notes="D  F  A  C"), "home: the chord big, its notes (the steps on their LEDs)", png="1b-home-step")
 
     pe = Run(DM7 + ["button:right@1400+50", "step:0@1500+50"], 2000)
     ok(not any(w.startswith("Step 17") for w in pe.says) and pe.led(32) != SEQ,
@@ -416,10 +454,10 @@ def main():
     kt = Run(["button:shift@200+300", "step:0@250+50", "button:shift@700+300", "step:1@750+50"], 2300)
     ok(kt.says[:2] == ["Key, on", "Lock, on"], "Shift + step 1 tapped: Key Mode on; Shift + step 2: LOCK on (%s)"
        % kt.says)
-    ok(kt.screen[:16] == scr_home("C MAJ", 1, "-", lock=True).rows()[:16], 'home: "C MAJ", LOCK on "LK S1"')
+    same(kt, scr_home(chord=False, label="Key C", lock=True), 'home: Key C, LOCK on: the LK tag')
     pl = Run(["button:shift@200+700", "step:3@250+600"], 1100)
     ok(pl.says == ["PERF, Strum"], "Shift + step 4 held: the PERF settings, said (%s)" % pl.says)
-    same(pl, scr_layer("PERF", False, "Strum", 1, 8), "the PERF settings: off, its mode big, the modes as dashes",
+    same(pl, scr_layer("PERF", False, 1, 8), "the PERF settings: off, its mode big, the modes as dashes",
          png="9-perf-settings")
     ok(all(pl.led(55 + k) == VIOLET for k in range(4)) and all(pl.led(59 + k) == (0, 0, 0) for k in range(4)),
        "the PERF settings: knobs 1-4 lit violet, 5-8 dark")
@@ -448,7 +486,7 @@ def main():
 
     # ---- Loop held: the slots (proposal 4, E)
     lh = Run(["button:loop@200+600"], 700)
-    same(lh, scr_slots(0, ()), "Loop held: the slots view", png="4-slots")
+    same(lh, scr_slots(0, ()), "Loop held: the ten slots, Loop 1 big, the tempo", png="4-slots")
     ok(lh.led(32) == HELD and lh.led(33) == pct(SEQ, 12) and lh.led(42) == (0, 0, 0) and lh.led(70) == WHITE,
        "Loop held: slot 1 orange, 2..10 dim, Loop lit")
     sw = Run(DM7 + ["step:0@1500+50", "button:loop@2000+2000", "step:1@2200+50", "knob:1@2400:4"], 3700)
@@ -473,15 +511,15 @@ def main():
 
     # ---- a knob's popup
     kp = Run(["touch:0@200+300", "knob:1@250:2"], 400)
-    same(kp, scr_popup("Voicing", "+2", 14 / 24), "Voicing touched and turned: name, then the value big",
+    same(kp, scr_popup("Voicing", 1000 * 14 // 24), "Voicing touched and turned: name, then the value big",
          png="6-knob-popup")
     ok(kp.says[:2] == ["Voicing 0", "Voicing plus 2"], "said: %s" % kp.says)
     p1 = Run(["knob:5@200:1", "knob:5@210:1", "knob:5@220:1"], 400)
-    same(p1, scr_popup("Key", "C"), "Key: three ticks are not an entry yet")
+    same(p1, scr_popup("Key"), "Key: three ticks are not an entry yet")
     ap_ = Run(["button:shift@200+1400", "step:3@250+50", "step:3@500+600", "knob:0@1300:1", "knob:0@1310:1",
                "knob:0@1320:1", "button:back@1700+50", "pad:25@1900+1500", "pad:17@1900+1500", "pad:1@2000+1400"], 2900)
-    ok(ap_.screen[0].startswith("1") and ap_.screen[61] == "1" * 128,
-       "Arp running: the hop view (its rule at the foot)")
+    ok(len(ap_.screen) == 64 and ap_.screen[61] == "1" * 128 and ink(ap_, 80, 0, 128, 14) and ink(ap_, 0, 34, 128, 56),
+       "Arp running: the hop view (the division top right, the notes, its rule at the foot)")
     PNGS["7-arp"] = ap_.screen
     sp = Run(["button:shift@200+400", "knob:8@300:1"], 500)
     ok(sp.says[-1].startswith("Tempo 121"), "Shift + knob 8: Tempo, as without Shift (one layer) (%s)" % sp.says)
