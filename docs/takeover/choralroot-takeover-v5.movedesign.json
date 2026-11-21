@@ -4,7 +4,7 @@
  "name": "ChoralRoot takeover, as built",
  "items": [
   {
-   "id": "6pycdybk155o",
+   "id": "5kl9f8yylbeg",
    "x": -60,
    "y": -60,
    "w": 4304,
@@ -14,7 +14,7 @@
    "color": "#28dc5a"
   },
   {
-   "id": "xtz7q74sviz7",
+   "id": "1rhdsv3ucdrd",
    "x": 0,
    "y": 0,
    "w": 1048,
@@ -863,7 +863,7 @@
     },
     "step-2": {
      "meta": {
-      "label": "",
+      "label": "2",
       "function": "Step 2 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -880,7 +880,7 @@
     },
     "step-3": {
      "meta": {
-      "label": "",
+      "label": "3",
       "function": "Step 3 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -897,7 +897,7 @@
     },
     "step-4": {
      "meta": {
-      "label": "",
+      "label": "4",
       "function": "Step 4 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -914,7 +914,7 @@
     },
     "step-5": {
      "meta": {
-      "label": "G7",
+      "label": "",
       "function": "Step 5 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -931,7 +931,7 @@
     },
     "step-6": {
      "meta": {
-      "label": "",
+      "label": "6",
       "function": "Step 6 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -948,7 +948,7 @@
     },
     "step-7": {
      "meta": {
-      "label": "",
+      "label": "7",
       "function": "Step 7 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -965,7 +965,7 @@
     },
     "step-8": {
      "meta": {
-      "label": "",
+      "label": "8",
       "function": "Step 8 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -999,7 +999,7 @@
     },
     "step-10": {
      "meta": {
-      "label": "",
+      "label": "10",
       "function": "Step 10 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -1016,7 +1016,7 @@
     },
     "step-11": {
      "meta": {
-      "label": "",
+      "label": "11",
       "function": "Step 11 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -1033,7 +1033,7 @@
     },
     "step-12": {
      "meta": {
-      "label": "",
+      "label": "12",
       "function": "Step 12 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -1067,7 +1067,7 @@
     },
     "step-14": {
      "meta": {
-      "label": "",
+      "label": "14",
       "function": "Step 14 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -1101,7 +1101,7 @@
     },
     "step-16": {
      "meta": {
-      "label": "",
+      "label": "16",
       "function": "Step 16 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -1126,12 +1126,12 @@
    "screen": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/4AAAAAAAAAAP//gAAAAAf+AAAAAAAAAAD//+AAAAAH/gAAAAAAAAAA///4AAAAAA4AAAAAAAAAAP///gAAAAAcAAAAAAAAAAD///8AAAAAPAAAAAAAAAAA////AAAAADgAAAAAAAAAAP4B/4AAAAB4AAAAAAAAAAD+AH/AAAAAcAAAAAAAAAAA/gAfwAAAAHAAAAAAAAAAAP4AH+AAAADgAAAAAAAAAAD+AA/gAAAAwAAAAAAAAAAA/gAP4AAAAcAAAAAAAAAAAP4AD/AAAAGAAAAAAAAAAAD+AAfwAAAAAAAAAAAAAAAA/gAH8AAAAAAAAAAAAAAAAP4AB/AAAAAAAAAAAAAAAAD+AAfwAAAAAAAAAAAAAAAA/gAH8AAAAAAAAAAAAAAAAP4AB/AAAAAAAAAAAAAAAAD+AAfwBgQAAAAAAAAAAAAA/gAP898/AAAAAAAAAAAAAP4AD+P/v4AAAAAAAAAAAAD+AA/j/++AAAAAAAAAAAAA/gAfw8PHgAAAAAAAAAAAAP4AH8PDw4AAAAAAAAAAAAD+AH/Dw8OAAAAAAAAAAAAA/gP/g8PDgAAAAAAAAAAAAP///4PDw4AAAAAAAAAAAAD///8Dw8OAAAAAAAAAAAAA///+A8PDgAAAAAAAAAAAAP//+APDw4AAAAAAAAAAAAD///ADw8OAAAAAAAAAAAAA//+AA8PDgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwAAAAP/AAAAD8AAAAD8AD8AAAAD/wAAAA/AAAAA/AAwwAAAAwAAAAAwMAAAAwMAMMAAAAMAAAAAMDAAAAMDADAwAAADAAAAADAwAAADAAAwMAAAAwAAAAAwMAAAAwAAMDAAAAP8AAAAMDAAAAMAADAwAAAD/AAAADAwAAADAAAwMAAAAwAAAAA/8AAAAwAAMDAAAAMAAAAAP/AAAAMAADDAAAADAAAAADAwAAADAwAwwAAAAwAAAAAwMAAAAwMAPwAAAAMAAAAAMDAAAAD8AD8AAAADAAAAADAwAAAA/AA==",
    "screenFrames": [
     {
-     "id": "x1o9ro5nzqdg",
+     "id": "4pm4hu0z7x0z",
      "duration": 1500,
      "image": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/4AAAAAAAAAAP//gAAAAAf+AAAAAAAAAAD//+AAAAAH/gAAAAAAAAAA///4AAAAAA4AAAAAAAAAAP///gAAAAAcAAAAAAAAAAD///8AAAAAPAAAAAAAAAAA////AAAAADgAAAAAAAAAAP4B/4AAAAB4AAAAAAAAAAD+AH/AAAAAcAAAAAAAAAAA/gAfwAAAAHAAAAAAAAAAAP4AH+AAAADgAAAAAAAAAAD+AA/gAAAAwAAAAAAAAAAA/gAP4AAAAcAAAAAAAAAAAP4AD/AAAAGAAAAAAAAAAAD+AAfwAAAAAAAAAAAAAAAA/gAH8AAAAAAAAAAAAAAAAP4AB/AAAAAAAAAAAAAAAAD+AAfwAAAAAAAAAAAAAAAA/gAH8AAAAAAAAAAAAAAAAP4AB/AAAAAAAAAAAAAAAAD+AAfwBgQAAAAAAAAAAAAA/gAP898/AAAAAAAAAAAAAP4AD+P/v4AAAAAAAAAAAAD+AA/j/++AAAAAAAAAAAAA/gAfw8PHgAAAAAAAAAAAAP4AH8PDw4AAAAAAAAAAAAD+AH/Dw8OAAAAAAAAAAAAA/gP/g8PDgAAAAAAAAAAAAP///4PDw4AAAAAAAAAAAAD///8Dw8OAAAAAAAAAAAAA///+A8PDgAAAAAAAAAAAAP//+APDw4AAAAAAAAAAAAD///ADw8OAAAAAAAAAAAAA//+AA8PDgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwAAAAP/AAAAD8AAAAD8AD8AAAAD/wAAAA/AAAAA/AAwwAAAAwAAAAAwMAAAAwMAMMAAAAMAAAAAMDAAAAMDADAwAAADAAAAADAwAAADAAAwMAAAAwAAAAAwMAAAAwAAMDAAAAP8AAAAMDAAAAMAADAwAAAD/AAAADAwAAADAAAwMAAAAwAAAAA/8AAAAwAAMDAAAAMAAAAAP/AAAAMAADDAAAADAAAAADAwAAADAwAwwAAAAwAAAAAwMAAAAwMAPwAAAAMAAAAAMDAAAAD8AD8AAAADAAAAADAwAAAA/AA==",
      "layers": [
       {
-       "id": "2w3ll9tzql8i",
+       "id": "d867qttidvz5",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -1143,12 +1143,12 @@
      ]
     },
     {
-     "id": "1n2fvu0i3xx0",
+     "id": "ora1368tlm42",
      "duration": 1500,
      "image": "wMAAAAAAPwAAAAAAAAAAAMDAAAAAAD8AAAAAAAAAAADDAAAAAADAwAAAAAAAAAAAwwAAAAAAwMAAAAAAAAAAAMwD8MDAAMAAAAAAAAAAAADMA/DAwADAAAAAAAAAAAAA8AwMwMAAwAAAAAAAAAAAAPAMDMDAAMAAAAAAAAAAAADMD/zAwADAAAAAAAAAAAAAzA/8wMAAwAAAAAAAAAAAAMMMAD/AAMDAAAAAAAAAAADDDAA/wADAwAAAAAAAAAAAwMPwAMAAPwAAAAAAAAAAAMDD8ADAAD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/AAAAAAAAAAAD//wAAAAB/wAAAAAAAAAAA///gAAAAAcAAAAAAAAAAAP//+AAAAAHAAAAAAAAAAAD///gAAAADgAAAAAAAAAAA///8AAAAA4AAAAAAAAAAAP///gAAAAMAAAAAAAAAAAD+Af8AAAAHAAAAAAAAAAAA/gB/AAAADgAAAAAAAAAAAP4AP4AAAA4AAAAAAAAAAAD+AD+AAAAcAAAAAAAAAAAA/gAfgAAAHAAAAAAAAAAAAP4AH8AAADgAAAAAAAAAAAD+AA/AAAAAAAAAAAAAAAAA/gAPwAAAAAAAAAAAAAAAAP4AD8AAAAAAAAAAAAAAAAD+AA/AAAAAAAAAAAAAAAAA/gAPwAAAAAAAAAAAAAAAAP4AD8AwIAAAAAAAAAAAAAD+AA/PfPgAAAAAAAAAAAAA/gAfz/38AAAAAAAAAAAAAP4AH4///AAAAAAAAAAAAAD+AD+PDhwAAAAAAAAAAAAA/gA/jw4cAAAAAAAAAAAAAP4Afw8OHAAAAAAAAAAAAAD+Af8PDhwAAAAAAAAAAAAA///+Dw4cAAAAAAAAAAAAAP///A8OHAAAAAAAAAAAAAD///wPDhwAAAAAAAAAAAAA///4Dw4cAAAAAAAAAAAAAP//wA8OHAAAAAAAAAAAAAD//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8AAD/wAA/AAA/AAAAAAAA/AAA/8AAPwAAPwAAAAAAAMMAAMAAAMDAAMDAAAAAAADDAADAAADAwADAwAAAAAAAwMAAwAAAwMAAwAAAAAAAAMDAAMAAAMDAAMAAAAAAAADAwAD/AADAwADAAAAAAAAAwMAA/wAAwMAAwAAAAAAAAMDAAMAAAP/AAMAAAAAAAADAwADAAAD/wADAAAAAAAAAwwAAwAAAwMAAwMAAAAAAAMMAAMAAAMDAAMDAAAAAAAD8AADAAADAwAA/AAAAAAAA/AAAwAAAwMAAPwAAA==",
      "layers": [
       {
-       "id": "bzn1kir0gshy",
+       "id": "9k0ciqh17pvk",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -1160,12 +1160,12 @@
      ]
     },
     {
-     "id": "l5sn3pkzjli4",
+     "id": "sq7vzl81tnbz",
      "duration": 1500,
      "image": "AAAAAAAAAAAAAAAAPP/PzwAAAAAAAAAAAAAAADz/z88AAAAAAAAAAAAAAAA8/88/AAAAAAAAAAAAAAAAPP/PPwAAAAAAAAAAAAAAADz/zP8AAAAAAAAAAAAAAAA8/8z/AAAAAAAAAA/4AAAAPP/D/wP//gAAAAAf+AAAADz/w/8D//+AAAAAH/gAAAA8/8z/A///4AAAAAA4AAAAPP/M/wP///gAAAAAcAAAADz/zz8D///8AAAAAPAAAAA8/88/A////AAAAADgAAAAPADPzwP4B/4AAAAB4AAAADwAz88D+AH/AAAAAcAAAAAAAAAAA/gAfwAAAAHAAAAAAAAAAAP4AH+AAAADgAAAAAAAAAAD+AA/gAAAAwAAAAAAAAAAA/gAP4AAAAcAAAAAAAAAAAP4AD/AAAAGAAAAAAAAAAAD+AAfwAAAAAAAAAAAAAAAA/gAH8AAAAAAAAAAAAAAAAP4AB/AAAAAAAAAAAAAAAAD+AAfwAAAAAAAAAAAAAAAA/gAH8AAAAAAAAAAAAAAAAP4AB/AAAAAAAAAAAAAAAAD+AAfwBgQAAAAAAAAAAAAA/gAP898/AAAAAAAAAAAAAP4AD+P/v4AAAAAAAAAAAAD+AA/j/++AAAAAAAAAAAAA/gAfw8PHgAAAAAAAAAAAAP4AH8PDw4AAAAAAAAAAAAD+AH/Dw8OAAAAAAAAAAAAA/gP/g8PDgAAAAAAAAAAAAP///4PDw4AAAAAAAAAAAAD///8Dw8OAAAAAAAAAAAAA///+A8PDgAAAAAAAAAAAAP//+APDw4AAAAAAAAAAAAD///ADw8OAAAAAAAAAAAAA//+AA8PDgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwAAAAP/AAAAD8AAAAD8AD8AAAAD/wAAAA/AAAAA/AAwwAAAAwAAAAAwMAAAAwMAMMAAAAMAAAAAMDAAAAMDADAwAAADAAAAADAwAAADAAAwMAAAAwAAAAAwMAAAAwAAMDAAAAP8AAAAMDAAAAMAADAwAAAD/AAAADAwAAADAAAwMAAAAwAAAAA/8AAAAwAAMDAAAAMAAAAAP/AAAAMAADDAAAADAAAAADAwAAADAwAwwAAAAwAAAAAwMAAAAwMAPwAAAAMAAAAAMDAAAAD8AD8AAAADAAAAADAwAAAA/AA==",
      "layers": [
       {
-       "id": "ufh1reosfhyp",
+       "id": "oc5eogdvbz3p",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -1177,12 +1177,12 @@
      ]
     },
     {
-     "id": "n3nwk0do4ue1",
+     "id": "m5mpzvqtrbuv",
      "duration": 1500,
      "image": "DAAAAAAAAAAAAAAAAAAB+AwAAAAAAAAAAAAAAAAAAfg8AAAAAAAAAAAAAAAAAAYGPAAAAAAAAAAAAAAAAAAGBgwAAAAAAAAAAAA/wAAABgYMAAAA//8AAAAAf8AAAAYGDAAAAP//4AAAAAHAAAAB+AwAAAD///gAAAABwAAAAfgMAAAA///4AAAAA4AAAAYGDAAAAP///AAAAAOAAAAGBgwAAAD///4AAAADAAAABgYMAAAA/gH/AAAABwAAAAYGPwAAAP4AfwAAAA4AAAAB+D8AAAD+AD+AAAAOAAAAAfgAAAAA/gA/gAAAHAAAAAAAAAAAAP4AH4AAABwAAAAAAAAAAAD+AB/AAAA4AAAAAAAAAAAA/gAPwAAAAAAAAAAAAAAAAP4AD8AAAAAAAAAAAAAAAAD+AA/AAAAAAAAAAAAAAAAA/gAPwAAAAAAAAAAAAAAAAP4AD8AAAAAAAAAAAAAAAAD+AA/AMCAAAAAAAAAAAAAA/gAPz3z4AAAAAAAAAAAAAP4AH8/9/AAAAAAAAAAAAAD+AB+P//wAAAAAAAAAAAAA/gA/jw4cAAAAAAAAAAAAAP4AP48OHAAAAAAAAAAAAAD+AH8PDhwAAAAAAAAAAAAA/gH/Dw4cAAAAAAAAAAAAAP///g8OHAAAAAAAAAAAAAD///wPDhwAAAAAAAAAAAAA///8Dw4cAAAAAAAAAAAAAP//+A8OHAAAAAAAAAAAAAD//8APDhwAAAAAAAAAAAAA//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/gAAAAAAAAAAAAAAAAAAAP4AAAAAAAAAAAAAAAAAAAD+AAAAAAAAAAAAAAAAAAAA/gAAAAAAAAAAAAAAAAAAAP4AAAAAAAAAAP7+/v7+/v7+/v7+/v7+/v7+goKC/oKC/oKCgoKCgoKC/oKCgv6Cgv6CgoKCgoKCgv6CgoL+goL+goKCgoKCgoL+goKC/oKC/oKCgoKCgoKC/oKCgv6Cgv6CgoKCgoKCgv7+/v7+/v7+/v7+/v7+/v4AAAAAAAAA/gAAAAAAAAAAAAAAAAAAAP4AAAAAAAAAAA==",
      "layers": [
       {
-       "id": "1rb4pvp3bn88",
+       "id": "wnu3j9xycg06",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -1196,7 +1196,7 @@
    ]
   },
   {
-   "id": "0pzcy7ibbtdd",
+   "id": "fuihvmu660uf",
    "x": 0,
    "y": 640,
    "w": 1048,
@@ -1206,7 +1206,7 @@
    "color": "#c6f5d2"
   },
   {
-   "id": "0gdmsaur44na",
+   "id": "pbms7dfrn16h",
    "x": 1148,
    "y": 0,
    "w": 1048,
@@ -2055,7 +2055,7 @@
     },
     "step-2": {
      "meta": {
-      "label": "",
+      "label": "2",
       "function": "Step 2 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -2072,7 +2072,7 @@
     },
     "step-3": {
      "meta": {
-      "label": "",
+      "label": "3",
       "function": "Step 3 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -2089,7 +2089,7 @@
     },
     "step-4": {
      "meta": {
-      "label": "",
+      "label": "4",
       "function": "Step 4 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -2106,7 +2106,7 @@
     },
     "step-5": {
      "meta": {
-      "label": "G7",
+      "label": "",
       "function": "Step 5 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -2123,7 +2123,7 @@
     },
     "step-6": {
      "meta": {
-      "label": "",
+      "label": "6",
       "function": "Step 6 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -2140,7 +2140,7 @@
     },
     "step-7": {
      "meta": {
-      "label": "",
+      "label": "7",
       "function": "Step 7 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -2157,7 +2157,7 @@
     },
     "step-8": {
      "meta": {
-      "label": "",
+      "label": "8",
       "function": "Step 8 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -2191,7 +2191,7 @@
     },
     "step-10": {
      "meta": {
-      "label": "",
+      "label": "10",
       "function": "Step 10 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -2208,7 +2208,7 @@
     },
     "step-11": {
      "meta": {
-      "label": "",
+      "label": "11",
       "function": "Step 11 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -2225,7 +2225,7 @@
     },
     "step-12": {
      "meta": {
-      "label": "",
+      "label": "12",
       "function": "Step 12 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -2259,7 +2259,7 @@
     },
     "step-14": {
      "meta": {
-      "label": "",
+      "label": "14",
       "function": "Step 14 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -2293,7 +2293,7 @@
     },
     "step-16": {
      "meta": {
-      "label": "",
+      "label": "16",
       "function": "Step 16 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -2318,12 +2318,12 @@
    "screen": "/8wMDwAAAAAAAAAAAAAH/v/MDA8AAAAAAAAAAAAAB/7ADzwwAAAAAAAAAAAAAAAYwA88MAAAAAAAAAAAAAAAGMAMzMAAAAAAAAAAAAAAAGDADMzAAAAAAAAAAAAAAABg/wzM/wAAAAAAAAAAAAAAGP8MzP8AAAAAAAAAAAAAABjADAzAwAAAAAAAAAAAAAAGwAwMwMAAAAAAAAAAAAAABsAMDMDAAAAAAAAAAAAABgbADAzAwAAAAAAAAAAAAAYGwAwMPwAAAAAAAAAAAAAB+MAMDD8AAAAAAAAAAAAAAfgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/ngB4B/gP/jgBwAAAAAAH/78AeA//H/54A8AAAAAAB/+/APgP/x/+eAPAAAAAAAf/vwD4Dw+f/ngDwAAAAAAHgD+B+A8HngB4A8AAAAAAB4A/gfgPB54AeAPAAAAAAAeAP8P4DweeAHgDwAAAAAAHgD3D+A8PHgB4A8AAAAAAB/89w7gP/h/+eAPAAAAAAAf/POe4D/8f/ngDwAAAAAAH/zznOA8Pn/54A8AAAAAAB4A87zgPA94AeAPAAAAAAAeAPH44DwPeAHgDwAAAAAAHgDx+OA8D3gB4A8AAAAAAB4A8fjgPB94AeAPAAAAAAAeAPDw4D/+f/n/7/8AAAAAHgDw8OA//n/5/+//AAAAAB4A8GDgP/h/+f/v/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAB/hngfgfgfh+AAAAAAAAAAf4Z4H4H4H4fgAAAAAAAAAGBnhmBmAGBhgAAAAAAAAABgZ4ZgZgBgYYAAAAAAAAAAYGYAf+H4f+GAAAAAAAAAAGBmAH/h+H/hgAAAAAAAAAB/hgBgAAZgAYYAAAAAAAAAf4YAYAAGYAGGAAAAAAAAAGAGAB+H+B+AeAAAAAAAAABgBgAfh/gfgHgAAAAA==",
    "screenFrames": [
     {
-     "id": "m73wa3yy8dx3",
+     "id": "hy1nsbs09ilr",
      "duration": 1500,
      "image": "/8wMDwAAAAAAAAAAAAAH/v/MDA8AAAAAAAAAAAAAB/7ADzwwAAAAAAAAAAAAAAAYwA88MAAAAAAAAAAAAAAAGMAMzMAAAAAAAAAAAAAAAGDADMzAAAAAAAAAAAAAAABg/wzM/wAAAAAAAAAAAAAAGP8MzP8AAAAAAAAAAAAAABjADAzAwAAAAAAAAAAAAAAGwAwMwMAAAAAAAAAAAAAABsAMDMDAAAAAAAAAAAAABgbADAzAwAAAAAAAAAAAAAYGwAwMPwAAAAAAAAAAAAAB+MAMDD8AAAAAAAAAAAAAAfgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/ngB4B/gP/jgBwAAAAAAH/78AeA//H/54A8AAAAAAB/+/APgP/x/+eAPAAAAAAAf/vwD4Dw+f/ngDwAAAAAAHgD+B+A8HngB4A8AAAAAAB4A/gfgPB54AeAPAAAAAAAeAP8P4DweeAHgDwAAAAAAHgD3D+A8PHgB4A8AAAAAAB/89w7gP/h/+eAPAAAAAAAf/POe4D/8f/ngDwAAAAAAH/zznOA8Pn/54A8AAAAAAB4A87zgPA94AeAPAAAAAAAeAPH44DwPeAHgDwAAAAAAHgDx+OA8D3gB4A8AAAAAAB4A8fjgPB94AeAPAAAAAAAeAPDw4D/+f/n/7/8AAAAAHgDw8OA//n/5/+//AAAAAB4A8GDgP/h/+f/v/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAB/hngfgfgfh+AAAAAAAAAAf4Z4H4H4H4fgAAAAAAAAAGBnhmBmAGBhgAAAAAAAAABgZ4ZgZgBgYYAAAAAAAAAAYGYAf+H4f+GAAAAAAAAAAGBmAH/h+H/hgAAAAAAAAAB/hgBgAAZgAYYAAAAAAAAAf4YAYAAGYAGGAAAAAAAAAGAGAB+H+B+AeAAAAAAAAABgBgAfh/gfgHgAAAAA==",
      "layers": [
       {
-       "id": "s4kc4o499oya",
+       "id": "k28jqwo5qxtp",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -2335,12 +2335,12 @@
      ]
     },
     {
-     "id": "5vngcngsuu2s",
+     "id": "uzztpcqpyflo",
      "duration": 1500,
      "image": "/8AAAADAAAAAAAAB+AAH/v/AAAAAwAAAAAAAAfgAB/7AAAAAAAAAAAAAAAYGAGAGwAAAAAAAAAAAAAAGBgBgBsAM8D/DwM8D8AAAAAYBgBjADPA/w8DPA/AAAAAGAYAY/w8MwMDA8MwMAAAAGAYAYP8PDMDAwPDMDAAAABgGAGDADAzAwMDAz/wAAABgGAGAwAwMwMDAwM/8AAAAYBgBgMAMDD/AwMDMAAAAAYBgAYDADAw/wMDAzAAAAAGAYAGA/8wMAMPwwMPwAAAH/gABgP/MDADD8MDD8AAAB/4AAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//HgAeAf/8A+AOAOH/4AAf/78APwP//A/4HwDz//AAH/+/AD8D//w//h+A8//wAB//v4A/A//8f/4fgPP/8AAfAD+AfwAPAHwfH8Dz4AAAHwA/wP8ADwD4H5/g8+AAAB8AP8D/AA8A8Aef4PPgAAAfAD/A/wAPAfAHn/Dz4AAAHwA/4e8ADwHgB5948//AAB/+POHvAA8B4AefePP/4AAf/jzzzwAPAeAHnzzz/+AAH/48888ADwHgB58+8//gAB8APHPPAA8B8AefH/PgAAAfADx/jwAPAfAHnx/z4AAAHwA8Pw8ADwD4D58H8+AAAB8APD8PAA8A+B+fB/PgAAAfADw/DwAPAH/+HwPz/+AAHwA8Hw8ADwB//h8B8//wAB8APB4PAA8AH/gfAfP/8AAfADwMDwAPAA/4HwDz//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//D/8P/w//D/8P/w//AAAIAQ//CAEIAQgBCAEIAQAAD/8P/w//D/8P/w//D/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
      "layers": [
       {
-       "id": "tuzu6r5hxhav",
+       "id": "hkj0fzgm7n2x",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -2352,12 +2352,12 @@
      ]
     },
     {
-     "id": "1oo8e9fj60n8",
+     "id": "khab557i2v9t",
      "duration": 1500,
      "image": "4B//////8AAAAGBh+AAAYOAf//////AAAABgYfgAAGDn5//////wAAAAYGYGAAHg5+f/////8AAAAGBmBgAB4OfngfgfgfAAAABgZgYAAGDn54H4H4HwAAAAYGYGAABg4B/+Z/5/8AAAAGBmBgAAYOAf/mf+f/AAAABgZgYAAGDn54B4H4HwAAAAYGf+AABg5+eAeB+B8AAAAGBn/gAAYOfmfn/n/nAAAAAZhgYAAGDn5n5/5/5wAAAAGYYGAABg4B+AYB4B8AAAAAYGBgAB+OAfgGAeAfAAAAAGBgYAAfgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcOAOOP/+AAAAAAAAAAAAAPnwD33//gAAAAAAAAAAAAD5+A99//4AAAAAAAAAAAAA+fgPff/+AAAAAAAAAAAAAPn8D3wHgAAAAAAAAAAAAAD5/g98B4AAAAAAAAAAAAAA+f4PfAeAAAAAAAAAAAAAAPn/D3wHgAAAAAAAAAAAAAD59498B4AAAAAAAAAAAAAA+fePfAeAAAAAAAAAAAAAAPnzz3wHgAAAAAAAAAAAAAD58+98B4AAAAAAAAAAAAAA+fH/fAeAAAAAAAAAAAAAAPnx/3wHgAAAAAAAAAAAAAD58H98B4AAAAAAAAAAAAAA+fB/fAeAAAAAAAAAAAAAAPnwP3wHgAAAAAAAAAAAAAD58B98B4AAAAAAAAAAAAAA+fAffAeAAAAAAAAAAAAAAPnwD3wHgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
      "layers": [
       {
-       "id": "o26qbh3cbhhh",
+       "id": "cdo2kcy1i0qo",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -2369,12 +2369,12 @@
      ]
     },
     {
-     "id": "pwdmnu4q28js",
+     "id": "z0dyhfw9hyjz",
      "duration": 1500,
      "image": "4B//////8AAAAAAAGAAH/uAf//////AAAAAAABgAB/7n5//////wAAAAAAB4AGAG5+f/////8AAAAAAAeABgBufngfgfgfAAAAAAAZgBgBjn54H4H4HwAAAAAAGYAYAY4B/+Z/5/8AAAAAAGGAYAYOAf/mf+f/AAAAAABhgGAGDn54B4H4HwAAAAAAf+GAGA5+eAeB+B8AAAAAAH/hgBgOfmfn/n/nAAAAAAABhgAYDn5n5/5/5wAAAAAAAYYAGA4B+AYB4B8AAAAAAAGAABgOAfgGAeAfAAAAAAABgAAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4B//gAAcAAAAAAAAAAAAD/g//4AAPgAAAAAAAAAAAD/+P/+AAP4AAAAAAAAAAAB//j//gAP+AAAAAAAAAAAAfB8ADwAD/gAAAAAAAAAAAPgfAB8AA74AAAAAAAAAAADwB4A8AAI+AAAAAAAAAAAB8AcAPAAAPgAAAAAAAAAAAeAAAHgAAD4AAAAAAAAAAAHgAAD4AAA+AAAAAAAAAAAB4AAB8A/wPgAAAAAAAAAAAeAAAeAP+D4AAAAAAAAAAAHwAAPAD/g+AAAAAAAAAAAB8AADwA/wPgAAAAAAAAAAAPgPj4AAAD4AAAAAAAAAAAD4Hw8AAAA+AAAAAAAAAAAAf/4f/4AAPgAAAAAAAAAAAH/+P/+AAD4AAAAAAAAAAAAf+D//gAA+AAAAAAAAAAAAD/g//4AAPgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//D/8P/w//D/8P/w//AAAIAQgBCAEP/wgBCAEIAQAAD/8P/w//D/8P/w//D/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
      "layers": [
       {
-       "id": "lmbzew3b6oa0",
+       "id": "9xk8v8w5s5s2",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -2388,7 +2388,7 @@
    ]
   },
   {
-   "id": "ii87698ytzrb",
+   "id": "flcdg3ssddey",
    "x": 1148,
    "y": 640,
    "w": 1048,
@@ -2398,7 +2398,7 @@
    "color": "#c6f5d2"
   },
   {
-   "id": "5clph32ur7ln",
+   "id": "ygderb1nrssu",
    "x": 2296,
    "y": 0,
    "w": 1048,
@@ -3495,7 +3495,7 @@
    "screen": "AAAAAAAAAAAAAAAAAAAAAGBn/mBgAAAAGAB+B+GBgABgZ/5gYAAAABgAfgfhgYAAYYYAYGAAAAAYAYGYGYYAAGGGAGBgAAAAGAGBmBmGAABmBgBgYAAAABgBgZgBmAAAZgYAYGAAAAAYAYGYAZgAAHgH+BmAAAAAGAGBmAHgAAB4B/gZgAAAABgBgZgB4AAAZgYABgAAAAAYAYGYAZgAAGYGAAYAAAAAGAGBmAGYAABhhgAGAAAAABgBgZgZhgAAYYYABgAAAAAYAYGYGYYAAGBn/gYAAAAAH/h+B+GBgABgZ/4GAAAAAB/4fgfhgYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAfh/4fhgYB/h/5/h/4AAYAH4f+H4YGAf4f+f4f+AAGAGBgYGBmBgGBmAGBmAAABgBgYGBgZgYBgZgBgZgAAAYAYGBgYAYGAYGYAYGYAAAGAGBgYGAGBgGBmAGBmAAABgBgYGBgB/4B/h/h/h/gAAYAYGBgYAf+Af4f4f4f4AAGAH/gYGAGBgGAGAGYGAAABgB/4GBgBgYBgBgBmBgAAAYAYGBgYGYGAYAYAYYYAAAGAGBgYGBmBgGAGAGGGAAAB/5gYGAfhgYBgB/5gZgAAAf+YGBgH4YGAYAf+YGYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//////////f4AAf4f4f+AgBn5//////3+AAH+H+H/gIAZ+f/////9gYABgZgZgACf+fn//////YGAAYGYGYAAn/n5//////2BgAGBmBmAAJ/+Z//////9gYABgZgZgACf/mf//////f4AAf4f4f4AgH+f//////3+AAH+H+H+AIB/n//////9gYABgBmBgACf/mf//////YGAAYAZgYAAn/5n//////2Bh4GAGGGAAJ/5+f/////9gYeBgBhhgACf+fn//////f4HgYAYGYAAn/n5//////3+B4GAGBmAAJ/5+f/////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH+B+B/h/gAAH+H/h+H/gAB/gfgf4f4AAB/h/4fh/4AAYGYGYAYAAAAYGYAYGBgAAGBmBmAGAAAAGBmAGBgYAABgZgZgBgAAABgZgBgYGAAAYGYGYAYAAAAYGYAYGBgAAH+GBh+B+AAAH+H+GBgYAAB/hgYfgfgAAB/h/hgYGAAAYGf+AGAGAAAYGYAf+BgAAGBn/gBgBgAAGBmAH/gYAABgZgYAYAYAABgZgBgYGAAAYGYGAGAGAAAYGYAYGBgAAH+GBn+H+AAAH+H/mBgYAAB/hgZ/h/gAAB/h/5gYGAAAAAAAAAAAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "53pd9varw8ts",
+   "id": "4tiugypehm8x",
    "x": 2296,
    "y": 640,
    "w": 1048,
@@ -3505,7 +3505,7 @@
    "color": "#c6f5d2"
   },
   {
-   "id": "jkinjo13q6s2",
+   "id": "kfti6twkbcct",
    "x": 0,
    "y": 920,
    "w": 1048,
@@ -4302,7 +4302,7 @@
     },
     "step-2": {
      "meta": {
-      "label": "",
+      "label": "2",
       "function": "Step 2 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -4319,7 +4319,7 @@
     },
     "step-3": {
      "meta": {
-      "label": "",
+      "label": "3",
       "function": "Step 3 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -4336,7 +4336,7 @@
     },
     "step-4": {
      "meta": {
-      "label": "",
+      "label": "4",
       "function": "Step 4 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -4353,7 +4353,7 @@
     },
     "step-5": {
      "meta": {
-      "label": "G7",
+      "label": "",
       "function": "Step 5 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -4370,7 +4370,7 @@
     },
     "step-6": {
      "meta": {
-      "label": "",
+      "label": "6",
       "function": "Step 6 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -4387,7 +4387,7 @@
     },
     "step-7": {
      "meta": {
-      "label": "",
+      "label": "7",
       "function": "Step 7 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -4404,7 +4404,7 @@
     },
     "step-8": {
      "meta": {
-      "label": "",
+      "label": "8",
       "function": "Step 8 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -4438,7 +4438,7 @@
     },
     "step-10": {
      "meta": {
-      "label": "",
+      "label": "10",
       "function": "Step 10 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -4455,7 +4455,7 @@
     },
     "step-11": {
      "meta": {
-      "label": "",
+      "label": "11",
       "function": "Step 11 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -4472,7 +4472,7 @@
     },
     "step-12": {
      "meta": {
-      "label": "",
+      "label": "12",
       "function": "Step 12 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -4506,7 +4506,7 @@
     },
     "step-14": {
      "meta": {
-      "label": "",
+      "label": "14",
       "function": "Step 14 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -4540,7 +4540,7 @@
     },
     "step-16": {
      "meta": {
-      "label": "",
+      "label": "16",
       "function": "Step 16 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -4609,12 +4609,12 @@
    "screen": "/w/8/w/8AAAAAAAAAAeAeP8P/P8P/AAAAAAAAAAHgHjAzADAzAAAAAAAAAAAGGGGwMwAwMwAAAAAAAAAABhhhsDMAMDMAAAAAAAAAfgYAYDAzADAzAAAAAAAAAH4GAGA/w/w/w/wAAAAAAAGBn4H4P8P8P8P8AAAAAAABgZ+B+DADADMDAAAAAAAAAYGGAGAwAwAzAwAAAAAAAAGBhgBgMAMAMMMAAAAAAAABgYYAYDADADDDAAAAAAAAAYGGAGAwA/8wMwAAAAAAAAB+BgBgMAP/MDMAAAAAAAAAfgYAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/8AAAAAAAAAAAAAAAAAAB//wAAAAAAAAAAAAAAAAAA//+B+AAAAAAAAAAAAAAAAf//wfgAAAAAAAAAAAAAAAH//+H4AAAAAAAAAAAAAAAD+A/h+AAAAAAAAAAAAAAAA/AH4fgAAAAAAAAAAAAAAAPwB///h+PPwD8fD8D+AAAD8AAP/4fvz8A/H7/h/wAAA/gAD/+H/8/APx+/8/+AAAP8AA//h//PwD8f////wAAD/4AP/4f/z8A/H////8AAAf/4AfgH/A/APx/D/h/AAAD//gH4B/APwD8fgfwPwAAAf/+B+AfgD8A/H4D8D8AAAB//wfgH4A/APx+A/A/AAAAB/+H4B+APwD8fgPwPwAAAAD/h+AfgD8A/H4D8D8AAAAAH8fgH4A/APx+A/A/AAAAAB/H4B+APwD8fgPwPwAAH4APx+AfgD8A/H4D8D8AAB+AD8fgH4A/Afx+A/A/AAAfwB/H4B+APwH8fgPwPwAAD+A/h+AfgD+D/H4D8D8AAA///4f+H4A///x+A/A/AAAH//8D/h+AH//8fgPwPwAAA///A/4fgB/+/H4D8D8AAAH//AH/H4AP/Px+A/A/AAAAf/AA/x+AA/j8fgPwPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/8P/D/w/8P/D/w/8P/AAAIBD/wgEIBCAQgEIBCAQAAD/w/8P/D/w/8P/D/w/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
    "screenFrames": [
     {
-     "id": "87ram6wzlfri",
+     "id": "5y3gacnc31by",
      "duration": 1500,
      "image": "/w/8/w/8AAAAAAAAAAeAeP8P/P8P/AAAAAAAAAAHgHjAzADAzAAAAAAAAAAAGGGGwMwAwMwAAAAAAAAAABhhhsDMAMDMAAAAAAAAAfgYAYDAzADAzAAAAAAAAAH4GAGA/w/w/w/wAAAAAAAGBn4H4P8P8P8P8AAAAAAABgZ+B+DADADMDAAAAAAAAAYGGAGAwAwAzAwAAAAAAAAGBhgBgMAMAMMMAAAAAAAABgYYAYDADADDDAAAAAAAAAYGGAGAwA/8wMwAAAAAAAAB+BgBgMAP/MDMAAAAAAAAAfgYAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/8AAAAAAAAAAAAAAAAAAB//wAAAAAAAAAAAAAAAAAA//+B+AAAAAAAAAAAAAAAAf//wfgAAAAAAAAAAAAAAAH//+H4AAAAAAAAAAAAAAAD+A/h+AAAAAAAAAAAAAAAA/AH4fgAAAAAAAAAAAAAAAPwB///h+PPwD8fD8D+AAAD8AAP/4fvz8A/H7/h/wAAA/gAD/+H/8/APx+/8/+AAAP8AA//h//PwD8f////wAAD/4AP/4f/z8A/H////8AAAf/4AfgH/A/APx/D/h/AAAD//gH4B/APwD8fgfwPwAAAf/+B+AfgD8A/H4D8D8AAAB//wfgH4A/APx+A/A/AAAAB/+H4B+APwD8fgPwPwAAAAD/h+AfgD8A/H4D8D8AAAAAH8fgH4A/APx+A/A/AAAAAB/H4B+APwD8fgPwPwAAH4APx+AfgD8A/H4D8D8AAB+AD8fgH4A/Afx+A/A/AAAfwB/H4B+APwH8fgPwPwAAD+A/h+AfgD+D/H4D8D8AAA///4f+H4A///x+A/A/AAAH//8D/h+AH//8fgPwPwAAA///A/4fgB/+/H4D8D8AAAH//AH/H4AP/Px+A/A/AAAAf/AA/x+AA/j8fgPwPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/8P/D/w/8P/D/w/8P/AAAIBD/wgEIBCAQgEIBCAQAAD/w/8P/D/w/8P/D/w/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
      "layers": [
       {
-       "id": "e5s5180oefi2",
+       "id": "pi4czxu7qmx7",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -4626,12 +4626,12 @@
      ]
     },
     {
-     "id": "l3w1ekwmwkz6",
+     "id": "gkgwx8bk9psy",
      "duration": 1500,
      "image": "AB+AGAAAAAAAYAGAAAAAAAAfgBgAAAAAAGABgAAAAAAAGGAAAAAAAABgAAAAAAAAABhgAAAAAAAAYAAAAAAAAAAYGHgZ4H4H4fgHgH4Z4AAAGBh4GeB+B+H4B4B+GeAAABgYGB4ZgZgAYAGBgZ4YAAAYGBgeGYGYAGABgYGeGAAAGBgYGAH/mABgAYGBmBgAABgYGBgB/5gAYAGBgZgYAAAYYBgYAYAYGGGBgYGYGAAAGGAYGAGAGBhhgYGBmBgAAB+AfhgAfgfgHgfgfhgYAAAfgH4YAH4H4B4H4H4YGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/AA/AAAAAAAAAAAAAAAAAPwAPwAAAAAAAAAAAAAAAAD8AD8AAAAAAAAAAAAAAAAA/AA/AAAAAAAAAAAAAAAAAPwAPwAAAAAAAAAAAAAAAAD8AD8AAAAAAAAAAAAAAAAA/AA/AAAAAAAAAAAAAAAAAPwAPx+PwAAAAAAAAAAAAAD8AD8fn/AAAAAAAAAAAAAA/AA/H7/4AAAAAAAAAAAAAPwAPx///AAAAAAAAAAAAAD8AD8f//4AAAAAAAAAAAAA/AA/H+D+AAAAAAAAAAAAAPwAPx/AfgAAAAAAAAAAAAD8AD8fgH8AAAAAAAAAAAAA/AA/H4A/AAAAAAAAAAAAAPwAPx+APwAAAAAAAAAAAAD8AD8fgD8AAAAAAAAAAAAA/AA/H4A/AAAAAAAAAAAAAPwAPx+APwAAAAAAAAAAAAD8AH8fgD8AAAAAAAAAAAAA/gB/H4B/AAAAAAAAAAAAAP8A/h/AfgAAAAAAAAAAAAB/gf4f4P4AAAAAAAAAAAAAf//8H/v+AAAAAAAAAAAAAD///B///AAAAAAAAAAAAAAf//gfv/gAAAAAAAAAAAAAB//gH7/wAAAAAAAAAAAAAAH/gB+P4AAAAAAAAAAAAAAAAAAfgAAAAAAAAAAAAAAAAAAAH4AAAAAAAAAAAAAAAAAAAB+AAAAAAAAAAAAAAAAAAAAfgAAAAAAAAAAAAAAAAAAAH4AAAAAAAAAAAAAAAAAAAB+AAAAAAAAAAAAAAAAAAAAfgAAAAAAAAAAAAAAAAAAAH4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
      "layers": [
       {
-       "id": "4xe1t8roq9og",
+       "id": "tdamfpb2xkum",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -4643,12 +4643,12 @@
      ]
     },
     {
-     "id": "ag3ba4gwfc3v",
+     "id": "8kzpf3esomzv",
      "duration": 1500,
      "image": "/8wMAAAAAAAAAAAAP//////MDAAAAAAAAAAAAD/////ADAwAAAAAAAAAAAA/////wAwMAAAAAAAAAAAAP////8ADMAAAAAAAAAAAAD8DzD/AAzAAAAAAAAAAAAA/A8w//wDAAAAAAAAAAAAAPPzDz/8AwAAAAAAAAAAAADz8w8/AAzAAAAAAAAAAAAA8/M/PwAMwAAAAAAAAAAAAPPzPz8AMDAAAAAAAAAAAADz8z8/ADAwAAAAAAAAAAAA8/M/PwAwMAAAAAAAAAAAAPwPPz8AMDAAAAAAAAAAAAD8Dz88AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/wAAAAAAAAAAB+AAAAAAH//AAAAAAAAAAAfgAAAAAD//4AAAAAAAAAAH4AAAAAB///AAAAAAAAAAB+AAAAAAf//4AAAAAAAAAAfgAAAAAP4D+AAAAAAAAAAH4AAAAAD8AfgAAAAAAAAAB+AAAAAA/AH8A/gB+P4AD8fgP+AAAPwAAA/+Afn/AD/n4P/4AAD+AAA//4H7/4B/9+H//AAA/wAAf/+B///A///j//4AAP/gAH8/wf//wf//4/j+AAB//gD8D+H+H+H8H+fwPwAAP/+A/Afh/A/j+A/n4DwAAB//4fgD4fgH4/gH5/AAAAAH//H4A/H4B+PwB+P8AAAAAH/5///x+Afj8Afj/+AAAAAP+f//8fgH4/AH4f/8AAAAAf3///H4B+PwB+D//gAAAAH9///h+Afj8AfgP/8AAfgA/fgAAfgH4/AH4AH/AAH4AP34AAH4B+P4B+AAfwAB/AH8/AMB+Afj+A/gwD8AAP4D+PwH4fgH4fwf5+A/AAD///j/D+H4B+H/f+fwfwAAf//wf//B+Afg///j//4AAD//8D//wfgH4P/34f/+AAAf/8Af/wH4B+B/9+D//AAAB/8AB/4B+AfgH8fgf/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf+H/h/4f+H/h/4f+AAAAAH/hAIQCEAhAIQCEAgAAAAB/4f+H/h/4f+H/h/4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
      "layers": [
       {
-       "id": "7j755bp492c2",
+       "id": "6cq5roylouv1",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -4662,7 +4662,7 @@
    ]
   },
   {
-   "id": "hh4xz8p8ftca",
+   "id": "9cdifavrl1bc",
    "x": 0,
    "y": 1560,
    "w": 1048,
@@ -4672,7 +4672,7 @@
    "color": "#c6f5d2"
   },
   {
-   "id": "svmzxej4hlaf",
+   "id": "iwlnpllo08gs",
    "x": 1148,
    "y": 920,
    "w": 1048,
@@ -5654,7 +5654,7 @@
     },
     "step-11": {
      "meta": {
-      "label": "",
+      "label": "11",
       "function": "Step 11 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -5671,7 +5671,7 @@
     },
     "step-12": {
      "meta": {
-      "label": "",
+      "label": "12",
       "function": "Step 12 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -5688,7 +5688,7 @@
     },
     "step-13": {
      "meta": {
-      "label": "",
+      "label": "13",
       "function": "Step 13 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -5705,7 +5705,7 @@
     },
     "step-14": {
      "meta": {
-      "label": "",
+      "label": "14",
       "function": "Step 14 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -5722,7 +5722,7 @@
     },
     "step-15": {
      "meta": {
-      "label": "",
+      "label": "15",
       "function": "Step 15 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -5739,7 +5739,7 @@
     },
     "step-16": {
      "meta": {
-      "label": "",
+      "label": "16",
       "function": "Step 16 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -5764,7 +5764,7 @@
    "screen": "/+arKqmqyqpqsqqarKqmq//gAAAAAAAAAAAAAAAAAAD/5AEgCQBIAkASAJAEgCQB/+AAAAAAAAAAAAAAAAAAAP/kASAJAEgCQBIAkASAJAH/4AAAAAAAAAAAAAAAAAAA/+QBIAkASAJAEgCQBIAkAf/gAAAAAAAAAAAAAAAAAAD/5AEgCQBIAkASAJAEgCQB/+AAAAAAAAAAAAAAAAAAAP/mqyqpqsqqarKqmqyqpqsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4AAAAAAAAAAADwAAAAAAA+AAAAAAAAAAAB+AAAAAAAPgAAAAAAAAAAB/gAAAAAAD4AAAAAAAAAAB/4AAAAAAA+AAAAAAAAAAAf+AAAAAAAPgAA4ABwAAYAHvgAAAAAAD4AA/gB/A+fgBj4AAAAAAA+AA/+B/8Pv8AQ+AAAAAAAPgAf/w//j//gAPgAAAAAAD4AHx8Pj4/n4AD4AAAAAAA+AD4PnwfPwfAA+AAAAAAAPgA+D58Hz4HwAPgAAAAAAD4APA+eB8+B8AD4AAAAAAA+AHwHvgPPgfAA+AAAAAAAPgB8B74Dz4HwAPgAAAAAAD4AfAe+A8+B8AD4AAAAAAA+AD4PnwfPwfAA+AAAAAAAPgA+D58Hz8HwAPgAAAAAAD//H78P34/34AD4AAAAAAA//x/+D/8P/8AA+AAAAAAAP/8P/gf/D7/AAPgAAAAAAD//A/gB/A+fAAD4AAAAAAAAAAAAAAAPgAAAAAAAAAAAAAAAAAAAD4AAAAAAAAAAAAAAAAAAAA+AAAAAAAAAAAAAAAAAAAAPgAAAAAAAAAAAAAAAAAAAD4AAAAAAAAAAAAAAAAAAAAeAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYB+B+AAGAAAAAAAAAAAAAGAfgfgABgAAAAAAAAAAAAHgYGYGAAYAAAAAAAAAAAAB4GBmBgAGAAAAAAAAAAAAAGAAZh4ABnh/h5gAAAAAAABgAGYeAAZ4f4eYAAAAAAAAYAGGZgAHhmBmZgAAAAAAAGABhmYAB4ZgZmYAAAAAAABgBgeGAAYGYGZmAAAAAAAAYAYHhgAGBmBmZgAAAAAAAGAYBgYABgZ/hgYAAAAAAABgGAYGAAYGf4YGAAAAAAAB+H/h+AAH+GAGBgAAAAAAAfh/4fgAB/hgBgYAAAA=="
   },
   {
-   "id": "bt2mc7ojlihe",
+   "id": "czgp48en3ce1",
    "x": 1148,
    "y": 1560,
    "w": 1048,
@@ -5774,7 +5774,7 @@
    "color": "#c6f5d2"
   },
   {
-   "id": "nkzlqr4nde2m",
+   "id": "vizu0rya7m08",
    "x": 2296,
    "y": 920,
    "w": 1048,
@@ -6600,7 +6600,7 @@
     },
     "step-2": {
      "meta": {
-      "label": "",
+      "label": "2",
       "function": "Step 2 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -6617,7 +6617,7 @@
     },
     "step-3": {
      "meta": {
-      "label": "",
+      "label": "3",
       "function": "Step 3 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -6634,7 +6634,7 @@
     },
     "step-4": {
      "meta": {
-      "label": "",
+      "label": "4",
       "function": "Step 4 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -6651,7 +6651,7 @@
     },
     "step-5": {
      "meta": {
-      "label": "G7",
+      "label": "",
       "function": "Step 5 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -6668,7 +6668,7 @@
     },
     "step-6": {
      "meta": {
-      "label": "",
+      "label": "6",
       "function": "Step 6 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -6685,7 +6685,7 @@
     },
     "step-7": {
      "meta": {
-      "label": "",
+      "label": "7",
       "function": "Step 7 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -6702,7 +6702,7 @@
     },
     "step-8": {
      "meta": {
-      "label": "",
+      "label": "8",
       "function": "Step 8 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -6736,7 +6736,7 @@
     },
     "step-10": {
      "meta": {
-      "label": "",
+      "label": "10",
       "function": "Step 10 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -6753,7 +6753,7 @@
     },
     "step-11": {
      "meta": {
-      "label": "",
+      "label": "11",
       "function": "Step 11 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -6770,7 +6770,7 @@
     },
     "step-12": {
      "meta": {
-      "label": "",
+      "label": "12",
       "function": "Step 12 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -6804,7 +6804,7 @@
     },
     "step-14": {
      "meta": {
-      "label": "",
+      "label": "14",
       "function": "Step 14 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -6838,7 +6838,7 @@
     },
     "step-16": {
      "meta": {
-      "label": "",
+      "label": "16",
       "function": "Step 16 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -6863,7 +6863,7 @@
    "screen": "PwAAAAAAAAAAAAAAAAAAAD8AAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAAAAAAAwD8D8AAAAAAAAAAAAAAAAMA/A/AAAAAAAAAAAAAAAADAwAwMAAAAAAAAAAAAAAAAwMAMDAAAAAAAAAAAAAAAAMA/DAwAAAAAAAAAAAAAAADAPwwMAAAAAAAAAAAAAAAAwADMDAAAAAAAAAAAAAAAAMAAzAwAAAAAAAAAAAAAAAPw/wPwAAAAAAAAAAAAAAAD8P8D8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//wAAAAAAAAAAAAAAAAAA///gAAAAAAAAAAAAAAAAAP//+AAAAAAAAAAAAAAAAAD///gAAAAAAAAAAAAAAAAA///8AAAAAAAAAAAAAAAAAP///gAAAAAAAAAAAAAAAAD+Af8AAAAAAAAAAAAAAAAA/gB/AAAAAAAAAAAAAAAAAP4AP4AAAAAAAAAAAAAAAAD+AD+AAAAAAAAAAAAAAAAA/gAfgAAAAAAAAAAAAAAAAP4AH8AAAAAAAAAAAAAAAAD+AA/AAAAAAAAAAAAAAAAA/gAPwAAAAAAAAAAAAAAAAP4AD8AAAAAAAAAAAAAAAAD+AA/AAAAAAAAAAAAAAAAA/gAPwAAAAAAAAAAAAAAAAP4AD8AAAAAAAAAAAAAAAAD+AA/AAAAAAAAAAAAAAAAA/gAfwAAAAAAAAAAAAAAAAP4AH4AAAAAAAAAAAAAAAAD+AD+AAAAAAAAAAAAAAAAA/gA/gAAAAAAAAAAAAAAAAP4AfwAAAAAAAAAAAAAAAAD+Af8AAAAAAAAAAAAAAAAA///+AAAAAAAAAAAAAAAAAP///AAAAAAAAAAAAAAAAAD///wAAAAAAAAAAAAAAAAA///4AAAAAAAAAAAAAAAAAP//wAAAAAAAAAAAAAAAAAD//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8AAAAAAAAAAAAAAAAAAAA/AAAAAAAAAAAAAAAAAAAAMMAAAAAAAAAAAAAAAAAAADDAAAAAAAAAAAAAAAAAAAAwMAAAAAAAAAAAAAAAAAAAMDAAAAAAAAAAAAAAAAAAADAwAAAAAAAAAAAAAAAAAAAwMAAAAAAAAAAAAAAAAAAAMDAAAAAAAAAAAAAAAAAAADAwAAAAAAAAAAAAAAAAAAAwwAAAAAAAAAAAAAAAAAAAMMAAAAAAAAAAAAAAAAAAAD8AAAAAAAAAAAAAAAAAAAA/AAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "8bu9n67l1jr3",
+   "id": "ba832r20a5nw",
    "x": 2296,
    "y": 1560,
    "w": 1048,
@@ -6873,7 +6873,7 @@
    "color": "#c6f5d2"
   },
   {
-   "id": "i89eeszsjqdf",
+   "id": "zp2adr8h4hvl",
    "x": 0,
    "y": 1840,
    "w": 1048,
@@ -7713,7 +7713,7 @@
     },
     "step-2": {
      "meta": {
-      "label": "",
+      "label": "2",
       "function": "Step 2 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -7730,7 +7730,7 @@
     },
     "step-3": {
      "meta": {
-      "label": "",
+      "label": "3",
       "function": "Step 3 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -7747,7 +7747,7 @@
     },
     "step-4": {
      "meta": {
-      "label": "",
+      "label": "4",
       "function": "Step 4 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -7764,7 +7764,7 @@
     },
     "step-5": {
      "meta": {
-      "label": "G7",
+      "label": "",
       "function": "Step 5 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -7781,7 +7781,7 @@
     },
     "step-6": {
      "meta": {
-      "label": "",
+      "label": "6",
       "function": "Step 6 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -7798,7 +7798,7 @@
     },
     "step-7": {
      "meta": {
-      "label": "",
+      "label": "7",
       "function": "Step 7 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -7815,7 +7815,7 @@
     },
     "step-8": {
      "meta": {
-      "label": "",
+      "label": "8",
       "function": "Step 8 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -7849,7 +7849,7 @@
     },
     "step-10": {
      "meta": {
-      "label": "",
+      "label": "10",
       "function": "Step 10 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -7866,7 +7866,7 @@
     },
     "step-11": {
      "meta": {
-      "label": "",
+      "label": "11",
       "function": "Step 11 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -7883,7 +7883,7 @@
     },
     "step-12": {
      "meta": {
-      "label": "",
+      "label": "12",
       "function": "Step 12 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -7917,7 +7917,7 @@
     },
     "step-14": {
      "meta": {
-      "label": "",
+      "label": "14",
       "function": "Step 14 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -7951,7 +7951,7 @@
     },
     "step-16": {
      "meta": {
-      "label": "",
+      "label": "16",
       "function": "Step 16 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -7976,12 +7976,12 @@
    "screen": "/8wMDwAAAAAAAAAAAAAAAP/MDA8AAAAAAAAAAAAAAADADzwwAAAAAAAAAAAAAAAAwA88MAAAAAAAAAAAAAAAAMAMzMAAAAAAAAAAAAAAAADADMzAAAAAAAAAAAAAAAAA/wzM/wAAAAAAAAAAAAAAAP8MzP8AAAAAAAAAAAAAAADADAzAwAAAAAAAAAAAAAAAwAwMwMAAAAAAAAAAAAAAAMAMDMDAAAAAAAAAAAAAAADADAzAwAAAAAAAAAAAAAAAwAwMPwAAAAAAAAAAAAAAAMAMDD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/8AAP/gAA/8AAAAAAAAAA//wAP/+AA//wAAAAAAAAA///AH//wA///AAAAAAAAAf//4D//+Af//4AAAAAAAAP///A///wP//+AAAAAAAAD/A/wfwH8D/A/wAAAAAAAB/AH+H4A/B/gH+AAAAAAAAfwA/h+AP4fwA/gAAAAAAAP4AH8fgAAP4AH4AAAAAAAD8AA/H8AAD8AB+AAAAAAAA/AAPx/gAA/AAAAAAAAAAAPwAD8f/AAPwAAAAAAAAAAH8AA/j//AH8AAAAAAAAAAB/AAP4f/8B/AAAAAAAAAAAfwAD+D//wfwAAAAAAAAAAH8AA/gP/+H8AAAAAAAAAAB/AAP4AP/x/AAAAAAAAAAAPwAD8AAf8PwAAAAAAAAAAD8AA/AAA/j8AAAAAAAAAAA/AAPwAAP4/AAfgAAAAAAAP4AH8/AB+P4AH4AAAAAAAB/AD+PwAfh/AD+AAAAAAAAf4B/j+AP4f4B/gAAAAAAAD/A/wfwH8D/A/wAAAAAAAA///8H///A///4AAAAAAAAH//+A///gH//+AAAAAAAAA///AH//4A//+AAAAAAAAAD//AA//4AD//AAAAAAAAAAP/AAD/4AAP/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB+H+AAAYAAAAAAB+AAAAAAfh/gAAGAAAAAAAfgAAAAAYGYGAAHgAAAAAAYGAAAAAGBmBgAB4AAAAAAGBgAAAABgZgYAAGAAAAAABgYAAAAAYGYGAABgAAAAAAYGAAAAAGBn+AAAYAAH/gAGBgAAAABgZ/gAAGAAB/4ABgYAAAAAYGYAAABgAAAAAAf+AAAAAGBmAAAAYAAAAAAH/gAAAABgZgAAAGAAAAAABgYAAAAAYGYAAABgAAAAAAYGAAAAAB+GAAAB+AAAAAAGBgAAAAAfhgAAAfgAAAAABgYAAA==",
    "screenFrames": [
     {
-     "id": "bcwxugd95sqk",
+     "id": "bnbnc8s7cj9h",
      "duration": 1500,
      "image": "/8wMDwAAAAAAAAAAAAAAAP/MDA8AAAAAAAAAAAAAAADADzwwAAAAAAAAAAAAAAAAwA88MAAAAAAAAAAAAAAAAMAMzMAAAAAAAAAAAAAAAADADMzAAAAAAAAAAAAAAAAA/wzM/wAAAAAAAAAAAAAAAP8MzP8AAAAAAAAAAAAAAADADAzAwAAAAAAAAAAAAAAAwAwMwMAAAAAAAAAAAAAAAMAMDMDAAAAAAAAAAAAAAADADAzAwAAAAAAAAAAAAAAAwAwMPwAAAAAAAAAAAAAAAMAMDD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/8AAP/gAA/8AAAAAAAAAA//wAP/+AA//wAAAAAAAAA///AH//wA///AAAAAAAAAf//4D//+Af//4AAAAAAAAP///A///wP//+AAAAAAAAD/A/wfwH8D/A/wAAAAAAAB/AH+H4A/B/gH+AAAAAAAAfwA/h+AP4fwA/gAAAAAAAP4AH8fgAAP4AH4AAAAAAAD8AA/H8AAD8AB+AAAAAAAA/AAPx/gAA/AAAAAAAAAAAPwAD8f/AAPwAAAAAAAAAAH8AA/j//AH8AAAAAAAAAAB/AAP4f/8B/AAAAAAAAAAAfwAD+D//wfwAAAAAAAAAAH8AA/gP/+H8AAAAAAAAAAB/AAP4AP/x/AAAAAAAAAAAPwAD8AAf8PwAAAAAAAAAAD8AA/AAA/j8AAAAAAAAAAA/AAPwAAP4/AAfgAAAAAAAP4AH8/AB+P4AH4AAAAAAAB/AD+PwAfh/AD+AAAAAAAAf4B/j+AP4f4B/gAAAAAAAD/A/wfwH8D/A/wAAAAAAAA///8H///A///4AAAAAAAAH//+A///gH//+AAAAAAAAA///AH//4A//+AAAAAAAAAD//AA//4AD//AAAAAAAAAAP/AAD/4AAP/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB+H+AAAYAAAAAAB+AAAAAAfh/gAAGAAAAAAAfgAAAAAYGYGAAHgAAAAAAYGAAAAAGBmBgAB4AAAAAAGBgAAAABgZgYAAGAAAAAABgYAAAAAYGYGAABgAAAAAAYGAAAAAGBn+AAAYAAH/gAGBgAAAABgZ/gAAGAAB/4ABgYAAAAAYGYAAABgAAAAAAf+AAAAAGBmAAAAYAAAAAAH/gAAAABgZgAAAGAAAAAABgYAAAAAYGYAAABgAAAAAAYGAAAAAB+GAAAB+AAAAAAGBgAAAAAfhgAAAfgAAAAABgYAAA==",
      "layers": [
       {
-       "id": "24ibftl895vw",
+       "id": "qb9zfqf1m4fe",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -7993,12 +7993,12 @@
      ]
     },
     {
-     "id": "sq4b0hiaxqk6",
+     "id": "tfg0v0s6q3fr",
      "duration": 1500,
      "image": "/8wMDwAAAAAAAAAAAAAAAP/MDA8AAAAAAAAAAAAAAADADzwwAAAAAAAAAAAAAAAAwA88MAAAAAAAAAAAAAAAAMAMzMAAAAAAAAAAAAAAAADADMzAAAAAAAAAAAAAAAAA/wzM/wAAAAAAAAAAAAAAAP8MzP8AAAAAAAAAAAAAAADADAzAwAAAAAAAAAAAAAAAwAwMwMAAAAAAAAAAAAAAAMAMDMDAAAAAAAAAAAAAAADADAzAwAAAAAAAAAAAAAAAwAwMPwAAAAAAAAAAAAAAAMAMDD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH//8fj8AH///4AAAAAAAAB///H4/AB///+AAAAAAAAAf//x+PwAf///gAAAAAAAAH//8fj8AH///4AAAAAAAAB///H4/AB///+AAAAAAAAAfgAB+PwAAD8AAAAAAAAAAH4AAfj8AAA/AAAAAAAAAAB+AAH4/AAAPwAAAAAAAAAAfgAB+PwAAD8AAAAAAAAAAH4AAfj8AAA/AAAAAAAAAAB+AAH4/AAAPwAAAAAAAAAAfgAB+PwAAD8AAAAAAAAAAH4AAfj8AAA/AAAAAAAAAAB//+H4/AAAPwAAAAAAAAAAf//h+PwAAD8AAAAAAAAAAH//4fj8AAA/AAAAAAAAAAB//+H4/AAAPwAAAAAAAAAAf//h+PwAAD8AAAAAAAAAAH4AAfj8AAA/AAAAAAAAAAB+AAH4/AAAPwAAAAAAAAAAfgAB+PwAAD8AAAAAAAAAAH4AAfj8AAA/AAAAAAAAAAB+AAH4/AAAPwAAAAAAAAAAfgAB+PwAAD8AAAAAAAAAAH4AAfj//8A/AAAAAAAAAAB+AAH4///APwAAAAAAAAAAfgAB+P//wD8AAAAAAAAAAH4AAfj//8A/AAAAAAAAAAB+AAH4///APwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB+GAB+B+AAAAAAAAAAAAAAfhgAfgfgAAAAAAAAAAAAAYGYAYGYGAAAAAAAAAAAAAGBmAGBmBgAAAAAAAAAAAABgZgBgBgYAAAAAAAAAAAAAYGYAYAYGAAAAAAAAAAAAAGBmAGfmBgAAAAAAAAAAAABgZgBn5gYAAAAAAAAAAAAAf+YAYGYGAAAAAAAAAAAAAH/mAGBmBgAAAAAAAAAAAABgZgBgZgYAAAAAAAAAAAAAYGYAYGYGAAAAAAAAAAAAAGBn/h/h+AAAAAAAAAAAAABgZ/4f4fgAAAAAAA==",
      "layers": [
       {
-       "id": "ps6pfx3xpl2m",
+       "id": "2sidwh2zokap",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -8010,12 +8010,12 @@
      ]
     },
     {
-     "id": "rk3tioy2v4xe",
+     "id": "s1wqgtx8v7se",
      "duration": 1500,
      "image": "AAAAB+AAAYAAAAAAAAAAAAAAAAfgAAGAAAAAAAAAAAAAAAAGGAABgAAAAAAAAAAAAAAABhgAAYAAAAAAAAAAAAAAAAYGH4fgYGZ4H4AAAAAAAAAGBh+H4GBmeB+AAAAAAAAABgZgYYBgZ4ZgYAAAAAAAAAYGYGGAYGeGYGAAAAAAAAAGBn/hgGBmBn/gAAAAAAAABgZ/4YBgZgZ/4AAAAAAAAAYYYAGGYeYGYAAAAAAAAAAGGGABhmHmBmAAAAAAAAAAB+AfgHgeZgYfgAAAAAAAAAfgH4B4HmYGH4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/AAAAAAAAAAAAAAAAAAAP/4AAAAAAAAAAAAAAAAAAP//AAAAAAAAAAAAAAAAAAD//4AAAAAAAAAAAAAAAAAB/j/AAAAAAAAAAAAAAAAAA/gPwAAAAAAAAAAAAAAAAAPwD8AAAAAAAAAAAAAAA8AD8AfgAAAAAAAAAAAAAAfAAAAH4AAAAAAAAAAAAAAHwAAAD8AAAAAAAAAAAAAAB8AAAA/AAAAAAAAAAAAAAAfAAAA/gAAAAAAAAAAAAAAHwAAH/wAAAAAAAAAAAAAAB8AAB/wAAAAAAAAAAAAAAAfgAAf+AAAAAAAAAAAAAAP//8AH/4AAAAAAAAAAAAAD///AAH/AAAAAAAAAAAAAA///wAAP4AAAAAAAAAAAAAP//8AAB+AAAAAAAAAAAAAD///AAAfwAAAAAAAAAAAAAAfAAAAH8AAAAAAAAAAAAAAHwAfwB/AAAAAAAAAAAAAAB8AD8AfgAAAAAAAAAAAAAAfAA/gP4AAAAAAAAAAAAAAHwAP//+AAAAAAAAAAAAAAB8AB///AAAAAAAAAAAAAAAfAAP//gAAAAAAAAAAAAAAAAAB//wAAAAAAAAAAAAAAAAAAH/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//////////////////AAAP////////////AAAAAQAAD////////////wAAAAEAAA////////////8AAAABAAAP/////////////////wAAAAAAAAAAAAAAAAAAAAAAA==",
      "layers": [
       {
-       "id": "b32chu3ukixz",
+       "id": "c4gxcrjdf1pc",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -8029,7 +8029,7 @@
    ]
   },
   {
-   "id": "tzirokkzpav7",
+   "id": "jwdlcu14n2lh",
    "x": 0,
    "y": 2480,
    "w": 1048,
@@ -8039,7 +8039,7 @@
    "color": "#c6f5d2"
   },
   {
-   "id": "nb6ig7ij4fwe",
+   "id": "r7jxkovpbjhk",
    "x": 1148,
    "y": 1840,
    "w": 1048,
@@ -8812,7 +8812,7 @@
     },
     "step-1": {
      "meta": {
-      "label": "",
+      "label": "1",
       "function": "Step 1 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -8829,7 +8829,7 @@
     },
     "step-2": {
      "meta": {
-      "label": "",
+      "label": "2",
       "function": "Step 2 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -8846,7 +8846,7 @@
     },
     "step-3": {
      "meta": {
-      "label": "",
+      "label": "3",
       "function": "Step 3 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -8863,7 +8863,7 @@
     },
     "step-4": {
      "meta": {
-      "label": "",
+      "label": "4",
       "function": "Step 4 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -8880,7 +8880,7 @@
     },
     "step-5": {
      "meta": {
-      "label": "",
+      "label": "5",
       "function": "Step 5 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -8897,7 +8897,7 @@
     },
     "step-6": {
      "meta": {
-      "label": "",
+      "label": "6",
       "function": "Step 6 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -8914,7 +8914,7 @@
     },
     "step-7": {
      "meta": {
-      "label": "",
+      "label": "7",
       "function": "Step 7 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -8931,7 +8931,7 @@
     },
     "step-8": {
      "meta": {
-      "label": "",
+      "label": "8",
       "function": "Step 8 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -8948,7 +8948,7 @@
     },
     "step-9": {
      "meta": {
-      "label": "",
+      "label": "9",
       "function": "Step 9 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -8965,7 +8965,7 @@
     },
     "step-10": {
      "meta": {
-      "label": "",
+      "label": "10",
       "function": "Step 10 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -8982,7 +8982,7 @@
     },
     "step-11": {
      "meta": {
-      "label": "",
+      "label": "11",
       "function": "Step 11 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -8999,7 +8999,7 @@
     },
     "step-12": {
      "meta": {
-      "label": "",
+      "label": "12",
       "function": "Step 12 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -9016,7 +9016,7 @@
     },
     "step-13": {
      "meta": {
-      "label": "",
+      "label": "13",
       "function": "Step 13 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -9033,7 +9033,7 @@
     },
     "step-14": {
      "meta": {
-      "label": "",
+      "label": "14",
       "function": "Step 14 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -9050,7 +9050,7 @@
     },
     "step-15": {
      "meta": {
-      "label": "",
+      "label": "15",
       "function": "Step 15 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -9067,7 +9067,7 @@
     },
     "step-16": {
      "meta": {
-      "label": "",
+      "label": "16",
       "function": "Step 16 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -9092,7 +9092,7 @@
    "screen": "AAAAAAAAAAAAAAAAAH+AYAAAAAAAAAAAAAAAAAB/gGAAAAAAAAAAAAAAAAAAYGHgAAAAAAAAAAAAAAAAAGBh4AAAAAAAAAAAAAAAAABgYGAAAAAAAAAAAAAAAAAAYGBgAAAAAAAAAAAAAAAAAH+AYAAAAAAAAAAAAAAAAAB/gGAAAAAAAAAAAAAAAAAAYGBgAAAAAAAAAAAAAAAAAGBgYAAAAAAAAAAAAAAAAABgYGAAAAAAAAAAAAAAAAAAYGBgAAAAAAAAAAAAAAAAAH+B+AAAAAAAAAAAAAAAAAB/gfgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfgB/gAAAAAAAAAAAAAAAAH4AfwAAAAAAAAAAAAAAAAB+AP4AAAAAAAAAAAAAAAAAfgH8AAAAAAAAAAAAAAAAAH4D+AAAAAAAAAAAAAAAAAB+B/gAAAAAAAAAAAAAAAAAfg/wAAAAAAAAAAAAAAAAAH4P4AH8B+AH4H/AAAAAAAB+H8AH/wfwD+H/8AAAAAAAfj+AH//D8A/D//gAAAAAAH5/AD//w/APx//8AAAAAAB+/wA/n+H4H8fx/AAAAAAAf/4Afgfx+B+P4H4AAAAAAH/+AH4D8fgfj8B4AAAAAAB//wD8AfD4H4/gAAAAAAAAf/8A/AH4/D8H+AAAAAAAAH//gP//+Pw/B//AAAAAAAB//8D///h8PgP/+AAAAAAAf5/A///4fn4B//wAAAAAAH8P4P//8H5+AH/+AAAAAAB+D/D8AAA+fAAD/gAAAAAAfgfw/AAAPnwAAP4AAAAAAH4D+H4BgD/8AYB+AAAAAAB+A/x+A/Af+A/AfgAAAAAAfgH8f4fwH/gP4P4AAAAAAH4A/j//4B/4B//8AAAAAAB+AP8f/+AP8AP//AAAAAAAfgB/D/+AD/AB//gAAAAAAH4AP4P/AA/wAP/gAAAAAAAAAAAAAAAH4AAAAAAAAAAAAAAAAAAAB+AAAAAAAAAAAAAAAAAAAA/gAAAAAAAAAAAAAAAAAAD/wAAAAAAAAAAAAAAAAAAA/8AAAAAAAAAAAAAAAAAAAf+AAAAAAAAAAAAAAAAAAAH/AAAAAAAAAAAAAAAAAAAB/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH//4H//4H//4H//4H//4AB//+BAACBAACBAACBAACAAf//gf//gf//gf//gf//gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "ceptafbvpjfc",
+   "id": "ogdadlsdn9jk",
    "x": 1148,
    "y": 2480,
    "w": 1048,
@@ -9102,7 +9102,7 @@
    "color": "#c6f5d2"
   },
   {
-   "id": "3uzhn5curm8d",
+   "id": "qy4oetjl66yf",
    "x": 2296,
    "y": 1840,
    "w": 1048,
@@ -9951,7 +9951,7 @@
     },
     "step-2": {
      "meta": {
-      "label": "",
+      "label": "2",
       "function": "Step 2 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -9968,7 +9968,7 @@
     },
     "step-3": {
      "meta": {
-      "label": "",
+      "label": "3",
       "function": "Step 3 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -9985,7 +9985,7 @@
     },
     "step-4": {
      "meta": {
-      "label": "",
+      "label": "4",
       "function": "Step 4 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -10002,7 +10002,7 @@
     },
     "step-5": {
      "meta": {
-      "label": "G7",
+      "label": "",
       "function": "Step 5 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -10019,7 +10019,7 @@
     },
     "step-6": {
      "meta": {
-      "label": "",
+      "label": "6",
       "function": "Step 6 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -10036,7 +10036,7 @@
     },
     "step-7": {
      "meta": {
-      "label": "",
+      "label": "7",
       "function": "Step 7 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -10053,7 +10053,7 @@
     },
     "step-8": {
      "meta": {
-      "label": "",
+      "label": "8",
       "function": "Step 8 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -10087,7 +10087,7 @@
     },
     "step-10": {
      "meta": {
-      "label": "",
+      "label": "10",
       "function": "Step 10 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -10104,7 +10104,7 @@
     },
     "step-11": {
      "meta": {
-      "label": "",
+      "label": "11",
       "function": "Step 11 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -10121,7 +10121,7 @@
     },
     "step-12": {
      "meta": {
-      "label": "",
+      "label": "12",
       "function": "Step 12 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -10155,7 +10155,7 @@
     },
     "step-14": {
      "meta": {
-      "label": "",
+      "label": "14",
       "function": "Step 14 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -10189,7 +10189,7 @@
     },
     "step-16": {
      "meta": {
-      "label": "",
+      "label": "16",
       "function": "Step 16 of the page: lit blue = a chord in it, white = playing now, dark = empty, off = past the loop's end.",
       "click": "Empty: the last chord played goes in. Holding a chord: cleared",
       "hold": "Held: play a key or a memory pad = that chord goes in (several keys add up); the knobs edit the step",
@@ -10214,12 +10214,12 @@
    "screen": "P8MAAAAAAAPwAAAAAAAB+D/DAAAAAAAD8AAAAAAAAfjAAwAAAAAADAwAAAAAAAYGwAMAAAAAAAwMAAAAAAAGBsAPwD8P8AAMDAAAAABgYAbAD8A/D/AADAwAAAAAYGAGPwMAwMwMAAP8AAAAABmAGD8DAMDMDAAD/AAAAAAZgBgAwwD/zAwAAAwAAAAABgBgAMMA/8wMAAAMAAAAAAYAYADDDMAP8AAAMAAAAAAZgYAAwwzAD/AAADAAAAAAGYGA/wDwPwwAAAPAAAAAAGBn/v8A8D8MAAADwAAAAABgZ/4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/4AAAAAAAAAAAAAAAAAAH//gAAAAAAAAAAAAAAAAAB//+AAAAAAAAAAAAAAAAAAf//wAAAAAAAAAAAAAAAAAH//+AAAAAAAAAAAAAAAAAB+A/wAAAAAAAAAAAAAAAAAfgD8AAAAAAAAAAAAAAAAAH4AfgAAAAAAAAAAAAAAAAB+AH4AAAAAAAAAAAAAAAAAfgB+AAAAAAAAAAAAAAAAAH4APwAAAAAAAAAAAAAAAAB+AD8AAAAAAAAAAAAAAAAAfgA/ADmAAAAAAAAAAAAAAH4APwA7wAAAAAAAAAAAAAB+AD8AOYAAAAAAAAAAAAAAfgA/ADgAQQAAAAAAAAAAAH4Afwe4HffAAAAAAAAAAAB+AH4P+5//4AAAAAAAAAAAfgB+HnueeOAAAAAAAAAAAH4Afhw7nDjgAAAAAAAAAAB+APw8O5w44AAAAAAAAAAAfgP8PDucOOAAAAAAAAAAAH//+Dw7nDjgAAAAAAAAAAB///AcO5w44AAAAAAAAAAAf//gHnucOOAAAAAAAAAAAH//gA/7nDjgAAAAAAAAAAB//gAHu4wwYAAAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/AAAAAwAAAAAAAAAAAAAAPwAAAAMAAAAAAAAAAAAAAMDAAAADAAAAAAAAAAAAAADAwAAAAwAAAAAAAAAAAAAAAMAAPw/AAAAAAAAAAAAAAADAAD8PwAAAAAAAAAAAAAADAADAAwAAAAAAAAAAAAAAAwAAwAMAAAAAAAAAAAAAAAwAAD8DAAAAAAAAAAAAAAAMAAA/AwAAAAAAAAAAAAAAMAAAAMMMAAAAAAAAAAAAADAAAADDDAAAAAAAAAAAAAD/wAD/APAAAAAAAAAAAAAA/8AA/wDwAAAAAAAAAAAAAA==",
    "screenFrames": [
     {
-     "id": "jhts4vbx44lx",
+     "id": "z87yr3dnmrkl",
      "duration": 1500,
      "image": "P8MAAAAAAAPwAAAAAAAB+D/DAAAAAAAD8AAAAAAAAfjAAwAAAAAADAwAAAAAAAYGwAMAAAAAAAwMAAAAAAAGBsAPwD8P8AAMDAAAAABgYAbAD8A/D/AADAwAAAAAYGAGPwMAwMwMAAP8AAAAABmAGD8DAMDMDAAD/AAAAAAZgBgAwwD/zAwAAAwAAAAABgBgAMMA/8wMAAAMAAAAAAYAYADDDMAP8AAAMAAAAAAZgYAAwwzAD/AAADAAAAAAGYGA/wDwPwwAAAPAAAAAAGBn/v8A8D8MAAADwAAAAABgZ/4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/4AAAAAAAAAAAAAAAAAAH//gAAAAAAAAAAAAAAAAAB//+AAAAAAAAAAAAAAAAAAf//wAAAAAAAAAAAAAAAAAH//+AAAAAAAAAAAAAAAAAB+A/wAAAAAAAAAAAAAAAAAfgD8AAAAAAAAAAAAAAAAAH4AfgAAAAAAAAAAAAAAAAB+AH4AAAAAAAAAAAAAAAAAfgB+AAAAAAAAAAAAAAAAAH4APwAAAAAAAAAAAAAAAAB+AD8AAAAAAAAAAAAAAAAAfgA/ADmAAAAAAAAAAAAAAH4APwA7wAAAAAAAAAAAAAB+AD8AOYAAAAAAAAAAAAAAfgA/ADgAQQAAAAAAAAAAAH4Afwe4HffAAAAAAAAAAAB+AH4P+5//4AAAAAAAAAAAfgB+HnueeOAAAAAAAAAAAH4Afhw7nDjgAAAAAAAAAAB+APw8O5w44AAAAAAAAAAAfgP8PDucOOAAAAAAAAAAAH//+Dw7nDjgAAAAAAAAAAB///AcO5w44AAAAAAAAAAAf//gHnucOOAAAAAAAAAAAH//gA/7nDjgAAAAAAAAAAB//gAHu4wwYAAAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/AAAAAwAAAAAAAAAAAAAAPwAAAAMAAAAAAAAAAAAAAMDAAAADAAAAAAAAAAAAAADAwAAAAwAAAAAAAAAAAAAAAMAAPw/AAAAAAAAAAAAAAADAAD8PwAAAAAAAAAAAAAADAADAAwAAAAAAAAAAAAAAAwAAwAMAAAAAAAAAAAAAAAwAAD8DAAAAAAAAAAAAAAAMAAA/AwAAAAAAAAAAAAAAMAAAAMMMAAAAAAAAAAAAADAAAADDDAAAAAAAAAAAAAD/wAD/APAAAAAAAAAAAAAA/8AA/wDwAAAAAAAAAAAAAA==",
      "layers": [
       {
-       "id": "76mks7d7fqhm",
+       "id": "txcnk1et2snc",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -10231,12 +10231,12 @@
      ]
     },
     {
-     "id": "385sgtinlkpj",
+     "id": "0nodt7qlqfj1",
      "duration": 1500,
      "image": "P8MAAAAAAADAPwAAAAAAAD/DAAAAAAAAwD8AAAAAAADAAwAAAAAAA8DAwAAAAAAAwAMAAAAAAAPAwMAAAAAAAMAPwD8P8AAAwMPAAAAAAADAD8A/D/AAAMDDwAAAAAAAPwMAwMwMAADAzMAAAAAAAD8DAMDMDAAAwMzAAAAAAAAAwwD/zAwAAMDwwAAAAAAAAMMA/8wMAADA8MAAAAAAAADDDMAP8AAAwMDAAAAAAAAAwwzAD/AAAMDAwAAAAAAA/wDwPwwAAAPwPwAAAAAAAP8A8D8MAAAD8D8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////AAAAAAAAAAAAAAAAAP///wAAAAAAAAAAAAAAAAD///8AAAAAAAAAAAAAAAAA////AAAAAAAAAAAAAAAAAP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4AAAAAAAAGAAAAAABgAAAeAAAAAAAABgAAAAAAYAAABgAAAAAAAAYAAAAAAGAAAAYAAAAAAAAGAAAAAABgB/gGAfhgYAAfhngfhngeYAf4BgH4YGAAH4Z4H4Z4HmAGBgYABmBgAGAHhmBnhmHgBgYGAAZgYABgB4ZgZ4Zh4AYGBgH+YGAAYAYGYGYAYGAGBgYB/mBgAGAGBmBmAGBgB/gGBgYf4ABgZgZgZgBgYAf4BgYGH+AAYGYGYGYAYGAGAB+B/gBgAB+GBh+GAB/gBgAfgf4AYAAfhgYfhgAf4A==",
      "layers": [
       {
-       "id": "o871jfunk6k6",
+       "id": "tkgqoa6gck3z",
        "type": "raster",
        "name": "Frame",
        "visible": true,
@@ -10250,7 +10250,7 @@
    ]
   },
   {
-   "id": "u1s9dfwx4lzi",
+   "id": "5qmg8fhu4t4j",
    "x": 2296,
    "y": 2480,
    "w": 1048,
@@ -10260,7 +10260,7 @@
    "color": "#c6f5d2"
   },
   {
-   "id": "8usml37mjry8",
+   "id": "royeq2qhukz6",
    "x": -60,
    "y": 2720,
    "w": 4304,
@@ -10270,7 +10270,7 @@
    "color": "#28dc5a"
   },
   {
-   "id": "w69nj322gqe6",
+   "id": "809samc386n0",
    "x": 0,
    "y": 2800,
    "w": 560,
@@ -10281,7 +10281,7 @@
    "screen": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/4AAAAAAAAAAP//gAAAAAf+AAAAAAAAAAD//+AAAAAH/gAAAAAAAAAA///4AAAAAA4AAAAAAAAAAP///gAAAAAcAAAAAAAAAAD///8AAAAAPAAAAAAAAAAA////AAAAADgAAAAAAAAAAP4B/4AAAAB4AAAAAAAAAAD+AH/AAAAAcAAAAAAAAAAA/gAfwAAAAHAAAAAAAAAAAP4AH+AAAADgAAAAAAAAAAD+AA/gAAAAwAAAAAAAAAAA/gAP4AAAAcAAAAAAAAAAAP4AD/AAAAGAAAAAAAAAAAD+AAfwAAAAAAAAAAAAAAAA/gAH8AAAAAAAAAAAAAAAAP4AB/AAAAAAAAAAAAAAAAD+AAfwAAAAAAAAAAAAAAAA/gAH8AAAAAAAAAAAAAAAAP4AB/AAAAAAAAAAAAAAAAD+AAfwBgQAAAAAAAAAAAAA/gAP898/AAAAAAAAAAAAAP4AD+P/v4AAAAAAAAAAAAD+AA/j/++AAAAAAAAAAAAA/gAfw8PHgAAAAAAAAAAAAP4AH8PDw4AAAAAAAAAAAAD+AH/Dw8OAAAAAAAAAAAAA/gP/g8PDgAAAAAAAAAAAAP///4PDw4AAAAAAAAAAAAD///8Dw8OAAAAAAAAAAAAA///+A8PDgAAAAAAAAAAAAP//+APDw4AAAAAAAAAAAAD///ADw8OAAAAAAAAAAAAA//+AA8PDgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwAAAAP/AAAAD8AAAAD8AD8AAAAD/wAAAA/AAAAA/AAwwAAAAwAAAAAwMAAAAwMAMMAAAAMAAAAAMDAAAAMDADAwAAADAAAAADAwAAADAAAwMAAAAwAAAAAwMAAAAwAAMDAAAAP8AAAAMDAAAAMAADAwAAAD/AAAADAwAAADAAAwMAAAAwAAAAA/8AAAAwAAMDAAAAMAAAAAP/AAAAMAADDAAAADAAAAADAwAAADAwAwwAAAAwAAAAAwMAAAAwMAPwAAAAMAAAAAMDAAAAD8AD8AAAADAAAAADAwAAAA/AA=="
   },
   {
-   "id": "2t5togfpphyd",
+   "id": "vq620k4octol",
    "x": 600,
    "y": 2800,
    "w": 560,
@@ -10292,7 +10292,7 @@
    "screen": "wMAAAAAAPwAAAAAAAAAAAMDAAAAAAD8AAAAAAAAAAADDAAAAAADAwAAAAAAAAAAAwwAAAAAAwMAAAAAAAAAAAMwD8MDAAMAAAAAAAAAAAADMA/DAwADAAAAAAAAAAAAA8AwMwMAAwAAAAAAAAAAAAPAMDMDAAMAAAAAAAAAAAADMD/zAwADAAAAAAAAAAAAAzA/8wMAAwAAAAAAAAAAAAMMMAD/AAMDAAAAAAAAAAADDDAA/wADAwAAAAAAAAAAAwMPwAMAAPwAAAAAAAAAAAMDD8ADAAD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/AAAAAAAAAAAD//wAAAAB/wAAAAAAAAAAA///gAAAAAcAAAAAAAAAAAP//+AAAAAHAAAAAAAAAAAD///gAAAADgAAAAAAAAAAA///8AAAAA4AAAAAAAAAAAP///gAAAAMAAAAAAAAAAAD+Af8AAAAHAAAAAAAAAAAA/gB/AAAADgAAAAAAAAAAAP4AP4AAAA4AAAAAAAAAAAD+AD+AAAAcAAAAAAAAAAAA/gAfgAAAHAAAAAAAAAAAAP4AH8AAADgAAAAAAAAAAAD+AA/AAAAAAAAAAAAAAAAA/gAPwAAAAAAAAAAAAAAAAP4AD8AAAAAAAAAAAAAAAAD+AA/AAAAAAAAAAAAAAAAA/gAPwAAAAAAAAAAAAAAAAP4AD8AwIAAAAAAAAAAAAAD+AA/PfPgAAAAAAAAAAAAA/gAfz/38AAAAAAAAAAAAAP4AH4///AAAAAAAAAAAAAD+AD+PDhwAAAAAAAAAAAAA/gA/jw4cAAAAAAAAAAAAAP4Afw8OHAAAAAAAAAAAAAD+Af8PDhwAAAAAAAAAAAAA///+Dw4cAAAAAAAAAAAAAP///A8OHAAAAAAAAAAAAAD///wPDhwAAAAAAAAAAAAA///4Dw4cAAAAAAAAAAAAAP//wA8OHAAAAAAAAAAAAAD//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8AAD/wAA/AAA/AAAAAAAA/AAA/8AAPwAAPwAAAAAAAMMAAMAAAMDAAMDAAAAAAADDAADAAADAwADAwAAAAAAAwMAAwAAAwMAAwAAAAAAAAMDAAMAAAMDAAMAAAAAAAADAwAD/AADAwADAAAAAAAAAwMAA/wAAwMAAwAAAAAAAAMDAAMAAAP/AAMAAAAAAAADAwADAAAD/wADAAAAAAAAAwwAAwAAAwMAAwMAAAAAAAMMAAMAAAMDAAMDAAAAAAAD8AADAAADAwAA/AAAAAAAA/AAAwAAAwMAAPwAAA=="
   },
   {
-   "id": "ixjqaofpss91",
+   "id": "fclkagm2o4nc",
    "x": 1200,
    "y": 2800,
    "w": 560,
@@ -10303,7 +10303,7 @@
    "screen": "AAAAAAAAAAAAAAAAPP/PzwAAAAAAAAAAAAAAADz/z88AAAAAAAAAAAAAAAA8/88/AAAAAAAAAAAAAAAAPP/PPwAAAAAAAAAAAAAAADz/zP8AAAAAAAAAAAAAAAA8/8z/AAAAAAAAAA/4AAAAPP/D/wP//gAAAAAf+AAAADz/w/8D//+AAAAAH/gAAAA8/8z/A///4AAAAAA4AAAAPP/M/wP///gAAAAAcAAAADz/zz8D///8AAAAAPAAAAA8/88/A////AAAAADgAAAAPADPzwP4B/4AAAAB4AAAADwAz88D+AH/AAAAAcAAAAAAAAAAA/gAfwAAAAHAAAAAAAAAAAP4AH+AAAADgAAAAAAAAAAD+AA/gAAAAwAAAAAAAAAAA/gAP4AAAAcAAAAAAAAAAAP4AD/AAAAGAAAAAAAAAAAD+AAfwAAAAAAAAAAAAAAAA/gAH8AAAAAAAAAAAAAAAAP4AB/AAAAAAAAAAAAAAAAD+AAfwAAAAAAAAAAAAAAAA/gAH8AAAAAAAAAAAAAAAAP4AB/AAAAAAAAAAAAAAAAD+AAfwBgQAAAAAAAAAAAAA/gAP898/AAAAAAAAAAAAAP4AD+P/v4AAAAAAAAAAAAD+AA/j/++AAAAAAAAAAAAA/gAfw8PHgAAAAAAAAAAAAP4AH8PDw4AAAAAAAAAAAAD+AH/Dw8OAAAAAAAAAAAAA/gP/g8PDgAAAAAAAAAAAAP///4PDw4AAAAAAAAAAAAD///8Dw8OAAAAAAAAAAAAA///+A8PDgAAAAAAAAAAAAP//+APDw4AAAAAAAAAAAAD///ADw8OAAAAAAAAAAAAA//+AA8PDgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwAAAAP/AAAAD8AAAAD8AD8AAAAD/wAAAA/AAAAA/AAwwAAAAwAAAAAwMAAAAwMAMMAAAAMAAAAAMDAAAAMDADAwAAADAAAAADAwAAADAAAwMAAAAwAAAAAwMAAAAwAAMDAAAAP8AAAAMDAAAAMAADAwAAAD/AAAADAwAAADAAAwMAAAAwAAAAA/8AAAAwAAMDAAAAMAAAAAP/AAAAMAADDAAAADAAAAADAwAAADAwAwwAAAAwAAAAAwMAAAAwMAPwAAAAMAAAAAMDAAAAD8AD8AAAADAAAAADAwAAAA/AA=="
   },
   {
-   "id": "vlhpsacwph9s",
+   "id": "1mt2tjvt3ycq",
    "x": 1800,
    "y": 2800,
    "w": 560,
@@ -10314,7 +10314,7 @@
    "screen": "wMDwAAAAAAAAAAAAAAAAAMDA8AAAAAAAAAAAAAAAAADzwwAAAAAAAAAAAAAAAAAA88MAAAAAAAAAAAAAAAAAAMzMAAAAAAAAAAAAAAAAAADMzAAAAAAAAAAAAAAAAAAAzM/wAAAAAAAAAAAAAAAAAMzP8AAAAAAAAAAAAAAAAADAzAwAAAAAAAAAAAAAAAAAwMwMAAAAAAAAAAAAAAAAAMDMDAAAAAAAAAAAAAAAAADAzAwAAAAAAAAAAAAAAAAAwMPwAAAAAAAAAAAAAAAAAMDD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/AAAAAAAAAAAD//wAAAAB/wAAAAAAAAAAA///gAAAAAcAAAAAAAAAAAP//+AAAAAHAAAAAAAAAAAD///gAAAADgAAAAAAAAAAA///8AAAAA4AAAAAAAAAAAP///gAAAAMAAAAAAAAAAAD+Af8AAAAHAAAAAAAAAAAA/gB/AAAADgAAAAAAAAAAAP4AP4AAAA4AAAAAAAAAAAD+AD+AAAAcAAAAAAAAAAAA/gAfgAAAHAAAAAAAAAAAAP4AH8AAADgAAAAAAAAAAAD+AA/AAAAAAAAAAAAAAAAA/gAPwAAAAAAAAAAAAAAAAP4AD8AAAAAAAAAAAAAAAAD+AA/AAAAAAAAAAAAAAAAA/gAPwAAAAAAAAAAAAAAAAP4AD8AwIAAAAAAAAAAAAAD+AA/PfPgAAAAAAAAAAAAA/gAfz/38AAAAAAAAAAAAAP4AH4///AAAAAAAAAAAAAD+AD+PDhwAAAAAAAAAAAAA/gA/jw4cAAAAAAAAAAAAAP4Afw8OHAAAAAAAAAAAAAD+Af8PDhwAAAAAAAAAAAAA///+Dw4cAAAAAAAAAAAAAP///A8OHAAAAAAAAAAAAAD///wPDhwAAAAAAAAAAAAA///4Dw4cAAAAAAAAAAAAAP//wA8OHAAAAAAAAAAAAAD//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8AAD/wAA/AAA/AAAAAAAA/AAA/8AAPwAAPwAAAAAAAMMAAMAAAMDAAMDAAAAAAADDAADAAADAwADAwAAAAAAAwMAAwAAAwMAAwAAAAAAAAMDAAMAAAMDAAMAAAAAAAADAwAD/AADAwADAAAAAAAAAwMAA/wAAwMAAwAAAAAAAAMDAAMAAAP/AAMAAAAAAAADAwADAAAD/wADAAAAAAAAAwwAAwAAAwMAAwMAAAAAAAMMAAMAAAMDAAMDAAAAAAAD8AADAAADAwAA/AAAAAAAA/AAAwAAAwMAAPwAAA=="
   },
   {
-   "id": "e8tvo7lkfwy7",
+   "id": "3nuuco407di4",
    "x": 2400,
    "y": 2800,
    "w": 560,
@@ -10325,7 +10325,7 @@
    "screen": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////AAAAAAAAAAAAAA///////wAAAAAAAAAAAAAP//////8AAAAAAAAAAAAAD///////AAAAAAAAAAAAAA///////wAAAAAAAAAAAAAP//////8AAAAAAAAAAAAAD4f+H8P/AAAAAAAAAAAAAA8D/h8A/wAAAAAAAAAAAAAPA/wfAH8f/4AAAAAAB///DwP8Hhg/H//gAAAAAAf//w8B+Bw8Px//+AAAAAAH//8PAfgcPj8f//wAAAAAB///DwDwGHP/H//+AAAAAAAAfw8I8BhAfx+A/wAAAAAAAH4PCPEYAH8fgD8Hx+B+AAB+DwxhGBw/H4Afh8/x/wAA/A8MYxg+Hx+AH4f/+/+AAPwPDEMYfh8fgB+H////wAH4Dw4HGH4fH4APx///v8AB+A8OBxx+Hx+AD8fg/g/AAfgPDgccPD8fgA/H4PwHwAPwDw8PHgA/H4APx8B8B8AD8A8PDx8Afx+AD8fAfAfAB+APD58fgP8fgA/HwHwHwAfgD///////H4Afx8B8B8APwA///////x+AH4fAfAfAH4AP//////8fgB+HwHwHwB+AD///////H4Afh8B8B8A/AA///////x+APwfAfAfAPwAP//////8fgP8HwHwHwH4AD///////H//+B8B8B8B+AA///////x///AfAfAfA/gAP///P//8f//gHwHwHwPwAD///z///H//gB8B8B8H8AA///8///x//gAeAeAfB+AAP///P//8AAAAAAAAAAAAAD/8Dzz//AAAAAAAAAAAAAA//A88//wAAAAAAAAAAAAAP/PzM//8AAAAAAAAAAAAAD/z8zP//AAAAAAAAAAAAAA/8/MP//wAAAAAAAAAAAAAP/PzD//8AAAAAAAAAAAAAD/z8zP//AAAAAAAAAAAAAA/8/Mz//wAAAAAAAAAAAAAP/wPPP/8AAAAAAAAAAAAAD/8Dzz//AAAAAAAAAAAAAA///////wAAAAAAAAAAAAAP//////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "04q37pn2o71t",
+   "id": "0kuf3xj278nb",
    "x": 3000,
    "y": 2800,
    "w": 560,
@@ -10336,7 +10336,7 @@
    "screen": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8AAAAAAAAAAAAB//gAAAB/AAAAAAAAAAAAAf/+AAAAAwAAAAAAAAAAAAH//wAAAAYAAAAAAAAAAAAB//+AAAAGAAAAAAAAAAAAAfA/wAAADAAAAAAAAAAAAAHwD+AAAAwAAAAAAAAAAAAB8AfgAAAYAAAAAAAAAAAAAfAD4AAAGAAAAAAAAAAAAAHwA+AAADAAAAAAAAAAAAAB8APwAAAAAAAAAAAAAAAAAfAB8AAAAAAAAAAAAAAAAAHwAfAAAAAAAAAAAAAAAAAB8AHwAAAAAAAAAAAAAAAAAfAB8AAAAAAAAAAAAAAAAAHwAfAMIAAAAAAAAAAAAAAB8APx/ngAAAAAAAAAAAAAAfAD4f/8AAAAAAAAAAAAAAHwB+HnnAAAAAAAAAAAAAAB8AfhxxwAAAAAAAAAAAAAAfAP4cccAAAAAAAAAAAAAAH//8HHHAAAAAAAAAAAAAAB//+BxxwAAAAAAAAAAAAAAf//AcccAAAAAAAAAAAAAAH//gHHHAAAAAAAAAAAAAAB//AAwwwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8AAAAD/wAAAA/AAAAA/AA/AAAAA/8AAAAPwAAAAPwAMMAAAAMAAAAAMDAAAAMDADDAAAADAAAAADAwAAADAwAwMAAAAwAAAAAwMAAAAwAAMDAAAAMAAAAAMDAAAAMAADAwAAAD/AAAADAwAAADAAAwMAAAA/wAAAAwMAAAAwAAMDAAAAMAAAAAP/AAAAMAADAwAAADAAAAAD/wAAADAAAwwAAAAwAAAAAwMAAAAwMAMMAAAAMAAAAAMDAAAAMDAD8AAAADAAAAADAwAAAA/AA/AAAAAwAAAAAwMAAAAPwAAAAAAwAAAwAAAAAAAAD8AAAAAAMAAAMAAAAAAAAA/AAAAAAAAAAAAAAAAAADAwMAAAAAAAAAAAAAAAAAAwMDADAw/A8A/A8DPA/wAAMAAwAwMPwPAPwPAzwP8AADAAMAMDMDAwMAAwPDMDAAP/AMADAzAwMDAAMDwzAwAD/wDAAwMwMDAwADAwMwMAADADAAMDMDAwMAAwMDMDAAAwAwAAzDAwMDAwMDAw/wAAMAwAAMwwMDAwMDAwMP8AADAMAAAwD8D8D8D8MDADAAAAP/AAMA/A/A/A/DAwAwAAAD/wA=="
   },
   {
-   "id": "vw4ymy5w5hr3",
+   "id": "2x75jypi241p",
    "x": 3600,
    "y": 2800,
    "w": 560,
@@ -10347,7 +10347,7 @@
    "screen": "AAABgYAAGAAAGAAAAAAAAAAAAYGAABgAABgAAAAAAAAAAAGBgAAAAAAAAAAAAAAAAAABgYAAAAAAAAAAAAAAAAAAAYGH4HgH4HgZ4H+AAAAAAAGBh+B4B+B4GeB/gAAAAAABgZgYGBgAGB4ZgYAAAAAAAYGYGBgYABgeGYGAAAAAAAGBmBgYGAAYGBmBgAAAAAABgZgYGBgAGBgZgYAAAAAAAGYYGBgYGBgYGH+AAAAAAABmGBgYGBgYGBh/gAAAAAAAGAfgfgfgfhgYAYAAAAAAABgH4H4H4H4YGAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/AAAAAAAAAAAAAAAAAAAP/8AAAAAAAAAAAAAAAAAAH//gAAAAAAAAAAAAAAAAAD//8AAAAAAAAAAAAAAAAAB/z/AAAAAAAAAAAAAAAAAAfwP4AAAAAAAAAAAAAAAAAH4B+AAAAAAAAAAAAAAAeAD8AfgAAAAAAAAAAAAAAPgA/AH4AAAAAAAAAAAAAAD4AAAB+AAAAAAAAAAAAAAA+AAAAfgAAAAAAAAAAAAAAPgAAAPwAAAAAAAAAAAAAAD4AAAH8AAAAAAAAAAAAAAA+AAAB+AAAAAAAAAAAAAAAPwAAA/AAAAAAAAAAAAAAH//+AA/wAAAAAAAAAAAAAB///gAf4AAAAAAAAAAAAAAf//4AP8AAAAAAAAAAAAAAH//+AH+AAAAAAAAAAAAAAB///gD/AAAAAAAAAAAAAAAAPgAB/gAAAAAAAAAAAAAAAD4AA/wAAAAAAAAAAAAAAAA+AAf4AAAAAAAAAAAAAAAAPgAP8AAAAAAAAAAAAAAAAD4AH//+AAAAAAAAAAAAAAA+AB///gAAAAAAAAAAAAAAPgAf//4AAAAAAAAAAAAAAAAAH//+AAAAAAAAAAAAAAAAAB///gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//////////////////AAAP/////////8AAAAAAAQAAD//////////AAAAAAAEAAA//////////wAAAAAABAAAP/////////////////wAAAAAAAAAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "ug6uwvhwprfb",
+   "id": "3hv1mq871rdv",
    "x": 0,
    "y": 3180,
    "w": 560,
@@ -10358,7 +10358,7 @@
    "screen": "DAAAAAAAAAAAAAAAAAAB+AwAAAAAAAAAAAAAAAAAAfg8AAAAAAAAAAAAAAAAAAYGPAAAAAAAAAAAAAAAAAAGBgwAAAAAAAAAAAA/wAAABgYMAAAA//8AAAAAf8AAAAYGDAAAAP//4AAAAAHAAAAB+AwAAAD///gAAAABwAAAAfgMAAAA///4AAAAA4AAAAYGDAAAAP///AAAAAOAAAAGBgwAAAD///4AAAADAAAABgYMAAAA/gH/AAAABwAAAAYGPwAAAP4AfwAAAA4AAAAB+D8AAAD+AD+AAAAOAAAAAfgAAAAA/gA/gAAAHAAAAAAAAAAAAP4AH4AAABwAAAAAAAAAAAD+AB/AAAA4AAAAAAAAAAAA/gAPwAAAAAAAAAAAAAAAAP4AD8AAAAAAAAAAAAAAAAD+AA/AAAAAAAAAAAAAAAAA/gAPwAAAAAAAAAAAAAAAAP4AD8AAAAAAAAAAAAAAAAD+AA/AMCAAAAAAAAAAAAAA/gAPz3z4AAAAAAAAAAAAAP4AH8/9/AAAAAAAAAAAAAD+AB+P//wAAAAAAAAAAAAA/gA/jw4cAAAAAAAAAAAAAP4AP48OHAAAAAAAAAAAAAD+AH8PDhwAAAAAAAAAAAAA/gH/Dw4cAAAAAAAAAAAAAP///g8OHAAAAAAAAAAAAAD///wPDhwAAAAAAAAAAAAA///8Dw4cAAAAAAAAAAAAAP//+A8OHAAAAAAAAAAAAAD//8APDhwAAAAAAAAAAAAA//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/gAAAAAAAAAAAAAAAAAAAP4AAAAAAAAAAAAAAAAAAAD+AAAAAAAAAAAAAAAAAAAA/gAAAAAAAAAAAAAAAAAAAP4AAAAAAAAAAP7+/v7+/v7+/v7+/v7+/v7+goKC/oKC/oKCgoKCgoKC/oKCgv6Cgv6CgoKCgoKCgv6CgoL+goL+goKCgoKCgoL+goKC/oKC/oKCgoKCgoKC/oKCgv6Cgv6CgoKCgoKCgv7+/v7+/v7+/v7+/v7+/v4AAAAAAAAA/gAAAAAAAAAAAAAAAAAAAP4AAAAAAAAAAA=="
   },
   {
-   "id": "ghpgl56dljgi",
+   "id": "ocpkwz30z6ch",
    "x": 600,
    "y": 3180,
    "w": 560,
@@ -10369,7 +10369,7 @@
    "screen": "AAAAAAAAAAAAAAAAYAAB+AAAAAAAAAAAAAAAAGAAAfgf4AAADwAAAAAAAAHgAGYGP/wAAA+AAAAAAAAB4ABmBj//AAADAAAAAAAAAGABhgY//wAAAwAAAAAAAABgAYYGPg/AAAIAAAAAAAAAYAYB+D4HwAAGAAAAAAAAAGAGAfg+A8AABAAAAAAAAABgGAYGPgPAAAwAAAAAAAAAYBgGBj4B4AAAAAAAAAAAAGBgBgY+AeAAAAAAAAAAAABgYAYGPgHgAAAAAAAAAAAB+AAB+D4B4mYAAAAAAAAAAfgAAfg+A+f/AAAAAAAAAAAAAAAAPgPHO4AAAAAAAAAAAAAAAD4DxjGAAAAAAAAAAAAAAAA+B8YxgAAAAAAAAAAAAAAAP/+GMYAAAAAAAAAAAAAAAD//BjGAAAAAAAAAAAAAAAA//gYxgAAAAAAAAAAAAAAAP/wCMQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///AAAAAAAAAAAAAAAAAD///wAAAAAAAAAAAAAAAAA///8AAAAAAAAAAAAAAAAAP///AAAAAAAAAAAAAAAAAD/A/wAAAAAAAAAAAAAAAAA/wP8AAAAAAAAAAAAAAAAAPz8/AAAAAAAAAAAAAAAAAD8/PwAAAAAAAAAAAAAAAAA/P/8AAAAAAAAAAAAAAAAAPz//AAD8AAAA/8AAAD8AAD8//wAA/AAAAP/AAAA/AAA/P/8AAMMAAADAAAAAwMAAPz//AADDAAAAwAAAAMDAAD8//wAAwMAAAMAAAADAwAA/Pz8AAMDAAADAAAAAwMAAPz8/AADAwAAA/wAAAMDAAD/A/wAAwMAAAP8AAADAwAA/wP8AAMDAAADAAAAA/8AAP///AADAwAAAwAAAAP/AAD///wAAwwAAAMAAAADAwAA///8AAMMAAADAAAAAwMAAP///AAD8AAAAwAAAAMDAAAAAAAAA/AAAAMAAAADAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP////////////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "5gz6xr583ywh",
+   "id": "eebfyvcgroaj",
    "x": 1200,
    "y": 3180,
    "w": 560,
@@ -10380,7 +10380,7 @@
    "screen": "wMAAAAAAP8AAAAPAAAAAAMDAAAAAAD/AAAADwAAAAADAwAAAAADAAAAAAMAAAAAAwMAAAAAAwAAAAADAAAAAAPDD8D8AAMAD8MDAwAAAAADww/A/AADAA/DAwMAAAAAAzMwMwMAAPwwMwMDAAAAAAMzMDMDAAD8MDMDAwAAAAADDz/zAwAAAzAzAwMAAAAAAw8/8wMAAAMwMwMDAAAAAAMDMAMDAAADMDMPAwAAAAADAzADAwAAAzAzDwMAAAAAAwMPwPwAA/wPwPMPwAAAAAMDD8D8AAP8D8DzD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwHP4AAAAAAAAAD/wAA+D4eD3/AAAAAAAAAD//AAPg+Hg8DwAAAAAAAAD//8ADwPh8PA4AAAAAAAAB///gA8D4fHwMAAAAAAAAA///4APA8HxsHAAAAAAAAAP8D/AHwPB27BwAAAAAAAAH+Af4B8Hwdsw4AAAAAAAAB/AD+H///3PMMAAAAAAAAA/gAfh///9zzHAAAAAAAAAPwAAAf///c4xwAAAAAAAAD8AAAH///nEM4AAAAAAAAA/AAAB///4AAAAAAAAAAAAfwAAAD4PgAAAAAAAAAAAAH8A/+A+D4AAAAAAAAAAAAB/AP/wPA+AAAAAAAAAAAAAfwD/8DwPgAAAAAAAAAAAAH8A//A8DwAAAAAAAAAAAAA/AP/z///wAAAAAAAAAAAAPwAD9///8AAAAAAAAAAAAD8AA/f///AAAAAAAAAAAAA/gAfn///wAAAAAAAAAAAAH8AH5///4AAAAAAAAAAAAB/gD+B4HgAAAAAAAAAAAAAP8D/A+B4AAAAAAAAAAAAAD///wPgeAAAAAAAAAAAAAAf//4D4PgAAAAAAAAAAAAAD//8A+D4AAAAAAAAAAAAAAP/8APA+AAAAAAAAAAAAAAA/8ADwPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAH4AAAAAAAAAAAAAAAAGAAB+AAAAAAAAAAAAAAAAHgAZgYAAAAAAAAAAAAAAAB4AGYGAAAAAAAAAAAAAAABmAGGBgAAAAAAAAAAAAAAAZgBhgYAAAAAAAAAAAAAAAYYBgH4AAAAAAAAAAAAAAAGGAYB+AAAAAAAAAAAAAAAB/4YBgYAAAAAAAAAAAAAAAf+GAYGAAAAAAAAAAAAAAAAGGAGBgAAAAAAAAAAAAAAABhgBgYAAAAAAAAAAAAAAAAYAAH4AAAAAAAAAAAAAAAAGAAB+A=="
   },
   {
-   "id": "8o4qzyobd2nn",
+   "id": "wsk8uwktqix4",
    "x": 1800,
    "y": 3180,
    "w": 560,
@@ -10391,7 +10391,7 @@
    "screen": "P8MAAAAAAAPwAAAAAAAB+D/DAAAAAAAD8AAAAAAAAfjAAwAAAAAADAwAAAAAAAYGwAMAAAAAAAwMAAAAAAAGBsAPwD8P8AAMDAAAAABgYAbAD8A/D/AADAwAAAAAYGAGPwMAwMwMAAP8AAAAABmAGD8DAMDMDAAD/AAAAAAZgBgAwwD/zAwAAAwAAAAABgBgAMMA/8wMAAAMAAAAAAYAYADDDMAP8AAAMAAAAAAZgYAAwwzAD/AAADAAAAAAGYGA/wDwPwwAAAPAAAAAAGBn/v8A8D8MAAADwAAAAABgZ/4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/4AAAAAAAAAAAAAAAAAAH//gAAAAAAAAAAAAAAAAAB//+AAAAAAAAAAAAAAAAAAf//wAAAAAAAAAAAAAAAAAH//+AAAAAAAAAAAAAAAAAB+A/wAAAAAAAAAAAAAAAAAfgD8AAAAAAAAAAAAAAAAAH4AfgAAAAAAAAAAAAAAAAB+AH4AAAAAAAAAAAAAAAAAfgB+AAAAAAAAAAAAAAAAAH4APwAAAAAAAAAAAAAAAAB+AD8AAAAAAAAAAAAAAAAAfgA/ADmAAAAAAAAAAAAAAH4APwA7wAAAAAAAAAAAAAB+AD8AOYAAAAAAAAAAAAAAfgA/ADgAQQAAAAAAAAAAAH4Afwe4HffAAAAAAAAAAAB+AH4P+5//4AAAAAAAAAAAfgB+HnueeOAAAAAAAAAAAH4Afhw7nDjgAAAAAAAAAAB+APw8O5w44AAAAAAAAAAAfgP8PDucOOAAAAAAAAAAAH//+Dw7nDjgAAAAAAAAAAB///AcO5w44AAAAAAAAAAAf//gHnucOOAAAAAAAAAAAH//gA/7nDjgAAAAAAAAAAB//gAHu4wwYAAAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/AAAAAwAAAAAAAAAAAAAAPwAAAAMAAAAAAAAAAAAAAMDAAAADAAAAAAAAAAAAAADAwAAAAwAAAAAAAAAAAAAAAMAAPw/AAAAAAAAAAAAAAADAAD8PwAAAAAAAAAAAAAADAADAAwAAAAAAAAAAAAAAAwAAwAMAAAAAAAAAAAAAAAwAAD8DAAAAAAAAAAAAAAAMAAA/AwAAAAAAAAAAAAAAMAAAAMMMAAAAAAAAAAAAADAAAADDDAAAAAAAAAAAAAD/wAD/APAAAAAAAAAAAAAA/8AA/wDwAAAAAAAAAAAAAA=="
   },
   {
-   "id": "yf5s0afygooi",
+   "id": "firir9tivfaz",
    "x": 2400,
    "y": 3180,
    "w": 560,
@@ -10402,7 +10402,7 @@
    "screen": "P8MAAAAAAADAPwAAAAAAAD/DAAAAAAAAwD8AAAAAAADAAwAAAAAAA8DAwAAAAAAAwAMAAAAAAAPAwMAAAAAAAMAPwD8P8AAAwMPAAAAAAADAD8A/D/AAAMDDwAAAAAAAPwMAwMwMAADAzMAAAAAAAD8DAMDMDAAAwMzAAAAAAAAAwwD/zAwAAMDwwAAAAAAAAMMA/8wMAADA8MAAAAAAAADDDMAP8AAAwMDAAAAAAAAAwwzAD/AAAMDAwAAAAAAA/wDwPwwAAAPwPwAAAAAAAP8A8D8MAAAD8D8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////AAAAAAAAAAAAAAAAAP///wAAAAAAAAAAAAAAAAD///8AAAAAAAAAAAAAAAAA////AAAAAAAAAAAAAAAAAP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4AAAAAAAAGAAAAAABgAAAeAAAAAAAABgAAAAAAYAAABgAAAAAAAAYAAAAAAGAAAAYAAAAAAAAGAAAAAABgB/gGAfhgYAAfhngfhngeYAf4BgH4YGAAH4Z4H4Z4HmAGBgYABmBgAGAHhmBnhmHgBgYGAAZgYABgB4ZgZ4Zh4AYGBgH+YGAAYAYGYGYAYGAGBgYB/mBgAGAGBmBmAGBgB/gGBgYf4ABgZgZgZgBgYAf4BgYGH+AAYGYGYGYAYGAGAB+B/gBgAB+GBh+GAB/gBgAfgf4AYAAfhgYfhgAf4A=="
   },
   {
-   "id": "7ijkq70kj9by",
+   "id": "2b6epu9vqi6x",
    "x": 3000,
    "y": 3180,
    "w": 560,
@@ -10413,7 +10413,7 @@
    "screen": "AAAAAAAAAAAAAAAAAH+AYAAAAAAAAAAAAAAAAAB/gGAAAAAAAAAAAAAAAAAAYGHgAAAAAAAAAAAAAAAAAGBh4AAAAAAAAAAAAAAAAABgYGAAAAAAAAAAAAAAAAAAYGBgAAAAAAAAAAAAAAAAAH+AYAAAAAAAAAAAAAAAAAB/gGAAAAAAAAAAAAAAAAAAYGBgAAAAAAAAAAAAAAAAAGBgYAAAAAAAAAAAAAAAAABgYGAAAAAAAAAAAAAAAAAAYGBgAAAAAAAAAAAAAAAAAH+B+AAAAAAAAAAAAAAAAAB/gfgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfgB/gAAAAAAAAAAAAAAAAH4AfwAAAAAAAAAAAAAAAAB+AP4AAAAAAAAAAAAAAAAAfgH8AAAAAAAAAAAAAAAAAH4D+AAAAAAAAAAAAAAAAAB+B/gAAAAAAAAAAAAAAAAAfg/wAAAAAAAAAAAAAAAAAH4P4AH8B+AH4H/AAAAAAAB+H8AH/wfwD+H/8AAAAAAAfj+AH//D8A/D//gAAAAAAH5/AD//w/APx//8AAAAAAB+/wA/n+H4H8fx/AAAAAAAf/4Afgfx+B+P4H4AAAAAAH/+AH4D8fgfj8B4AAAAAAB//wD8AfD4H4/gAAAAAAAAf/8A/AH4/D8H+AAAAAAAAH//gP//+Pw/B//AAAAAAAB//8D///h8PgP/+AAAAAAAf5/A///4fn4B//wAAAAAAH8P4P//8H5+AH/+AAAAAAB+D/D8AAA+fAAD/gAAAAAAfgfw/AAAPnwAAP4AAAAAAH4D+H4BgD/8AYB+AAAAAAB+A/x+A/Af+A/AfgAAAAAAfgH8f4fwH/gP4P4AAAAAAH4A/j//4B/4B//8AAAAAAB+AP8f/+AP8AP//AAAAAAAfgB/D/+AD/AB//gAAAAAAH4AP4P/AA/wAP/gAAAAAAAAAAAAAAAH4AAAAAAAAAAAAAAAAAAAB+AAAAAAAAAAAAAAAAAAAA/gAAAAAAAAAAAAAAAAAAD/wAAAAAAAAAAAAAAAAAAA/8AAAAAAAAAAAAAAAAAAAf+AAAAAAAAAAAAAAAAAAAH/AAAAAAAAAAAAAAAAAAAB/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH//4H//4H//4H//4H//4AB//+BAACBAACBAACBAACAAf//gf//gf//gf//gf//gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "j1fsf86y4m6g",
+   "id": "dvcy4a6l65gk",
    "x": 3600,
    "y": 3180,
    "w": 560,
@@ -10424,7 +10424,7 @@
    "screen": "/+arKqmqyqpqsqqarKqmq//gAAAAAAAAAAAAAAAAAAD/5AEgCQBIAkASAJAEgCQB/+AAAAAAAAAAAAAAAAAAAP/kASAJAEgCQBIAkASAJAH/4AAAAAAAAAAAAAAAAAAA/+QBIAkASAJAEgCQBIAkAf/gAAAAAAAAAAAAAAAAAAD/5AEgCQBIAkASAJAEgCQB/+AAAAAAAAAAAAAAAAAAAP/mqyqpqsqqarKqmqyqpqsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4AAAAAAAAAAADwAAAAAAA+AAAAAAAAAAAB+AAAAAAAPgAAAAAAAAAAB/gAAAAAAD4AAAAAAAAAAB/4AAAAAAA+AAAAAAAAAAAf+AAAAAAAPgAA4ABwAAYAHvgAAAAAAD4AA/gB/A+fgBj4AAAAAAA+AA/+B/8Pv8AQ+AAAAAAAPgAf/w//j//gAPgAAAAAAD4AHx8Pj4/n4AD4AAAAAAA+AD4PnwfPwfAA+AAAAAAAPgA+D58Hz4HwAPgAAAAAAD4APA+eB8+B8AD4AAAAAAA+AHwHvgPPgfAA+AAAAAAAPgB8B74Dz4HwAPgAAAAAAD4AfAe+A8+B8AD4AAAAAAA+AD4PnwfPwfAA+AAAAAAAPgA+D58Hz8HwAPgAAAAAAD//H78P34/34AD4AAAAAAA//x/+D/8P/8AA+AAAAAAAP/8P/gf/D7/AAPgAAAAAAD//A/gB/A+fAAD4AAAAAAAAAAAAAAAPgAAAAAAAAAAAAAAAAAAAD4AAAAAAAAAAAAAAAAAAAA+AAAAAAAAAAAAAAAAAAAAPgAAAAAAAAAAAAAAAAAAAD4AAAAAAAAAAAAAAAAAAAAeAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYB+B+AAGAAAAAAAAAAAAAGAfgfgABgAAAAAAAAAAAAHgYGYGAAYAAAAAAAAAAAAB4GBmBgAGAAAAAAAAAAAAAGAAZh4ABnh/h5gAAAAAAABgAGYeAAZ4f4eYAAAAAAAAYAGGZgAHhmBmZgAAAAAAAGABhmYAB4ZgZmYAAAAAAABgBgeGAAYGYGZmAAAAAAAAYAYHhgAGBmBmZgAAAAAAAGAYBgYABgZ/hgYAAAAAAABgGAYGAAYGf4YGAAAAAAAB+H/h+AAH+GAGBgAAAAAAAfh/4fgAB/hgBgYAAAA=="
   },
   {
-   "id": "ce12obgjf3ug",
+   "id": "d7qwfkvlgfdx",
    "x": 0,
    "y": 3560,
    "w": 560,
@@ -10435,7 +10435,7 @@
    "screen": "AAAAAAAAAAAAAAAAAAAAAGBn/mBgAAAAGAB+B+GBgABgZ/5gYAAAABgAfgfhgYAAYYYAYGAAAAAYAYGYGYYAAGGGAGBgAAAAGAGBmBmGAABmBgBgYAAAABgBgZgBmAAAZgYAYGAAAAAYAYGYAZgAAHgH+BmAAAAAGAGBmAHgAAB4B/gZgAAAABgBgZgB4AAAZgYABgAAAAAYAYGYAZgAAGYGAAYAAAAAGAGBmAGYAABhhgAGAAAAABgBgZgZhgAAYYYABgAAAAAYAYGYGYYAAGBn/gYAAAAAH/h+B+GBgABgZ/4GAAAAAB/4fgfhgYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAfh/4fhgYB/h/5/h/4AAYAH4f+H4YGAf4f+f4f+AAGAGBgYGBmBgGBmAGBmAAABgBgYGBgZgYBgZgBgZgAAAYAYGBgYAYGAYGYAYGYAAAGAGBgYGAGBgGBmAGBmAAABgBgYGBgB/4B/h/h/h/gAAYAYGBgYAf+Af4f4f4f4AAGAH/gYGAGBgGAGAGYGAAABgB/4GBgBgYBgBgBmBgAAAYAYGBgYGYGAYAYAYYYAAAGAGBgYGBmBgGAGAGGGAAAB/5gYGAfhgYBgB/5gZgAAAf+YGBgH4YGAYAf+YGYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//////////f4AAf4f4f+AgBn5//////3+AAH+H+H/gIAZ+f/////9gYABgZgZgACf+fn//////YGAAYGYGYAAn/n5//////2BgAGBmBmAAJ/+Z//////9gYABgZgZgACf/mf//////f4AAf4f4f4AgH+f//////3+AAH+H+H+AIB/n//////9gYABgBmBgACf/mf//////YGAAYAZgYAAn/5n//////2Bh4GAGGGAAJ/5+f/////9gYeBgBhhgACf+fn//////f4HgYAYGYAAn/n5//////3+B4GAGBmAAJ/5+f/////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH+B+B/h/gAAH+H/h+H/gAB/gfgf4f4AAB/h/4fh/4AAYGYGYAYAAAAYGYAYGBgAAGBmBmAGAAAAGBmAGBgYAABgZgZgBgAAABgZgBgYGAAAYGYGYAYAAAAYGYAYGBgAAH+GBh+B+AAAH+H+GBgYAAB/hgYfgfgAAB/h/hgYGAAAYGf+AGAGAAAYGYAf+BgAAGBn/gBgBgAAGBmAH/gYAABgZgYAYAYAABgZgBgYGAAAYGYGAGAGAAAYGYAYGBgAAH+GBn+H+AAAH+H/mBgYAAB/hgZ/h/gAAB/h/5gYGAAAAAAAAAAAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "nuowr9zloz1p",
+   "id": "17m7poz095x9",
    "x": 600,
    "y": 3560,
    "w": 560,
@@ -10446,7 +10446,7 @@
    "screen": "/w/8/w/8AAAAAAAAAAeAeP8P/P8P/AAAAAAAAAAHgHjAzADAzAAAAAAAAAAAGGGGwMwAwMwAAAAAAAAAABhhhsDMAMDMAAAAAAAAAfgYAYDAzADAzAAAAAAAAAH4GAGA/w/w/w/wAAAAAAAGBn4H4P8P8P8P8AAAAAAABgZ+B+DADADMDAAAAAAAAAYGGAGAwAwAzAwAAAAAAAAGBhgBgMAMAMMMAAAAAAAABgYYAYDADADDDAAAAAAAAAYGGAGAwA/8wMwAAAAAAAAB+BgBgMAP/MDMAAAAAAAAAfgYAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB/8AAAAAAAAAAAAAAAAAAB//wAAAAAAAAAAAAAAAAAA//+B+AAAAAAAAAAAAAAAAf//wfgAAAAAAAAAAAAAAAH//+H4AAAAAAAAAAAAAAAD+A/h+AAAAAAAAAAAAAAAA/AH4fgAAAAAAAAAAAAAAAPwB///h+PPwD8fD8D+AAAD8AAP/4fvz8A/H7/h/wAAA/gAD/+H/8/APx+/8/+AAAP8AA//h//PwD8f////wAAD/4AP/4f/z8A/H////8AAAf/4AfgH/A/APx/D/h/AAAD//gH4B/APwD8fgfwPwAAAf/+B+AfgD8A/H4D8D8AAAB//wfgH4A/APx+A/A/AAAAB/+H4B+APwD8fgPwPwAAAAD/h+AfgD8A/H4D8D8AAAAAH8fgH4A/APx+A/A/AAAAAB/H4B+APwD8fgPwPwAAH4APx+AfgD8A/H4D8D8AAB+AD8fgH4A/Afx+A/A/AAAfwB/H4B+APwH8fgPwPwAAD+A/h+AfgD+D/H4D8D8AAA///4f+H4A///x+A/A/AAAH//8D/h+AH//8fgPwPwAAA///A/4fgB/+/H4D8D8AAAH//AH/H4AP/Px+A/A/AAAAf/AA/x+AA/j8fgPwPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/8P/D/w/8P/D/w/8P/AAAIBD/wgEIBCAQgEIBCAQAAD/w/8P/D/w/8P/D/w/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "dht2b4akywbp",
+   "id": "hcs5ia4f6rs9",
    "x": 1200,
    "y": 3560,
    "w": 560,
@@ -10457,7 +10457,7 @@
    "screen": "/8wMAAAAAAAAAAAAP//////MDAAAAAAAAAAAAD/////ADAwAAAAAAAAAAAA/////wAwMAAAAAAAAAAAAP////8ADMAAAAAAAAAAAAD8DzD/AAzAAAAAAAAAAAAA/A8w//wDAAAAAAAAAAAAAPPzDz/8AwAAAAAAAAAAAADz8w8/AAzAAAAAAAAAAAAA8/M/PwAMwAAAAAAAAAAAAPPzPz8AMDAAAAAAAAAAAADz8z8/ADAwAAAAAAAAAAAA8/M/PwAwMAAAAAAAAAAAAPwPPz8AMDAAAAAAAAAAAAD8Dz88AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/wAAAAAAAAAAB+AAAAAAH//AAAAAAAAAAAfgAAAAAD//4AAAAAAAAAAH4AAAAAB///AAAAAAAAAAB+AAAAAAf//4AAAAAAAAAAfgAAAAAP4D+AAAAAAAAAAH4AAAAAD8AfgAAAAAAAAAB+AAAAAA/AH8A/gB+P4AD8fgP+AAAPwAAA/+Afn/AD/n4P/4AAD+AAA//4H7/4B/9+H//AAA/wAAf/+B///A///j//4AAP/gAH8/wf//wf//4/j+AAB//gD8D+H+H+H8H+fwPwAAP/+A/Afh/A/j+A/n4DwAAB//4fgD4fgH4/gH5/AAAAAH//H4A/H4B+PwB+P8AAAAAH/5///x+Afj8Afj/+AAAAAP+f//8fgH4/AH4f/8AAAAAf3///H4B+PwB+D//gAAAAH9///h+Afj8AfgP/8AAfgA/fgAAfgH4/AH4AH/AAH4AP34AAH4B+P4B+AAfwAB/AH8/AMB+Afj+A/gwD8AAP4D+PwH4fgH4fwf5+A/AAD///j/D+H4B+H/f+fwfwAAf//wf//B+Afg///j//4AAD//8D//wfgH4P/34f/+AAAf/8Af/wH4B+B/9+D//AAAB/8AB/4B+AfgH8fgf/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf+H/h/4f+H/h/4f+AAAAAH/hAIQCEAhAIQCEAgAAAAB/4f+H/h/4f+H/h/4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "t7ioyr64lnmj",
+   "id": "uy5i8anojqje",
    "x": 1800,
    "y": 3560,
    "w": 560,
@@ -10468,7 +10468,7 @@
    "screen": "wM/8wMAAAAAAAAAAAAeAeMDP/MDAAAAAAAAAAAAHgHjDDADAwAAAAAAAAAAAGGGGwwwAwMAAAAAAAAAAABhhhswMAMDAAAAAAAAAAfgYAYDMDADAwAAAAAAAAAH4GAGA8A/wMwAAAAAAAAAGBn4H4PAP8DMAAAAAAAAABgZ+B+DMDAAMAAAAAAAAAAYGGAGAzAwADAAAAAAAAAAGBhgBgMMMAAwAAAAAAAAABgYYAYDDDAAMAAAAAAAAAAYGGAGAwM/8DAAAAAAAAAAB+BgBgMDP/AwAAAAAAAAAAfgYAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8AP8AAAAAAAAAAAAAAAAA/AD+AAAAAAAAAAAAAAAAAPwB/AAAAAAAAAAAAAAAAAD8A/gAAAAAAAAAAAAAAAAA/AfwAAAAAAAAAAAAAAAAAPwP8AAAAAAAAAAAAAAAAAD8H+AAAAAAAAAAAAAAAAAA/B/AA/gPwA/AAAAAAAAAAPw/gA/+D+AfwAAAAAAAAAD8fwA//4fgH4AAAAAAAAAA/P4Af/+H4B+AAAAAAAAAAP3+AH8/w/A/gAAAAAAAAAD//AD8D+PwPwAAAAAAAAAA//wA/Afj8D8AAAAAAAAAAP/+AfgD4fA/AAAAAAAAAAD//gH4A/H4fgAAAAAAAAAA//8B///x+H4AAAAAAAAAAP//gf//8Ph8AAAAAAAAAAD/P4H///D8/AAAAAAAAAAA/h/B///g/PwAAAAAAAAAAPwf4fgAAHz4AAAAAAAAAAD8D+H4AAB8+AAAAAAAAAAA/Afw/AMAf/gAAAAAAAAAAPwH+PwH4D/wAAAAAAAAAAD8A/j/D+A/8AAAAAAAAAAA/AH8f//AP/AAAAAAAAAAAPwB/j//wB/gAAAAAAAAAAD8AP4f/wAf4AAAAAAAAAAA/AB/B/4AH+AAAAAAAAAAAAAAAAAAAA/AAAAAAAAAAAAAAAAAAAAPwAAAAAAAAAAAAAAAAAAAH8AAAAAAAAAAAAAAAAAAAf+AAAAAAAAAAAAAAAAAAAH/gAAAAAAAAAAAAAAAAAAD/wAAAAAAAAAAAAAAAAAAA/4AAAAAAAAAAAAAAAAAAAP4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH//4H//4H//4AAAAAAAAAB//+BAACBAACAAAAAAAAAAf//gf//gf//gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "b6eo946yy8co",
+   "id": "52nrdgomezzn",
    "x": 2400,
    "y": 3560,
    "w": 560,
@@ -10479,7 +10479,7 @@
    "screen": "/8wMDwAAAAAAAAAAAAAAAP/MDA8AAAAAAAAAAAAAAADADzwwAAAAAAAAAAAAAAAAwA88MAAAAAAAAAAAAAAAAMAMzMAAAAAAAAAAAAAAAADADMzAAAAAAAAAAAAAAAAA/wzM/wAAAAAAAAAAAAAAAP8MzP8AAAAAAAAAAAAAAADADAzAwAAAAAAAAAAAAAAAwAwMwMAAAAAAAAAAAAAAAMAMDMDAAAAAAAAAAAAAAADADAzAwAAAAAAAAAAAAAAAwAwMPwAAAAAAAAAAAAAAAMAMDD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/8AAP/gAA/8AAAAAAAAAA//wAP/+AA//wAAAAAAAAA///AH//wA///AAAAAAAAAf//4D//+Af//4AAAAAAAAP///A///wP//+AAAAAAAAD/A/wfwH8D/A/wAAAAAAAB/AH+H4A/B/gH+AAAAAAAAfwA/h+AP4fwA/gAAAAAAAP4AH8fgAAP4AH4AAAAAAAD8AA/H8AAD8AB+AAAAAAAA/AAPx/gAA/AAAAAAAAAAAPwAD8f/AAPwAAAAAAAAAAH8AA/j//AH8AAAAAAAAAAB/AAP4f/8B/AAAAAAAAAAAfwAD+D//wfwAAAAAAAAAAH8AA/gP/+H8AAAAAAAAAAB/AAP4AP/x/AAAAAAAAAAAPwAD8AAf8PwAAAAAAAAAAD8AA/AAA/j8AAAAAAAAAAA/AAPwAAP4/AAfgAAAAAAAP4AH8/AB+P4AH4AAAAAAAB/AD+PwAfh/AD+AAAAAAAAf4B/j+AP4f4B/gAAAAAAAD/A/wfwH8D/A/wAAAAAAAA///8H///A///4AAAAAAAAH//+A///gH//+AAAAAAAAA///AH//4A//+AAAAAAAAAD//AA//4AD//AAAAAAAAAAP/AAD/4AAP/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB+H+AAAYAAAAAAB+AAAAAAfh/gAAGAAAAAAAfgAAAAAYGYGAAHgAAAAAAYGAAAAAGBmBgAB4AAAAAAGBgAAAABgZgYAAGAAAAAABgYAAAAAYGYGAABgAAAAAAYGAAAAAGBn+AAAYAAH/gAGBgAAAABgZ/gAAGAAB/4ABgYAAAAAYGYAAABgAAAAAAf+AAAAAGBmAAAAYAAAAAAH/gAAAABgZgAAAGAAAAAABgYAAAAAYGYAAABgAAAAAAYGAAAAAB+GAAAB+AAAAAAGBgAAAAAfhgAAAfgAAAAABgYAAA=="
   },
   {
-   "id": "7dkffof3ysfi",
+   "id": "2fxna5cm04k5",
    "x": 3000,
    "y": 3560,
    "w": 560,
@@ -10490,7 +10490,7 @@
    "screen": "/8wMDwAAAAAAAAAAAAAAAP/MDA8AAAAAAAAAAAAAAADADzwwAAAAAAAAAAAAAAAAwA88MAAAAAAAAAAAAAAAAMAMzMAAAAAAAAAAAAAAAADADMzAAAAAAAAAAAAAAAAA/wzM/wAAAAAAAAAAAAAAAP8MzP8AAAAAAAAAAAAAAADADAzAwAAAAAAAAAAAAAAAwAwMwMAAAAAAAAAAAAAAAMAMDMDAAAAAAAAAAAAAAADADAzAwAAAAAAAAAAAAAAAwAwMPwAAAAAAAAAAAAAAAMAMDD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH//8fj8AH///4AAAAAAAAB///H4/AB///+AAAAAAAAAf//x+PwAf///gAAAAAAAAH//8fj8AH///4AAAAAAAAB///H4/AB///+AAAAAAAAAfgAB+PwAAD8AAAAAAAAAAH4AAfj8AAA/AAAAAAAAAAB+AAH4/AAAPwAAAAAAAAAAfgAB+PwAAD8AAAAAAAAAAH4AAfj8AAA/AAAAAAAAAAB+AAH4/AAAPwAAAAAAAAAAfgAB+PwAAD8AAAAAAAAAAH4AAfj8AAA/AAAAAAAAAAB//+H4/AAAPwAAAAAAAAAAf//h+PwAAD8AAAAAAAAAAH//4fj8AAA/AAAAAAAAAAB//+H4/AAAPwAAAAAAAAAAf//h+PwAAD8AAAAAAAAAAH4AAfj8AAA/AAAAAAAAAAB+AAH4/AAAPwAAAAAAAAAAfgAB+PwAAD8AAAAAAAAAAH4AAfj8AAA/AAAAAAAAAAB+AAH4/AAAPwAAAAAAAAAAfgAB+PwAAD8AAAAAAAAAAH4AAfj//8A/AAAAAAAAAAB+AAH4///APwAAAAAAAAAAfgAB+P//wD8AAAAAAAAAAH4AAfj//8A/AAAAAAAAAAB+AAH4///APwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB+GAB+B+AAAAAAAAAAAAAAfhgAfgfgAAAAAAAAAAAAAYGYAYGYGAAAAAAAAAAAAAGBmAGBmBgAAAAAAAAAAAABgZgBgBgYAAAAAAAAAAAAAYGYAYAYGAAAAAAAAAAAAAGBmAGfmBgAAAAAAAAAAAABgZgBn5gYAAAAAAAAAAAAAf+YAYGYGAAAAAAAAAAAAAH/mAGBmBgAAAAAAAAAAAABgZgBgZgYAAAAAAAAAAAAAYGYAYGYGAAAAAAAAAAAAAGBn/h/h+AAAAAAAAAAAAABgZ/4f4fgAAAAAAA=="
   },
   {
-   "id": "glquf4dk86yo",
+   "id": "y0vec28iah81",
    "x": 3600,
    "y": 3560,
    "w": 560,
@@ -10501,7 +10501,7 @@
    "screen": "AAAAB+AAAYAAAAAAAAAAAAAAAAfgAAGAAAAAAAAAAAAAAAAGGAABgAAAAAAAAAAAAAAABhgAAYAAAAAAAAAAAAAAAAYGH4fgYGZ4H4AAAAAAAAAGBh+H4GBmeB+AAAAAAAAABgZgYYBgZ4ZgYAAAAAAAAAYGYGGAYGeGYGAAAAAAAAAGBn/hgGBmBn/gAAAAAAAABgZ/4YBgZgZ/4AAAAAAAAAYYYAGGYeYGYAAAAAAAAAAGGGABhmHmBmAAAAAAAAAAB+AfgHgeZgYfgAAAAAAAAAfgH4B4HmYGH4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/AAAAAAAAAAAAAAAAAAAP/4AAAAAAAAAAAAAAAAAAP//AAAAAAAAAAAAAAAAAAD//4AAAAAAAAAAAAAAAAAB/j/AAAAAAAAAAAAAAAAAA/gPwAAAAAAAAAAAAAAAAAPwD8AAAAAAAAAAAAAAA8AD8AfgAAAAAAAAAAAAAAfAAAAH4AAAAAAAAAAAAAAHwAAAD8AAAAAAAAAAAAAAB8AAAA/AAAAAAAAAAAAAAAfAAAA/gAAAAAAAAAAAAAAHwAAH/wAAAAAAAAAAAAAAB8AAB/wAAAAAAAAAAAAAAAfgAAf+AAAAAAAAAAAAAAP//8AH/4AAAAAAAAAAAAAD///AAH/AAAAAAAAAAAAAA///wAAP4AAAAAAAAAAAAAP//8AAB+AAAAAAAAAAAAAD///AAAfwAAAAAAAAAAAAAAfAAAAH8AAAAAAAAAAAAAAHwAfwB/AAAAAAAAAAAAAAB8AD8AfgAAAAAAAAAAAAAAfAA/gP4AAAAAAAAAAAAAAHwAP//+AAAAAAAAAAAAAAB8AB///AAAAAAAAAAAAAAAfAAP//gAAAAAAAAAAAAAAAAAB//wAAAAAAAAAAAAAAAAAAH/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//////////////////AAAP////////////AAAAAQAAD////////////wAAAAEAAA////////////8AAAABAAAP/////////////////wAAAAAAAAAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "zrg9bvpwkccc",
+   "id": "7kiqi0y2sq6t",
    "x": 0,
    "y": 3940,
    "w": 560,
@@ -10512,7 +10512,7 @@
    "screen": "PwwAAAAAAMAAAAAAAAAAAD8MAAAAAADAAAAAAAAAAADAzAAAAAAAwAAAAAAAAAAAwMwAAAAAAMAAAAAAAAAAAMAM8D8M8DzD8AAAAAAAAADADPA/DPA8w/AAAAAAAAAAwA8MwM8Mw8wAAAAAAAAAAMAPDMDPDMPMAAAAAAAAAADADAzAzADAw/AAAAAAAAAAwAwMwMwAwMPwAAAAAAAAAMDMDMDMAMDADAAAAAAAAADAzAzAzADAwAwAAAAAAAAAPwwMPwwAP8/wAAAAAAAAAD8MDD8MAD/P8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAYAAAAAAcA4HgAAAAAAAf+PAAAAAAHgeDwAAAAAAAH/jwAAAAAB4Hg8AAAAAAAH/88AA4AGAeB4eBwAAAwAB4HPEA/h/hHgePB/Hg5/gAcA734f8f594Hng/44e/8APAA/+PHn//+B7wePOHvHADwAP3zg54fPgf8HBzx7gAA8ADw84PeHh4H/B/88c/AAPAA8PeD3jweB/w//HPP+ADwAPD3g948Hgf+P/xzg/wA8ADw84PePB4H3xwAO4A+AHge8PPHnhweB48cHD8OHgB8PPDz754ePgeHnjw/Dx4AP/jw8f8eH/4Hg8/8Hw/8AB/48PD+Hg/+B4PH8B8D8AAP8PDwAAAH3geB4AAeAAAAAAAAAAAAAAAAAAAAHgAAAAAAAAAAAAAAAAAAAPwAAAAAAAAAAAAAAAAAAAD8AAAAAAAAAAAAAAAAAAAA+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/mBgAAYAAAAAAAAAAAAAB/5gYAAGAAAAAAAAAAAAAAYAeeAAHgAAAAAAAAAAAAAGAHngAB4AAAAAAAAAAAAABgBmYAAGAAAAAAAAAAAAAAYAZmAABgAAAAAAAAAAAAAH+GZn/gYAAAAAAAAAAAAAB/hmZ/4GAAAAAAAAAAAAAAYAYGAABgAAAAAAAAAAAAAGAGBgAAYAAAAAAAAAAAAABgBgYAAGAAAAAAAAAAAAAAYAYGAABgAAAAAAAAAAAAAGAGBgAB+AAAAAAAAAAAAABgBgYAAfgAAAAAAA=="
   },
   {
-   "id": "7lsukygsuu5r",
+   "id": "wp9kxsgsyxts",
    "x": 600,
    "y": 3940,
    "w": 560,
@@ -10523,7 +10523,7 @@
    "screen": "/8wMDwAAAAAAAAAAAAAH/v/MDA8AAAAAAAAAAAAAB/7ADzwwAAAAAAAAAAAAAAAYwA88MAAAAAAAAAAAAAAAGMAMzMAAAAAAAAAAAAAAAGDADMzAAAAAAAAAAAAAAABg/wzM/wAAAAAAAAAAAAAAGP8MzP8AAAAAAAAAAAAAABjADAzAwAAAAAAAAAAAAAAGwAwMwMAAAAAAAAAAAAAABsAMDMDAAAAAAAAAAAAABgbADAzAwAAAAAAAAAAAAAYGwAwMPwAAAAAAAAAAAAAB+MAMDD8AAAAAAAAAAAAAAfgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/ngB4B/gP/jgBwAAAAAAH/78AeA//H/54A8AAAAAAB/+/APgP/x/+eAPAAAAAAAf/vwD4Dw+f/ngDwAAAAAAHgD+B+A8HngB4A8AAAAAAB4A/gfgPB54AeAPAAAAAAAeAP8P4DweeAHgDwAAAAAAHgD3D+A8PHgB4A8AAAAAAB/89w7gP/h/+eAPAAAAAAAf/POe4D/8f/ngDwAAAAAAH/zznOA8Pn/54A8AAAAAAB4A87zgPA94AeAPAAAAAAAeAPH44DwPeAHgDwAAAAAAHgDx+OA8D3gB4A8AAAAAAB4A8fjgPB94AeAPAAAAAAAeAPDw4D/+f/n/7/8AAAAAHgDw8OA//n/5/+//AAAAAB4A8GDgP/h/+f/v/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAYAAAAAAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAB/hngfgfgfh+AAAAAAAAAAf4Z4H4H4H4fgAAAAAAAAAGBnhmBmAGBhgAAAAAAAAABgZ4ZgZgBgYYAAAAAAAAAAYGYAf+H4f+GAAAAAAAAAAGBmAH/h+H/hgAAAAAAAAAB/hgBgAAZgAYYAAAAAAAAAf4YAYAAGYAGGAAAAAAAAAGAGAB+H+B+AeAAAAAAAAABgBgAfh/gfgHgAAAAA=="
   },
   {
-   "id": "fuwvqxiwrv2y",
+   "id": "qlupltr3a58c",
    "x": 1200,
    "y": 3940,
    "w": 560,
@@ -10534,7 +10534,7 @@
    "screen": "/8AAAADAAAAAAAAB+AAH/v/AAAAAwAAAAAAAAfgAB/7AAAAAAAAAAAAAAAYGAGAGwAAAAAAAAAAAAAAGBgBgBsAM8D/DwM8D8AAAAAYBgBjADPA/w8DPA/AAAAAGAYAY/w8MwMDA8MwMAAAAGAYAYP8PDMDAwPDMDAAAABgGAGDADAzAwMDAz/wAAABgGAGAwAwMwMDAwM/8AAAAYBgBgMAMDD/AwMDMAAAAAYBgAYDADAw/wMDAzAAAAAGAYAGA/8wMAMPwwMPwAAAH/gABgP/MDADD8MDD8AAAB/4AAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//HgAeAf/8A+AOAOH/4AAf/78APwP//A/4HwDz//AAH/+/AD8D//w//h+A8//wAB//v4A/A//8f/4fgPP/8AAfAD+AfwAPAHwfH8Dz4AAAHwA/wP8ADwD4H5/g8+AAAB8AP8D/AA8A8Aef4PPgAAAfAD/A/wAPAfAHn/Dz4AAAHwA/4e8ADwHgB5948//AAB/+POHvAA8B4AefePP/4AAf/jzzzwAPAeAHnzzz/+AAH/48888ADwHgB58+8//gAB8APHPPAA8B8AefH/PgAAAfADx/jwAPAfAHnx/z4AAAHwA8Pw8ADwD4D58H8+AAAB8APD8PAA8A+B+fB/PgAAAfADw/DwAPAH/+HwPz/+AAHwA8Hw8ADwB//h8B8//wAB8APB4PAA8AH/gfAfP/8AAfADwMDwAPAA/4HwDz//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//D/8P/w//D/8P/w//AAAIAQ//CAEIAQgBCAEIAQAAD/8P/w//D/8P/w//D/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "8z4pur27hqc5",
+   "id": "pdxdihnd7wur",
    "x": 1800,
    "y": 3940,
    "w": 560,
@@ -10545,7 +10545,7 @@
    "screen": "4B//////8AAAAGBh+AAAYOAf//////AAAABgYfgAAGDn5//////wAAAAYGYGAAHg5+f/////8AAAAGBmBgAB4OfngfgfgfAAAABgZgYAAGDn54H4H4HwAAAAYGYGAABg4B/+Z/5/8AAAAGBmBgAAYOAf/mf+f/AAAABgZgYAAGDn54B4H4HwAAAAYGf+AABg5+eAeB+B8AAAAGBn/gAAYOfmfn/n/nAAAAAZhgYAAGDn5n5/5/5wAAAAGYYGAABg4B+AYB4B8AAAAAYGBgAB+OAfgGAeAfAAAAAGBgYAAfgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcOAOOP/+AAAAAAAAAAAAAPnwD33//gAAAAAAAAAAAAD5+A99//4AAAAAAAAAAAAA+fgPff/+AAAAAAAAAAAAAPn8D3wHgAAAAAAAAAAAAAD5/g98B4AAAAAAAAAAAAAA+f4PfAeAAAAAAAAAAAAAAPn/D3wHgAAAAAAAAAAAAAD59498B4AAAAAAAAAAAAAA+fePfAeAAAAAAAAAAAAAAPnzz3wHgAAAAAAAAAAAAAD58+98B4AAAAAAAAAAAAAA+fH/fAeAAAAAAAAAAAAAAPnx/3wHgAAAAAAAAAAAAAD58H98B4AAAAAAAAAAAAAA+fB/fAeAAAAAAAAAAAAAAPnwP3wHgAAAAAAAAAAAAAD58B98B4AAAAAAAAAAAAAA+fAffAeAAAAAAAAAAAAAAPnwD3wHgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "8xm16qf8y1bo",
+   "id": "yzagyp3me4pf",
    "x": 2400,
    "y": 3940,
    "w": 560,
@@ -10556,7 +10556,7 @@
    "screen": "4B//////8AAAAAAAGAAH/uAf//////AAAAAAABgAB/7n5//////wAAAAAAB4AGAG5+f/////8AAAAAAAeABgBufngfgfgfAAAAAAAZgBgBjn54H4H4HwAAAAAAGYAYAY4B/+Z/5/8AAAAAAGGAYAYOAf/mf+f/AAAAAABhgGAGDn54B4H4HwAAAAAAf+GAGA5+eAeB+B8AAAAAAH/hgBgOfmfn/n/nAAAAAAABhgAYDn5n5/5/5wAAAAAAAYYAGA4B+AYB4B8AAAAAAAGAABgOAfgGAeAfAAAAAAABgAAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4B//gAAcAAAAAAAAAAAAD/g//4AAPgAAAAAAAAAAAD/+P/+AAP4AAAAAAAAAAAB//j//gAP+AAAAAAAAAAAAfB8ADwAD/gAAAAAAAAAAAPgfAB8AA74AAAAAAAAAAADwB4A8AAI+AAAAAAAAAAAB8AcAPAAAPgAAAAAAAAAAAeAAAHgAAD4AAAAAAAAAAAHgAAD4AAA+AAAAAAAAAAAB4AAB8A/wPgAAAAAAAAAAAeAAAeAP+D4AAAAAAAAAAAHwAAPAD/g+AAAAAAAAAAAB8AADwA/wPgAAAAAAAAAAAPgPj4AAAD4AAAAAAAAAAAD4Hw8AAAA+AAAAAAAAAAAAf/4f/4AAPgAAAAAAAAAAAH/+P/+AAD4AAAAAAAAAAAAf+D//gAA+AAAAAAAAAAAAD/g//4AAPgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//D/8P/w//D/8P/w//AAAIAQgBCAEP/wgBCAEIAQAAD/8P/w//D/8P/w//D/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "7vaotvz5dx2j",
+   "id": "wo4m66ct0ua6",
    "x": 3000,
    "y": 3940,
    "w": 560,
@@ -10567,7 +10567,7 @@
    "screen": "PwAAAAAAAAAAAAAAAAAAAD8AAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAAAAAAAwD8D8AAAAAAAAAAAAAAAAMA/A/AAAAAAAAAAAAAAAADAwAwMAAAAAAAAAAAAAAAAwMAMDAAAAAAAAAAAAAAAAMA/DAwAAAAAAAAAAAAAAADAPwwMAAAAAAAAAAAAAAAAwADMDAAAAAAAAAAAAAAAAMAAzAwAAAAAAAAAAAAAAAPw/wPwAAAAAAAAAAAAAAAD8P8D8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//wAAAAAAAAAAAAAAAAAA///gAAAAAAAAAAAAAAAAAP//+AAAAAAAAAAAAAAAAAD///gAAAAAAAAAAAAAAAAA///8AAAAAAAAAAAAAAAAAP///gAAAAAAAAAAAAAAAAD+Af8AAAAAAAAAAAAAAAAA/gB/AAAAAAAAAAAAAAAAAP4AP4AAAAAAAAAAAAAAAAD+AD+AAAAAAAAAAAAAAAAA/gAfgAAAAAAAAAAAAAAAAP4AH8AAAAAAAAAAAAAAAAD+AA/AAAAAAAAAAAAAAAAA/gAPwAAAAAAAAAAAAAAAAP4AD8AAAAAAAAAAAAAAAAD+AA/AAAAAAAAAAAAAAAAA/gAPwAAAAAAAAAAAAAAAAP4AD8AAAAAAAAAAAAAAAAD+AA/AAAAAAAAAAAAAAAAA/gAfwAAAAAAAAAAAAAAAAP4AH4AAAAAAAAAAAAAAAAD+AD+AAAAAAAAAAAAAAAAA/gA/gAAAAAAAAAAAAAAAAP4AfwAAAAAAAAAAAAAAAAD+Af8AAAAAAAAAAAAAAAAA///+AAAAAAAAAAAAAAAAAP///AAAAAAAAAAAAAAAAAD///wAAAAAAAAAAAAAAAAA///4AAAAAAAAAAAAAAAAAP//wAAAAAAAAAAAAAAAAAD//wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8AAAAAAAAAAAAAAAAAAAA/AAAAAAAAAAAAAAAAAAAAMMAAAAAAAAAAAAAAAAAAADDAAAAAAAAAAAAAAAAAAAAwMAAAAAAAAAAAAAAAAAAAMDAAAAAAAAAAAAAAAAAAADAwAAAAAAAAAAAAAAAAAAAwMAAAAAAAAAAAAAAAAAAAMDAAAAAAAAAAAAAAAAAAADAwAAAAAAAAAAAAAAAAAAAwwAAAAAAAAAAAAAAAAAAAMMAAAAAAAAAAAAAAAAAAAD8AAAAAAAAAAAAAAAAAAAA/AAAAAAAAAAAAAAAA=="
   },
   {
-   "id": "b7rtf00alcco",
+   "id": "p8o7423omcf7",
    "x": 3600,
    "y": 3940,
    "w": 560,
@@ -10578,7 +10578,7 @@
    "screen": "//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////4Af/g/8f+HD/4P///////8AB/wH+D/gg/wA////////AAP8B/gf4IP4AD///////wAA+Af4D+CD8AAf//////8HgPgD+A/gg+AQH///////B+D4A/gH4IPg/A///////wfweEH4A+CDwf4P//////8H8HBB+APgg8H/D///////B/BwwfgB4IOD/////////wfgcOH4IOCDg/////////8H4ODg+CDgg4P/////////AADh8Pg4YIOD/////////wABwfD4OCCDg/////////8AA8HweDwgg4P/////////AA/AAHg8AIOD/////////wf/gAA4PgCDwf8P//////8H/4AAOD8Ag8H+D///////B/+H+Dg/AIPgfA///////wf/h/wYP4CD4AAf//////8H/wf8GD/Ag/AAP///////B/4H/hg/wIP4AH///////wf+D/4YP+CD/gD//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////h/h/////4f4f/////////4f4f////+H+H//////////n/n////+eeef/////////5/5/////nnnn///////4H+f+f//4H5/5////////+B/n/n//+B+f+f/////////n5/5//+fmB+B/////////5+f+f//n5gfgf///////+Afn/n//5+ef+f////////gH5/5//+fnn/n////////n5+f+f//n55/5////////5+fn/n//5+ef+f////////gHgfgf//gfn/n////////4B4H4H//4H5/5///////////////////////////////////////////////w=="
   },
   {
-   "id": "7ofs5nxnmm8z",
+   "id": "7fwpyqxvtmdt",
    "x": 3444,
    "y": 0,
    "w": 760,

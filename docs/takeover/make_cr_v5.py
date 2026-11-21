@@ -29,6 +29,7 @@ os.chdir(HERE)
 exec(open("make_cr_v4.py").read().split("\ndef main():")[0], V4)
 os.chdir(_cwd)
 V, M = V4["V"], V4["M"]
+V4["random"].seed(20261123)                        # (ids of its own: v4's seed would repeat its ids)
 hexc, uid, ctl, knobs = V4["hexc"], V4["uid"], V4["ctl"], V4["knobs"]
 VIOLET, ORANGE, BASSC, GREEN, CYAN, RED = (V4[k] for k in ("VIOLET", "ORANGE", "BASSC", "GREEN", "CYAN", "RED"))
 WHITE, YELLOW, SEQC = V4["WHITE"], V4["YELLOW"], V4["SEQC"]
@@ -86,9 +87,8 @@ def labels_from_leds(c):
                 e.setdefault("meta", {})["label"] = "M%d" % ((rr - 1) * 4 + k - 4)
     for i in range(16):
         e = c.get(f"step-{i + 1}", {})
-        if e.get("led", {}).get("color") != hexc(SEQC) and "Slot" not in e.get("meta", {}).get("label", "") and \
-                e.get("meta", {}).get("label", "") not in V4["SC"] and not e.get("meta", {}).get("label", "").isupper():
-            e.setdefault("meta", {})["label"] = ""
+        if e.get("led", {}).get("color") != hexc(SEQC) and e.get("meta", {}).get("label", "") in V["SEQ"].values():
+            e.setdefault("meta", {})["label"] = ""          # (the mockup's sequence: the build's steps are empty)
     return c
 
 
