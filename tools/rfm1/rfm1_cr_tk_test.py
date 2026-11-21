@@ -199,7 +199,7 @@ def scr_layout(cur=0, bank=1):
     return s
 
 
-SC = ["KEY", "LOCK", "LATCH", "PERF", "B.PRF", "FX", "BASS", "BEAT"]
+SC = ["KEY", "LOCK", "LATCH", "PERF", "B.PRF", "FX", "BASS", "METRO"]
 
 
 def scr_shortcuts(on):                             # proposal 4, C: Shift held
@@ -370,8 +370,11 @@ def main():
     ok(e.rc == 0 and "tk-state@100: on claims 0x5f speech" in e.lines, "entering: shown with claims 0x5f")
     same(e, scr_home(chord=False), "home on entering: no chord yet, a dash (proposal 3)")
     ok(e.led(pad(4, 1)) == YELLOW and e.led(pad(4, 8)) == YELLOW and e.led(pad(4, 2)) == KEY_D and
-       e.led(pad(3, 2)) == KEY_D and e.led(pad(3, 1)) == (0, 0, 0) and e.led(pad(3, 4)) == (0, 0, 0),
-       "Keys layout: C and the top C yellow, the keys grey, no key above E / B")
+       e.led(pad(3, 2)) == (16, 16, 18) and e.led(pad(3, 1)) == (0, 0, 0) and e.led(pad(3, 4)) == (0, 0, 0),
+       "Keys layout: the tonic (C) yellow, the key's notes grey, the others dim, no key above E / B")
+    kd = Run(["knob:5@150:8"], 600)
+    ok(kd.led(pad(4, 2)) == YELLOW and kd.led(pad(3, 2)) == KEY_D and kd.led(pad(4, 1)) == (16, 16, 18) and
+       kd.led(pad(4, 4)) == (16, 16, 18), "Keys in D major: D yellow, C# grey (in the key), C and F dim")
     ok(all(e.led(pad(1, c)) == VIOLET_D for c in range(1, 5)) and all(e.led(pad(2, c)) == ORANGE_D for c in range(1, 5)),
        "the chord keys: types violet, extensions orange (dim)")
     ok(all(e.led(pad(r, c)) == pct(MEM, 18) for r in (1, 2) for c in range(5, 9)), "eight empty memories, dim cyan")
@@ -423,8 +426,11 @@ def main():
     ch = Run(["button:menu@200+400", "pad:26@300+50"], 900)
     ok(ch.led(pad(4, 1)) == YELLOW and ch.led(pad(4, 2)) == (12, 12, 14) and ch.led(pad(4, 3)) == pct(WHITE, 32) and
        ch.led(pad(3, 1)) == pct(WHITE, 32), "Chromatic: C yellow, C# dark, D in the scale; the row above from F")
-    pg = Run(["button:menu@200+400", "pad:10@300+50", "pad:3@800+300"], 1200)
+    pg = Run(["button:menu@200+400", "pad:10@300+50", "pad:3@1600+300"], 2000)
     ok(pg.says[0].startswith("Progression 3"), "Menu + progression 3: the Prog layout with it (%s)" % pg.says[:1])
+    pn_ = Run(["button:menu@200+900", "pad:10@300+50"], 800)
+    same(pn_, (lambda s: (clbl(s, 0, "Progression 3"), bigc(s, 18, 30), s)[-1])(Scr()),
+         "Menu + a progression: its name shown (Neo Soul)", png="12-prog-name")
     ok(all(pg.led(pad(4, c)) == pct(PROG, 85) for c in (1, 2, 3)), "Prog: its chords lit purple")
     ok(len(pg.says) >= 2 and pg.says[1].startswith("Chord "), "Prog: chord 4 plays (%s)" % pg.says[1:])
     ok(len(pg.screen) == 64 and ink(pg, 0, 0, 64, 14) and ink(pg, 4, 17, 128, 48) and ink(pg, 80, 50, 128, 64) and
@@ -453,15 +459,18 @@ def main():
        "a step past the loop's end (page 2 of a 16-step loop): nothing (%s)" % pe.says[-3:])
 
     # ---- Shift: the FM-1's buttons on the pads of columns 7-8 (proposal 5), the screen's 2 x 4 grid pad for name
-    SCP = [pad(1 + i // 2, 7 + i % 2) for i in range(8)]       # KEY LOCK / LATCH PERF / B.PRF FX / BASS BEAT
+    SCP = [pad(1 + i // 2, 1 + i % 2) for i in range(8)]       # KEY LOCK / LATCH PERF / B.PRF FX / BASS METRO
     sh = Run(["button:shift@200+600"], 700)
     COLS = [YELLOW, VIOLET, WHITE, VIOLET, BASS, GREEN, BASS, RED]
     on = [sh.led(SCP[i]) == COLS[i] for i in range(8)]
     ok(all(sh.led(SCP[i]) in (COLS[i], pct(COLS[i], 18)) for i in range(8)),
-       "Shift held: the pads of columns 7-8 KEY .. BEAT, lit when on, dim when off")
-    ok(sh.led(33) == pct(WHITE, 30) and sh.led(39) == pct(CYAN, 30) and sh.led(32) == (0, 0, 0) and
-       sh.led(47) == (0, 0, 0) and sh.led(77) == WHITE and sh.led(83) == WHITE and sh.led(76) == (0, 0, 0),
-       "Shift held: S2 (Settings) and S8 (sound editor) lit, their icons on; the other steps dark")
+       "Shift held: the pads of columns 1-2 KEY .. METRO, lit when on, dim when off")
+    ok(all(sh.led(pad(r, c)) == (0, 0, 0) for r in (1, 2) for c in (3, 4)) and
+       all(sh.led(pad(r, c)) == (0, 0, 0) for r in (3, 4) for c in range(3, 9)) and sh.led(pad(1, 5)) == pct(MEM, 18),
+       "Shift held: only the shortcuts and the top right's eight lit, the rest dark")
+    ok(all(sh.led(32 + i) != (0, 0, 0) for i in range(12)) and all(sh.led(44 + i) == (0, 0, 0) for i in range(4)) and
+       all(sh.led(76 + i) == WHITE for i in range(12)) and all(sh.led(88 + i) == (0, 0, 0) for i in range(4)),
+       "Shift held: S1..S12 lit (dim: off), their icons on; S13..S16 dark")
     ok(not on[0] and not on[1], "Shift held: Key and Lock off at the start")
     same(sh, scr_shortcuts(on), "Shift held: the eight buttons, inverted = on", png="4-shortcuts")
     kt = Run(["button:shift@200+300", "pad:%d@250+50" % SCP[0], "button:shift@700+300", "pad:%d@750+50" % SCP[1]], 2300)
@@ -491,8 +500,8 @@ def main():
        "Chorus send (%s)" % fx.says)
     pb = Run(["button:shift@200+900", "pad:%d@250+600" % SCP[3], "button:shift@1300+300", "step:7@1350+50",
               "button:back@1700+50"], 2000)
-    ok(pb.says[-1] == "Home" and len(pb.screen) == 64 and pb.screen[28][52:76] == "1" * 24,
-       "the editor over a settings layer, Back: home at once (%s)" % pb.says)
+    ok(pb.says[-1] == "Home" and pb.led(pad(1, 5)) == pct(MEM, 18),
+       "the editor over a settings layer, Back: home at once, the memories back (%s)" % pb.says)
 
     # ---- Shift + S8: the sound editor (proposal 5)
     ed = Run(["button:shift@200+300", "step:7@250+50", "knob:5@700:4", "pad:29@2000+50"], 2300)
@@ -503,7 +512,10 @@ def main():
        "the editor: the memories' pads its groups, each its colour, FILT full, OSC dim; the eighth chord / bass")
     ok(ed.led(55) == CYAN, "the editor: its knobs lit cyan")
     ec = Run(["button:shift@200+300", "step:7@250+50"], 700)
-    same(ec, scr_popup("Sound editor"), "entering: a card, Sound editor / Chord", png="10-editor-card")
+    same(ec, scr_popup("Chord"), "entering: a card, Chord / EDIT", png="10-editor-card")
+    em = Run(["button:shift@200+300", "step:7@250+50", "button:shift@1500+300", "step:7@1550+50"], 1900)
+    ok(em.says[-1] == "Memories", "Shift + S8 again: the memories (%s)" % em.says[-1:])
+    same(em, (lambda s: (bigc(s, 18, 30), s)[-1])(Scr()), "leaving: a card, MEMORY")
     eb_ = Run(["button:shift@200+300", "step:7@250+50", "button:back@2000+50"], 2300)
     ok(eb_.says[-1] == "Home" and eb_.led(pad(1, 5)) == pct(MEM, 18), "the editor, Back: home (the memories back)")
 
@@ -547,8 +559,8 @@ def main():
     iso = Run(["button:menu@200+400", "pad:16@300+50", "pad:20@900+300", "button:shift@1400+700"], 1900)
     ok(iso.says[:2] == ["Layout Isomorphic", "Chord D"], "Menu + ISO; the top row's fifth pad is D (%s)" % iso.says)
     ok(iso.led_when(pad(2, 3), 1300) == YELLOW and iso.led_when(pad(1, 1), 1300) == (12, 12, 14) and
-       iso.led(pad(1, 1)) == VIOLET_D, "ISO: notes on the top rows too (C5 yellow, D#5 dark); Shift held: the chord "
-       "keys back")
+       iso.led(pad(1, 1)) == pct(YELLOW, 18) and iso.led(pad(1, 5)) == pct(MEM, 18),
+       "ISO: notes on the top rows too (C5 yellow, D#5 dark); Shift held: the shortcuts and the memories")
 
     # ---- a knob's popup
     kp = Run(["touch:0@200+300", "knob:1@250:2"], 400)
@@ -604,6 +616,42 @@ def main():
     ok(quiet == 0.0 and heard > 0.01, "stopped: a step tapped is silent, held it is previewed (rms %.4f, %.4f)"
        % (quiet, heard))
 
+    # ---- proposal 6: Shift + steps, the Loop list, the player's chord on a step
+    S6 = "button:shift@200+300"
+    fv_ = Run([S6, "step:0@250+50"], 600)
+    ok(fv_.says == ["Fixed velocity, on"] and fv_.led_when(32, 400) == WHITE, "Shift + S1: Fixed velocity on")
+    sw_ = Run([S6, "step:2@250+50", "knob:0@600:5"], 900)
+    ok(sw_.says == ["Loop, editing Swing: 50 percent", "Swing: 55 percent"], "Shift + S3: the Loop list at Swing, "
+       "editing; the wheel 55 %% (%s)" % sw_.says)
+    PNGS["13-loop-swing"] = sw_.screen
+    ok(ink(sw_, 0, 0, 60, 14) and sw_.screen[16] == "1" * 128, "the Loop list: its title, the rule")
+    qn = Run([S6, "step:3@250+50"], 600)
+    rt = Run([S6, "step:4@250+50"], 600)
+    ok(qn.says[0].startswith("Loop, editing Quantize") and rt.says[0].startswith("Loop, editing Rate"),
+       "Shift + S4: Quantize, S5: the loop's Rate (%s, %s)" % (qn.says, rt.says))
+    st_ = Run(DM7 + ["step:0@1200+50", "button:shift@1500+300", "step:5@1550+50", "knob:0@1900:1", "knob:0@2000:1"],
+              2300)
+    ok(st_.says[-3:] == ["Loop, editing Steps: 16", "Steps: 17", "Steps: 18"], "Shift + S6: the loop's steps, the "
+       "wheel 17, 18 (%s)" % st_.says[-3:])
+    lp_ = Run([S6, "step:6@250+50", "knob:0@600:1"], 900)
+    ok(lp_.says[0] == "Loop, Swing: 50 percent" and lp_.says[1].startswith("Quantize"), "Shift + S7: the Loop "
+       "list (the owner's track settings), the wheel its rows (%s)" % lp_.says)
+    tp = Run(["button:shift@200+1500", "step:8@250+50", "step:8@750+50", "step:8@1250+50"], 1700)
+    ok(tp.says[-1] == "Tempo, 120 bpm", "Shift + S9 tapped every 500 ms: tempo 120 (%s)" % tp.says)
+    ex = Run([S6, "step:9@250+50", "button:shift@700+300", "step:10@750+50", "button:shift@1200+300", "step:11@1250+50"],
+             1700)
+    ok(ex.says == ["Rec mode, Advance", "Count-in, off", "Metronome, on"], "Shift + S10 the record mode, S11 "
+       "count-in, S12 the metronome (%s)" % ex.says)
+    jt = Run([S6, "step:1@250+50", "touch:9@600+400", "knob:0@700:1"], 1100)
+    ok(jt.says == ["Settings, Velocity: Dynamic", "Fixed level: 100"] and ink(jt, 0, 0, 100, 14) and
+       jt.screen[16] == "1" * 128, "the Settings: the wheel touched and turned moves the row, no preset (%s)" % jt.says)
+    sl_ = Run(["button:shift@200+1500", "step:1@250+50"], 1000)
+    ok(sl_.screen[16] == "1" * 128, "Shift still held: the Settings shown, not the Shift screen")
+    mc = Run(DM7 + ["step:0@1200+50", "button:play@1400+50", "pad:2@2000+200", "step:5@3200+50", "button:play@3500+50",
+                    "step:5@4000+900"], 5100)
+    ok(mc.says[-1] == "Step 6, E", "a step tapped while the loop plays: the chord the player played (E), not the "
+       "loop's (%s)" % mc.says[-2:])
+
     # ---- Iso Key and the Perf amount knob (proposal 5)
     ik = Run(["button:menu@200+400", "pad:17@300+50", "pad:8@900+300", "pad:9@1300+300"], 1800)
     ok(ik.says[0] == "Layout Isomorphic, in key" and ik.says[1:3] == ["Chord F", "Chord G"],
@@ -611,8 +659,10 @@ def main():
     ok(all(ik.led(n) in (YELLOW, pct(WHITE, 32)) for n in range(32)), "Iso Key: every pad in the key")
     pa = Run(["knob:3@200:1", "knob:3@220:1", "knob:3@240:1", "knob:3@260:1", "knob:3@280:1", "knob:3@300:1"], 500)
     ok(len(pa.says) == 2, "Perf amount: three ticks a step (six ticks: two) (%s)" % pa.says)
-    lk = Run(["button:shift@200+300", "pad:25@300+100", "pad:1@1000+100", "pad:3@1300+100"], 1600)
-    ok("Chord D minor" in lk.says and "Chord F minor" in lk.says, "Shift + MIN: LOCK, MIN latched (%s)" % lk.says)
+    lk = Run(["pad:26@200+1300", "button:shift@300+300", "pad:%d@350+50" % SCP[1], "pad:1@1600+100", "pad:3@1900+100"],
+             2200)
+    ok("Chord D major" in lk.says and "Chord F major" in lk.says, "MAJ held + Shift + the LOCK pad: MAJ latched (%s)"
+       % lk.says)
     rc = Run(DM7 + ["step:0@1500+50", "button:play@1700+50"], 2000)
     ok(rc.led(48) == (0, 200, 0) and rc.led_when(32, 1720) == WHITE and rc.led(32) == SEQ and
        WHITE in [rc.led(32 + i) for i in range(1, 16)], "Play: the slot plays, Play lit green, the playhead (white) "
