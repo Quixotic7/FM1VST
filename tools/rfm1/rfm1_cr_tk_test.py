@@ -100,9 +100,9 @@ class Scr:
 
 # the design's screens (make_cr_v2.py scr_home / scr_saved / scr_step / scr_slots / scr_layout / scr_prog2,
 # make_cr_mockups.py scr_popup), parameterised by what this run holds
-def scr_home(key, slot, name, filled=(), play=None, nsteps=16):
+def scr_home(key, slot, name, filled=(), play=None, nsteps=16, lock=False):
     s = Scr()
-    s.header(key, "SEQ %d" % slot)
+    s.header(key, ("LK S%d" if lock else "SEQ %d") % slot)
     s.text(1, 19, name, 4)
     for i in range(16):
         x = 1 + i * 8
@@ -164,6 +164,39 @@ def scr_prog(name, num, chord, filled, last):
         (s.rect if i in filled else s.box)(x, 52, 7, 7, 1, **({} if i in filled else {"dotted": True}))
         if i == last:
             s.rect(x, 61, 7, 3)
+    return s
+
+
+def fit(t, k=4):                                   # cr_move.c px_fit
+    while k > 1 and Scr.tw(t, k) > 126:
+        k -= 1
+    return k
+
+
+SC = ["KEY", "LOCK", "LATCH", "PERF", "B.PRF", "FX", "BASS", "BEAT"]
+
+
+def scr_shortcuts(on):                             # proposal 4, C: Shift held
+    s = Scr()
+    for i, lab in enumerate(SC):
+        x, y = (i % 2) * 66, (i // 2) * 16
+        if on[i]:
+            s.rect(x, y, 62, 15)
+            s.text(x + 1, y + 1, lab, 2, 0)
+        else:
+            s.text(x + 1, y + 1, lab, 2)
+    return s
+
+
+def scr_layer(name, on, page, at, of):             # proposal 4, D: a settings layer
+    s = Scr()
+    s.header(name, "on" if on else "off")
+    k = fit(page)
+    s.text(1, 19 + (4 - k) * 3, page, k)
+    if 2 <= of <= 16:
+        x0 = 64 - of * 4
+        for i in range(of):
+            s.rect(x0 + i * 8, 58 if i == at else 60, 6, 5 if i == at else 1)
     return s
 
 
@@ -234,6 +267,7 @@ def dim(c, f):
 VIOLET_D, ORANGE_D = (0x36, 0x10, 0x47), (0x47, 0x21, 0x00)
 VIOLET, ORANGE = (196, 58, 255), (255, 120, 0)
 KEY_D, YELLOW, WHITE = (0x51, 0x51, 0x51), (0xFF, 0xD2, 0x28), (255, 255, 255)
+BASS, GREEN, RED, CYAN = (255, 90, 30), (40, 220, 90), (255, 40, 40), (0x13, 0xAB, 0xBF)
 MEM, SEQ, HELD, PROG = (0x13, 0xAB, 0xBF), (40, 110, 255), (255, 120, 0), (150, 90, 255)
 
 
@@ -256,7 +290,7 @@ def custom_rfm1(b):
     return None
 
 
-KEY_ON = "knob:6@150:48"                           # Key + 12 semitones (4 ticks a semitone): the tonic stays C, Key Mode on ("C MAJ")
+KEY_ON = "knob:5@150:48"                           # Key + 12 semitones (4 ticks a semitone): the tonic stays C, Key Mode on ("C MAJ")
 DM7 = ["pad:25@200+700", "pad:17@205+700", "pad:1@300+500"]   # MIN + m7 held, D: Dm7
 
 
@@ -295,7 +329,8 @@ def main():
     ok(all(e.led(pad(r, c)) == pct(MEM, 18) for r in (1, 2) for c in range(5, 9)), "eight empty memories, dim cyan")
     ok(all(e.led(32 + i) == (24, 24, 30) for i in range(16)), "the steps: 16 dark (an empty slot: a bar)")
     ok(all(e.led(76 + i) == (0, 0, 0) for i in range(16)), "the step icons: off for a loop of one page")
-    ok(e.led(55) == ORANGE and e.led(56) == VIOLET and e.led(60) == YELLOW, "the knob rings: Voicing, Perform, Key")
+    ok(e.led(55) == ORANGE and e.led(56) == BASS and e.led(57) == VIOLET and e.led(58) == GREEN and e.led(59) == YELLOW
+       and e.led(62) == WHITE, "the knob rings: Voicing, Bass reg., Perf amount, FX send, Key .. Tempo")
 
     # ---- a chord from the chord keys and a key
     c1 = Run([KEY_ON] + DM7, 2000)
@@ -322,7 +357,8 @@ def main():
     mn = Run(["button:menu@200+600"], 700)
     same(mn, scr_layout(), "Menu held: the picker (layout E)", png="5-layout-picker")
     ok(mn.led(pad(1, 1)) == WHITE and mn.led(pad(1, 2)) == pct(WHITE, 45) and mn.led(pad(1, 3)) == pct(WHITE, 15) and
-       mn.led(pad(2, 1)) == (0, 0, 0), "picker: Keys now, Scale the previous, the free row dark")
+       mn.led(pad(2, 1)) == pct(WHITE, 15) and mn.led(pad(2, 2)) == (0, 0, 0),
+       "picker: Keys now, Scale the previous, ISO under Keys, the rest of that row dark")
     ok(mn.led(pad(1, 5)) == MEM and mn.led(pad(1, 6)) == pct(MEM, 15), "picker: bank 1 of 8")
     ok(all(mn.led(pad(3, c)) == pct(PROG, 85) for c in range(1, 7)) and mn.led(pad(3, 7)) == pct(PROG, 12),
        "picker: progressions 1-6 (the factory set) lit, 7.. dim")
@@ -368,33 +404,87 @@ def main():
     ok(not any(w.startswith("Step 17") for w in pe.says) and pe.led(32) != SEQ,
        "a step past the loop's end (page 2 of a 16-step loop): nothing (%s)" % pe.says[-3:])
 
-    # ---- Shift: the slots and the pages
+    # ---- Shift: the FM-1's buttons on the steps (proposal 4, C): tap on / off, held the settings
     sh = Run(["button:shift@200+600"], 700)
-    same(sh, scr_slots(0, ()), "Shift held: the slots view (layout D)", png="4-slots")
-    ok(sh.led(32) == HELD and sh.led(33) == pct(SEQ, 12) and sh.led(42) == (0, 0, 0) and sh.led(44) == WHITE and
-       sh.led(45) == pct(WHITE, 25), "Shift held: slot 1 orange, 2..10 dim, 13 = page 1 lit")
-    sw = Run(DM7 + ["step:0@1500+50", "button:shift@2000+2000", "step:1@2200+50", "step:13@2300+50"], 3700)
-    ok(any(s.startswith("loop 2") for s in sw.says) and "Page 2" in sw.says, "Shift + step 2: slot 2 (slot 1 saved); "
-       "Shift + step 14: page 2 (%s)" % sw.says)
-    same(sw, scr_slots(1, (0,), 2), "the slots view: slot 2 current, slot 1 holds a loop, page 2")
+    COLS = [YELLOW, VIOLET, WHITE, VIOLET, BASS, GREEN, BASS, RED]
+    on = [sh.led(32 + i) == COLS[i] for i in range(8)]
+    ok(all(sh.led(32 + i) in (COLS[i], pct(COLS[i], 18)) for i in range(8)) and sh.led(42) == (0, 0, 0) and
+       sh.led(47) == pct(WHITE, 18), "Shift held: the steps KEY .. BEAT lit when on, dim when off; 11..15 dark, "
+       "16 Options")
+    ok(not on[0] and not on[1], "Shift held: Key and Lock off at the start")
+    same(sh, scr_shortcuts(on), "Shift held: the eight buttons, inverted = on", png="4-shortcuts")
+    kt = Run(["button:shift@200+300", "step:0@250+50", "button:shift@700+300", "step:1@750+50"], 2300)
+    ok(kt.says[:2] == ["Key, on", "Lock, on"], "Shift + step 1 tapped: Key Mode on; Shift + step 2: LOCK on (%s)"
+       % kt.says)
+    ok(kt.screen[:16] == scr_home("C MAJ", 1, "-", lock=True).rows()[:16], 'home: "C MAJ", LOCK on "LK S1"')
+    pl = Run(["button:shift@200+700", "step:3@250+600"], 1100)
+    ok(pl.says == ["PERF, Strum"], "Shift + step 4 held: the PERF settings, said (%s)" % pl.says)
+    same(pl, scr_layer("PERF", False, "Strum", 1, 8), "the PERF settings: off, its mode big, the modes as dashes",
+         png="9-perf-settings")
+    ok(all(pl.led(55 + k) == VIOLET for k in range(4)) and all(pl.led(59 + k) == (0, 0, 0) for k in range(4)),
+       "the PERF settings: knobs 1-4 lit violet, 5-8 dark")
+    pw = Run(["button:shift@200+900", "step:3@250+600", "knob:0@1300:1", "knob:0@1350:1", "knob:1@1500:1"], 1700)
+    ok(pw.says[1:] == ["PERF, Strum 2 Octaves", "PERF, Slop", "Rate 41 ms"], "the wheel turns its pages (the mode), "
+       "knob 1 the page's first (%s)" % pw.says)
+    pk = Run(["button:shift@200+900", "step:0@250+600", "button:back@1500+50", "touch:4@1700+100"], 1900)
+    ok(pk.says[:2] == ["KEY, Key", "Closed"] and pk.says[-1].startswith("Key "), "Shift + step 1 held: KEY; Back "
+       "closes; knob 5 is Key again (%s)" % pk.says)
+    pk2 = Run(["button:shift@200+300", "step:0@250+600", "button:shift@1500+300", "step:0@1550+600"], 2400)
+    ok(pk2.says == ["KEY, Key", "Closed"], "the same step held again: closed (%s)" % pk2.says)
+    fx = Run(["button:shift@200+900", "step:5@250+600", "knob:2@1500:3"], 1700)
+    ok(fx.says[0] == "FX, Sends" and fx.says[1].startswith("Chorus "), "FX held: the Sends page; knob 2 the "
+       "Chorus send (%s)" % fx.says)
+    ed = Run(["button:shift@200+300", "step:8@250+50", "knob:5@700:4", "pad:29@1000+50"], 1300)
+    ok(len(ed.says) == 3 and ed.says[0] == "Editor, chord" and ed.says[1].startswith("Level ") and
+       ed.says[2] == "Filter 1", "Shift + step 9: the editor (OSC); knob 5 the next lane's first, Level; the second "
+       "memory pad: FILT (%s)" % ed.says)
+    ok(ed.led(pad(1, 6)) == WHITE and ed.led(pad(1, 5)) == pct(CYAN, 60) and ed.led(pad(2, 8)) == pct(BASS, 25),
+       "the editor: the memories' pads its groups, FILT white, OSC cyan; the eighth chord / bass")
+    ok(ed.led(55) == CYAN, "the editor: its knobs lit cyan")
+    op = Run(["button:shift@200+300", "step:15@250+50", "knob:0@800:1", "button:jogclick@1000+50",
+              "button:back@1300+50", "button:back@1500+50"], 1700)
+    ok(op.says == ["Options", "Chords", "Chords", "Options", "Options closed"],
+       "Shift + step 16: the Options; the wheel a group, the click opens it, Back twice out (%s)" % op.says)
+
+    # ---- Loop held: the slots (proposal 4, E)
+    lh = Run(["button:loop@200+600"], 700)
+    same(lh, scr_slots(0, ()), "Loop held: the slots view", png="4-slots")
+    ok(lh.led(32) == HELD and lh.led(33) == pct(SEQ, 12) and lh.led(42) == (0, 0, 0) and lh.led(70) == WHITE,
+       "Loop held: slot 1 orange, 2..10 dim, Loop lit")
+    sw = Run(DM7 + ["step:0@1500+50", "button:loop@2000+2000", "step:1@2200+50", "knob:1@2400:4"], 3700)
+    ok(any(s.startswith("loop 2") for s in sw.says) and "Length 1 bar" in sw.says, "Loop + step 2: slot 2 (slot 1 "
+       "saved); Loop + knob 1: the length (%s)" % sw.says)
+    ok("Latch, on" not in sw.says, "Loop held and used: no LATCH")
+    same(sw, scr_slots(1, (0,)), "the slots view: slot 2 current, slot 1 holds a loop")
     ok(all(sw.led(76 + i) == (0, 0, 0) for i in range(16)), "the icons: off (slot 2's loop is one page)")
+
+    # ---- the wheel: preset; click: engine; Shift: the bass (proposal 4, A B)
+    wh = Run(["knob:0@200:1", "button:jogclick@500+50", "knob:0@800:1", "button:shift@1100+400", "knob:0@1200:1"],
+             1700)
+    ok(len(wh.says) == 4 and wh.says[2].startswith("Engine ") and wh.says[3].startswith("Bass "),
+       "the wheel: a preset; clicked: the engine; Shift: the bass sound (%s)" % wh.says)
+
+    # ---- the full isomorphic layout (proposal 4, F)
+    iso = Run(["button:menu@200+400", "pad:16@300+50", "pad:20@900+300", "button:shift@1400+700"], 1900)
+    ok(iso.says[:2] == ["Layout Isomorphic", "Chord D"], "Menu + ISO; the top row's fifth pad is D (%s)" % iso.says)
+    ok(iso.led_when(pad(2, 3), 1300) == YELLOW and iso.led_when(pad(1, 1), 1300) == (12, 12, 14) and
+       iso.led(pad(1, 1)) == VIOLET_D, "ISO: notes on the top rows too (C5 yellow, D#5 dark); Shift held: the chord "
+       "keys back")
 
     # ---- a knob's popup
     kp = Run(["touch:0@200+300", "knob:1@250:2"], 400)
     same(kp, scr_popup("Voicing", "+2", 14 / 24), "Voicing touched and turned: name, then the value big",
          png="6-knob-popup")
     ok(kp.says[:2] == ["Voicing 0", "Voicing plus 2"], "said: %s" % kp.says)
-    pf = Run(["knob:2@200:4", "knob:2@210:4", "knob:2@220:4", "knob:2@230:4"], 400)
-    same(pf, scr_popup("Perform", "Arp"), "Perform turned four entries (16 ticks): Arp")
-    p1 = Run(["knob:2@200:1", "knob:2@210:1", "knob:2@220:1"], 400)
-    same(p1, scr_popup("Perform", "Off"), "Perform: three ticks are not an entry yet")
-    ap_ = Run(["knob:2@200:4", "knob:2@210:4", "knob:2@220:4", "knob:2@230:4"] + [
-        "pad:25@1500+1500", "pad:17@1500+1500", "pad:1@1600+1400"], 2500)
+    p1 = Run(["knob:5@200:1", "knob:5@210:1", "knob:5@220:1"], 400)
+    same(p1, scr_popup("Key", "C"), "Key: three ticks are not an entry yet")
+    ap_ = Run(["button:shift@200+1400", "step:3@250+50", "step:3@500+600", "knob:0@1300:1", "knob:0@1310:1",
+               "knob:0@1320:1", "button:back@1700+50", "pad:25@1900+1500", "pad:17@1900+1500", "pad:1@2000+1400"], 2900)
     ok(ap_.screen[0].startswith("1") and ap_.screen[61] == "1" * 128,
        "Arp running: the hop view (its rule at the foot)")
     PNGS["7-arp"] = ap_.screen
     sp = Run(["button:shift@200+400", "knob:8@300:1"], 500)
-    ok(sp.says[-1].startswith("Tempo 121"), "Shift + knob 8: Tempo (%s)" % sp.says)
+    ok(sp.says[-1].startswith("Tempo 121"), "Shift + knob 8: Tempo, as without Shift (one layer) (%s)" % sp.says)
 
     # ---- the buttons
     bt = Run(["button:copy@200+50", "button:loop@400+50", "button:mute@600+50", "button:up@800+50"], 1000)
@@ -413,7 +503,7 @@ def main():
     PNGS["1c-home-playing"] = rc.screen
     # an empty slot picked while playing: the bar runs on (Play lit, the playhead moving); a step written joins it;
     # Play stops it (the owner, 2026-11-21)
-    eb = DM7 + ["step:0@1500+50", "button:play@1700+50", "button:shift@2500+400", "step:2@2600+50"]
+    eb = DM7 + ["step:0@1500+50", "button:play@1700+50", "button:loop@2500+400", "step:2@2600+50"]
     e1 = Run(eb, 7000)
     heads = {t for t, i, c in e1.led_at if 32 <= i < 48 and c == WHITE and t > 5000}
     ok(e1.led(48) == (0, 200, 0) and len(heads) >= 8, "an empty slot while playing: the bar runs on (%d playhead "
