@@ -364,3 +364,6 @@
 [submodule "PING-OS-1"]
 	path = cores/PING-OS-1
 	url = https://github.com/PINGAUDIO/PING-OS-1
+[submodule "M-vance"]
+	path = cores/M-vance
+	url = https://github.com/bk40-home/M-vance
