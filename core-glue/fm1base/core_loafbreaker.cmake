@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# LOAF BREAKER 0.9.68 (https://github.com/FLEXOR-R/loaf-breaker, tag loaf-v0.9.68 = f372ee0; FLEXOR's hardcore and
+# LOAF BREAKER 0.9.73 (https://github.com/FLEXOR-R/loaf-breaker, tag loaf-v0.9.73 = 352ad4f; FLEXOR's hardcore and
 # breakcore break chopper, a fork of CHOPPAH by Laurens Profittlich: MPL-2.0, on fm1-base and felucca-bsp, MPL-2.0,
 # its own submodules base = fm1-base @ 317cb86, base/bsp = felucca-bsp @ 5b0879b): the fm1-base glue
 # (core-glue/fm1base/README.md) over the unmodified submodule, from Mighty Arp's glue (fm1-base b0976f2: 317cb86's
@@ -20,7 +20,7 @@
 # Amen breaks. The firmware has no build switch to leave the six out. breaks/classics/ (commercial records too) is
 # not built in at this tag.
 set(_lb ${CMAKE_SOURCE_DIR}/cores/loaf-breaker)
-set(_lb_ver 0.9.68)
+set(_lb_ver 0.9.73)
 # the release's numbers (scripts/loaf_version.sh, .github/workflows/loaf.yml): V 0.9.68 is what people see
 # (LOAF_VERSION, app/loaf_version.h upstream: the splash); the package's own PKG is A+2 . B . C = 2.9.68
 # (build.sh --release 2.9.68: APP_VERSION "2.9.68", the identity fm1.toml's id_prefix FM-1_2623 + 02 09 68)

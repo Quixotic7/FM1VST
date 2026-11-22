@@ -11,7 +11,7 @@
  * the device's plat.h implementation (plat_fm1.c, with APP_DIM_LEVELS' plat_dim_ns) and the app (app.c: the break
  * engine's glue, the bank, the sequencer, then ui/*.c). The engine (fm1.toml "o2": app/dsp/*.c) is its own units.
  *
- * Its numbers (core_loafbreaker.cmake): LOAF_VERSION "0.9.68" (the splash's, app/loaf_version.h upstream), APP_VERSION
+ * Its numbers (core_loafbreaker.cmake): LOAF_VERSION "0.9.73" (the splash's, app/loaf_version.h upstream), APP_VERSION
  * "2.9.68" and FELUCCA_ID FM-1_2623020968 (build.sh --release 2.9.68, scripts/loaf_version.sh's PKG).
  * Left out: the splash (APP_SPLASH: plat_glue.h starts the UI at power-on); APP_OVERLOAD (the FX chain sheds slots when
  * the render runs late) has no audio timing on the host and is not called; the screen mirror (fm1.toml mirror:
