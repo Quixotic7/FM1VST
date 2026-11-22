@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Ruido 0.7.1 by Miguel Hernández Domenech (https://github.com/miguelhd/ruido, tag v0.7.1 = 963e912; GPL-3.0-only), a
+# Ruido 0.7.2 by Miguel Hernández Domenech (https://github.com/miguelhd/ruido, tag v0.7.2 = 86cc26c; GPL-3.0-only), a
 # four-oscillator Schmitt-trigger drone synthesizer with a scope HUD. Its firmware is portable C++17 (src/); on the
 # FM-1 it runs over zvenson/dinghy's platform (fetched by its container build at f77bf03, the hardware layer), in its
 # browser simulator over platforms/sim/wasm_bridge.cpp. Its own glue folder (core-glue/ruido): ruido_glue.cpp is the
@@ -10,7 +10,7 @@
 # GATED: the UI's font tables (src/ui/FontSansAA.h, used by every HUD screen) are glyph bitmaps rasterised from
 # Apple's Helvetica Neue (tools/bake_font.mm, lines 164-168: CoreText HelveticaNeue-Medium / -Bold), no licence.
 set(_ru ${CMAKE_SOURCE_DIR}/cores/ruido)
-set(_ru_ver 0.7.1)
+set(_ru_ver 0.7.2)
 if(EXISTS ${_ru}/src/core/Version.h)
     file(STRINGS ${_ru}/src/core/Version.h _ru_vl REGEX "define RUIDO_VERSION_STR")
     if(NOT _ru_vl MATCHES "\"${_ru_ver}\"")
@@ -39,4 +39,5 @@ endif()
 fm1_add_rfm1(ruido AUTHORS "Miguel Hernández Domenech"
              HOSTED_DESPITE_GATE "Helvetica Neue glyph bitmaps compiled in: built as the author ships it, hosted on RemoteFM1FW only, the owner's call of 2026-11-18"
              LICENSE_FILES "GPL-3.0-only ({name}, LICENSE)=LICENSE"
-                           "{name} third-party notices (THIRD_PARTY_NOTICES.md)=THIRD_PARTY_NOTICES.md")
+                           "{name} third-party notices (THIRD_PARTY_NOTICES.md)=THIRD_PARTY_NOTICES.md"
+             RUN_ARGS --press PLAY@2000)   # 0.7.2 boots stopped (Parameters.h masterRun = false): PLAY/STOP starts it
