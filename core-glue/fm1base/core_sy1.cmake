@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# SY1 0.4.0 (https://github.com/fenderberg/fm1-sy1, tag v0.4.0 = 430a473; fenderberg's Synth1-compatible two-oscillator
+# SY1 1.0.0 (https://github.com/fenderberg/fm1-sy1, tag v1.0.0 = abe0d0b; fenderberg's Synth1-compatible two-oscillator
 # polysynth, bitimbral since 0.4: MIT, on fm1-base and felucca-bsp, MPL-2.0, its own submodules base = fm1-base @
 # c8e0599, base/bsp = felucca-bsp @ 18eadad): the fm1-base glue (core-glue/fm1base/README.md) over the unmodified
 # submodule, from LOOM-8's glue (core_loom.c: the same fm1-base, the second core simulated) without backup.c and the
@@ -12,9 +12,9 @@
 # patchmaker's own terms, all free to redistribute, some not to be sold: THIRD_PARTY.md, app/presets/CREDITS.txt) are
 # committed upstream and compiled in, with their credits text (the app's SysEx 06 reads it back). Not gated.
 set(_sy1 ${CMAKE_SOURCE_DIR}/cores/fm1-sy1)
-set(_sy1_ver 0.4.0)
-# build.py --release 0.4.0 (the release workflow's version): APP_VERSION the release in capitals; the package identity
-# fm1.toml's id_prefix (FM-1_51) + the major, minor and patch as two digits each: FM-1_51000400
+set(_sy1_ver 1.0.0)
+# build.py --release 1.0.0 (the release workflow's version): APP_VERSION the release in capitals; the package identity
+# fm1.toml's id_prefix (FM-1_51) + the major, minor and patch as two digits each: FM-1_51010000
 string(TOUPPER "${_sy1_ver}" _sy1_app_ver)
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)(\\.([0-9]+))?" _m "${_sy1_ver}")
 set(_sy1_id "FM-1_51")

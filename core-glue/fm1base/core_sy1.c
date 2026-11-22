@@ -16,8 +16,8 @@
  * plat_core() 1 while it runs; it is never given up or barred. app_render's sums are the same as on a two-core FM-1.
  * fm1-base's device half (cpu2.c) is not built; plat_fm1.c's plat_core is renamed away.
  *
- * SY1's version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 0.4.0's: "0.4.0" and
- * FM-1_51000400 (fm1.toml id_prefix FM-1_51 + 00 04 00); core_sy1.cmake derives both from its VERSION.
+ * SY1's version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 1.0.0's: "1.0.0" and
+ * FM-1_51010000 (fm1.toml id_prefix FM-1_51 + 00 04 00); core_sy1.cmake derives both from its VERSION.
  *
  * THE MANAGERS (core-glue/plat/plat_sx.h): fm1-base's main loop (base/device/main_fm1.c fm1_main) gives each SysEx
  * frame to the screen reader (announce.c, 7D 53 52), the log readout (7D 4C 47: "no crash recorded", the app's own
