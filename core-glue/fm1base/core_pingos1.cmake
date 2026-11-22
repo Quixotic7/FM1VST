@@ -33,6 +33,7 @@ fm1_add_core(pingos1 ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_pg} UNIT core_pingos1.c
              FAMILY fm1base LICENSE "MPL-2.0 AND MIT AND Apache-2.0"
              CREDITS "PING OS-1 by PING AUDIO (ping.audio), MPL-2.0. WHEEL, PHASE, TRIO, LOFI and FM6 from Felucca by Leo Kuroshita (Hügelton Instruments): MIT, the FM6 engine and patches MPL-2.0 by his grant, its core after msfa (Google, Pascal Gauthier, Apache-2.0). FOLD, FORMANT, CHORD, STRING and MODAL ported from Mutable Instruments' Plaits and stmlib by Emilie Gillet (MIT). Built on fm1-base by Charles Vestal and felucca-bsp by Leo Kuroshita (Hügelton Instruments), MPL-2.0. Fonts: Barlow Semi Condensed (The Barlow Project Authors) and Jost (The Jost Project Authors), SIL OFL 1.1. See docs/THIRD_PARTY.md."
              GEN felucca_font.h ann_words.h ping_font.h GEN_ROOT app GEN_PYTHON "${_pg_gen}" PYTHON_NEEDS raqm
+             SUBMODULES_RECURSIVE
              VERSION ${_pg_ver}
              FLAGS -ffp-contract=off
              DEFINES APP_VERSION="${_pg_ver}" FELUCCA_ID="${_pg_id}"
