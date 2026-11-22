@@ -17,7 +17,7 @@
  *                  once (fm1core_dg_sync below)
  *   SysEx          in: a frame whose first byte is APP_SYSEX_ID (7D: the patch transfer of the library page,
  *                  vs_xfer.c) goes to app_sysex, the rest to ota.c's ota_service, as the device's platform_poll hands
- *                  them: the M-UPGRADE identity FM-1_9681003 (tools/build.py --release 1.3: "FM-1_968100" + the minor);
+ *                  them: the M-UPGRADE identity FM-1_9681005 (tools/build.py --release 1.5.2: "FM-1_968100" + the minor);
  *                  out: their replies (sysex_send, ota_wire_send)
  *   the LEDs       host_leds per id (0..13 buttons, 14 + k keys): lit; host_glow (fm1_led_key_glow): dim
  * MASTER is the glue's (the device's curve, after app_audio). Not here: USB audio (uac_out.c), the TRS jack, the
@@ -79,8 +79,7 @@ static int fm1core_dg_sync(void)
     if (prog.dirty && vs_prog_flush(&prog))
         return 0;                         /* (a failed write: tried again at the next sync) */
     if (set_dirty) {
-        set_dirty = 0;
-        set_t = fm1_ms;
+        set_dirty = 0;                    /* (1.5: no set_t; set_chg is the change's time) */
         if (settings_save(&set, sizeof set))
             return 0;
     }
@@ -94,7 +93,7 @@ static void fm1core_dg_info(char *buf, uint32_t n)
 
 /* the M-UPGRADE identity and the patch transfer: platform.c's platform_poll gives a frame starting with APP_SYSEX_ID
  * to the app, the rest to ota_service */
-#define FELUCCA_ID "FM-1_9681003"         /* tools/build.py --release 1.3 */
+#define FELUCCA_ID "FM-1_9681005"         /* tools/build.py --release 1.5.2 */
 #define FM1CORE_DG_OTA_C "../../cores/M-Vsynth2/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) \
     ((n) && (p)[0] == APP_SYSEX_ID ? APP_SYSEX((p), (n)) : fm1core_dg_ota_frame((p), (n)))
