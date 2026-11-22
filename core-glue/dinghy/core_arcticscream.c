@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The Arctic Scream core: Arctic Scream p0larpatch (https://github.com/PolarPatch/Arctic-scream-FM-1, the pinned,
  * unmodified submodule cores/Arctic-scream-FM-1), PolarPatch's fork of GR!MM (a Dinghy app), on its browser shim
- * web/fm1_web.c (GRIMM_WEB: platform.c includes it in place of the hardware), built natively. The glue is GR!MM's
+ * web/fm1_web.c (ARCTIC_WEB: platform.c includes it in place of the hardware), built natively. The glue is GR!MM's
  * (core_grimm.c) but for the output stage and the identity; its hook is GR!MM's too (grimm_hook/, -iquote).
  * The family glue (dinghy_pre.h, dinghy_glue.h) runs the main loop as a coroutine; what the shim does its own way:
  *
@@ -11,7 +11,7 @@
  *                 import attributes neutralised while the firmware is compiled)
  *   the audio     the shim's own rendering in platform_poll is kept out (web_owed reset each tick): the glue's ISR
  *                 renders app_audio's 256-frame blocks (FM1CORE_DG_RENDER, below). The app applies MASTER itself
- *                 (grimm.c out_stage asks fm1_master: the shim's web_master_q12, set to the device's MASTER curve
+ *                 (arctic.c out_stage asks fm1_master: the shim's web_master_q12, set to the device's MASTER curve
  *                 before each block) and, unlike GR!MM 2, writes Q15 (its limiter under full scale): only clipped
  *   the input     into the shim's fm1_in, edges (web_pressed / web_released / web_notes_pressed) and encoder steps
  *   MIDI / glow   the shim drops MIDI out and the keys' glow: grimm_hook/analog_tables.h points midi_send and
@@ -27,13 +27,13 @@
  *                 SysEx packets after each pass, as many as the MIDI out queue has room for
  * Not here: SCREEN OFF's backlight (the shim keeps the screen lit), USB audio, the rescue, the boot guard (the shim
  * has neither). The .pool section attribute Mach-O rejects: core_arcticscream.cmake's FLAGS. */
-#define GRIMM_WEB 1
+#define ARCTIC_WEB 1
 #define FM1CORE_GRM_DEVICE_SLOTS 1        /* (2.0: the FM-1's 72 KiB sample slots, not the browser's 1 MiB: grimm_hook) */
 #include "dinghy_pre.h"
 
 #define import_module(x) unused           /* (fm1_web.c's wasm imports: plain declarations here, defined below) */
 #define import_name(x) unused
-#include "grimm.c"
+#include "arctic.c"                       /* (2.1.4: grimm.c renamed arctic.c) */
 #undef import_module
 #undef import_name
 #include "exit_end.h"

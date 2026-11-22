@@ -120,6 +120,16 @@ static int blob_load(uint32_t i, void *p, uint32_t n) { return i < NBLOB ? fm1co
 static int blob_save(uint32_t i, const void *p, uint32_t n) { return i < NBLOB ? fm1core_mv_area_save(BLOBS_AT + i * 0x1000u, 1u, STORE_MAGIC, p, n) : -1; }
 static int slot_load(uint32_t i, void *p, uint32_t n) { return i < NSLOT ? fm1core_mv_area_load(SLOTS_AT + i * SLOT_SECT * 0x1000u, SLOT_MAX, SLOT_MAGIC ^ STORE_MAGIC, p, n) : -1; }
 static int slot_save(uint32_t i, const void *p, uint32_t n) { return i < NSLOT ? fm1core_mv_area_save(SLOTS_AT + i * SLOT_SECT * 0x1000u, SLOT_SECT, SLOT_MAGIC ^ STORE_MAGIC, p, n) : -1; }
+/* (1.5: platform.c's) n bytes at off of what slot i holds, without loading it (no CRC check: vs_prog.c's names) */
+static int slot_peek(uint32_t i, uint32_t off, void *p, uint32_t n)
+{
+    uint32_t h[3];
+    const uint32_t at = SLOTS_AT + i * SLOT_SECT * 0x1000u;
+    if (i >= NSLOT || fm1nor_read(at, h, sizeof h) || h[0] != (SLOT_MAGIC ^ STORE_MAGIC) || h[1] > SLOT_MAX ||
+        off > h[1] || n > h[1] - off)
+        return -1;
+    return fm1nor_read(at + sizeof h + off, p, n) ? -1 : 0;
+}
 static int slot_sec_load(uint32_t i, uint32_t k, void *p, uint32_t n) { return i < NSLOT && k < SLOT_SECT ? fm1core_mv_area_load(SLOTS_AT + (i * SLOT_SECT + k) * 0x1000u, SECTOR_MAX, SSEC_MAGIC ^ STORE_MAGIC, p, n) : -1; }
 static int slot_sec_save(uint32_t i, uint32_t k, const void *p, uint32_t n) { return i < NSLOT && k < SLOT_SECT ? fm1core_mv_area_save(SLOTS_AT + (i * SLOT_SECT + k) * 0x1000u, 1u, SSEC_MAGIC ^ STORE_MAGIC, p, n) : -1; }
 
