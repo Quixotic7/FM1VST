@@ -26,7 +26,7 @@
 
 #define PEN_HOST 1                        /* the device's .pool section off (plat.h PEN_POOL) */
 #define PEN_VERSION FM1CORE_VERSION
-#define FELUCCA_ID "FM-1_73010600"        /* the package identity: tools/build.py --release 1.6 (FM-1_73 01 01 00) */
+#define FELUCCA_ID "FM-1_73010900"        /* the package identity: tools/build.py --release 1.9 (FM-1_73 01 09 00) */
 #define FM1CORE_PL_SX 1                   /* the installer's M-UPGRADE identity, the screen reader (plat_sx.h) */
 #include "plat_hal.h"
 #include "plat_sx.h"
@@ -91,6 +91,11 @@ static uint32_t fm1core_penumbra_irq_stack[64];
 #include "app/plat_fm1.c"
 #include "app/settings.c"
 #include "app/ui.c"
+/* (1.9) backups: the site's Backup page over SysEx (backup.c, after ui.c as in penumbra.c); its replies leave as the
+ * screen reader's do, a restore's restart halts the core as the unit resets (as PERF-1's) */
+static int bk_wire_send(const uint8_t *p, uint32_t n) { return fm1core_pl_sx_send(p, n); }
+static void bk_restart(void) { exit(2); }
+#include "app/backup.c"
 #undef __attribute__
 #undef _sstack_lo
 #undef _sstack_top
@@ -111,7 +116,8 @@ static void fm1core_penumbra_sx_service(void)   /* main_fm1.c fm1_main, each pas
 {
     const uint8_t *p;
     uint32_t n;
-    if (fm1sx_frame(&fm1core_pl_sxi, &p, &n) && ann_frame(p, n, fm1_ms))   /* a screen reader's, before the updater */
+    if (fm1sx_frame(&fm1core_pl_sxi, &p, &n) && (ann_frame(p, n, fm1_ms) || bk_frame(p, n)))   /* a screen reader's or
+                                          * (1.9) a backup's (00 59 packed: 00 32 .., fm1sx_is_mupg), before the updater */
         fm1sx_done(&fm1core_pl_sxi);
     ota_service();                        /* M-UPGRADE handshake (other SysEx is dropped) */
 }
