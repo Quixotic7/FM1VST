@@ -8,7 +8,7 @@
  * orders it, the flash storage, the user presets, the projects and the FM6 store (MELODEE_FLASH 1: storage.c on
  * melodee_hal.h's NOR hooks instead of storage_hw.c's SPI driver), then splash.c (the boot's mosaic).
  *
- * The build options are the 3.5.3 release's (.github/workflows/release.yml: MELODEE_LOOK=1 ./build.sh --release, the
+ * The build options are the 3.7.5 release's (.github/workflows/release.yml: MELODEE_LOOK=1 ./build.sh --release, the
  * dual-core package; tools/build.py build_app's defaults: FM6 1, SID 0, SID KIT 0, PHYS 1, PLAITS 0, HELP_PACKED 1;
  * melodee.c / core.h's for the rest: DUAL_CORE 1, CACHE_RAM 0, RAM_AUDIO 0, ADMISSION 0, TRIO 1, ORACLE 1). The engine
  * flags are core_tessera.cmake's DEFINES (core.h reads them before this file is reached).
@@ -76,7 +76,7 @@ static void lcd_gamma_switch(uint32_t opt) { (void)opt; }   /* (lcd.c: the panel
 /* --------------------------------------------------------------------- UI --- */
 #define MELODEE_FLASH 1                               /* storage.c on the NOR image: settings, projects, presets */
 #ifndef MELODEE_VERSION
-#define MELODEE_VERSION "v3.5.3"                      /* (build.py --release 3.5.3; melodee.c's default is stale) */
+#define MELODEE_VERSION "v3.7.5"                      /* (build.py --release 3.7.5; melodee.c's default is stale) */
 #endif
 #include "../../cores/tessera/firmware/src/gfx.c"
 #include "../../cores/tessera/firmware/src/panel.c"
@@ -84,6 +84,7 @@ static void lcd_gamma_switch(uint32_t opt) { (void)opt; }   /* (lcd.c: the panel
 #include "../../cores/tessera/firmware/src/icons.c"   /* parameter icons (MELODEE_ICONS), used by ui_draw.c */
 #include "../../cores/tessera/firmware/src/ui_graph.c"
 #include "../../cores/tessera/firmware/src/page_random.c" /* GEN / TWEAK: page randomize (melodee.c's order) */
+#include "../../cores/tessera/firmware/src/ui_zones.c" /* a mouse's screen zones: nothing (TESS_HAS_POINTER 0) */
 #include "../../cores/tessera/firmware/src/ui_draw.c"
 #include "../../cores/tessera/firmware/src/ui_menu.c"
 #include "../../cores/tessera/firmware/src/ui_input.c"
@@ -94,6 +95,7 @@ static void lcd_gamma_switch(uint32_t opt) { (void)opt; }   /* (lcd.c: the panel
 #include "../../cores/tessera/firmware/src/upreset.c" /* user presets (flash with MELODEE_FLASH) */
 #include "../../cores/tessera/firmware/src/project.c" /* projects, the settings record */
 #include "../../cores/tessera/firmware/src/fm6_store.c" /* FM6: DX7 SysEx, the STORE shortcut */
+#include "../../cores/tessera/firmware/src/generate.c" /* GENERATE: the plugin's (TESS_GENERATE 0: nothing) */
 
 /* -------------------------------------------- the managers' SysEx (above) --- */
 #include "sysex.h"                                    /* (core-glue/common) */
@@ -113,7 +115,7 @@ static void ota_frame_done(void) { fm1sx_done(&fm1core_me_sxi); }
 #define so_r (fm1core_me_sxo.r)
 #define sx_out_q (fm1core_me_sxo.q)                   /* (editor.c ed_pn_put: PANEL's CC / note packets, as is) */
 #ifndef MELODEE_ID
-#define MELODEE_ID "FM-1_835"                         /* build.py --release 3.5.3: FM-1_8 + X Y (3.3 on) */
+#define MELODEE_ID "FM-1_837"                         /* build.py --release 3.7.5: FM-1_8 + X Y (3.3 on) */
 #endif
 #define FM1SX_OTA_C "../../cores/tessera/firmware/src/ota.c"
 #define FM1SX_OTA_IN fm1core_me_sxi
