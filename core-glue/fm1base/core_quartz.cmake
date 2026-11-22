@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# QUARTZ 0.6 (https://github.com/F0nski/quartz, tag v0.6 = 457c069; f0nski's four-track groovebox on Plaits:
+# QUARTZ 0.10 (https://github.com/F0nski/quartz, tag v0.10 = 52206ea; f0nski's four-track groovebox on Plaits:
 # GPL-3.0-or-later, with Mutable Instruments' Plaits, Marbles, Clouds and stmlib (MIT) and Grids' drum map (GPL-3.0),
 # on fm1-base and felucca-bsp, MPL-2.0, its own submodules base = fm1-base @ b0976f2, base/bsp = felucca-bsp @
 # 5b0879b): the fm1-base glue (core-glue/fm1base/README.md) over the unmodified submodule, from Mighty Arp's glue (the
@@ -16,8 +16,8 @@
 # CONF from app/fm1.toml, GEN = app/build/gen): the fonts and the screen reader's words; one Python expression, run in
 # app/ (GEN_ROOT). Not gated.
 set(_qz ${CMAKE_SOURCE_DIR}/cores/quartz)
-set(_qz_ver 0.6)
-# build.py --release 0.6: APP_VERSION "0.6", the identity fm1.toml's id_prefix FM-1_98 + XX YY ZZ: FM-1_98000600
+set(_qz_ver 0.10)
+# build.py --release 0.10: APP_VERSION "0.10", the identity fm1.toml's id_prefix FM-1_98 + XX YY ZZ: FM-1_98001000
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)(\\.([0-9]+))?" _m "${_qz_ver}")
 set(_qz_id "FM-1_98")
 foreach(_g 1 2 4)

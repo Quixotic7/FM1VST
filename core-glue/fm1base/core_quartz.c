@@ -11,7 +11,7 @@
  * screen (APP_LATE, app_ui.c: the UI and the animated scenes). The engine (fm1.toml "o2": QUARTZ's C++ voice and
  * effects over Plaits and stmlib) is its own units (core_quartz.cmake).
  *
- * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 0.6's: "0.6" and FM-1_98000600
+ * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 0.10's: "0.10" and FM-1_98001000
  * (fm1.toml id_prefix FM-1_98 + 00 06 00), from core_quartz.cmake.
  * Left out: the splash (APP_SPLASH, scene_splash.c: plat_glue.h starts the UI at power-on; app_init's boot_step is
  * NULL then, as app.c allows). Bluetooth is not built (fm1.toml ble = false; radio_none.c, as in every fm1base core).
