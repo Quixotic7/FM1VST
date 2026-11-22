@@ -3,7 +3,7 @@
 | core | firmware | submodule | licence |
 |---|---|---|---|
 | `x0x` | X0X 1.1.0 | `cores/fm1-x0x` @ v1.1.0 | GPL-3.0-only |
-| `fomni` | FoMni-1 0.4 | `cores/fm1-fomni` @ v0.4 | GPL-3.0-only |
+| `fomni` | FoMni-1 0.5 | `cores/fm1-fomni` @ v0.5 | GPL-3.0-only |
 | `fimba` | FiMba-1 0.6.1 | `cores/fm1-fimba` @ v0.6.1 | GPL-3.0-only |
 | `fartmachine` | Fart Machine One 1.0.0 | `cores/Fart-Machine-One` @ V1.0.0 | GPL-3.0-only, **GATED** (the recordings) |
 | `ravel` | Ravel 1.5.0 (De-Pattern) | `cores/Ravel_FM1` @ v1.5.0 | GPL-3.0-only |
@@ -128,7 +128,7 @@ before the frame), with the firmware's own handlers compiled from the submodule:
 | core | manager | handlers |
 |---|---|---|
 | `x0x` | `web/backup/index.html` (backup / restore), the break-loop page, a screen reader | `ota.c` (identity `FM-1_9010100`), `backup.c` (with `main_fm1.c`'s hooks redone in `core_x0x.c`), `editor.c` (INFO, PING, the sample slots), `announce.c` |
-| `fomni` | the installer, a screen reader | `ota.c` (`FM-1_8000400`, via `common/sysex_ota.h`), `announce.c` |
+| `fomni` | the installer, a screen reader | `ota.c` (`FM-1_8000500`, via `common/sysex_ota.h`), `announce.c` |
 | `penumbra` | the installer, a screen reader | `ota.c` (`FM-1_73010000`, via `common/sysex_ota.h`), `announce.c` |
 | `dub` | the installer, a screen reader | `ota.c` (`FM-1_8010403`, via `common/sysex_ota.h`), `announce.c` |
 | `fimba`, `fartmachine` | the installer | `ota.c` (`FM-1_8000601`, `FM-1_701`) |

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# MORSE 0.6 (https://github.com/daviddwlee84/fm1-morse, tag v0.6 = 60f76cf; Da-Wei Lee's pocket Morse code machine:
+# MORSE 0.8 (https://github.com/daviddwlee84/fm1-morse, tag v0.8 = 8467a08; Da-Wei Lee's pocket Morse code machine:
 # a keyer and decoder on the keys, rhythm drills, flash cards, listening practice, Vail-format MIDI keying; GPL-3.0-or-
 # later, its common/ (hostlink, ledfx) MIT, on fm1-base and felucca-bsp, MPL-2.0, its own submodules fm1-base =
 # fm1-base @ c8e0599, fm1-base/bsp = felucca-bsp @ 18eadad): the fm1-base glue (core-glue/fm1base/README.md) over the
@@ -10,9 +10,9 @@
 # CONF from fm1.toml, GEN = build/gen): the fonts (fm1-base's Barlow Semi Condensed) and the screen reader's words
 # (words.tsv); one Python expression, run in the repository's root. Not gated.
 set(_mo ${CMAKE_SOURCE_DIR}/cores/fm1-morse)
-set(_mo_ver 0.6)
-# build.py --release 0.6: APP_VERSION the release; the package identity fm1.toml's id_prefix (FM-1_41) + the major,
-# minor and patch as two digits each (fm1.toml: "release 0.3 FM-1_41000300"): FM-1_41000600
+set(_mo_ver 0.8)
+# build.py --release 0.8: APP_VERSION the release; the package identity fm1.toml's id_prefix (FM-1_41) + the major,
+# minor and patch as two digits each (fm1.toml: "release 0.3 FM-1_41000300"): FM-1_41000800
 string(TOUPPER "${_mo_ver}" _mo_app_ver)
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)(\\.([0-9]+))?" _m "${_mo_ver}")
 set(_mo_id "FM-1_41")
@@ -38,8 +38,9 @@ fm1_add_core(morse ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_mo} UNIT core_morse.c DES
              INCLUDES ${_mo} ${_mo}/common ${_mo}/fm1-base/include ${_mo}/fm1-base/device ${_mo}/fm1-base/lib)
 
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: MORSE's GPL-3.0, fm1-base's
-# MPL-2.0 with its notes and credits, felucca-bsp's MPL-2.0 with its notes, the Barlow OFL. RUN_ARGS: MORSE starts on
-# PRACTICE, where the keys are silent until a card asks; PLAY starts the practice and the card's prompt sounds
+# MPL-2.0 with its notes and credits, felucca-bsp's MPL-2.0 with its notes, the Barlow OFL. RUN_ARGS: MORSE (0.7 on)
+# starts on MENU (SETTINGS > START PAGE), PRACTICE chosen: PLAY opens it, where the keys are silent until a card asks;
+# PLAY again starts the practice and the card's prompt sounds
 fm1_add_rfm1(morse AUTHORS "Da-Wei Lee (daviddwlee84)"
              LICENSE_FILES "GPL-3.0 ({name}, LICENSE)=LICENSE"
                            "MPL-2.0 (fm1-base, fm1-base/LICENSE)=fm1-base/LICENSE"
@@ -49,4 +50,4 @@ fm1_add_rfm1(morse AUTHORS "Da-Wei Lee (daviddwlee84)"
                            "felucca-bsp licensing (fm1-base/bsp/LICENSING.md)=fm1-base/bsp/LICENSING.md"
                            "felucca-bsp notice (fm1-base/bsp/NOTICE)=fm1-base/bsp/NOTICE"
                            "SIL OFL 1.1 (Barlow)=fm1-base/assets/fonts/Barlow-OFL.txt"
-             RUN_ARGS --press PLAY@1000)
+             RUN_ARGS --press PLAY@1000 --press PLAY@1500)

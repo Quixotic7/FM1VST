@@ -24,7 +24,7 @@
 
 #define OM_HOST 1                         /* the device's .pool section off (plat.h OM_POOL) */
 #define OM_VERSION FM1CORE_VERSION
-#define FELUCCA_ID "FM-1_8000300"          /* the package identity: build.py --release 0.3 (FM-1_8 00 03 00) */
+#define FELUCCA_ID "FM-1_8000301"          /* the package identity: build.py --release 0.3.1 (FM-1_8 00 03 01) */
 #define FM1CORE_PL_SX 1                   /* the installer's M-UPGRADE identity (plat_sx.h) */
 #include "plat_hal.h"
 #include "plat_sx.h"
@@ -55,6 +55,33 @@ static int fm1core_nd_midi_in(uint32_t pkt)
     return 0;                             /* not taken: on to the queue */
 }
 #define FM1CORE_PL_MIDI_IN_HOOK(pkt) fm1core_nd_midi_in(pkt)
+
+/* 0.3.1's fm1_input_held (firmware/hal/fm1_input.h: plat_fm1.c's plat_buttons takes one look at the panel, no tap
+ * between two looks lost): the debounced matrix's edges, gathered each device ms after the input (the tick hook: the
+ * HAL's scan, here once a ms), given to the firmware's own fm1_taps() (firmware/hal/fm1_taps.h, unmodified) at each
+ * look, then taken, as the device does */
+#include "../../cores/niagara-drift/firmware/hal/fm1_taps.h"
+static uint32_t fm1core_nd_b, fm1core_nd_n;               /* what the last ms saw held */
+static uint32_t fm1core_nd_bp, fm1core_nd_br, fm1core_nd_np, fm1core_nd_nr;   /* edges since the last look */
+static void fm1core_nd_scan(void)
+{
+    const uint32_t b = fm1_in.buttons, n = fm1_in.notes;
+    fm1core_nd_bp |= b & ~fm1core_nd_b;
+    fm1core_nd_br |= fm1core_nd_b & ~b;
+    fm1core_nd_np |= n & ~fm1core_nd_n;
+    fm1core_nd_nr |= fm1core_nd_n & ~n;
+    fm1core_nd_b = b;
+    fm1core_nd_n = n;
+}
+#define FM1CORE_PL_TICK_HOOK() fm1core_nd_scan()
+static uint32_t fm1_input_held(uint32_t *notes)
+{
+    static uint32_t seen_b, seen_n;
+    const uint32_t b = fm1_taps(fm1_in.buttons, fm1core_nd_bp, fm1core_nd_br, &seen_b);
+    *notes = fm1_taps(fm1_in.notes, fm1core_nd_np, fm1core_nd_nr, &seen_n);
+    fm1core_nd_bp = fm1core_nd_br = fm1core_nd_np = fm1core_nd_nr = 0;
+    return b;
+}
 
 /* ---------------------------------------------------------------- the firmware --- */
 #define __attribute__(x)                  /* (as the host simulator) */

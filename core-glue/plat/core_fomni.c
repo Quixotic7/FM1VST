@@ -22,7 +22,7 @@
 
 #define OM_HOST 1                         /* the device's .pool section off (plat.h OM_POOL) */
 #define OM_VERSION FM1CORE_VERSION
-#define FELUCCA_ID "FM-1_8000401"          /* the package identity: build.py --release 0.4.1 (FM-1_8 00 04 00) */
+#define FELUCCA_ID "FM-1_8000500"          /* the package identity: build.py --release 0.5 (FM-1_8 00 05 00) */
 #define FM1CORE_PL_SX 1                   /* the installer's M-UPGRADE identity (plat_sx.h) */
 #include "plat_hal.h"
 #include "plat_sx.h"
@@ -106,20 +106,10 @@ static void fm1core_pl_uboot_say(uint32_t left)
         ui_say("UPDATE MODE", "CANCELLED");
     }
 }
-/* the lazy save now (AUTOSAVE: a few seconds after a change, nothing sounding, nothing touched); while the rhythm
- * plays the device never erases: deferred */
-static int fm1core_pl_sync(void)
-{
-    if (!ui.dirty)
-        return 1;
-    if (om_playing)
-        return 0;
-    if (project_save() == 0) {
-        ui.dirty = 0;
-        ui.saved_t = plat_ms();
-    }
-    return !ui.dirty;
-}
+/* the lazy save now: none since 0.5 (issue #8: SAVE is the only save, no AUTOSAVE; switching off goes back to what
+ * was saved, the header's dot shows unsaved changes), so nothing is ever pending: the RAM is all there is, as on the
+ * device */
+static int fm1core_pl_sync(void) { return 1; }
 static void fm1core_pl_info(char *buf, uint32_t n)
 {
     snprintf(buf, n, "view %u chord %d playing %u dirty %u", (unsigned)ui.view, (int)ui.pad, (unsigned)om_playing,
