@@ -34,6 +34,32 @@ static int fm1core_fma_printf(const char *fmt, ...);
 /* the poll (host.c declares it under OBV_WASM: sim.c's, a millisecond of the page's clock) */
 static void platform_poll(void) { fm1core_dg_poll(); }
 
+/* (0.6) the ISR as platform.c's fm1_alnk0_irq: app_audio, then the FM-1's own voice where READER > OUTPUT sends it
+ * (app_audio_usb: MAIN, with the music; app_audio_out: HEADPHONES; USB: USB audio only, so not here). Under OBV_HOST
+ * the voice is mixed at full MASTER (VO_MASTER): the glue's MASTER and the clip come after, over both */
+static void fm1core_fma_render(int32_t *o, uint32_t frames, int32_t q12)
+{
+    uint32_t i;
+    app_audio(o, frames);
+    (void)app_audio_usb(o, frames);
+    app_audio_out(o, frames);
+    for (i = 0; i < 2u * frames; i++) {
+        const int32_t v = (int32_t)(((int64_t)o[i] * q12) >> 12);
+        o[i] = v > 32767 ? 32767 : v < -32767 ? -32767 : v;
+    }
+}
+#define FM1CORE_DG_RENDER(o, frames, q12) fm1core_fma_render((o), (frames), (q12))
+
+/* (0.6) the screen reader's SysEx out (announce.c: host.c's is in its script branch, not OBV_WASM's): never waits,
+ * not sent at all while the MIDI out queue has no room for it, as platform.c's ann_wire_send */
+static int ann_wire_send(const uint8_t *p, uint32_t n)
+{
+    if (FM1CORE_DG_MQ - (fm1core_dg_mo_w - fm1core_dg_mo_r) < (n + 2u) / 3u)
+        return -1;
+    fm1core_dg_sysex_out(p, n);
+    return 0;
+}
+
 static uint8_t *fm1core_fma_rec(uint32_t kind, uint32_t i, uint32_t *at)   /* 0 settings, 2 program sector */
 {
     if (kind == 0) {
@@ -144,9 +170,16 @@ static void fm1core_dg_info(char *buf, uint32_t n)
              (unsigned)set.tprog[ctrk] + 1u);
 }
 
-/* the installer's M-UPGRADE identity: the device's platform_poll runs ota_service every pass (dinghy_glue.h) */
+/* the installer's M-UPGRADE identity: the device's platform_poll runs ota_service every pass (dinghy_glue.h), after the
+ * screen reader (fm1-reader: F0 7D 53 52 .., announce.c) has looked at the frame */
 #define FELUCCA_ID "FM-1_3628"            /* FMav-1's one package identity, every version (platform.c, tools/build.py) */
 #define FM1CORE_DG_OTA_C "../../cores/fmav1/firmware/src/ota.c"
-#define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
+static void fm1core_dg_ota_frame(const uint8_t *p, uint32_t n);
+static void fm1core_fma_sx_in(const uint8_t *p, uint32_t n)   /* (0.6) a screen reader's frame first (platform_poll) */
+{
+    if (!ann_frame(p, n, fm1_ms))
+        fm1core_dg_ota_frame(p, n);
+}
+#define FM1CORE_DG_SYSEX_IN(p, n) fm1core_fma_sx_in((p), (n))
 
 #include "dinghy_glue.h"
