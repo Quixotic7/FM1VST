@@ -18,8 +18,8 @@
  * plat_core() 1 while it runs; it is never given up or barred. app_render's output is the same as on a two-core FM-1.
  * fm1-base's device half (cpu2.c) is not built; plat_fm1.c's plat_core is renamed away.
  *
- * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 0.8.0's (the release workflow's):
- * "0.8.0" and FM-1_042000800 (fm1.toml id_prefix FM-1_042 + 00 08 00); core_chimeravocal.cmake derives both.
+ * Its version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 0.9.0's (the release workflow's):
+ * "0.9.0" and FM-1_042000900 (fm1.toml id_prefix FM-1_042 + 00 08 00); core_chimeravocal.cmake derives both.
  * Left out, as in every core: the splash (APP_SPLASH: app.c app_splash, the head side on; plat_glue.h starts the UI
  * at power-on).
  *

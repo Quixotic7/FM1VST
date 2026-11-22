@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# FM-1 Chimera Vocal 0.8.0 (https://github.com/shan-sherif/fm-1-chimera-vocal, tag v0.8.0 = 5a9e5f7; Shan-Sherif's port
+# FM-1 Chimera Vocal 0.9.0 (https://github.com/shan-sherif/fm-1-chimera-vocal, tag v0.9.0 = 7422270; Shan-Sherif's port
 # of Jameson Hodge's CHIMERA vocal synthesizer, a physically modelled human voice: MPL-2.0 AND MIT, CHIMERA's port MIT,
 # the CMUdict entries under CMU's BSD-style licence, fm1-base and felucca-bsp MPL-2.0, vendored in the repository
 # under base/, no submodules): the fm1-base glue (core-glue/fm1base/README.md) over the unmodified submodule, from
@@ -13,9 +13,9 @@
 # The dictionary (engine/ch_dict_data.h, app/dsp/words_default.h: CMUdict entries) is committed upstream and compiled
 # in, with CMU's licence text; SCOWL's word list is the site's only (app/web), not built. Not gated.
 set(_chv ${CMAKE_SOURCE_DIR}/cores/fm-1-chimera-vocal)
-set(_chv_ver 0.8.0)
-# build.py --release 0.8.0 (the release workflow's version, the tag's): APP_VERSION the release in capitals; the package
-# identity fm1.toml's id_prefix (FM-1_042) + the major, minor and patch as two digits each: FM-1_042000800
+set(_chv_ver 0.9.0)
+# build.py --release 0.9.0 (the release workflow's version, the tag's): APP_VERSION the release in capitals; the package
+# identity fm1.toml's id_prefix (FM-1_042) + the major, minor and patch as two digits each: FM-1_042000900
 string(TOUPPER "${_chv_ver}" _chv_app_ver)
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)(\\.([0-9]+))?" _m "${_chv_ver}")
 set(_chv_id "FM-1_042")
