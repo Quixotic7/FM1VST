@@ -358,3 +358,6 @@
 [submodule "h1"]
 	path = cores/h1
 	url = https://github.com/jakehandy/h1
+[submodule "M-vance"]
+	path = cores/M-vance
+	url = https://github.com/bk40-home/M-vance
