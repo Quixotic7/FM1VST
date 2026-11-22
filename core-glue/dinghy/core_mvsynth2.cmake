@@ -30,10 +30,10 @@ dinghy_core(mvsynth2 core_mvsynth2.c)
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md): the main loop on the coroutine, so Asyncify
 # (tools/rfm1/rfm1_link.cmake). The licence texts: its GPL, its LICENSING.md (with Synth2's MIT notice, which covers the
 # ported engine and the factory bank), the Terminus font's OFL and DejaVu's licence (vs_ui_gen.h's font tables),
-# (1.5) the MPL-2.0 of fm1-base's announce.c (the screen reader, vs_speak.c: built in; the text is fm1-kit's copy). Not
+# (1.5) the MPL-2.0 of fm1-base's announce.c (the screen reader, vs_speak.c: built in; the text: licences/mvsynth2/MPL-2.0.txt, as fm1-kit is a nested submodule). Not
 # the MPL-2.0 of uac_out.c (USB audio: the device branch only) nor the JieLi SDK's Apache-2.0 (device packages only).
 fm1_add_rfm1(mvsynth2 AUTHORS "Kris (bk40-home)" "zvenson"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name}, with Synth2's MIT notice)=LICENSING.md"
                            "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt"
                            "Bitstream Vera / DejaVu (DejaVu Sans Condensed Bold in {name})=assets/fonts/dejavu/LICENSE"
-                           "MPL-2.0 (fm1-base's announce.c in {name})=third_party/fm1-kit/firmware/fk_ble/LICENSES/MPL-2.0.txt")
+                           "MPL-2.0 (fm1-base's announce.c in {name})=${CMAKE_CURRENT_LIST_DIR}/licences/mvsynth2/MPL-2.0.txt")
