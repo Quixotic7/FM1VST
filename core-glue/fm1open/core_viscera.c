@@ -28,7 +28,7 @@
  * starts that never ran well), Bluetooth (its settings stay; scans and links find nothing), the render's CPU readout
  * and its guard (simulated time: no load, never eased), the battery (USB power: the bolt), USB audio in (the host's
  * input is the Bluetooth one), the stock firmware's sample bank and DX7 library (Viscera plays neither), the managers'
- * SysEx (M-UPGRADE's identity FM-1_8620600: the SDK's, not in the repository). Version: VERSION's "2.6.0" (VSC_VERSION,
+ * SysEx (M-UPGRADE's identity FM-1_8620600: the SDK's, not in the repository). Version: VERSION's "2.9.2" (VSC_VERSION,
  * as make_fm1_tree.py writes it into vsc_config.h). */
 #include <stddef.h>
 #include <stdint.h>

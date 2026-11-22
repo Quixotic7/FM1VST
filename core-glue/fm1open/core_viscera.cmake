@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Viscera 4-Track 2.6.0 by De-Pattern (https://github.com/De-Pattern/viscera, tag v2.6.0 = bb13e0c; GPL-3.0-only with
+# Viscera 4-Track 2.6.0 by De-Pattern (https://github.com/De-Pattern/viscera, tag v2.9.2 = 9c25e5e; GPL-3.0-only with
 # the FM1 SDK linking exception), an overdubbing four-track tape looper with a resonator to print through. On the FM-1
 # it is an APP on M-VAVE's FM1 Open SDK (tools/make_fm1_tree.py overlays it on m-vave/fm1_open V14, which is not in
 # the repository); its own part is a portable core (core/: C99, float, no C library) that its browser emulator runs
@@ -9,7 +9,7 @@
 # Nothing is generated. Not gated: every compiled file is Viscera's own (GPL-3.0-only with the linking exception);
 # the stock V15 firmware file in site/ (the install page's bridge) is not built in.
 set(_vs ${CMAKE_SOURCE_DIR}/cores/viscera)
-set(_vs_ver 2.6.0)
+set(_vs_ver 2.9.2)
 set(_vs_glue ${CMAKE_CURRENT_LIST_DIR})
 file(RELATIVE_PATH _vs_rel ${_vs_glue} ${_vs})
 if(EXISTS ${_vs}/VERSION)
