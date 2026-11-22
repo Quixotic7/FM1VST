@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# cursed os 0.18.5 (https://github.com/cursedsound-music/CS_FM1, tag v0.18.5 = 93dec8e): cursedsound's fork of JIANT FM
+# cursed os 0.20.0 (https://github.com/cursedsound-music/CS_FM1, tag v0.20.0 = d4415c3): cursedsound's fork of JIANT FM
 # V10.19, the felucca_web family's core (fw_core.h over the firmware's own web/emu/felucca_web.c, unmodified;
 # cmake/FM1Cores.cmake fm1_add_core), after core_jiant.cmake. The generated headers are tools/build.py generate()'s; the
 # version: firmware/src/cos.c's COS_VERSION (FELUCCA_VERSION stays JIANT's V10.19, as the firmware has it); the
 # identity FM-1_420 (core_csfm1.c). The golden check: fw_common.cmake.
 include(${CMAKE_CURRENT_LIST_DIR}/fw_common.cmake)
 set(_cs ${CMAKE_SOURCE_DIR}/cores/CS_FM1)
-set(_cs_ver 0.18.5)
+set(_cs_ver 0.20.0)
 fm1_add_core(csfm1 ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_cs} UNIT core_csfm1.c
              DESC core_csfm1_desc.c FAMILY felucca_web LICENSE GPL-3.0-only
              CREDITS "cursed os by cursedsound, on JIANT FM by Juan Jiant, on Felucca by Leo Kuroshita (Hügelton Instruments), GPL-3.0-only (cursedsound's own files also MIT). ACID's 303 voice: X0X by charlesvestal (GPL-3.0-only, the Open303 parts by Robin Schmidt, MIT). FMDRUM's transient samples and curves: the LXR drum machine's firmware by Erica Synths, GPL-3.0-only with its section 7 terms. FM6: msfa (Google Inc., Pascal Gauthier), Apache-2.0. The icons: the Fukiai font (MIT). The UI's text: IBM Plex Mono, Michroma, Chakra Petch, Inter Tight, Press Start 2P (SIL OFL 1.1). VOICE's English words: a subset of The CMU Pronouncing Dictionary (cmudict 0.7b, Carnegie Mellon University), BSD-2-Clause."

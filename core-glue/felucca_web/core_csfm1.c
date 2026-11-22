@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The cursed os core (https://github.com/cursedsound-music/CS_FM1, tag v0.18.5 = 93dec8e, the pinned, unmodified
+/* The cursed os core (https://github.com/cursedsound-music/CS_FM1, tag v0.20.0 = d4415c3, the pinned, unmodified
  * submodule cores/CS_FM1): cursedsound's Elektron-style groovebox, a fork of JIANT FM V10.19 (itself a Felucca fork),
  * whose browser unit, web/emu/felucca_web.c (JIANT's, with cos.c and kits.c in it), is driven by the family's glue
  * (fw_core.h). After core_jiant.c, whose notes hold here too:
