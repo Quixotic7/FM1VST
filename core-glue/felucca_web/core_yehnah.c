@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The Yehnah core (https://github.com/Mello-D/yehnah, tag v0.1.0 = e8b59f6, the pinned, unmodified submodule
+/* The Yehnah core (https://github.com/Mello-D/yehnah, tag v0.2.0 = e532391, the pinned, unmodified submodule
  * cores/yehnah): Mello-D's chord-harp fork of JIANT FM (itself a Felucca fork), whose browser unit,
  * web/emu/yehnah_web.c (JIANT's, with the FELUCCA_* names renamed YEHNAH_*), is driven by the family's glue
  * (fw_core.h). After the author's own glue (tools/rfm1/core_yehnah.c) and core_jiant.c, whose notes hold here too:

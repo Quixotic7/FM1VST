@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Yehnah 0.1.0 (https://github.com/Mello-D/yehnah, tag v0.1.0 = e8b59f6): Mello-D's chord-harp fork of JIANT FM, the
+# Yehnah 0.2.0 (https://github.com/Mello-D/yehnah, tag v0.2.0 = e532391): Mello-D's chord-harp fork of JIANT FM, the
 # felucca_web family's core (fw_core.h over the firmware's own web/emu/yehnah_web.c, unmodified; cmake/FM1Cores.cmake
 # fm1_add_core), after the author's own glue (tools/rfm1/) and core_jiant.cmake. The generated headers are
 # tools/build.py generate()'s; the version: firmware/src/yehnah.c's YEHNAH_VERSION; the identity FM-1_069
@@ -12,7 +12,7 @@
 # voices them, via benbadio's hera-fm1). The owner's call (2026-11-17): built as the author ships it, hosted only.
 include(${CMAKE_CURRENT_LIST_DIR}/fw_common.cmake)
 set(_yn ${CMAKE_SOURCE_DIR}/cores/yehnah)
-set(_yn_ver 0.1.0)
+set(_yn_ver 0.2.0)
 fm1_add_core(yehnah ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_yn} UNIT core_yehnah.c
              DESC core_yehnah_desc.c FAMILY felucca_web LICENSE GPL-3.0-only
              GATED "the JUNO engine compiles in the Roland Juno-106 factory bank (eng_juno.c JUNO_PRESETS, via FM-106) of unverified rights, no build switch to leave it out"
