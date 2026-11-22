@@ -358,3 +358,6 @@
 [submodule "h1"]
 	path = cores/h1
 	url = https://github.com/jakehandy/h1
+[submodule "PING-OS-1"]
+	path = cores/PING-OS-1
+	url = https://github.com/PINGAUDIO/PING-OS-1
