@@ -1,16 +1,23 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# Caravel 0.13.0 (https://github.com/bonszaimusic/caravel, tag v0.13.0): bonszaimusic's fork of Felucca 1.6.1, the
+# Caravel 1.1.0 (https://github.com/bonszaimusic/caravel, tag v1.1.0 = 75e6da1): bonszaimusic's fork of Felucca 1.6.1, the
 # felucca_web family's core (fw_core.h over the firmware's own web/emu/felucca_web.c, unmodified; cmake/FM1Cores.cmake
 # fm1_add_core), with its Felucca-Engines submodule (firmware/engines: SUBMODULES_RECURSIVE). The golden check:
 # fw_common.cmake. Built as web/emu/build.sh builds its browser emulator: build/gen and firmware/src on the include
-# path (the unit includes firmware/hal and experiments/ by relative paths), the profile FELUCCA_HOME_PERF,
-# FELUCCA_PAIR_MORPH, FELUCCA_PERF_HW = 1 and FELUCCA_CPU2 = 0; the generated headers are tools/build.py generate's.
-set(_cv_defs FELUCCA_VERSION="v0.13.0" FELUCCA_HOME_PERF=1 FELUCCA_PAIR_MORPH=1 FELUCCA_PERF_HW=1 FELUCCA_CPU2=0)
+# path (the unit includes firmware/hal and experiments/ by relative paths), its 1.x profile (FORMAT 2, the six-engine
+# CARAVEL_SLIM, UX layers / EVOLVE / CAPTURE, ELASTIC P1 + PLAYABLE, RANDOM MORPH, the minimal reverb with the STASIS
+# expansion, the action banks, HOME_PERF, PAIR_MORPH, PERF_HW) and FELUCCA_CPU2 = 0; the generated headers are
+# tools/build.py generate's (1.x: no FM6 patches, no samples). The version: as build.py --release 1.1.0 stamps it
+# ("v1.1.0"; felucca.c's own default still reads v1.0.0).
+set(_cv_ver 1.1.0)
+set(_cv_defs FELUCCA_VERSION="v${_cv_ver}" CARAVEL_UX_CAPTURE=1 CARAVEL_FORMAT2=1 CARAVEL_SLIM=1 CARAVEL_UX_LAYERS=1
+             CARAVEL_UX_EVOLVE=1 CARAVEL_ELASTIC_P1=1 CARAVEL_ELASTIC_PLAYABLE=1 FELUCCA_RANDOM_MORPH=1
+             CARAVEL_REVERB_MINIMAL=1 CARAVEL_STASIS_EXPAND=1 FELUCCA_HOME_PERF=1 FELUCCA_PAIR_MORPH=1 FELUCCA_PERF_HW=1
+             CARAVEL_ACTION_BANKS=1 FELUCCA_CPU2=0)
 include(${CMAKE_CURRENT_LIST_DIR}/fw_common.cmake)
 fm1_add_core(caravel ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/caravel UNIT core_caravel.c
              DESC core_caravel_desc.c FAMILY felucca_web LICENSE GPL-3.0-only SUBMODULES_RECURSIVE
-             GEN ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h felucca_tables.h felucca_fm6.h felucca_samples.h
-             VERSION_FILE firmware/src/felucca.c VERSION_REGEX "^#define FELUCCA_VERSION \"v?([^\"]*)\""
+             GEN ui_fonts.h ui_icons.h ui_keycaps.h ui_palettes.h felucca_tables.h
+             VERSION ${_cv_ver}
              DEFINES ${_cv_defs})
 fw_golden(caravel ${CMAKE_SOURCE_DIR}/cores/caravel web/emu/felucca_web.c ${_cv_defs})
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: what is compiled into the core
