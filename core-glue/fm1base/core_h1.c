@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* The h1 core: h1 (https://github.com/jakehandy/h1, the pinned, unmodified submodule cores/h1, tag v0.2.1 = 5b697e5,
+/* The h1 core: h1 (https://github.com/jakehandy/h1, the pinned, unmodified submodule cores/h1, tag v0.3.0 = 4cff936,
  * MIT, with its submodules base = fm1-base and base/bsp = felucca-bsp, MPL-2.0) built as one unit with the fm1-base
  * glue (core-glue/fm1base/README.md). h1's fm1-base is c8e0599, SY1's: this unit follows core_sy1.c (the second core
  * simulated) without the app's own SysEx (h1 has none) and without lib/touch.c (no APP_TOUCH). The include list
@@ -22,8 +22,8 @@
  * plat_core() 1 while it runs; it is never given up or barred. The render's sums are the same as on a two-core FM-1.
  * fm1-base's device half (cpu2.c) is not built; plat_fm1.c's plat_core is renamed away.
  *
- * h1's version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 0.2.1's: "0.2.1" and
- * FM-1_481000201 (fm1.toml id_prefix FM-1_481 + 00 02 01); core_h1.cmake derives both from its VERSION.
+ * h1's version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 0.3.0's: "0.3.0" and
+ * FM-1_481000300 (fm1.toml id_prefix FM-1_481 + 00 03 00); core_h1.cmake derives both from its VERSION.
  *
  * THE MANAGERS (core-glue/plat/plat_sx.h): fm1-base's main loop (base/device/main_fm1.c fm1_main) gives each SysEx
  * frame to the screen reader (announce.c, 7D 53 52), the log readout (7D 4C 47: "no crash recorded", then "end") and
