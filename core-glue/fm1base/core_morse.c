@@ -14,8 +14,8 @@
  * device's plat.h implementation (plat_fm1.c) and the app (app.c: hostlink.c, ledfx.c, morse.c, learn.c, content.c,
  * tone.c, the sidetone and the screens).
  *
- * MORSE's version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 0.6's: "0.6" and
- * FM-1_41000600 (fm1.toml id_prefix FM-1_41 + 00 06 00); core_morse.cmake derives both from its VERSION.
+ * MORSE's version (APP_VERSION) and package identity (FELUCCA_ID) are build.py --release 0.8's: "0.8" and
+ * FM-1_41000800 (fm1.toml id_prefix FM-1_41 + 00 08 00); core_morse.cmake derives both from its VERSION.
  *
  * THE MANAGERS (core-glue/plat/plat_sx.h): fm1-base's main loop (base/device/main_fm1.c fm1_main) gives each SysEx
  * frame to the screen reader (announce.c, 7D 53 52), the log readout (7D 4C 47: "no crash recorded", then "end"), the
