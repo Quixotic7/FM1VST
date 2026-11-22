@@ -1,16 +1,16 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# OrGigs 1.0.2 (https://github.com/orgelbobo/orgigs, tag v1.0.2 = b2773e3): the Dinghy family glue (core-glue/dinghy/)
+# OrGigs 1.1 (https://github.com/orgelbobo/orgigs, tag v1.1 = e95e890): the Dinghy family glue (core-glue/dinghy/)
 # over the unmodified submodule cores/orgigs, in its host mode (DINGHY_HOST, the FM-1 board). platform.c includes
 # "../../tests/host.c" by a relative path (a program: script, WAV, main), so clang's -ivfsoverlay maps that path to
 # orgigs_host.c, as core_sid1.cmake does; orgigs_host.c takes the firmware's own fake FM-1, sim/sim_platform.h (its
 # browser simulator's and tests' shared one). The headers in firmware/gen are committed (NO_GEN); the version is the
-# tag's (tools/build.py --release 1.0.2: APP_VER "1.0.2", identity FM-1_674102). The .pool section attribute
+# tag's (tools/build.py --release 1.1: APP_VER "1.1", identity FM-1_674102). The .pool section attribute
 # (gfx.c) Mach-O rejects becomes an alignment (FLAGS).
 # Public: GPL-3.0-only; the Terminus font SIL OFL 1.1; the Yamaha SEQTRAK sound list (names, firmware/gen/
 # yst_presets.h) from jaeggerr/seqtrak-docs, MIT (LICENSING.md). The designburg logo in assets/ is not compiled in.
 include(${CMAKE_CURRENT_LIST_DIR}/dinghy.cmake)
 set(_orgigs ${CMAKE_SOURCE_DIR}/cores/orgigs)
-set(_orgigs_ver 1.0.2)
+set(_orgigs_ver 1.1)
 set(_orgigs_vfs ${CMAKE_BINARY_DIR}/dinghy/orgigs_vfs.yaml)
 file(WRITE ${_orgigs_vfs} "{ \"version\": 0, \"case-sensitive\": \"false\", \"roots\": [ { \"type\": \"file\", \"name\": \"${_orgigs}/tests/host.c\", \"external-contents\": \"${CMAKE_CURRENT_LIST_DIR}/orgigs_host.c\" } ] }\n")
 fm1_add_core(orgigs ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_orgigs}

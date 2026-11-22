@@ -16,7 +16,7 @@
  *                  ctl_save_tick); flash_sync saves what is pending at once. The blobs are the SMK-37's only
  *   SysEx          in: OrGigs' own (F0 7D 4F 47 .., the settings backup) and Yamaha's (F0 43 .., a SEQTRAK) go to
  *                  app_sysex, the rest to ota.c's ota_service, as the device's sysex_service does (the M-UPGRADE
- *                  identity FM-1_674102: tools/build.py --release 1.0.2); out through the MIDI out queue
+ *                  identity FM-1_674102: tools/build.py --release 1.1); out through the MIDI out queue
  * MASTER is the glue's (the device's curve after app_audio, the block zeroed first as fm1_alnk0_irq does). Not here:
  * USB audio, the TRS MIDI in, the rescue, the boot guard (the device branch's). */
 #include "dinghy_pre.h"
@@ -116,7 +116,7 @@ static void fm1core_dg_info(char *buf, uint32_t n)
 
 /* SysEx in: platform.c's sysex_service (OrGigs): its own and Yamaha's to app_sysex, the rest to ota_service */
 static void fm1core_org_sysex(const uint8_t *p, uint32_t n);
-#define FELUCCA_ID "FM-1_674102"          /* tools/build.py --release 1.0.2: FM-1_674 + X Y Z */
+#define FELUCCA_ID "FM-1_674102"          /* tools/build.py --release 1.1: FM-1_674 + X Y Z */
 #define FM1CORE_DG_OTA_C "../../cores/orgigs/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_org_sysex((p), (n))
 
