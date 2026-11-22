@@ -358,3 +358,6 @@
 [submodule "h1"]
 	path = cores/h1
 	url = https://github.com/jakehandy/h1
+[submodule "a22"]
+	path = cores/a22
+	url = https://github.com/abektes/a22
