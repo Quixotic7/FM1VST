@@ -49,10 +49,12 @@
  * A firmware's unit (core_<id>.c) sets, then includes this file:
  *   FM1CORE_FW_P           the entry points' prefix (fm1core_<P>_init ..)                     (required)
  *   FM1CORE_FW_WEB_C       "<path>/web/emu/felucca_web.c" (relative to this folder)           (required)
+ *   FM1CORE_FW_EDITOR_AFTER  a file included right after FM1CORE_FW_EDITOR_C, inside its flash stand-ins     (optional)
  *   FM1CORE_FW_DEFAULT_FLASH  the flash file when options() gets NULL outside headless       ("build/<id>/flash.bin")
  *   FM1CORE_FW_ANIM_IDLE   1: the web unit has 1.2's idle LED animation (web_anim_idle)        (0)
  *   FM1CORE_FW_BOOTGUARD   0: no fm1_cstart guard (boot_options NULL)                          (1)
  *   FM1CORE_FW_BEFORE_BOOT()  before web_power_on (JIANT: the session seed)
+ *   FM1CORE_FW_WEB_MS         the device millisecond in place of the unit's web_ms (Modular Koi: its main loop)
  *   FM1CORE_FW_AFTER_MS()     after each web_ms (DUELL: its reboot request)
  *   FM1CORE_FW_LED(c, r, lv)  raise lv (a uint32_t 0..255) for the LED at column c, row bit r from the firmware's
  *                             own extra planes (JIANT hi, DUELL's keyboard sets)
@@ -154,6 +156,9 @@ static void fm1core_fw_wait(void)
 #define fm1_wdt_feed() fm1core_fw_wait()
 #define __attribute__(x)                  /* (as hostsim.c builds the firmware: no .pool section on the host) */
 #include FM1CORE_FW_EDITOR_C
+#ifdef FM1CORE_FW_EDITOR_AFTER
+#include FM1CORE_FW_EDITOR_AFTER       /* (a fork's own files that need the editor and the flash stand-ins above) */
+#endif
 #undef __attribute__
 #undef fm1_wdt_feed
 #undef audio_silence
@@ -201,6 +206,9 @@ static void fm1core_fw_sx_service(void)  /* main.c's loop: ed_service (editor fr
 #endif
 #ifndef FM1CORE_FW_BEFORE_BOOT
 #define FM1CORE_FW_BEFORE_BOOT() ((void)0)
+#endif
+#ifndef FM1CORE_FW_WEB_MS
+#define FM1CORE_FW_WEB_MS web_ms          /* the device's millisecond (a fork whose main loop is not Felucca's: its own) */
 #endif
 #ifndef FM1CORE_FW_AFTER_MS
 #define FM1CORE_FW_AFTER_MS() ((void)0)
@@ -539,7 +547,7 @@ static void fm1core_fw_ms_run(int host_frame)   /* frame / idle: the input, the 
 #else
     (void)host_frame;
 #endif
-    web_ms();
+    FM1CORE_FW_WEB_MS();
     FM1CORE_FW_AFTER_MS();
     if (fm1core_halted())
         return;

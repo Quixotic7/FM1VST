@@ -4,9 +4,11 @@
 # (fw_core.h over the firmware's own web/emu/felucca_web.c, unmodified; cmake/FM1Cores.cmake fm1_add_core), with its
 # submodules (firmware/engines, firmware/bsp: SUBMODULES_RECURSIVE; the web unit uses neither felucca-bsp nor the
 # off-by-default ADPCM engine). Built as web/emu/build.sh builds its browser emulator; the generated headers are
-# tools/build.py generate's. VERSION 0.1: the release's package (modular-koi-0.1.fwsc, tools/build.py --release 0.1,
-# FELUCCA_VERSION v0.1; felucca.c's default says v1.6.1). The golden check: fw_common.cmake.
-set(_dt_defs FELUCCA_VERSION="v0.1")
+# tools/build.py generate's. The Koi board's flags, as tools/build.py BOARD_DEFS["koi"] (BOARD=koi ./build.sh): without
+# MODULAR_KOI the tree builds plain Felucca (felucca.c includes koi_ui.c / koi_draw.c, engines.c the drum, only with
+# it). VERSION 0.1: the release's package (BOARD=koi ./build.sh --release 0.1: modular-koi-fm1-0.1.fwsc, version
+# string "KOI 0.1", identity FM-1_901). The golden check: fw_common.cmake.
+set(_dt_defs "FELUCCA_VERSION=\"KOI 0.1\"" MODULAR_ONE=1 FELUCCA_SLICE=0 MODULAR_KOI=1)
 include(${CMAKE_CURRENT_LIST_DIR}/fw_common.cmake)
 fm1_add_core(modularkoi ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/modular-koi
              UNIT core_modularkoi.c DESC core_modularkoi_desc.c FAMILY felucca_web LICENSE GPL-3.0-only
