@@ -158,7 +158,64 @@ static void fm1core_nd_leds(void)
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME "Niagara Drift"
-#define FM1CORE_PL_UI_FRAME() (ui_frame(), fm1core_nd_leds())
+/* the live knob labels and readouts (common/rd_cols.h): the values row as app/look.c lk_values draws it (knob_param,
+ * the card's name, lk_text then lk_line2's second line after a space; Shift's move added to a pitch as heard; the
+ * glyphs "\xC2\xB1" as "+-" and "\xC3\x97" as "x"); no knob there "". Nothing given on the splash, the SEL key map, a
+ * global knob's big readout (SELECT, ALGORITHM, PRESETS: lk_readout) and the RESTORE FROM USB? question */
+#include "rd_cols.h"
+static void fm1core_niagaradrift_ascii(char *d, const char *s, int n)
+{
+    int j = 0;
+    while (*s && j < n - 2) {
+        if ((uint8_t)s[0] == 0xC2u && (uint8_t)s[1] == 0xB1u)
+            d[j++] = '+', d[j++] = '-', s += 2;
+        else if ((uint8_t)s[0] == 0xC3u && (uint8_t)s[1] == 0x97u)
+            d[j++] = 'x', s += 2;
+        else
+            d[j++] = *s++;
+    }
+    d[j] = 0;
+}
+static void fm1core_niagaradrift_rd(void)
+{
+    const int held = (int)(ui.btn >> B_SEL & 1u);
+    int sh[G], i;
+    rdc_begin();
+    if (!ui.splash_done || rq || keymap_on() || plat_ms() < ui.glab_until)
+        return;
+    for (i = 0; i < G; i++) {                  /* (as lk_values: Shift's move of each drone, cents) */
+        const float c = dr_gest_pitch(i) * 100.0f;
+        sh[i] = (int)(c + (c >= 0.0f ? 0.5f : -0.5f));
+    }
+    for (i = 0; i < 4; i++) {
+        const int p = knob_param(i), second = held && sel_job(ui.view, i) >= 0;
+        const knob_t kn = VIEW_KNOB[ui.view][i];
+        const int g = kn.g < G ? kn.g : LK_G, is_pitch = kn.p == GP_PITCH && kn.g < G;
+        const char *name;
+        char t[16], t2[16], w[40], v8[24];
+        int v, mode;
+        if (p < 0) {
+            rdc_col((uint32_t)i, "", "");
+            continue;
+        }
+        v = proj.par[p];
+        if (is_pitch && (p == P_PLINK_OFF ? sh[1] != sh[0] : sh[g] != 0))
+            v += p == P_PLINK_OFF ? sh[1] - sh[0] : sh[g];
+        name = second ? (p == P_SUBW_0 || p == P_SUBW_1 ? "Sub wave" : sel_job_name(p))
+             : p == P_DLY_MIX || p == P_REV_MIX ? "Mix"
+             : card_name(p);
+        lk_text(p, v, t);
+        t2[0] = 0;
+        mode = second ? 0 : lk_line2(p, v, t, t2);
+        if (mode && t2[0])                     /* (the second line: under it, or in the meter band; '>' an arrow) */
+            snprintf(w, sizeof w, "%s %s", t, t2[0] == '>' ? t2 + 1 : t2);
+        else
+            snprintf(w, sizeof w, "%s", t);
+        fm1core_niagaradrift_ascii(v8, w, (int)sizeof v8);
+        rdc_col((uint32_t)i, name, v8);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() ((ui_frame(), fm1core_nd_leds()), fm1core_niagaradrift_rd())
 #define FM1CORE_PL_UI_INPUT() ui_input_only()
 #define FM1CORE_PL_DIM_LEVEL FM1P_LED_DIM /* the dim PWM levels */
 #define FM1CORE_PL_DIM_ON 1               /* (no glow divider: the PWM frames instead) */

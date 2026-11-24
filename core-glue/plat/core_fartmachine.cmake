@@ -24,7 +24,11 @@ plat_golden(fartmachine GEN_TARGET gen_fartmachine SOURCES ${_fmo}/host/omni_hos
             SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden_fartmachine.txt)
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md), enabled by RFM1Manager. The licence texts: the
 # firmware's own (its LICENSE, LICENSES/, LICENSING.md, the fonts')
-fm1_add_rfm1(fartmachine AUTHORS "Trust This Mechanism"
+# rd1: its knob row as drawn, live labels and readouts (core_fartmachine.c, common/rd_cols.h)
+fm1_add_rfm1(fartmachine WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_1_REV_=_16% --expect-readout ctl_6_4_RPTS_=_26%
+             AUTHORS "Trust This Mechanism"
              HOSTED_DESPITE_GATE "the bundled recordings (1.0.0's said to be from Pixabay, 1.1.0's said to be CC0 from Freesound, neither checked here): hosted at RemoteFM1FW only, as the author ships them, the owner's call of 1 November 2026"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
                            "LICENSING.md ({name})=LICENSING.md"

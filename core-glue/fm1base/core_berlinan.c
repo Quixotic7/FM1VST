@@ -123,7 +123,23 @@ static void fm1core_bn_sx_service(void)
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME APP_NAME
-#define FM1CORE_PL_UI_FRAME() app_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the knob strip as app/screen.c draw_knobs draws it:
+ * caps(KNOB_LABEL[ui.view][i]) and cell(ui.view, i)'s value line (a "shown only" cell's second line, c.sub, left
+ * out). The strip is drawn on every page, the help card included (the knobs keep their jobs): always given */
+#include "rd_cols.h"
+static void fm1core_berlinan_rd(void)
+{
+    int i;
+    rdc_begin();
+    for (i = 0; i < 4; i++) {
+        cell_t c;
+        char t[16];
+        cell(ui.view, i, &c);
+        caps(t, KNOB_LABEL[ui.view][i], sizeof t);
+        rdc_col((uint32_t)i, t, c.val);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (app_frame(), fm1core_berlinan_rd())
 #define FM1CORE_PL_UI_INPUT() app_input_only()
 #define FM1CORE_PL_DIM_LEVEL (fm1core_fb_dim_lo ? FM1P_LED_FAINT : FM1P_LED_DIM)   /* the glow: DIM LO / HI */
 #define FM1CORE_PL_DIM_ON 1               /* (plat_lights fills the dim plane only while glowing) */

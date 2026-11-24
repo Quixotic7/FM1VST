@@ -69,7 +69,11 @@ endif()
 # (GPL-2.0-or-later), SoftFloat's (BSD-3-Clause), fm1-base's and felucca-bsp's MPL-2.0 with their notes, the Barlow OFL.
 # Berlinan makes no sound (a MIDI sequencer: its notes go out over USB-MIDI), so the chord's RMS is 0: --min-rms 0.
 # PLAY starts the Demo trio at 2 s; the MIDI out (rfm1_run --midi-out) shows it plays
-fm1_add_rfm1(berlinan AUTHORS "Jiří Píša"
+# rd1: its knob row as drawn, live labels and readouts (core_berlinan.c, common/rd_cols.h)
+fm1_add_rfm1(berlinan WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_TEMPO_=_91
+             AUTHORS "Jiří Píša"
              LICENSE_FILES "GPL-2.0-or-later ({name}, LICENSE)=LICENSE"
                            "BSD-3-Clause (Berkeley SoftFloat 3e, app/engine/softfloat/LICENSE)=app/engine/softfloat/LICENSE"
                            "MPL-2.0 (fm1-base, base/LICENSE)=base/LICENSE"

@@ -273,7 +273,68 @@ static void fm1core_x0x_sx_service(void)  /* main_fm1.c fm1_main, each pass (the
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME "X0X"
-#define FM1CORE_PL_UI_FRAME() ui_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the knob strip as app/ui.c draw_knobs draws it: the page's
+ * refs (pg.r[cur_page()]), caps_of(pref_name(r)) and pref_value_of's number + unit (cell_value: no space), the value a
+ * held step's p-lock or the recorded motion plays in its place; SEQ with a 303 step held: NOTE / GATE / ACCENT / SLIDE.
+ * A question (O_ASK: the knobs wait) and the CPU test (the test owns the knobs): nothing given */
+#include "rd_cols.h"
+static void fm1core_x0x_rd(void)
+{
+    int i, pgi = cur_page();
+    rdc_begin();
+    if (ui.overlay == O_ASK || perf_testing())
+        return;
+    if (ui.view == V_SEQ && is_303() && ui.held_step >= 0) {   /* draw_knobs: the held step's own knobs */
+        static const char *const SN[4] = {"NOTE", "GATE", "ACCENT", "SLIDE"};
+        static const char *const G[3] = {"REST", "NOTE", "TIE"};
+        const bpart_t *bp = &cur_pat()->bass[bidx()];
+        const bstep_t *st = &bp->step[ui.held_step];
+        for (i = 0; i < 4; i++) {
+            char v[12];
+            if (i == 0)
+                put_note(v, held_note_of(bp, ui.held_step) + bp->transpose - 24);
+            else if (i == 1 && bstep_gate(st) == G_NOTE && bass_slides_on(bp, ui.held_step))
+                put_s(v, "SLIDE");
+            else if (i == 1 && bstep_gate(st) == G_NOTE && bass_note_len(bp, ui.held_step) > 1)
+                put_i(put_s(v, "LEN"), bass_note_len(bp, ui.held_step));
+            else if (i == 1)
+                put_s(v, G[bstep_gate(st)]);
+            else
+                put_s(v, (st->flags & (i == 2 ? BS_ACCENT : BS_SLIDE)) ? "ON" : "OFF");
+            rdc_col((uint32_t)i, SN[i], v);
+        }
+        return;
+    }
+    for (i = 0; i < 4; i++) {
+        pref_t r = pg.r[pgi][i];
+        const x0x_param_t *d = pref_desc(r);
+        char nm[24], num[16], unit[8], t[24];
+        const char *n;
+        int val, j;
+        if (!d) {
+            rdc_col((uint32_t)i, "", "");
+            continue;
+        }
+        n = pref_name(r);                 /* caps_of's upper case (not called: its two buffers turn) */
+        for (j = 0; n[j] && j < 23; j++)
+            nm[j] = n[j] >= 'a' && n[j] <= 'z' ? (char)(n[j] - 32) : n[j];
+        nm[j] = 0;
+        val = pref_get(r);
+        if (lock_step() >= 0) {
+            int lv = lock_of(r, lock_step());
+            if (lv >= 0)
+                val = lv;
+        } else if (has_motion(r)) {
+            int mv = motion_now(r);
+            if (mv >= 0)
+                val = mv;
+        }
+        pref_value_of(r, val, num, unit);
+        snprintf(t, sizeof t, "%s%s", num, unit);
+        rdc_col((uint32_t)i, nm, t);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (ui_frame(), fm1core_x0x_rd())
 #define FM1CORE_PL_UI_INPUT() ui_input_only()
 #define FM1CORE_PL_DIM_LEVEL FM1P_LED_DIM /* the glow and the dim keys: one scan frame in GLOW_DIV */
 static uint8_t fm1core_x0x_last_pat = 0xFF;

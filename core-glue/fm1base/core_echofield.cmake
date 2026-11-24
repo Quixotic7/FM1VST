@@ -49,7 +49,11 @@ fm1_add_core(echofield ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_ef} UNIT core_echofie
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: ECHOFIELD's MIT and its
 # LICENSING.md (which file has which licence), the factory sounds' CC0 note, fm1-base's and felucca-bsp's MPL-2.0 with
 # their notes, the Barlow OFL
-fm1_add_rfm1(echofield AUTHORS "Philip Bos"
+# rd1: its knob row as drawn, live labels and readouts (core_echofield.c, common/rd_cols.h)
+fm1_add_rfm1(echofield WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_ATTACK_=_14MS --expect-readout ctl_6_VELOCITY_=_51%
+             AUTHORS "Philip Bos"
              LICENSE_FILES "MIT ({name}, LICENSE)=LICENSE"
                            "LICENSING.md ({name})=LICENSING.md"
                            "CC0-1.0 (the factory sounds in {name})=${CMAKE_CURRENT_LIST_DIR}/echofield_factory_cc0.txt"

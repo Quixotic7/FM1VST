@@ -70,7 +70,31 @@ static void fm1core_fimba_sx_service(void)   /* main_fm1.c fm1_main, each pass (
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME "FiMba-1"
-#define FM1CORE_PL_UI_FRAME() ui_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the knob row as app/ui.c draw_knobs draws it (view_knob,
+ * km_param_info(k)->name, km_param_text; a knob with no sound hole to cover: its name and "--"); no knob there "". The
+ * row is on every screen (no splash, no menus: RESET? is a header message, the knobs as ever) */
+#include "rd_cols.h"
+static void fm1core_fimba_rd(void)
+{
+    int i;
+    rdc_begin();
+    for (i = 0; i < 4; i++) {
+        const int k = view_knob(i);
+        char t[24];
+        if (k == K_NONE) {
+            rdc_col((uint32_t)i, "", "");
+            continue;
+        }
+        if (knob_off(k)) {
+            rdc_col((uint32_t)i, km_param_info(k)->name, "--");
+            continue;
+        }
+        t[0] = 0;
+        km_param_text(k, proj.par[k], t);
+        rdc_col((uint32_t)i, km_param_info(k)->name, t);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (ui_frame(), fm1core_fimba_rd())
 #define FM1CORE_PL_UI_INPUT() ui_input_only()
 #define FM1CORE_PL_DIM_LEVEL FM1P_LED_DIM /* the dim keys */
 #define FM1CORE_PL_DIM_ON 1               /* (FiMba's HAL: no divider, the dim plane always shows) */

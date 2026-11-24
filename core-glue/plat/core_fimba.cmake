@@ -14,4 +14,8 @@ plat_golden(fimba GEN_TARGET gen_fimba SOURCES ${_fimba}/host/kalimba_host.c ${_
             DEFINES OM_HOST INCLUDES ${_fimba}/firmware/src ${_fimba}/firmware/src/dsp ${_fimba}/build/gen
             SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden_fimba.txt)
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
-fm1_add_rfm1(fimba AUTHORS "jadamsowers")
+# rd1: its knob row as drawn, live labels and readouts (core_fimba.c, common/rd_cols.h)
+fm1_add_rfm1(fimba WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_Material_=_Brass --expect-readout ctl_6_Tone_=_56
+             AUTHORS "jadamsowers")

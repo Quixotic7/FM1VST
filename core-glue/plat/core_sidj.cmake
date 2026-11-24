@@ -89,7 +89,11 @@ set_property(SOURCE ${CMAKE_CURRENT_LIST_DIR}/core_sidj.c APPEND PROPERTY OBJECT
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). A fresh flash has the two tunes (above), the first
 # selected, as at the browser emulator's first visit, where PLAY starts it; RUN_ARGS: PLAY tapped before the chord
 # (ui.c ui_play_btn: it loads and plays Debut & Credit), the chord then plays voice 1 over it
-fm1_add_rfm1(sidj AUTHORS "Thomas Jansson (tubesockor)"
+# rd1: its knob row as drawn, live labels and readouts (core_sidj.c, common/rd_cols.h)
+fm1_add_rfm1(sidj WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press SEQ@3000 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_PW_=_1952
+             AUTHORS "Thomas Jansson (tubesockor)"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
                            "GPL-2.0-or-later (the SID engine in {name}, after reSID 0.16)=third_party/licenses/GPL-2.0.txt"
                            "OFL-1.1 (the Barlow Semi Condensed font in {name})=assets/fonts/Barlow-OFL.txt"

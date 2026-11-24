@@ -58,7 +58,11 @@ endif()
 # (oxo_synth2's MIT text, the community banks' status), the Factory 500's credits and terms (app/presets/CREDITS.txt,
 # with each bank's original readme: Lunatique's asks for its complete readme), fm1-base's and felucca-bsp's MPL-2.0
 # with their notes, the Barlow OFL
-fm1_add_rfm1(sy1 AUTHORS "fenderberg"
+# rd1: its knob row as drawn, live labels and readouts (core_sy1.c, common/rd_cols.h)
+fm1_add_rfm1(sy1 WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_ATTACK_=_0.64_ms --expect-readout ctl_6_R.TAU_=_9.2_ms
+             AUTHORS "fenderberg"
              LICENSE_FILES "MIT ({name}, LICENSE)=LICENSE"
                            "Third-party material ({name}, THIRD_PARTY.md: oxo_synth2 MIT)=THIRD_PARTY.md"
                            "Factory 500 presets: credits and terms (app/presets/CREDITS.txt)=app/presets/CREDITS.txt"

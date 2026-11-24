@@ -28,7 +28,11 @@ plat_golden(x0x GEN_TARGET gen_x0x SOURCES ${_x0x}/host/x0x_host.c ${_u} DEFINES
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The second core needs nothing more: the unit runs
 # plat_cpu2_run's job at once on the one thread (fm1_cpu1_run), as natively. Not built while the core is gated.
 # The licence texts: its GPL, its LICENSING.md and the two fonts' OFL (Barlow, Terminus)
-fm1_add_rfm1(x0x AUTHORS "Charles Vestal"
+# rd1: its knob row as drawn, live labels and readouts (core_x0x.c, common/rd_cols.h)
+fm1_add_rfm1(x0x WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press SEL@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_TUNE_=_35 --expect-readout ctl_6_P.DPTH_=_1
+             AUTHORS "Charles Vestal"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
                            "OFL-1.1 (the Barlow font in {name})=assets/fonts/Barlow-OFL.txt"
                            "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt"

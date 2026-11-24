@@ -231,7 +231,29 @@ static void fm1core_sidj_sx_service(void)   /* main_fm1.c fm1_main, each pass (t
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME "SiDJ"
-#define FM1CORE_PL_UI_FRAME() ui_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the status line's knob fields as app/ui.c draw_status last
+ * drew them (st_cap, the screen reader's copy: st_kfield's knob, label, value; a field with no label shows only its
+ * "K1" tag, given as the label); a knob with no field "". Nothing given during the intro and while a message or the
+ * SID+CLK hint covers the status line */
+#include "rd_cols.h"
+static void fm1core_sidj_rd(void)
+{
+    const uint32_t now = plat_ms();
+    int i;
+    rdc_begin();
+    if (ui.intro || now < ui.msg_until || (now < ui.hint_until && set.output == ENG_OUT_CLOCK))
+        return;
+    for (i = 0; i < 4; i++)
+        rdc_col((uint32_t)i, "", "");
+    for (i = 0; i < st_cap.n && i < ST_CAP; i++) {
+        const int k = st_cap.knob[i];
+        char tag[3] = {'K', (char)('0' + k), 0};
+        if (k < 1 || k > 4)
+            continue;                        /* (a field by no knob: the voice, RSID's notes) */
+        rdc_col((uint32_t)(k - 1), st_cap.lab[i][0] ? st_cap.lab[i] : tag, st_cap.val[i]);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (ui_frame(), fm1core_sidj_rd())
 #define FM1CORE_PL_UI_INPUT() ui_input_only()
 #define FM1CORE_PL_DIM_LEVEL FM1P_LED_DIM /* (plat_leds: lit only, no glow plane) */
 static void fm1core_pl_flash_boot(void)  /* main_fm1.c fm1_main, the flash found (ota_boot_cleanup: the update's

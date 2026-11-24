@@ -350,7 +350,69 @@ static void fm1core_carnac_pass(int frame)
         panel_leds();
     }
 }
-#define FM1CORE_PL_UI_FRAME() fm1core_carnac_pass(1)
+/* the live knob labels and readouts (common/rd_cols.h): the knob row as the page draws it: SEQ ui_seq_draw.c
+ * sq_draw_knobs (the label, sq_value_text of the step), ARP ui_arp_draw.c ar_draw_knobs (ui_sm_knob_text or the
+ * number), the rest ui_page_draw.c pu_knob_read (PERF's tablets: the slot "088" and the patch's name or EMPTY); a knob
+ * with no job "". Nothing given before the start-up screen is over and while a popup (the preset or parameter list) has
+ * the whole screen */
+#include "rd_cols.h"
+static void fm1core_carnacos_rd(void)
+{
+    uint8_t k;
+    rdc_begin();
+    if (!fm1core_carnac_running || sm.browse || sm.rowpop)
+        return;
+    for (k = 0; k < 4u; k++) {
+        char b[8];
+        UiKnobInfo info;
+        if (sm.page == UIPAGE_SEQ) {
+            uint8_t l, st;
+            const char *t;
+            ui_sm_knob(&sm, UIPAGE_SEQ, 0, k, &info);
+            ui_sm_seq_knob_target(&sm, k, &l, &st);
+            t = sq_value_text(sm.lanes[l].event_type, ui_sm_seq_knob_get(&sm, k), b);
+            rdc_col(k, info.label, t);
+        } else if (sm.page == UIPAGE_ARP) {
+            const char *t;
+            ui_sm_knob(&sm, UIPAGE_ARP, 0, k, &info);
+            t = ui_sm_knob_text(&sm, UIPAGE_ARP, 0, k);
+            if (t == NULL) {
+                ar_num(b, sm.arp_knob[k]);
+                t = b;
+            }
+            rdc_col(k, info.label, t);
+        } else {
+            PuKnob o;
+            pu_knob_read(&sm, sm.page, k, &o, b);
+            if (sm.page == UIPAGE_PERF) {        /* (pu_draw_knob_tablet) */
+                char v[RDC_LEN], nm[NAME_LEN + 1];
+                int n = 0, i;
+                v[0] = 0;
+                if (!o.none && o.text) {
+                    while (o.text[n] && n < 3)
+                        n++;
+                    for (i = 0; i < 3 - n; i++)
+                        v[i] = '0';
+                    memcpy(v + i, o.text, (size_t)n);
+                    v[i + n] = 0;
+                }
+                if (k < 2u && !o.none) {
+                    const uint8_t s = ui_sm_slot_query(&sm, UISAVE_PATCH_PRESET, sm.perf->layer_patch[k], nm);
+                    if (s == UISLOT_EMPTY)
+                        snprintf(v + strlen(v), sizeof v - strlen(v), " EMPTY");
+                    else if (s == UISLOT_USED && nm[0])
+                        snprintf(v + strlen(v), sizeof v - strlen(v), " %s", nm);
+                }
+                rdc_col(k, o.label, v);
+            } else if (o.none) {
+                rdc_col(k, "", "");
+            } else {
+                rdc_col(k, o.label, o.text ? o.text : "");
+            }
+        }
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (fm1core_carnac_pass(1), fm1core_carnacos_rd())
 #define FM1CORE_PL_UI_INPUT() fm1core_carnac_pass(0)
 
 /* the release's waves into an area that holds none (a unit the installer has run on), before pcm_boot */

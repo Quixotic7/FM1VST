@@ -58,7 +58,11 @@ endif()
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: the repository's LICENSE (which
 # licence covers which files), CHIMERA's MIT, the port's MIT, the MPL-2.0, CMUdict's licence, fm1-base's and
 # felucca-bsp's MPL-2.0 with their notes, the Barlow OFL
-fm1_add_rfm1(chimeravocal AUTHORS "Shan-Sherif"
+# rd1: its knob row as drawn, live labels and readouts (core_chimeravocal.c, common/rd_cols.h)
+fm1_add_rfm1(chimeravocal WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_VIBRATO_=_36 --expect-readout ctl_6_RING_=_2%
+             AUTHORS "Shan-Sherif"
              LICENSE_FILES "{name} licensing (LICENSE)=LICENSE"
                            "MIT (CHIMERA, Jameson Hodge, LICENSES/MIT-CHIMERA.txt)=LICENSES/MIT-CHIMERA.txt"
                            "MIT ({name}, LICENSES/MIT.txt)=LICENSES/MIT.txt"

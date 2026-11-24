@@ -149,7 +149,32 @@ static void fm1core_qz_sx_service(void)
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME APP_NAME
-#define FM1CORE_PL_UI_FRAME() app_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the footer as app/ui.c draw_foot draws it, from the view the
+ * frame just drew (ui.shown.foot: its page, values, hidden knobs, insert type, model): the label PAGE[pid].label[k]
+ * (INSERT's first three: INS_LABEL), the value knob_text; a knob with no label or hidden: "". A LANES / TONNETZ /
+ * CHORDS cell held (K1 / K2 set the cell, not the footer's knobs): nothing given */
+#include "rd_cols.h"
+static void fm1core_quartz_rd(void)
+{
+    const q_view *v = &ui.shown;
+    const q_page *pg = &PAGE[v->foot.pid];
+    int k;
+    rdc_begin();
+    if (ui.cell)
+        return;
+    for (k = 0; k < 4; k++) {
+        const char *lb = v->foot.pid == P_INSERT && k < 3 ? INS_LABEL[v->foot.itype][k] : pg->label[k];
+        char t[24];
+        if (!lb || v->foot.hide >> k & 1u) {
+            rdc_col((uint32_t)k, "", "");
+            continue;
+        }
+        t[0] = 0;
+        knob_text(v->foot.pid, k, v->foot.v[k], v->foot.model, t);
+        rdc_col((uint32_t)k, lb, t);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (app_frame(), fm1core_quartz_rd())
 #define FM1CORE_PL_UI_INPUT() app_input_only()
 #define FM1CORE_PL_DIM_LEVEL (fm1core_fb_dim_lo ? FM1P_LED_FAINT : FM1P_LED_DIM)   /* the glow: DIM LO / HI */
 #define FM1CORE_PL_DIM_ON 1               /* (plat_lights fills the dim plane only while glowing) */

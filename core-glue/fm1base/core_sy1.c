@@ -207,7 +207,33 @@ static void fm1core_sy1_sx_service(void)
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME APP_NAME
-#define FM1CORE_PL_UI_FRAME() app_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the knob strip as app/ui/nord.h ux_controls draws it (every
+ * display style): cell_at(ui.page, ui.row, k), the label ux_label fitted to its 54 px (ux_fit, FONT_XS), the value
+ * ux_value(id, cell_value(id)) fitted in the font it is drawn in, then its unit line ("" none; the read-only GLOBAL
+ * row's own unit, not "READ ONLY"); X_NONE ("--"): "". No menus or overlays: always given */
+#include "rd_cols.h"
+static void fm1core_sy1_rd(void)
+{
+    uint32_t c;
+    rdc_begin();
+    for (c = 0; c < 4u; c++) {
+        const uint32_t id = cell_at(ui.page, ui.row, c);
+        const felucca_font_t *font;
+        const char *unit;
+        char text[40], lb[40], val[40], t[64];
+        if (id == X_NONE) {
+            rdc_col(c, "", "");
+            continue;
+        }
+        ux_fit(lb, sizeof lb, ux_label(id), &FONT_XS, 54);
+        ux_value(id, cell_value(id), text, &unit);
+        font = ux_display_width(&FONT_M, text) <= 52 ? &FONT_M : ux_display_width(&FONT_S, text) <= 52 ? &FONT_S : &FONT_XS;
+        ux_fit(val, sizeof val, text, font, 54);
+        snprintf(t, sizeof t, "%s%s%s", val, unit[0] ? " " : "", unit);
+        rdc_col(c, lb, t);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (app_frame(), fm1core_sy1_rd())
 #define FM1CORE_PL_UI_INPUT() app_input_only()
 #define FM1CORE_PL_DIM_LEVEL (fm1core_fb_dim_lo ? FM1P_LED_FAINT : FM1P_LED_DIM)   /* the glow: DIM LO / HI */
 #define FM1CORE_PL_DIM_ON 1               /* (plat_lights fills the dim plane only while glowing) */

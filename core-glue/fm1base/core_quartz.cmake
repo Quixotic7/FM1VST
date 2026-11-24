@@ -79,7 +79,11 @@ endif()
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: QUARTZ's LICENSE (GPL-3.0),
 # Mutable Instruments' MIT notice (stmlib's LICENSE, the notice of Plaits, Marbles, Clouds), fm1-base's and
 # felucca-bsp's MPL-2.0 with their notes, the Barlow OFL (gen_font.py's set; Terminus is not built in).
-fm1_add_rfm1(quartz AUTHORS "f0nski"
+# rd1: its knob row as drawn, live labels and readouts (core_quartz.c, common/rd_cols.h)
+fm1_add_rfm1(quartz WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ARP@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_MODE_=_UP --expect-readout ctl_6_GATE_=_51_%
+             AUTHORS "f0nski"
              LICENSE_FILES "GPL-3.0 ({name}, LICENSE)=LICENSE"
                            "MIT (Mutable Instruments: Plaits, Marbles, Clouds, stmlib, app/third_party/stmlib/LICENSE)=app/third_party/stmlib/LICENSE"
                            "MPL-2.0 (fm1-base, base/LICENSE)=base/LICENSE"
