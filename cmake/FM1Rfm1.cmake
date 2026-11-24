@@ -18,6 +18,9 @@
 #       [SOURCE_URL <url>]          the manifest's source_url (default: the descriptor's, "<repo>@<commit>")
 #       [DEFINES <d..>] [FLAGS <f..>] [INCLUDES <dirs..>]   more, for the Wasm build only
 #       [RUN_ARGS <args..>]         rfm1_run's options in the test ("--sysex <bank.syx>", "--settle 5000")
+#       [READOUT_TEST <args..>]     with rd1 in WANTS: a second test, rfm1_rd_<id>: rfm1_run with RUN_ARGS and these
+#                                   (knob turns and the readouts they must give: --turn K1@4100:3
+#                                   --expect-readout ctl_3_E5_CUT_=_412_Hz; an underscore stands for a space)
 #       [HOSTED_DESPITE_GATE "<reason>"]  a GATED core still built as an .rfm1, to be hosted (RemoteFM1FW) and
 #                                   downloaded, never bundled in an app or a public native build (CORES-PLAN.md 6)
 #       [VIRTUAL]                   a Fantasy CFW (docs/VIRTUAL-CARTS.md): host-only, the manifest says "virtual":
@@ -192,7 +195,7 @@ endfunction()
 
 function(fm1_add_rfm1 id)
     cmake_parse_arguments(A "VIRTUAL;NO_SKIN;NO_LABELS" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE;METADATA;AUDIO_OUT;VERSION"
-                          "AUTHORS;LICENSE_FILES;DEFINES;FLAGS;INCLUDES;RUN_ARGS;NEEDS;FOLDERS;WANTS" ${ARGN})
+                          "AUTHORS;LICENSE_FILES;DEFINES;FLAGS;INCLUDES;RUN_ARGS;NEEDS;FOLDERS;WANTS;READOUT_TEST" ${ARGN})
     if(A_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR "fm1_add_rfm1(${id}): unknown arguments ${A_UNPARSED_ARGUMENTS}")
     endif()
@@ -529,6 +532,12 @@ function(fm1_add_rfm1 id)
     set_property(GLOBAL APPEND PROPERTY FM1_RFM1_IDS ${id})
     set_property(GLOBAL PROPERTY FM1_RFM1_FILE_${id} ${_out})
     set_property(GLOBAL PROPERTY FM1_RFM1_RUN_ARGS_${id} "${A_RUN_ARGS}")
+    if(A_READOUT_TEST)
+        if(NOT "rd1" IN_LIST A_WANTS)
+            message(FATAL_ERROR "fm1_add_rfm1(${id}): READOUT_TEST without rd1 in WANTS")
+        endif()
+        set_property(GLOBAL PROPERTY FM1_RFM1_RD_ARGS_${id} "${A_RUN_ARGS};${A_READOUT_TEST}")
+    endif()
     set(_v "")
     if(A_VIRTUAL)
         set(_v ", virtual (Fantasy CFW): needs ${A_NEEDS}, folders ${A_FOLDERS}")
@@ -590,6 +599,15 @@ function(fm1_rfm1_finish)
                          -DRUN=$<TARGET_FILE:rfm1_run> -DFILE=${_f} "-DRUN_ARGS=${_ra}"
                          -P ${FM1_RFM1_TOOLS}/rfm1/rfm1_test.cmake)
         set_tests_properties(rfm1_${_id} PROPERTIES TIMEOUT 300)
+        get_property(_rd GLOBAL PROPERTY FM1_RFM1_RD_ARGS_${_id})
+        if(_rd)                   # READOUT_TEST: knob turns and the readouts (rd1) they must give
+            string(REPLACE ";" " " _rd "${_rd}")
+            add_test(NAME rfm1_rd_${_id}
+                     COMMAND ${CMAKE_COMMAND} -DPYTHON=${CR_PYTHON} -DCHECK=${FM1_RFM1_TOOLS}/rfm1_check.py
+                             -DRUN=$<TARGET_FILE:rfm1_run> -DFILE=${_f} "-DRUN_ARGS=${_rd}"
+                             -P ${FM1_RFM1_TOOLS}/rfm1/rfm1_test.cmake)
+            set_tests_properties(rfm1_rd_${_id} PROPERTIES TIMEOUT 300)
+        endif()
     endforeach()
     # a firmware's RemoteFM1Metadata.json: the skin through rfm1_pack / rfm1_check, the labels through rfm1_shim.c
     add_test(NAME rfm1_skin COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1/rfm1_skin_test.py)
