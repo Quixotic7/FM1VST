@@ -4,4 +4,5 @@
 #define FM1CORE_SL_C1_BAR 1                /* SLOOP 2.8.3's fm1_cpu1_bar / fm1_c1_mb (sloop_hal.h) */
 #define FM1CORE_SL_NO_ED_MASTER 1          /* no LIVE page level: main.c reads the MASTER pot only */
 #define FM1CORE_SL_FW 1                   /* FM1CORE_SL_SLOOP (sloop_firmware.h) */
+#define FM1CORE_SL_RD 1                   /* the live knob labels and readouts (sloop_rd.h) */
 #include "sloop_core.c"

@@ -17,7 +17,12 @@ fm1_add_core(orbit ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/or
 # the .rfm1 (cmake/FM1Rfm1.cmake; docs/RFM1.md): gated, built as a hosted file (the owner's call, 2026-11-06: CORES-PLAN.md
 # 6). Its GPL, its LICENSING.md, msfa's Apache-2.0 (the FM6 engine), the Terminus font's OFL (the screen font) and the
 # CC0 samples' provenance (the MIT notices of the PHYS engine are in its sources).
-fm1_add_rfm1(orbit AUTHORS "Wonkyoo Nam" MEMORY_MIB 16
+# rd1: sloop_rd.h's live knob labels and readouts (the columns as drawn)
+fm1_add_rfm1(orbit WANTS rd1
+             READOUT_TEST --press SEL@4100 --turn K1@4450:1 --turn K2@4550:1 --turn K3@4650:1 --turn K4@4750:1
+                          --settle 4900 --seconds 0.15 --min-rms 0
+                          --expect-readout ctl_3_ROOT_=_C# --expect-readout ctl_6_CHORD_=_TRIAD
+             AUTHORS "Wonkyoo Nam" MEMORY_MIB 16
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
                            "Apache-2.0 (msfa in {name})=LICENSES/Apache-2.0-msfa.txt"
                            "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt"

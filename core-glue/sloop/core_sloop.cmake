@@ -13,7 +13,12 @@ fm1_add_core(sloop ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/sl
              VERSION 2.8.5)
 # the .rfm1 (cmake/FM1Rfm1.cmake; docs/RFM1.md): gated, built as a hosted file (the owner's call, 2026-10-31: CORES-PLAN.md
 # 6). Its GPL, msfa's Apache-2.0, its LICENSING.md and the Terminus font's OFL (the screen font, gen_font.py).
-fm1_add_rfm1(sloop AUTHORS "isod89" MEMORY_MIB 16
+# rd1: sloop_rd.h's live knob labels and readouts (the columns as drawn)
+fm1_add_rfm1(sloop WANTS rd1
+             READOUT_TEST --press ENV@4100 --turn K1@4450:1 --turn K2@4550:1 --turn K3@4650:1 --turn K4@4750:1
+                          --settle 4900 --seconds 0.15 --min-rms 0
+                          --expect-readout ctl_3_ATK_=_1.1_ms --expect-readout ctl_6_REL_=_47_ms
+             AUTHORS "isod89" MEMORY_MIB 16
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "Apache-2.0 (msfa in {name})=LICENSES/Apache-2.0-msfa.txt"
                            "LICENSING.md ({name})=LICENSING.md"
                            "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt"

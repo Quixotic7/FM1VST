@@ -25,6 +25,12 @@
 #include "fifo.h"
 
 #include "sloop_firmware.h"
+#ifndef FM1CORE_SL_RD
+#define FM1CORE_SL_RD 0
+#endif
+#if FM1CORE_SL_RD
+#include "sloop_rd.h"                     /* the live knob labels and readouts (a unit with FM1CORE_SL_RD 1) */
+#endif
 
 /* ------------------------------------------------------------- flash --- */
 static uint8_t fm1core_sl_save_on_exit;
@@ -310,6 +316,9 @@ void fm1core_sl_fw_frame(void)                    /* main.c fm1_main's loop body
     if (fm1_ms - boot_logo_ms >= 750u)
 #endif
         ui_draw();
+#if FM1CORE_SL_RD
+    fm1core_sl_rd_drawn();                        /* (sloop_rd.h: the columns the screen drew, for the host) */
+#endif
     felucca_dbg.stage = 8;
     autosave_tick();                              /* the working project into flash, when quiet */
     sections_flush();                             /* live sections / the recorded song, when quiet */
