@@ -147,7 +147,10 @@ Ableton Move: its knob popup). Built with `WANTS rd1`:
   (core_evilgenius.c: FIZZ's own label and turn models), Dungeon Tracker, GHOULBOX and Mini-Tone (Felucca's map in their
   .rfm1 only, with each fork's dispatch differences as the map's options: fw_map_fork.h), SLOOP, Clipper, KARMA,
   M-PYRE, ORBIT and Stallion (core-glue/sloop/sloop_rd.h: the four columns as the screen drew them), Elasticat (its own
-  lines, with a tree that has them: EC_SOURCE). The audio is bit-identical to the released files over the same run.
+  lines, with a tree that has them: EC_SOURCE); and, through `core-glue/common/rd_cols.h` (a firmware's drawn knob
+  row copied after each frame: labels, and a readout when the turned knob's drawn value changes), SLOOP 3, CoralFlower,
+  a22, h1, FMav-1, M-Vsynth2, JamesOS, SID-1, FMEL-1, AURORA, bytemania, FM-KICK, Golf, Tekstuur, Mighty Arp, FoMni,
+  HYP-1, Nachtfahrt and ZEN-1. The audio is bit-identical to the released files over the same run.
 
 ## Check it
 

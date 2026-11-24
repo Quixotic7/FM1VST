@@ -1,0 +1,52 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "A" "B" "C" "D" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "A" "13"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "B" "9"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "C" "64"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "D" "5"
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "A" "B" "C" "D" ""
+   labels@4110: epoch 2 knobs "" "" "" "" "" "" "" ""
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "A" "B" "C" "D" ""
+   labels@4110: epoch 2 knobs "" "" "" "" "" "" "" ""
+   labels@4170: epoch 3 knobs "" "" "" "A" "B" "C" "D" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "A" "13"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "B" "9"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "C" "64"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "D" "5"
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "A" "B" "C" "D" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "A" "13"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "B" "9"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "C" "64"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "D" "5"
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "A" "B" "C" "D" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "A" "13"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "B" "9"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "C" "64"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "D" "5"
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "A" "B" "C" "D" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "A" "13"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "B" "9"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "C" "64"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "D" "5"
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "A" "B" "C" "D" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "A" "13"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "B" "9"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "C" "64"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "D" "5"
+== GLO rc 0
+   labels@0: epoch 1 knobs "" "" "" "A" "B" "C" "D" ""
+   labels@4110: epoch 2 knobs "" "" "" "" "" "" "" ""
+== SEQ rc 0
+   labels@0: epoch 1 knobs "" "" "" "A" "B" "C" "D" ""
+   labels@4110: epoch 2 knobs "" "" "" "S" "F" "L" "M" ""
+   labels@4170: epoch 3 knobs "" "" "" "A" "B" "C" "D" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "A" "13"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "B" "9"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "C" "64"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "D" "5"

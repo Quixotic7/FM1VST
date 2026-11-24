@@ -34,30 +34,34 @@ Of class B, built on this branch: grimm, glitch, arcticscream. Today (before the
 
 Two cheap partial routes the passes found, not built: (a) fm1-base and plat apps already speak "NAME VALUE" to a screen reader (announce.c, F0 7D 53 52): a wrapper keeping the reader on could read out a knob for ~a dozen apps at once, but the text is free-form and Quartz turns on a CPU probe with it; (b) several apps fill draw-time captures (vesper web_knobs, mutabledreams reader_cards, sloop3 ui_view) that an adapter reads directly.
 
-## Built so far and the revised cost (after batch 2)
+## Built so far, what is left, the cost (after batch 3)
 
-Built (rfm1-labels; BUILT.md has the files, sha256 and what to try on the Move): A: melodee, felucca. B: grimm, glitch, arcticscream (grimm_rd.h); evilgenius (FIZZ's adapter); dungeontracker, ghoulbox, minitone (Felucca's map with per-fork options, fw_map_fork.h); sloop, clipper, karma, mpyre, orbit, stallion (sloop_rd.h); elasticat (its own lines, a trial from its labels-readouts branch). 18 firmwares in all (with choralroot and fizz: 20 of 122).
+**Done: 37 of 122.** Before this branch: choralroot, fizz. Built on rfm1-labels (BUILT.md: files, sha256, tests, what to try on the Move): 35: a22, arcticscream, aurora, bytemania, clipper, coralflower, dungeontracker, elasticat, evilgenius, felucca, fmav1, fmel1, fmkick, fomni, ghoulbox, glitch, golf, grimm, h1, hyp1, jamesos, karma, melodee, mightyarp, minitone, mpyre, mvsynth2, nachtfahrt, orbit, sid1, sloop, sloop3, stallion, tekstuur, zen1 (elasticat as a trial from its own branch).
 
-What the four adapters cost, measured: grimm_rd.h 178 lines (3 firmwares, ~3 h); evilgenius ~130 lines (an existing model, ~1 h); the Felucca forks ~25 lines of map options + 10-25 per fork, but most of the time is the behaviour check (a screen tour per fork, ~30 min each) and one of four (pigeon) failed it; sloop_rd.h 81 lines + 2 per fork for 6 firmwares (~2 h with the tours). The surprise: copying what the screen DREW (sloop's ui.big_l / big_v / big_u, the frame breadcrumb that says the columns were drawn) is cheaper and exact; mirroring the knob dispatch (the Felucca map) is the expensive, error-prone route.
+**Left:** class B 57 (berlinan, caravel, carnacos, chimeravocal, csfm1, cultbox, dabke, drift, drumlab, dub, duell, dx747, echofield, fartmachine, fimba, fmini, golana, hadal1, hortator, jiant, kwasub, matryoshka, mnm1, modelar, modularkoi, mono2k, mope1, mutabledreams, mvance, niagaradrift, obervave, obssynth, orgigs, patchwerk, penumbra, perf1, pigeon, pingos1, quantumgammawave, quartz, ravel, rhythmer, ruido, s1vave, sidj, skiff, smileyface, speak37, spellbox, sy1, tessera, trapstationos, vector37, vesper, viscera, x0x, yehnah); class C 17 (fixed lists: the first ten drafted, waiting for the owner); class D 11 (the authors').
 
-Revised estimates for the rest of class B (code + a screen tour + a test):
+**How it is done now** (batch 3): common/rd_cols.h. After each UI frame the glue copies what the firmware itself keeps of its drawn knob row (a view model, a per-knob name and text function, its screen reader's card function) into four (or seven) label / value pairs; the knobs' live labels are those; a readout is sent when the turned knob's drawn value changes within 8 frames of the turn (the shim's fm1core_rd_turn / retry). A screen the feeder does not know (a list, a dialog, a scene with no knob row) is "not given": the host keeps its own labels and there is no readout, never a guess.
 
-- **Draw-time captures already in the firmware** (cheapest, ~40-80 lines, 1 h each): vesper (web_knobs), mutabledreams (reader_cards), sloop3 (ui_view V), coralflower (ui_knob_info), a22 + h1 (h1_control), arcticscream-style reader functions in fmav1, mvsynth2, jamesos (rd_knob / br_control).
-- **Name + text functions per knob** (grimm_rd.h shape, 60-120 lines, 1-2 h each): sid1, fmel1, aurora, bytemania, obervave + s1vave, mvance, cultbox, golf + tekstuur, fmkick, ctl1, echofield, hadal1, mightyarp, sy1, quartz, berlinan, fomni, zen1, hyp1, fimba, perf1, dub, nachtfahrt, niagaradrift, mope1, spellbox, obssynth, golana, drift, modularkoi, mono2k, carnacos, speak37, vector37, ruido, kwasub, orgigs, x0x, sidj.
-- **Larger or riskier** (150-300 lines, half a day each, the dispatch must be mirrored): jiant and its forks (quantumgammawave, rhythmer, yehnah), caravel, duell, trapstationos, skiff, tessera, hortator + mnm1, csfm1, fmini, matryoshka, penumbra, ravel, chimeravocal, dabke, modelar, patchwerk, pingos1, smileyface, drumlab, viscera, dx747, pigeon (its KO views).
-- Rough total for the remaining ~70 B firmwares: 60-90 hours, of which about a third is the screen tours. The first thing to try on each: does the firmware already keep the drawn strings (a reader, a web mirror, a big-values view)? Then capture, do not mirror.
+**What batch 3 really cost.** The shared part (rd_cols.h ~110 lines, the shim's retry and turn note ~35, rfm1_run --keys none) about 1.5 h. Then per firmware a 15-30 line feeder, a screen tour (8-9 pages, one contact sheet), a test and the audio check: 20-40 min each when the firmware has the functions; 19 built this way in about 9 h. Two of the eight "drawn strings" candidates failed: VESPER's web mirror disagrees with its LCD (screens/b3/vesper_mismatch.png), Mutable Dreams' cards exist only while a screen reader listens and join label and value in one string. Four from the "name and text" list turned out to need more than a copy (obervave + s1vave and mvance build their knob row inside the draw function; hadal1 draws bars, not text; dub rides knobs with LFOs), and ctl1 is not shipped by us (its .rfm1 is the author's ctl).
+
+**Revised estimate for the 57 left in class B.**
+
+- With name / text functions or a view model (the rd_cols way, ~30 min each): perf1, mope1, niagaradrift, fimba, quartz, berlinan, sy1, echofield, kwasub, cultbox, drumlab, orgigs, mono2k, sidj, ravel, x0x, speak37, vector37, viscera, ruido, carnacos, spellbox, obssynth, golana, drift, modularkoi, fmini, csfm1, chimeravocal, dabke, patchwerk, pingos1, smileyface, hadal1, mvance, fartmachine, matryoshka: about 37, 20-30 h, of which some will turn out to need more (the batch-3 rate: 4 in 16).
+- A mirror of a draw function or of the dispatch (2-4 h each): obervave + s1vave, vesper, mutabledreams, dub, dx747, penumbra, and the big Felucca forks (jiant and its three, caravel, duell, trapstationos, skiff, tessera, hortator + mnm1, pigeon): about 20, 40-70 h.
+- Elasticat: in its own repo (the trial branch), ready when its pin moves.
+- Total for the rest of class B: about 60-100 h.
 
 ## Every firmware
 
 | id | version | built by | names today | values today | what the wrapper / firmware has | class | route, rough adapter size |
 |---|---|---|---|---|---|---|---|
-| a22 | 0.1.0 | us | none | none | core/h1.h h1_control(enc,&lo,&hi,&name,&text) per encoder | B | ~60 (shared with h1) |
+| a22 | 0.1.0 | us | none | none | core/h1.h h1_control(enc,&lo,&hi,&name,&text) per encoder | B | BUILT (batch 3): h1_control, all seven knobs |
 | amb | 1.3.2 | author | none | none | author-built file, shipped unchanged | D | the author (rfm1_ext.h, or a RemoteFM1Metadata.json in their repo) |
 | amenity | 2.1.1 | author | none | none | author-built file, shipped unchanged | D | the author (rfm1_ext.h, or a RemoteFM1Metadata.json in their repo) |
 | arcticscream | 2.1.4 | us | none | none | GR!MM control map (arctic.c PAGES, knob_*; reader.c rd_knob) | B | BUILT here: grimm_rd.h + its knob_text page mask |
-| aurora | 0.8.0 | us | none | none | aurora.c PAGES[] (pdesc_t p[4]), fmt_value, page | B | ~35 |
+| aurora | 0.8.0 | us | none | none | aurora.c PAGES[].p[4], fmt_value (draw_knob) | B | BUILT (batch 3): the knob cells |
 | berlinan | 0.5.1 | us | none | none | VIEW_KNOB, KNOB_LABEL, cell(view,i) | B | ~70-90 |
-| bytemania | 1.3.2 | us | none | none | knob_param(bank,i), knob_text, BANK_KNOB | B | ~30 |
+| bytemania | 1.3.2 | us | none | none | knob_param / knob_text per bank | B | BUILT (batch 3): main screen and editor (CC, SAVE, NAME, ENV: none) |
 | caravel | 1.1.0 | us | fixed: 1 buttons renamed (descriptor) | none | Felucca params model; own HOME performance, UX layers, action banks | B | Felucca map + rework ~150-250 |
 | carnacos | 0.9.6 | us | none | none | ui_sm_knob(sm,page,layer,knob,&UiKnobInfo), ui_sm_knob_text | B | ~60-80 |
 | chimeravocal | 0.9.0 | us | none | none | KNOB[NK] (name, min, max, fmt), PAGE[6][4]; extra modes ad hoc | B | ~100 |
@@ -66,14 +70,14 @@ Revised estimates for the rest of class B (code + a screen tour + a test):
 | chordism | 0.9 | author | none | none | author-built file, shipped unchanged | D | the author (rfm1_ext.h, or a RemoteFM1Metadata.json in their repo) |
 | clipper | 1.3.1 | us | none | none | Felucca params model; draws columns via draw_column (ui.big_l/v/u) | B | BUILT: sloop_rd.h |
 | conductor | 1.0 | us | none | none | knob meanings hard-coded per screen (draw_foot_*) | C | fixed list |
-| coralflower | 0.7.1 | us | fixed: 7 buttons renamed (descriptor) | none | cf_ui.c ui_knob_info(k) -> name[12] + val[14] for the current screen | B | ~40-60 |
+| coralflower | 0.7.1 | us | fixed: 7 buttons renamed (descriptor) | none | cf_ui.c ui_knob_info(k) -> name + value for the current screen | B | BUILT (batch 3): ui_knob_info (its # / b glyphs mapped) |
 | csfm1 | 0.20.0 | us | fixed: 1 buttons renamed (descriptor) | none | COS_SLIM UI cos.c: cpg_t pages, cos_knob(page,k,&vp) -> param_desc_t | B | ~100-150 |
 | ctl | 1.0.3 | author | none | none | author-built file, shipped unchanged | D | the author (rfm1_ext.h, or a RemoteFM1Metadata.json in their repo) |
 | cultbox | 1.2 | us | none | none | fm1_param_t tables, page_param(page,k), page_title | B | ~50 |
 | dabke | 0.18 | us | none | none | PAR[], KROW[4][rows][4], knob_value(id, buf, &label) | B | ~100-130 |
 | drift | 0.9.6 | us | fixed: 1 buttons renamed (descriptor) | none | drift_ui.c D_PARAMS[page][4], D_LABEL, drift_desc + param_format | B | ~60-90 |
 | drumlab | 0.1.3-beta | us | none | none | LAB screen labui.c PG[6], param_text (sequencer screens ad hoc) | B | ~50 (LAB only) |
-| dub | 1.4.3 | us | none | none | VIEW_KNOB + STRIP_PAR, knob_name, knob_text | B | ~70 |
+| dub | 1.4.3 | us | none | none | vknob (strips), fm_knob_off, LFO-ridden knobs | B | ~100-150 (more than its VIEW_KNOB siblings) |
 | dubwise | 0.4.2 | author | none | none | author-built file, shipped unchanged | D | the author (rfm1_ext.h, or a RemoteFM1Metadata.json in their repo) |
 | duell | 1.3.6 | us | fixed: 1 buttons renamed (descriptor) | none | Felucca tables, dispatch rewritten (two parts, own scopes) | B | ~150-250 |
 | dungeontracker | 1.5 | us | fixed: 1 buttons renamed (descriptor) | none | Felucca 1.6.1 model, no symbol missing | B | BUILT: Felucca map + 3 options (SEQ+SELECT RONDO, DICE own) |
@@ -86,25 +90,25 @@ Revised estimates for the rest of class B (code + a screen tour + a test):
 | felucca | 1.8.2 | us | none | none | Tier 2 map core_felucca_params.c (85 entries, knob_target) | A | BUILT here: WANTS rd1 |
 | fimba | 0.7.0 | us | none | none | VIEW_KNOB, VIEW_BTN, view_knob, sp_knob | B | ~60 |
 | fizz | 0.13.0 | us (RemoteFM1 repo) | follows pages | all knobs (+ held steps) | adapter in RemoteFM1 tools/rfm1/fizz/fizz_unit.c over qd_ctl_labels / qd_view_turn | done | shipped (0.13.0, rd1) |
-| fmav1 | 0.6.4 | us | none | none | mfm_params.h PDEF[], SEC[], page_param, plabel, param_value; screen reader | B | ~40 |
-| fmel1 | 1.3 | us | none | none | mel.c CTL[NPG][4] (pid, fmt, name), fmt_val, page | B | ~30 |
+| fmav1 | 0.6.4 | us | none | none | page_param / plabel / param_value (knob_view) | B | BUILT (batch 3): the page's knobs as knob_view draws them |
+| fmel1 | 1.3 | us | none | none | mel.c CTL[page][4], fmt_val (draw_plate) | B | BUILT (batch 3): the plate |
 | fmini | 2.6.0 | us | fixed: 1 buttons renamed (descriptor) | none | ui_fmini.c FMG_PAGE[].f[] (fmgf_t), fmg_field | B | ~100-150 |
-| fmkick | 0.5.1 | us | none | none | knob_info(i,&knob_t) name/val/pos for the current page | B | ~50 |
+| fmkick | 0.5.1 | us | none | none | knob_info(i) name / val (draw_footer) | B | BUILT (batch 3): the footer (HOME: none) |
 | fmlarynx | 0.4.2 | author | none | none | author-built file, shipped unchanged | D | the author (rfm1_ext.h, or a RemoteFM1Metadata.json in their repo) |
-| fomni | 0.5 | us | none | none | VIEW_KNOB[view][4], knob_name, knob_text | B | ~50 |
+| fomni | 0.5 | us | none | none | VIEW_KNOB[view][4], knob_name, knob_text | B | BUILT (batch 3): VIEW_KNOB / knob_text |
 | frasil | 3.4 | author | none | none | author-built file, shipped unchanged | D | the author (rfm1_ext.h, or a RemoteFM1Metadata.json in their repo) |
 | ghoulbox | 2.4 | us | fixed: 1 buttons renamed (descriptor) | none | Felucca 1.4.1 model (3 symbols missing) | B | BUILT: Felucca map + crank SELECT, no EUCLID / HOME LEVELS |
 | glitch | 2.0.2 | us | none | none | GR!MM 2 control map (same functions) | B | BUILT here: grimm_rd.h |
 | golana | 1.3 | us | fixed: 1 buttons renamed (descriptor) | none | golana_ui.c GU_PAGES[] (btn, k[4] label/names), gu_text | B | ~60-80 |
-| golf | 1.0 | us | none | none | PAGE[NPG][4] par_t, PAGE_NAME, par_text | B | ~40-50 |
+| golf | 1.0 | us | none | none | PAGE[ui.page][4] par_t, par_text | B | BUILT (batch 3): PAGE / par_text |
 | grimm | 2.0.2 | us | none | none | GR!MM control map: PAGES[] (name, btn, knob[4]), knob_name/param/min/max/text, ui_slab_make | B | BUILT here: grimm_rd.h (178 lines, shared) |
 | guitchordi | 0.1.0-beta.1 | us | none | none | no table; fw_encoder ad hoc; 3 knob contexts | C | fixed list (drafted); hand page-aware ~60-90 |
-| h1 | 0.3.0 | us | none | none | h1_control / h1_control_set API | B | ~60 (shared with a22) |
-| hadal1 | 1.0.1 | us | none | none | KNOB[NPAGE][4], knob_name, knob_value, value_text | B | ~50 |
+| h1 | 0.3.0 | us | none | none | h1_control / h1_control_set API | B | BUILT (batch 3): h1_control, all seven knobs |
+| hadal1 | 1.0.1 | us | none | none | knob_name / value_text, but most values drawn as bars (no text) and only while touched | B | ~50, readouts would show numbers the screen draws as bars |
 | hawkchua | 2.1.7 | us | fixed: 1 buttons renamed (descriptor) | none | no params.c; ui.c edits ad hoc per sys.page (~20 pages) | C | fixed list (drafted) |
 | hortator | 1.0.1 | us | fixed: 1 buttons renamed (descriptor) | none | own pages.c PAGES/TP/GP, page_desc, param_format (Felucca shape) | B | ~120-180 |
-| hyp1 | 1.5.54 | us | none | none | VIEW_KNOB, knob_par, knob_text | B | ~60 |
-| jamesos | 1.0b | us | none | none | br_control(k) -> {label, value, low, high}, br_control_text | B | ~25 |
+| hyp1 | 1.5.54 | us | none | none | VIEW_KNOB, KNOB_LABEL, knob_text | B | BUILT (batch 3): VIEW_KNOB / KNOB_LABEL / knob_text |
+| jamesos | 1.0b | us | none | none | br_control / br_control_text (its reader's rd_knob) | B | BUILT (batch 3): its knob cards; levels through br_level_law as drawn |
 | jiant | 10.26 | us | fixed: 1 buttons renamed (descriptor) | none | Felucca 1.1.5 model; own knob dispatch (GEN, macros, lens) | B | ~150-250, reusable by its forks |
 | karma | 3.1.5 | us | none | none | as SLOOP; HOME loop screen and OP screens its own | B | BUILT: sloop_rd.h (HOME: none) |
 | kris_jangle | 0.15 | author | none | none | author-built file, shipped unchanged | D | the author (rfm1_ext.h, or a RemoteFM1Metadata.json in their repo) |
@@ -113,7 +117,7 @@ Revised estimates for the rest of class B (code + a screen tour + a test):
 | loom | 0.17.1 | author | none | none | author-built file, shipped unchanged | D | the author (rfm1_ext.h, or a RemoteFM1Metadata.json in their repo) |
 | matryoshka | 1.24.1 | us | none | none | Modular-1: pages built per patch (pages_ui.c), unit_of | B | ~100-150 |
 | melodee | 1.6.1 | us | none | none | Tier 2 map core_melodee_params.c (86 entries, knob_target) | A | BUILT here: WANTS rd1 (+ Prophet HOME cells in %) |
-| mightyarp | 1.5 | us | none | none | PAR[], PAGE[] (name, btn, p[4]), page_knob, param_text | B | ~40-60 |
+| mightyarp | 1.5 | us | none | none | PAGE[] (p[4]), page_knob, par_name, param_text | B | BUILT (batch 3): HOME macros, page_knob |
 | minitone | 1.0.5 | us | fixed: 1 buttons renamed (descriptor) | none | Felucca 1.5 model (eu, sel_mode missing), six parts | B | BUILT: Felucca map + SELECT PAGES, no EUCLID |
 | mnm1 | 1.0.1 | us | fixed: 1 buttons renamed (descriptor) | none | Hortator's model, 6 tracks | B | ~40 on top of a Hortator adapter |
 | modelar | 0.3 | us | none | none | menu rows built per page (row_t/col_t), col_text; KAOS page ad hoc | B | ~80-100 (partial) |
@@ -122,13 +126,13 @@ Revised estimates for the rest of class B (code + a screen tour + a test):
 | mope1 | 0.5.0 | us | none | none | PAGE_KNOB, PAGE_LABEL, PAGE_BTN, sy_param_info | B | ~80 |
 | morse | 0.8 | us | none | none | K1..K4 fixed (speed, spacing, pitch, send speed) | C | fixed list (drafted): already exact |
 | mpyre | 1.0.3 | us | none | none | as SLOOP; FX, ARP, AMP its own screens | B | BUILT: sloop_rd.h (ENV, LFO, SEL ..; amp pages: none) |
-| mutabledreams | 2.3 | us | none | none | reader.c reader_card(label, value) per drawn card (only with the reader on) | B | ~40-60 |
-| mvance | 2.7.1 | us | none | none | MV_PARAMS[], PAGES[] (btn, p[4]), col_label, col_value | B | ~50 |
-| mvsynth2 | 1.5.2 | us | none | none | VS_PARAMS[], VS_PAGES[] (btn, id[4]), vs_param_text/label | B | ~35 |
-| nachtfahrt | 1.0.2 | us | none | none | VIEW_KNOB, knob_name, knob_text | B | ~70 |
+| mutabledreams | 2.3 | us | none | none | reader.c reader_cards: only with a screen reader listening; label and value joined in one string | B | NOT built: needs a hook into reader_card (or md_named) ~60-100 |
+| mvance | 2.7.1 | us | none | none | kui_knob(p, lab, ..) per screen kind (pages, HOME labels, others) | B | ~80-120: the screens' choice of p mirrored |
+| mvsynth2 | 1.5.2 | us | none | none | VS_PAGES[].id, eng.patch.home, vs_param_label / ptext | B | BUILT (batch 3): a page's and HOME's knobs (bank, SAVE, GLOBAL: none) |
+| nachtfahrt | 1.0.2 | us | none | none | VIEW_KNOB, KNOB_LABEL, knob_text | B | BUILT (batch 3): VIEW_KNOB (REC grid: none) |
 | niagaradrift | 0.3.1 | us | none | none | VIEW_KNOB, knob_param (SEL held), dr_param_text | B | ~80 |
 | nomansky | 0.9 | us | none | none | its knob band draws numbers only (ui_nms.c n_knobs), no names on screen | C | fixed list; values without names not useful |
-| obervave | 3.5.2 | us | none | none | obv_params.h PDEF[], PAGE[] (p[4]), param_value (4 pages by hand) | B | ~40 (shared with s1vave) |
+| obervave | 3.5.2 | us | none | none | draw_page builds its knob_view_t k[4] locally (mixer, drive, global, layers, seq, params) | B | mirror draw_page's choices ~80-120 (shared with s1vave) |
 | obssynth | 0.2.0 | us | fixed: 1 buttons renamed (descriptor) | none | ui.c PAGES (id[4]), ui_view, page_param; engine.c PARAMS[], param_text | B | ~50-70 |
 | orbit | 1.0.0 | us | none | none | as SLOOP; ENV, LFO, FX, EDIT are its own screens | B | BUILT: sloop_rd.h (SEL, ARP only; its own pages ~60-100 more) |
 | orgigs | 1.1 | us | none | none | *_cells (4 knob strings), *_btnmap (12 live button labels), par_fmt | B | ~80 |
@@ -148,31 +152,31 @@ Revised estimates for the rest of class B (code + a screen tour + a test):
 | ripple | 0.6.1 | us | none | none | knobs belong to each Lua droplet | C | fixed list (or a droplet label API) |
 | ruido | 0.7.2 | us | none | none | formatColumnRoleAndValue(k) per knob bank (C++) | B | ~70-110 |
 | rupture | 2.0.14 | us | none | none | ETCH's code + rupture_ui.c (ru_knob_labels per the drafting pass, unverified) | C | fixed list (drafted); B possible, cost unclear |
-| s1vave | 2.0.1 | us | none | none | OberVave fork: PDEF, PAGE, param_value | B | ~40 (shared with obervave) |
+| s1vave | 2.0.1 | us | none | none | OberVave fork: draw_page as OberVave | B | mirror draw_page ~80-120 (shared with obervave) |
 | samsara | 1.0.0 | author | none | none | author-built file, shipped unchanged | D | the author (rfm1_ext.h, or a RemoteFM1Metadata.json in their repo) |
 | sid | 0.3 | us | none | none | fixed literals KN[4] per mode, tracker | C | fixed list per mode (2 modes) |
-| sid1 | 1.0.1 | us | none | none | sid1.c KNOB[NPAGE][4], knob_get, knob_text, page | B | ~25 |
+| sid1 | 1.0.1 | us | none | none | sid1.c KNOB[page][4], knob_get, knob_text | B | BUILT (batch 3): KNOB[page] / knob_text |
 | sidj | 1.5.1 | us | none | none | PG_NAME, KNOB_SAY[NPG][4], st_cap | B | ~100 |
 | sidou | 2.0.0 | us | fixed: 1 buttons renamed (descriptor) | none | names local to draw functions; menu tables only for settings | C | fixed list (drafted); B 300+ |
 | skiff | 2.7 | us | none | none | Felucca 1.1.5 + 1.6.1 model, 6 tracks, own sheets | B | ~80-150 |
 | sloop | 2.8.5 | us | none | none | Felucca params model; draw_column keeps ui.big_l / big_v / big_u | B | BUILT: sloop_rd.h (81 lines, shared) |
-| sloop3 | 3.4.0 | us | none | none | view model: ui_view V (knob label + value strings, page_name) | B | ~50 |
+| sloop3 | 3.4.0 | us | none | none | view model: ui_view V (knob label + value strings) | B | BUILT (batch 3): main.c's view V (rd_cols.h) |
 | smileyface | 1.1.5 | us | none | none | views.c KNAME[PAGES][4], knob_val (no text formatter) | B | ~30 (names + raw numbers) |
 | speak37 | 1.0 | us | none | none | SP_PAGE[page][4], SK_NAME, sk_ptr, sk_text | B | ~120-180 |
 | spellbox | 0.3 | us | none | none | main.c KN_NAME[8], knob_text, page | B | ~30-40 |
 | stallion | 1.1 | us | none | none | as SLOOP | B | BUILT: sloop_rd.h |
 | sy1 | 1.0.0 | us | none | none | PAGES[] (button, rows[][4]), cell_at, ux_label, ux_value | B | ~50-70 |
-| tekstuur | 2.0 | us | none | none | Golf's model: par_t pages, par_name, par_text | B | ~40-50 |
+| tekstuur | 2.0 | us | none | none | Golf's model: par_name, par_text | B | BUILT (batch 3): par_name / par_text |
 | tessera | 3.7.5 | us | none | none | Melodee ~1.3.6 model (TP/GP, PAGES, page_desc) | B | Melodee map + rework ~150-250 |
 | tonitor | 0.55 | us | none | none | ad hoc if-chain on ui.*_page; partial name helpers | C | fixed list (drafted); hand adapter ~150-250 |
 | trapstationos | 1.1.0.2 | us | fixed: 1 buttons renamed (descriptor) | none | Felucca model much extended; page_desc covers every scope | B | ~120-200 |
 | trax | 0.9.5 | us | none | none | hand-written enc() dispatch per view | C | fixed list (drafted) |
 | vector37 | 0.3.2 | us | none | none | pdesc_t CDESC/GDESC, LAYERS[].k[8], kd_desc, val_text | B | ~100-150 |
-| vesper | 2.0.2 | us | none | none | FM1_HOST_TEST web_knobs[4][2][16] filled at draw (already in our build) | B | ~30-40 |
+| vesper | 2.0.2 | us | none | none | FM1_HOST_TEST web_knobs (its web mirror) DISAGREES with the LCD (KEY F# vs F, STEP 02 vs 10) | B | NOT built: the mirror failed the screen check; mirror draw_page's knob() calls instead ~80-120 |
 | viscera | 2.9.2 | us | none | none | vsc_params info[], slot(k), slot_text (statics of vsc_ui.c) | B | ~80-120; wrapper unit |
 | x0x | 1.3 | us | none | none | ui.c pages_t pg (pref_t r[page][4]), pref_name, pref_value; announce | B | ~150 |
 | yehnah | 0.2.0 | us | fixed: 1 buttons renamed (descriptor) | none | JIANT family model, bigger deltas | B | ~80-120 on top of a JIANT adapter |
-| zen1 | 1.2 | us | none | none | VIEW_KNOB[4][4], fm_param_info/text | B | ~50 |
+| zen1 | 1.2 | us | none | none | scenes: amb_knob_text; pages: VIEW_KNOB, fm_param_text | B | BUILT (batch 3): the scene knob bar, else VIEW_KNOB |
 
 "names today: fixed: n buttons renamed" is the descriptor's button_names (FX..OCT+ given other words by the glue), not live labels. "?" none. Versions are the release's files.
 
