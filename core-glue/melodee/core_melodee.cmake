@@ -30,7 +30,15 @@ set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/core_melodee.c PROPERTIES 
 # serial console, the update). Its licence texts are the default set: LICENSE (GPL-3.0-only), each file of LICENSES/
 # (Apache-2.0 msfa and JieLi, BSD-3 uPD933, MIT DaisySP / Rings / Fukiai / m-bootloader, MPL-2.0, OFL Rubik / Inter
 # Tight) and LICENSING.md (with its notes on the CZ-1 and Prophet factory data compiled in; no raw .syx in the file)
-fm1_add_rfm1(melodee AUTHORS "Kerem Kilic (Ellic Studio)" MEMORY_MIB 16)   # (source_url: the descriptor's, melodee@6a608ba)
+# rd1 (docs/RFM1.md "Readouts (rd1)"): the Tier 2 map (core_melodee_params.c) through the shim's bridge: a knob turned
+# reads out its target's name and value text, and the knobs' live labels follow knob_target; the firmware's units are
+# the same bytes (no RFM1_* line in its tree: FM1_HOST_EXT changes nothing there)
+# (the test: HOME on a Prophet, KNOB 1 three detents up: Stage's cutoff 35 %; ALGORITHM: part 2, an FM6, whose HOME
+# KNOB 1 is its E3 MLVL)
+fm1_add_rfm1(melodee AUTHORS "Kerem Kilic (Ellic Studio)" MEMORY_MIB 16 WANTS rd1   # (source_url: the descriptor's, melodee@6a608ba)
+             READOUT_TEST --turn K1@4100:3 --turn ALGO@4300:1 --turn K1@4600:1 --seconds 1
+                          --expect-readout ctl_3_HOME_CUTOFF_=_35_% --expect-readout ctl_1_Part_=_Part_2
+                          --expect-readout ctl_3_E3_MLVL_=)
 
 # The golden check (golden/me_golden.c): the core's screen against Melodee's own host renderer, tests/ui_render.c,
 # built from the submodule as its tests/run_tests.sh builds it (-O1 -w -DMELODEE_USB_AUDIO=1)

@@ -135,7 +135,11 @@ Ableton Move: its knob popup). Built with `WANTS rd1`:
   NUL-terminated; `value` holds "value sub"). A host calls `rfm1_readout` once after init and reads `seq` after each
   `rfm1_frame`: a new one is shown. No import; hosts without rd1 ignore the export. `rfm1_check` wants `rd1` in
   `wants` with it. `rfm1_run --readouts` prints each readout and the knobs' labels when they move;
-  `rfm1_run --turn K1@2000:3` turns a knob (SELECT ALGO PRESETS K1..K4) by detents at a device ms.
+  `rfm1_run --turn K1@2000:3` turns a knob (SELECT ALGO PRESETS K1..K4) by detents at a device ms;
+  `--expect-readout ctl_3_E5_CUT_=_412_Hz` fails the run unless a readout `ctl C title = value` contains it ('_' a
+  space). `fm1_add_rfm1(.. WANTS rd1 READOUT_TEST <turns and expectations>)` makes that the ctest `rfm1_rd_<id>`.
+- **Built with it:** ChoralRoot (its own lines and the bridge), Melodee and Felucca (the bridge over their Tier 2
+  maps, core_melodee_params.c / core_felucca_params.c: the audio is bit-identical to the build without rd1).
 
 ## Check it
 

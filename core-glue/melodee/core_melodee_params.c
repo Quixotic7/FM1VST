@@ -563,6 +563,8 @@ static int32_t me_cell_new(const page_t *pg, uint32_t k, uint32_t slot, int home
     me_kc_new[k].slot = (uint8_t)slot;
     me_kc_new[k].home = (uint8_t)(home != 0);
     me_kd_new[k] = *d;                            /* (a desc hook may hand out one static: copied at once) */
+    if (home && pg->scope == SC_P5 && d->fmt == F_INT && d->min == 0 && d->max == 127)
+        me_kd_new[k].fmt = F_PCT;                 /* (Stage shows the Prophet's 0..127 in %: ui_stage.c stage_value) */
     snprintf(me_knm_new[k], 17, "%s %s", home ? "HOME" : pg->title, d->label ? d->label : "-");
     return me_index_of(MEK_KNOB, (int32_t)k);
 }

@@ -15,4 +15,9 @@ fm1_add_core(felucca ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/
                       ${CMAKE_SOURCE_DIR}/cores/Felucca/firmware/bsp/boards/fm1)
 fw_golden(felucca ${CMAKE_SOURCE_DIR}/cores/Felucca ../../core-glue/felucca_web/felucca_web_181.c FELUCCA_VERSION="v1.8.2")
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
-fm1_add_rfm1(felucca AUTHORS "Leo Kuroshita (Hügelton Instruments)")
+# rd1 (docs/RFM1.md "Readouts (rd1)"): the Tier 2 map (core_felucca_params.c) through the shim's bridge: a knob turned
+# reads out its target's name and value text, and the knobs' live labels follow knob_target
+# (the test: HOME on ANALOG, KNOB 1 three detents up: E5 CUT 412 Hz; SELECT one up: Tempo 121 BPM)
+fm1_add_rfm1(felucca AUTHORS "Leo Kuroshita (Hügelton Instruments)" WANTS rd1
+             READOUT_TEST --turn K1@4100:3 --turn SELECT@4300:1 --seconds 1
+                          --expect-readout ctl_3_E5_CUT_=_412_Hz --expect-readout ctl_0_Tempo_=_121_BPM)
