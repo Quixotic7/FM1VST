@@ -659,6 +659,9 @@ function(fm1_rfm1_finish)
         get_property(_f GLOBAL PROPERTY FM1_RFM1_FILE_choralroot)
         add_test(NAME rfm1_cr_tk COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1/rfm1_cr_tk_test.py
                                          --run $<TARGET_FILE:rfm1_run> --file ${_f})
+        # .. and its engine parameters (ep1, cr_ep.c): the record, SETs, the audio bit-identical with the record read
+        add_test(NAME rfm1_cr_ep COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1/rfm1_cr_ep_test.py
+                                         --run $<TARGET_FILE:rfm1_run> --file ${_f})
     endif()
     message(STATUS "rfm1: ${_ids}")
 endfunction()

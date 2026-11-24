@@ -40,5 +40,23 @@ crf_golden(choralroot SCRIPT ${_cr}/tools/emu/scripts/cr_dmaj.txt REF ${_cr}/bui
 # tk1 (docs/RFM1-TAKEOVER.md): ChoralRoot's own Ableton Move interface, "ChoralRoot" (the submodule's firmware/src/cr_move.c,
 # which tools/emu/emu_fw.c includes only with FM1_HOST_TK: the FM-1's image is unchanged), claiming all but the Track
 # buttons and the volume knob
-fm1_add_rfm1(choralroot AUTHORS "Quixotic7" METADATA skins/choralroot/RemoteFM1Metadata.json WANTS cpu2 rd1 tk1
+# ep1 (docs/RFM1.md "Engine parameters (ep1)", engine-params/SPEC.md): every engine's parameters by id for the host's
+# ENGINE page (cr_ep.c: the editor's walk, its knob's writes; the ids frozen in cr_ep_ids.h), only in the .rfm1
+fm1_add_rfm1(choralroot AUTHORS "Quixotic7" METADATA skins/choralroot/RemoteFM1Metadata.json WANTS cpu2 rd1 tk1 ep1
              TAKEOVER_NAME ChoralRoot TAKEOVER_CLAIMS screen pads steps knobs jog buttons)
+# the ctest rfm1_ep_choralroot (tests/cr_ep_test.c: the whole unit natively with cr_ep.c): an ep1 SET leaves the part
+# byte for byte as the editor's knob does, for every parameter of every engine of both layers; the ids frozen; the
+# audio bit-identical with the values read after every frame. Its --gen prints cr_ep_ids.h with new cells appended
+add_executable(cr_ep_test ${CMAKE_CURRENT_LIST_DIR}/tests/cr_ep_test.c ${CMAKE_CURRENT_LIST_DIR}/core_choralroot_desc.c
+               ${FM1_COMMON_SOURCES})
+get_target_property(_cr_ep_inc core_choralroot_obj INCLUDE_DIRECTORIES)
+get_target_property(_cr_ep_def core_choralroot_obj COMPILE_DEFINITIONS)
+target_include_directories(cr_ep_test PRIVATE ${_cr_ep_inc} ${CMAKE_CURRENT_LIST_DIR})
+target_compile_definitions(cr_ep_test PRIVATE ${_cr_ep_def} FM1_HOST_EP1=1)
+target_compile_options(cr_ep_test PRIVATE -O1 -w -fno-common)
+set_target_properties(cr_ep_test PROPERTIES C_STANDARD 11)
+add_dependencies(cr_ep_test gen_choralroot)
+if(MATH_LIB)
+    target_link_libraries(cr_ep_test PRIVATE ${MATH_LIB})
+endif()
+add_test(NAME rfm1_ep_choralroot COMMAND cr_ep_test)
