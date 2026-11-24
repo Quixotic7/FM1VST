@@ -6,7 +6,8 @@
  *   rfm1_run [options] <file.rfm1>
  *     --seconds S    the chord held for S device seconds (default 5)
  *     --settle MS    device ms after init before the chord (default 4000)
- *     --keys K,K,..  the chord's key numbers (default 9,13,16: D4 F#4 A4, as core_bench / core_conformance)
+ *     --keys K,K,..  the chord's key numbers (default 9,13,16: D4 F#4 A4, as core_bench / core_conformance); none: no
+ *                    keys at all (with --min-rms 0: a screen the keys would change)
  *     --vel V        the chord's velocity, key_vel (default 100; 0: none given, the core's default)
  *     --lean L       the chord's aftertouch, key_lean 0..100 % (default 0)
  *     --tap B,B,..   buttons tapped 1 s before the chord, by label (fm1core.h FM1P_B_*: PLAY 10): a firmware that
@@ -1029,7 +1030,7 @@ int main(int argc, char **argv)
     const char *expect_rd[16];                   /* --expect-readout */
     int nexpect_rd = 0, expect_rd_seen[16] = {0};
     const char *out_path = NULL, *wav_path = NULL, *sysex_path = NULL, *path = NULL, *midi_out_path = NULL;
-    int keys[FM1P_NKEY], nkeys = 0, vel = 100, lean = 0;
+    int keys[FM1P_NKEY], nkeys = 0, vel = 100, lean = 0, no_keys = 0;
     uint32_t taps = 0;                           /* (label bits: --tap) */
     static const char *const LABEL[FM1P_NB] = {"FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ",
                                                "PLAY", "REC", "OCT-", "OCT+"};
@@ -1141,6 +1142,8 @@ int main(int argc, char **argv)
                 while (*s == ',' || *s == ' ')
                     s++;
             }
+        } else if (!strcmp(a, "--keys") && more && !strcmp(argv[i + 1], "none")) {
+            no_keys = 1, i++;                    /* --keys none: no chord (a screen check the keys would change) */
         } else if (!strcmp(a, "--keys") && more) {
             char *s = argv[++i];
             nkeys = 0;
@@ -1164,7 +1167,7 @@ int main(int argc, char **argv)
         usage();
         return 2;
     }
-    if (!nkeys) {
+    if (!nkeys && !no_keys) {
         keys[0] = 9; keys[1] = 13; keys[2] = 16;   /* D4 F#4 A4 */
         nkeys = 3;
     }

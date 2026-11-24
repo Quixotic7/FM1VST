@@ -34,6 +34,9 @@ void rfm1_readout_push(int ctl, int kind, unsigned flags, int frac, const char *
  * and *flags (RFM1_RD_BIPOLAR) and return RFM1_RD_PARAM (or RFM1_RD_PRESET: a sound's name); 0: nothing to say. */
 int fm1core_rd_knob(int role, char *title, char *value, unsigned n, int32_t *frac, unsigned *flags)
     __attribute__((weak));
+/* .. 0 from it: the shim asks again after each of the next 8 frames (a screen that draws a frame later). And, before the
+ * core takes a knob's first detents, fm1core_rd_turn(role) (optional): the adapter notes the value before the turn. */
+void fm1core_rd_turn(int role) __attribute__((weak));
 #define RFM1_FRAC(v, lo, hi) \
     ((hi) > (lo) ? (int)((((int64_t)(v) - (int64_t)(lo)) * 1000) / ((int64_t)(hi) - (int64_t)(lo))) : -1)
 #define RFM1_READOUT(ctl, title, value) \

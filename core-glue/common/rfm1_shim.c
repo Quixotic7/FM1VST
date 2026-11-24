@@ -343,6 +343,8 @@ typedef char rfm1_readout_size_ok[sizeof(rfm1_readout_t) == 48 ? 1 : -1];
 static rfm1_readout_t RD = {1, sizeof(rfm1_readout_t), 0, -1, 0, 0, 0, -1, "", ""};
 static uint32_t rd_pushes, rd_seen;   /* the core's own readouts; the count the bridge last saw */
 static uint8_t rd_pending;            /* knobs (FM1P_E_SELECT .. K4) with detents waiting for the core */
+static uint8_t rd_retry[FM1P_E_K4 + 1];   /* an adapter's: frames left to ask again (its screen may draw later) */
+#define RD_RETRY_FRAMES 8
 
 static void rd_txt(char *d, const char *s, uint32_t n)   /* printable ASCII only, cut at n - 1 */
 {
@@ -396,16 +398,40 @@ static void rd_note(void)                       /* (each call in: the knobs whos
     if (!core() || !(P = C->panel))
         return;
     for (r = FM1P_E_SELECT; r <= FM1P_E_K4; r++)
-        if (P->enc[P->enc_id[r]] != 0)
+        if (P->enc[P->enc_id[r]] != 0 && !(rd_pending >> r & 1u)) {
             rd_pending |= (uint8_t)(1u << r);
+            if (fm1core_rd_turn)                /* (an adapter: the value before the core takes the turn) */
+                fm1core_rd_turn(r);
+        }
 }
 static void rd_bridge(void)                     /* (after a frame: the knobs the core took and said nothing about) */
 {
     const fm1panel_t *P;
     int r;
-    if (!rd_pending || !core() || !(P = C->panel))
+    if (!core() || !(P = C->panel))
         return;
     const int map = C->knob_target && C->params;
+    if (!map && fm1core_rd_knob)                /* an adapter's knobs still waiting for their screen */
+        for (r = FM1P_E_SELECT; r <= FM1P_E_K4; r++)
+            if (rd_retry[r] && !(rd_pending >> r & 1u)) {
+                char t[24], val[24];
+                int32_t fr = -1;
+                uint32_t fl = 0;
+                int kind;
+                if (rd_pushes != rd_seen) {     /* (the core spoke: its own wins) */
+                    rd_retry[r] = 0;
+                    continue;
+                }
+                rd_retry[r]--;
+                kind = fm1core_rd_knob(r, t, val, sizeof t, &fr, &fl);
+                t[sizeof t - 1] = val[sizeof val - 1] = 0;
+                if (kind == RFM1_RD_PARAM || kind == RFM1_RD_PRESET) {
+                    rd_set(kind == RFM1_RD_PARAM ? FM1CORE_LBL_KNOB0 + r : -1, kind, fl, fr, t, val, 0);
+                    rd_retry[r] = 0;
+                }
+            }
+    if (!rd_pending)
+        return;
     if (rd_pushes != rd_seen || (!map && !fm1core_rd_knob)) {   /* the core spoke (or has no map, no adapter): its own wins */
         rd_seen = rd_pushes;
         rd_pending = 0;
@@ -428,6 +454,8 @@ static void rd_bridge(void)                     /* (after a frame: the knobs the
             t[sizeof t - 1] = val[sizeof val - 1] = 0;
             if (kind == RFM1_RD_PARAM || kind == RFM1_RD_PRESET)
                 rd_set(kind == RFM1_RD_PARAM ? FM1CORE_LBL_KNOB0 + r : -1, kind, fl, fr, t, val, 0);
+            else
+                rd_retry[r] = RD_RETRY_FRAMES;  /* (nothing yet: asked again the next frames) */
             continue;
         }
         if (!(p = rd_target(r)) || !p->get)
