@@ -1,0 +1,48 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "TUNE" "ATTACK" "DECAY" "P.DPTH" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "TUNE" "35"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "ATTACK" "14"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "DECAY" "81"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "P.DPTH" "1"
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "TUNE" "ATTACK" "DECAY" "P.DPTH" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "TUNE" "35"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "ATTACK" "14"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "DECAY" "81"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "P.DPTH" "1"
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "TUNE" "ATTACK" "DECAY" "P.DPTH" ""
+   labels@4170: epoch 2 knobs "" "" "" "LEVEL" "PAN" "REV" "DLY" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "LEVEL" "-4.8dB"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "PAN" "R1"
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "TUNE" "ATTACK" "DECAY" "P.DPTH" ""
+   labels@4170: epoch 2 knobs "" "" "" "DECAY" "TONE" "" "" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "DECAY" "74"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "TONE" "58"
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "TUNE" "ATTACK" "DECAY" "P.DPTH" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "TUNE" "35"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "ATTACK" "14"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "DECAY" "81"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "P.DPTH" "1"
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "TUNE" "ATTACK" "DECAY" "P.DPTH" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "TUNE" "35"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "ATTACK" "14"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "DECAY" "81"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "P.DPTH" "1"
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "TUNE" "ATTACK" "DECAY" "P.DPTH" ""
+   labels@4170: epoch 2 knobs "" "" "" "PITCH" "" "" "" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "PITCH" "46"
+== GLO rc 0
+   labels@0: epoch 1 knobs "" "" "" "TUNE" "ATTACK" "DECAY" "P.DPTH" ""
+   labels@4170: epoch 2 knobs "" "" "" "TEMPO" "SWING" "FILTER" "PUMP" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "TEMPO" "126bpm"
+   readout@4770: seq 2 ctl 6 kind 1 flags 0 frac -1 "PUMP" "4.2dB"
+== SEQ rc 0
+   labels@0: epoch 1 knobs "" "" "" "TUNE" "ATTACK" "DECAY" "P.DPTH" ""
+   labels@4170: epoch 2 knobs "" "" "" "LENGTH" "RATE" "" "" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "LENGTH" "17st"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "RATE" "1/16T"

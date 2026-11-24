@@ -1,0 +1,41 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "INSTRUMENT" "PLAY" "TONE" "BUZZ" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "INSTRUMENT" "ZURNA"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "PLAY" "MONO"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "TONE" "87"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "BUZZ" "62"
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "VIB SPEED" "VIB DEPTH" "VIB DELAY" "ORNAMENT" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "VIB SPEED" "5.6 HZ"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "VIB DEPTH" "22"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "VIB DELAY" "280 MS"
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "DELAY" "DELAY TIME" "REPEATS" "REVERB" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "DELAY" "2"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "DELAY TIME" "310 MS"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "REPEATS" "47"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "REVERB" "27"
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== GLO rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "SWING" "ACCENT" "VARIATION" "LOOSENESS" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "SWING" "2"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "ACCENT" "52"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "VARIATION" "BUSY"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "LOOSENESS" "22"
+== SEQ rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4170: epoch 2 knobs "" "" "" "EFFECT" "FILTER" "PITCH" "VOLUME" ""
+   readout@4560: seq 1 ctl 4 kind 1 flags 0 frac -1 "FILTER" "THIN 4"
+   readout@4665: seq 2 ctl 5 kind 1 flags 0 frac -1 "PITCH" "+1"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "VOLUME" "82"

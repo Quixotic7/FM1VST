@@ -1,0 +1,22 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "DRUMS" "PLVKS" "DUB" "MASTER" ""
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "DRUMS" "PLVKS" "DUB" "MASTER" ""
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "DRUMS" "PLVKS" "DUB" "MASTER" ""
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "DRUMS" "PLVKS" "DUB" "MASTER" ""
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "DRUMS" "PLVKS" "DUB" "MASTER" ""
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "DRUMS" "PLVKS" "DUB" "MASTER" ""
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "DRUMS" "PLVKS" "DUB" "MASTER" ""
+== GLO rc 0
+   labels@0: epoch 1 knobs "" "" "" "DRUMS" "PLVKS" "DUB" "MASTER" ""
+== SEQ rc 0
+   labels@0: epoch 1 knobs "" "" "" "DRUMS" "PLVKS" "DUB" "MASTER" ""
+   labels@4110: epoch 2 knobs "" "" "" "TEMPO" "SWING" "LENGTH" "RATE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "Tempo" "121"
+   readout@4650: seq 2 ctl 5 kind 1 flags 0 frac -1 "Length" "32"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "Rate" "1/32"

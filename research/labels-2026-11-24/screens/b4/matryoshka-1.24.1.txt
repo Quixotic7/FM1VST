@@ -1,0 +1,27 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@5010: epoch 2 knobs "" "" "" "TUNE" "GLIDE" "GLIDE ON" "MOD MIX" ""
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@5010: epoch 2 knobs "" "" "" "TUNE" "GLIDE" "GLIDE ON" "MOD MIX" ""
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@5010: epoch 2 knobs "" "" "" "TUNE" "GLIDE" "GLIDE ON" "MOD MIX" ""
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@5010: epoch 2 knobs "" "" "" "TUNE" "GLIDE" "GLIDE ON" "MOD MIX" ""
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@5010: epoch 2 knobs "" "" "" "TUNE" "GLIDE" "GLIDE ON" "MOD MIX" ""
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@5010: epoch 2 knobs "" "" "" "TUNE" "GLIDE" "GLIDE ON" "MOD MIX" ""
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@5010: epoch 2 knobs "" "" "" "TUNE" "GLIDE" "GLIDE ON" "MOD MIX" ""
+== GLO rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@5010: epoch 2 knobs "" "" "" "TUNE" "GLIDE" "GLIDE ON" "MOD MIX" ""
+== SEQ rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@5010: epoch 2 knobs "" "" "" "TUNE" "GLIDE" "GLIDE ON" "MOD MIX" ""

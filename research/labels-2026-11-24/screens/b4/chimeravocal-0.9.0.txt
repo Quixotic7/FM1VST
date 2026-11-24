@@ -1,0 +1,50 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "VIBRATO" "RATE" "BREATHY" "RING" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "VIBRATO" "36"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "RATE" "6.1"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "BREATHY" "17%"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "RING" "2%"
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "VIBRATO" "RATE" "BREATHY" "RING" ""
+   labels@4125: epoch 2 knobs "" "" "" "TEMPO" "KEY" "VIBRATO" "SLOT" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "TEMPO" "X1.15"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "KEY" "+1"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "VIBRATO" "40"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "SLOT" "2"
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "VIBRATO" "RATE" "BREATHY" "RING" ""
+   labels@4125: epoch 2 knobs "" "" "" "RATE" "DEPTH" "DUTY" "BRIGHT" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "RATE" "19.1"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "DEPTH" "62%"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "DUTY" "49%"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "BRIGHT" "62%"
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "VIBRATO" "RATE" "BREATHY" "RING" ""
+   labels@4170: epoch 2 knobs "" "" "" "FRONT" "OPEN" "NASAL" "ROUND" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "FRONT" "1432"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "OPEN" "389"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "ROUND" "52%"
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "VIBRATO" "RATE" "BREATHY" "RING" ""
+   labels@4125: epoch 2 knobs "" "" "" "JAW" "LIPS" "LARYNX" "PALATE" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "JAW" "0.7"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "LIPS" "0.8"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "LARYNX" "+0.1"
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "VIBRATO" "RATE" "BREATHY" "RING" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "VIBRATO" "36"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "RATE" "6.1"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "BREATHY" "17%"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "RING" "2%"
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "VIBRATO" "RATE" "BREATHY" "RING" ""
+   labels@4125: epoch 2 knobs "" "" "" "" "" "" "" ""
+== GLO rc 0
+   labels@0: epoch 1 knobs "" "" "" "VIBRATO" "RATE" "BREATHY" "RING" ""
+   labels@4125: epoch 2 knobs "" "" "" "" "" "" "" ""
+== SEQ rc 0
+   labels@0: epoch 1 knobs "" "" "" "VIBRATO" "RATE" "BREATHY" "RING" ""
+   labels@4125: epoch 2 knobs "" "" "" "TEMPO" "SWING" "STEP" "" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "TEMPO" "97"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SWING" "2%"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "STEP" "2"

@@ -150,7 +150,9 @@ Ableton Move: its knob popup). Built with `WANTS rd1`:
   lines, with a tree that has them: EC_SOURCE); and, through `core-glue/common/rd_cols.h` (a firmware's drawn knob
   row copied after each frame: labels, and a readout when the turned knob's drawn value changes), SLOOP 3, CoralFlower,
   a22, h1, FMav-1, M-Vsynth2, JamesOS, SID-1, FMEL-1, AURORA, bytemania, FM-KICK, Golf, Tekstuur, Mighty Arp, FoMni,
-  HYP-1, Nachtfahrt and ZEN-1. The audio is bit-identical to the released files over the same run.
+  HYP-1, Nachtfahrt, ZEN-1, PERF-1, Niagara Drift, FiMba, carnac-os, SiDJ, X0X, Fart Machine, Quartz, Berlinan,
+  SY-1, ECHOFIELD, Chimera Vocal, Dabke, CULTBOX, orgigs, M-vance, Golana, FMini-1, cursed os, obssynth, MONO2K,
+  Matryoshka, Speak37, SPELLBOX and Viscera. The audio is bit-identical to the released files over the same run.
 
 ## Check it
 

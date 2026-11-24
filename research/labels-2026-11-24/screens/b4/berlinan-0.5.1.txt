@@ -1,0 +1,41 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "TEMPO" "AUTO" "FORM" "AMBIENT" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "TEMPO" "91"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "AUTO" "ON"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "FORM" "CLASSIC"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "AMBIENT" "ON"
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "TEMPO" "AUTO" "FORM" "AMBIENT" ""
+   labels@4170: epoch 2 knobs "" "" "" "CHANNEL" "LOOP" "REGISTER" "GENERATOR" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "CHANNEL" "2"
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "TEMPO" "AUTO" "FORM" "AMBIENT" ""
+   labels@4170: epoch 2 knobs "" "" "" "TARGET" "CYCLE" "DEPTH" "SCENE" ""
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "TEMPO" "AUTO" "FORM" "AMBIENT" ""
+   labels@4170: epoch 2 knobs "" "" "" "FEEDBACK" "WET" "PING-PONG" "FILTERED" ""
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "TEMPO" "AUTO" "FORM" "AMBIENT" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "TEMPO" "91"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "AUTO" "ON"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "FORM" "CLASSIC"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "AMBIENT" "ON"
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "TEMPO" "AUTO" "FORM" "AMBIENT" ""
+   labels@4170: epoch 2 knobs "" "" "" "RATCHET" "STEPS" "GENERATION" "PLAYS LEFT" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "RATCHET" "5%"
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "TEMPO" "AUTO" "FORM" "AMBIENT" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "TEMPO" "91"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "AUTO" "ON"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "FORM" "CLASSIC"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "AMBIENT" "ON"
+== GLO rc 0
+   labels@0: epoch 1 knobs "" "" "" "TEMPO" "AUTO" "FORM" "AMBIENT" ""
+   labels@4170: epoch 2 knobs "" "" "" "ROOT" "SYNC" "EXT INPUT" "LIGHTS" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "ROOT" "Bb"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SYNC" "EXT"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "LIGHTS" "KEYS"
+== SEQ rc 0
+   labels@0: epoch 1 knobs "" "" "" "TEMPO" "AUTO" "FORM" "AMBIENT" ""
+   labels@4170: epoch 2 knobs "" "" "" "PHASE" "LENGTH" "BED DROP" "REPRISE" ""
