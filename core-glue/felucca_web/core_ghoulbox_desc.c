@@ -4,4 +4,7 @@
 #define FM1CORE_FW_NAME "GHOULBOX"
 #define FM1CORE_FW_REPO "https://github.com/jasonpersinger/ghoulbox-fm1-dungeon-synth"
 #define FM1CORE_FW_BOOTGUARD 0
+#ifdef FM1CORE_RFM1
+#define FM1CORE_FW_PARAMS 1                 /* (the .rfm1: Felucca's map, fw_map_fork.h) */
+#endif
 #include "fw_desc.h"

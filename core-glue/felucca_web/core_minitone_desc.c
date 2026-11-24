@@ -4,4 +4,7 @@
 #define FM1CORE_FW_NAME "Mini-Tone"
 #define FM1CORE_FW_REPO "https://github.com/eldontyrellcorp/Mini-Tone"
 #define FM1CORE_FW_BOOTGUARD 1
+#ifdef FM1CORE_RFM1
+#define FM1CORE_FW_PARAMS 1                 /* (the .rfm1: Felucca's map, fw_map_fork.h) */
+#endif
 #include "fw_desc.h"

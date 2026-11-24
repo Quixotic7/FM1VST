@@ -66,9 +66,29 @@
  * from the constant tables (and the E entries' descriptor snapshot, double-buffered) and may run on any thread.
  * (param_format writes params.c's fmt_named, a flag only ui_draw.c's next card reads after its own param_format.) */
 
+/* THE FORKS' OPTIONS (fw_map_fork.h: a Felucca fork's .rfm1 uses this map; its unit sets these where it differs) */
+#ifndef FE_MELODEE
 #define FE_MELODEE 0
+#endif
+#ifndef FE_SLICE
 #define FE_SLICE FELUCCA_SLICE
+#endif
+#ifndef FE_SELECT_TARGET
 #define FE_SELECT_TARGET fe_select_target()          /* SELECT: the global tempo (ui_input.c, below) */
+#define FE_SELECT_FELUCCA 1
+#endif
+#ifndef FE_EUCLID_ON
+#define FE_EUCLID_ON (eu.on)                         /* SEQ held, EUCLID: its HITS STEPS ROT (a fork without: 0) */
+#endif
+#ifndef FE_HOME_TRK
+#define FE_HOME_TRK(k) home_trk(k)                   /* HOME LEVELS: KNOB k is part k's (a fork without: TSEL) */
+#endif
+#ifndef FE_KNOBS_OWN
+#define FE_KNOBS_OWN 0                               /* 1: KNOB 1..4 are the fork's own here (relative, no target) */
+#endif
+#ifndef FE_PAGE_OWN
+#define FE_PAGE_OWN(pg, k) 0                         /* 1: the fork's own graph on a page: knob k turned, no target */
+#endif
 
 static int32_t fe_clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo : v > hi ? hi : v; }
 
@@ -467,7 +487,7 @@ static int32_t fe_page_target(const page_t *pg, uint32_t k, int layer)   /* edit
     k &= 3u;
     if (pg->graph == GR_EVENTS || pg->graph == GR_SONG || pg->scope == SC_STEP || pg->graph == GR_BROWSE ||
         pg->graph == GR_USER || pg->graph == GR_PATS || fop_page(pg->graph) || (pg->graph == GR_MOD && !k) ||
-        (pg->graph == GR_TOOLS && k == 1u))
+        (pg->graph == GR_TOOLS && k == 1u) || FE_PAGE_OWN(pg, k))
         return -1;                                /* a cursor, a row, a slot, a preset list, an operator: turned */
 #if FE_SLICE
     if (pg->graph == GR_SLICES && k < 2u)
@@ -488,6 +508,7 @@ static int32_t fe_page_target(const page_t *pg, uint32_t k, int layer)   /* edit
 }
 /* SELECT (ui_input.c): GLO + SELECT is the tempo; else MENU > CONTROL > SELECT's mode: BPM (the tempo, unless MENU >
  * BPM LOCK: then nothing), PAGE (the pages), MODW / VEL (it plays): turned */
+#ifdef FE_SELECT_FELUCCA
 static int32_t fe_select_target(void)
 {
     const int glo = layer_held() && ui.ly == LAYER_GLO;
@@ -495,6 +516,7 @@ static int32_t fe_select_target(void)
         return -1;
     return fe_index_of(FEK_GP, G_BPM);
 }
+#endif
 static int32_t fe_knob_compute(uint32_t role)
 {
     int16_t *vp;
@@ -512,7 +534,7 @@ static int32_t fe_knob_compute(uint32_t role)
             return fe_index_of(FEK_FXM, (int32_t)(role - EN_K1));
         if (l == LAYER_GLO)
             return fe_index_of(FEK_TLV, (int32_t)(role - EN_K1));
-        if (l == LAYER_EDIT || l == LAYER_REC || (l == LAYER_SEQ && eu.on))
+        if (l == LAYER_EDIT || l == LAYER_REC || (l == LAYER_SEQ && FE_EUCLID_ON))
             return -1;                            /* ENG, No., FAV; CLICK, COUNT-IN, LEVEL; EUCLID: lists, steps */
         return fe_page_target(ly_page(l) ? ly_page(l) : &PAGES[page_first(LAYERS[l].fam)], role - EN_K1, 1);
     }
@@ -521,14 +543,14 @@ static int32_t fe_knob_compute(uint32_t role)
     case EN_PRESET: return -1;                    /* the sounds (HOME, PRESETS): a list */
     default: break;
     }
-    if (lock_held() || mom_down())
+    if (lock_held() || mom_down() || FE_KNOBS_OWN)
         return -1;                                /* a step held (its lock), LFO held (MOMENTARY): not the page's */
     if (ui.home) {
         const uint32_t k = role - EN_K1;
         d = home_param(k, &vp);
         if (!d || !vp || d->max <= d->min)
             return -1;
-        if (home_trk(k) != TSEL)                  /* HOME LEVELS: KNOB k is part k's level */
+        if (FE_HOME_TRK(k) != TSEL)                  /* HOME LEVELS: KNOB k is part k's level */
             return fe_index_of(FEK_TLV, (int32_t)k);
         return fe_cell_target(0, k, d, vp);
     }
