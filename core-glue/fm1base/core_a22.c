@@ -225,7 +225,21 @@ static void fm1core_a22_sx_service(void)
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME APP_NAME
-#define FM1CORE_PL_UI_FRAME() app_frame()
+/* the live knob labels and readouts (common/rd_cols.h): h1's own per-encoder view (core/h1.h h1_control: each
+ * encoder's name and value text as the screen has them; the H1_ENC_* order is FM1P_E_*'s), copied after each UI frame */
+#include "rd_cols.h"
+static void fm1core_a22_rd(void)
+{
+    int e;
+    rdc_begin();
+    for (e = 0; e < H1_NENC; e++) {
+        int lo, hi;
+        const char *nm = "", *tx = "";
+        (void)h1_control(e, &lo, &hi, &nm, &tx);   /* (it returns the value) */
+        rdc_knob(e, nm, tx);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (app_frame(), fm1core_a22_rd())
 #define FM1CORE_PL_UI_INPUT() app_input_only()
 #define FM1CORE_PL_DIM_LEVEL (fm1core_fb_dim_lo ? FM1P_LED_FAINT : FM1P_LED_DIM)   /* the glow: DIM LO / HI */
 #define FM1CORE_PL_DIM_ON 1               /* (plat_lights fills the dim plane only while glowing) */

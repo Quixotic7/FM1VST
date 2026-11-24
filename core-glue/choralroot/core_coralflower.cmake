@@ -19,4 +19,8 @@ fm1_add_core(coralflower ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_cf} UNIT core_coral
 crf_golden(coralflower SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden/coralflower.txt REF ${_cf}/build/host/emu
            BUILD env CR_VERSION=0.7.1 sh tools/emu/build.sh BUILD_DEPENDS gen_coralflower AUDIO)
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
-fm1_add_rfm1(coralflower AUTHORS "FicusFicusov")
+# rd1: its knob row (ui_knob_info) as live labels and readouts (core_coralflower.c, common/rd_cols.h)
+fm1_add_rfm1(coralflower WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --turn K2@4550:1 --press ENV@4700 --turn K4@5000:1 --settle 5200 --seconds 0.1
+                          --expect-readout ctl_4_KEY_=_Db --expect-readout ctl_6_RELEASE_=_33_ms
+             AUTHORS "FicusFicusov")
