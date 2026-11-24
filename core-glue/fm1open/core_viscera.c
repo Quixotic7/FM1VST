@@ -331,6 +331,26 @@ static void device_settings(uint32_t now) /* the FM-1's own settings: a second a
     if (vsc_fm1_device_save() != 0)
         vsc_ui_notice("NOT SAVED", 1200);
 }
+/* Viscera: the knob row (vsc_ui.c knob_row: slot(k) and slot_text, name and value as drawn), read through
+ * vsc_ui_rd_col (b_viscera_ui_rd.c, the unit compiled in place of core/vsc_ui.c). Nothing (rdc_begin) during the
+ * intro and on MIXER, INPUT and SAVE (no knob_row drawn); a K_NONE slot is an empty column. */
+#include "rd_cols.h"
+int vsc_ui_rd_col(unsigned k, char name[10], char val[10]);
+static void fm1core_viscera_rd(void)
+{
+    char n[10], v[10];
+    uint32_t k;
+    rdc_begin();
+    for (k = 0; k < 4u; k++) {
+        const int r = vsc_ui_rd_col(k, n, v);
+        if (r < 0) {
+            rdc_begin();
+            return;
+        }
+        rdc_col(k, r ? n : "", r ? v : "");
+    }
+}
+
 static void paint(uint32_t now)           /* a new frame every ~33 ms, all its bands */
 {
     unsigned y;
@@ -374,6 +394,7 @@ static void fm1core_vs_control(void)      /* groove_screen_control: one pass */
         refresh_slots();
     }
     paint(now);
+    fm1core_viscera_rd();                 /* (its knob row for the host: above) */
 }
 
 /* ---- the ABI ---- */
