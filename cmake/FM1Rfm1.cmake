@@ -42,7 +42,12 @@
 #                                   (core-glue/common/rfm1_cpu2.h: rfm1_cpu2_run / wait / core). rd1 in WANTS:
 #                                   readouts (docs/RFM1.md "Readouts (rd1)"): the shim's rfm1_readout record, the
 #                                   Tier 2 map's bridge and knob labels, and FM1_HOST_EXT for every unit
-#                                   (core-api/rfm1_ext.h's macros)
+#                                   (core-api/rfm1_ext.h's macros). tk1 in WANTS: the Move takeover
+#                                   (docs/RFM1-TAKEOVER.md): the shim's rfm1_tk record, rfm1_tk_input /
+#                                   rfm1_tk_state, and FM1_HOST_TK for every unit (core-api/rfm1_move.h's calls)
+#       [TAKEOVER_NAME <name>]      (with tk1) the manifest's informative "takeover": the mode's name (at most 15
+#       [TAKEOVER_CLAIMS <names..>] printable ASCII characters) and its claims (screen pads steps knobs jog volume
+#                                   buttons tracks, or all): a catalog can mark the file "made for Move"
 #       [VERSION <v>]               the .rfm1's version, in place of the firmware's (a rebuild of the same release
 #                                   with new glue: "0.42-r2"); the descriptor's FM1CORE_VERSION in the Wasm build too,
 #                                   the native core's and the FM-1's unchanged
@@ -95,6 +100,7 @@ set(FM1_RFM1_CFLAGS -std=gnu11 -ffp-contract=off -fno-common -DFM1CORE_RFM1=1)
 set_property(GLOBAL PROPERTY FM1_RFM1_IDS "")
 # a try of cores whose glue has no fm1_add_rfm1 call yet: their ids (or "all": every core of this build), with the
 # defaults (no AUTHORS). What their glue needs in Wasm shows at build time
+option(FM1_RFM1_TKDEMO "build tkdemo.rfm1, the Move takeover's test firmware (tools/rfm1/tkdemo)" ON)
 set(FM1_RFM1_EXTRA_CORES "" CACHE STRING "more cores to build as .rfm1 with fm1_add_rfm1's defaults (ids, or all)")
 
 if(FM1_RFM1)
@@ -194,10 +200,13 @@ function(fm1_rfm1_license_files id src license out)
 endfunction()
 
 function(fm1_add_rfm1 id)
-    cmake_parse_arguments(A "VIRTUAL;NO_SKIN;NO_LABELS" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE;METADATA;AUDIO_OUT;VERSION"
-                          "AUTHORS;LICENSE_FILES;DEFINES;FLAGS;INCLUDES;RUN_ARGS;NEEDS;FOLDERS;WANTS;READOUT_TEST" ${ARGN})
+    cmake_parse_arguments(A "VIRTUAL;NO_SKIN;NO_LABELS" "MEMORY_MIB;STACK_KIB;SOURCE_URL;HOSTED_DESPITE_GATE;METADATA;AUDIO_OUT;VERSION;TAKEOVER_NAME"
+                          "AUTHORS;LICENSE_FILES;DEFINES;FLAGS;INCLUDES;RUN_ARGS;NEEDS;FOLDERS;WANTS;READOUT_TEST;TAKEOVER_CLAIMS" ${ARGN})
     if(A_UNPARSED_ARGUMENTS)
         message(FATAL_ERROR "fm1_add_rfm1(${id}): unknown arguments ${A_UNPARSED_ARGUMENTS}")
+    endif()
+    if((A_TAKEOVER_NAME OR A_TAKEOVER_CLAIMS) AND NOT "tk1" IN_LIST A_WANTS)
+        message(FATAL_ERROR "fm1_add_rfm1(${id}): TAKEOVER_NAME / TAKEOVER_CLAIMS need tk1 in WANTS")
     endif()
     if(NOT FM1_RFM1)
         return()
@@ -283,6 +292,9 @@ function(fm1_add_rfm1 id)
     if("rd1" IN_LIST A_WANTS)     # readouts (docs/RFM1.md "Readouts (rd1)"): core-api/rfm1_ext.h's macros reach the shim
         list(APPEND _base -DFM1_HOST_EXT=1)
     endif()
+    if("tk1" IN_LIST A_WANTS)     # the Move takeover (docs/RFM1-TAKEOVER.md): core-api/rfm1_move.h's calls reach the shim
+        list(APPEND _base -DFM1_HOST_TK=1)
+    endif()
     foreach(_i IN LISTS _tinc A_INCLUDES)
         list(APPEND _base -I${_i})
     endforeach()
@@ -338,6 +350,9 @@ function(fm1_add_rfm1 id)
     endif()
     if("rd1" IN_LIST A_WANTS)     # readouts: the shim's record, rfm1_readout, the map's bridge and knob labels
         list(APPEND _shim_opt -DRFM1_RD1=1)
+    endif()
+    if("tk1" IN_LIST A_WANTS)     # the takeover: the shim's record, rfm1_tk, rfm1_tk_input, rfm1_tk_state
+        list(APPEND _shim_opt -DRFM1_TK=1)
     endif()
     if(A_AUDIO_OUT)               # more output channels (aout1): the shim's two exports, only for a core that gives some
         if(NOT A_AUDIO_OUT MATCHES "^(2|4|6|8|10)$")
@@ -482,6 +497,12 @@ function(fm1_add_rfm1 id)
     foreach(_w IN LISTS A_WANTS)  # the manifest's "wants" (any cart: hosts ignore what they lack)
         list(APPEND _pack_args --wants ${_w})
     endforeach()
+    if(A_TAKEOVER_NAME)           # the manifest's informative "takeover" (docs/RFM1-TAKEOVER.md 3)
+        list(APPEND _pack_args --takeover-name "${A_TAKEOVER_NAME}")
+    endif()
+    foreach(_c IN LISTS A_TAKEOVER_CLAIMS)
+        list(APPEND _pack_args --takeover-claim ${_c})
+    endforeach()
     if(A_VIRTUAL)                 # the manifest's "virtual", "needs", "folders" (rfm1_check then applies section 2)
         list(APPEND _pack_args --virtual)
         foreach(_n IN LISTS A_NEEDS)
@@ -520,7 +541,7 @@ function(fm1_add_rfm1 id)
     add_custom_command(OUTPUT ${_out}
         COMMAND ${CMAKE_COMMAND} -E make_directory ${FM1_RFM1_DIR}
         COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1_pack.py ${_pack_args}
-        COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1_check.py --quiet ${_out}
+        COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1_check.py --quiet --run $<TARGET_FILE:rfm1_run> ${_out}
         DEPENDS ${_wasm} ${_desc} ${FM1_RFM1_TOOLS}/rfm1_pack.py ${FM1_RFM1_TOOLS}/rfm1_check.py ${_lic_paths}
                 ${FM1_RFM1_TOOLS}/rfm1_skin.py ${_skin_deps}
         COMMENT "rfm1 ${id}: ${id}-${_fver}.rfm1"
@@ -567,6 +588,11 @@ function(fm1_rfm1_finish)
             fm1_add_rfm1(${_id})
         endif()
     endforeach()
+    # tkdemo, the Move takeover's test firmware (tools/rfm1/tkdemo): not a core of the plugin (its FM1_CORE_IDS entry
+    # stays in this function's scope)
+    if(FM1_RFM1_TKDEMO)
+        include(${FM1_RFM1_TOOLS}/rfm1/tkdemo/tkdemo.cmake)
+    endif()
     # wasm3 v0.5.0 (third_party/wasm3, MIT), with its release flags
     set(_w3 ${FM1_RFM1_ROOT}/third_party/wasm3/source)
     set(_w3src "")
@@ -613,5 +639,17 @@ function(fm1_rfm1_finish)
     add_test(NAME rfm1_skin COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1/rfm1_skin_test.py)
     add_test(NAME rfm1_labels COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1/rfm1_labels_test.py --emcc ${FM1_EMCC}
                                       --run $<TARGET_FILE:rfm1_run>)
+    # the Move takeover (tk1) on tkdemo: the record, rfm1_check, an rfm1_run --tk scenario, rfm1_move.h without it
+    if(FM1_RFM1_TKDEMO AND TARGET rfm1_tkdemo)
+        get_property(_f GLOBAL PROPERTY FM1_RFM1_FILE_tkdemo)
+        add_test(NAME rfm1_tk COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1/rfm1_tk_test.py --run $<TARGET_FILE:rfm1_run>
+                                      --file ${_f} --cc ${CMAKE_C_COMPILER})
+    endif()
+    # ChoralRoot's own takeover, CHORDS (its cr_move.c): scenarios through rfm1_run --tk, screens against the design's
+    if(TARGET rfm1_choralroot)
+        get_property(_f GLOBAL PROPERTY FM1_RFM1_FILE_choralroot)
+        add_test(NAME rfm1_cr_tk COMMAND ${CR_PYTHON} ${FM1_RFM1_TOOLS}/rfm1/rfm1_cr_tk_test.py
+                                         --run $<TARGET_FILE:rfm1_run> --file ${_f})
+    endif()
     message(STATUS "rfm1: ${_ids}")
 endfunction()

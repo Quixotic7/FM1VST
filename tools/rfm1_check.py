@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """rfm1_check: an .rfm1 file checked against docs/RFM1-FORMAT.md (version 1).
 
-    rfm1_check.py [--quiet] <file.rfm1>..
+    rfm1_check.py [--quiet] [--run <rfm1_run>] <file.rfm1>..
 
 Checks the WebAssembly binary (magic, every section's bounds), the manifest (the `rfm1` custom section: JSON, the
 required fields and their forms), the `rfm1.credits` / `rfm1.license.<n>` sections, the imports (only the format's
@@ -26,6 +26,13 @@ checker does not know are ignored, as hosts ignore them), the optional exports r
 
 Core 1 (docs/RFM1.md "cpu2"): the optional exports rfm1_cpu2 ([] -> [i32]), rfm1_c1_stack ([i32] -> []) and
 rfm1_c1_call ([i32 i32] -> []), all three or none, and "cpu2" in "wants" whenever they are exported.
+
+The Move takeover (docs/RFM1-TAKEOVER.md, "tk1"): the optional exports rfm1_tk ([] -> [i32]), rfm1_tk_input ([i32] ->
+[i32]) and rfm1_tk_state ([i32 i32 i32] -> []), all three or none, and "tk1" in "wants" whenever they are exported; the
+manifest's informative "takeover" ({"name": at most 15 printable ASCII characters, "claims": section 2's names}) when
+present. The record itself is only there once the module ran: with --run (tools/rfm1_run), the module is booted
+(rfm1_run --tk-info) and the record rfm1_tk() gives after init is checked: version 1, size 1468, a printable,
+NUL-terminated name, claims within 0xFF.
 
 A skin (section 8, optional: tools/rfm1_skin.py): rfm1.skin's JSON ({"skin": 1}, dim 0 .. 0.8, a theme of all fourteen
 roles or the five picked ones as "#RRGGBB"), each image a PNG or JPEG of at most 4 MiB, its longer side at most 4096 px.
@@ -72,6 +79,10 @@ AIN_EXPORTS = {"rfm1_audio_in": (2, 0), "rfm1_audio_in_info": (2, 0)}
 CPU2_EXPORTS = {"rfm1_cpu2": (0, 1), "rfm1_c1_stack": (1, 0), "rfm1_c1_call": (2, 0)}
 # docs/RFM1.md "Readouts (rd1)": the readout record, with "rd1" in "wants"
 RD1_EXPORTS = {"rfm1_readout": (0, 1)}
+# docs/RFM1-TAKEOVER.md 4.1: the Move takeover, all three or none, with "tk1" in "wants"
+TK1_EXPORTS = {"rfm1_tk": (0, 1), "rfm1_tk_input": (1, 1), "rfm1_tk_state": (3, 0)}
+TK1_CLAIMS = ("screen", "pads", "steps", "knobs", "jog", "volume", "buttons", "tracks", "all")
+TK1_VERSION, TK1_SIZE = 1, 1468
 # section 2: the exports, (params, results); all i32
 EXPORTS = {
     "rfm1_version": (0, 1), "rfm1_get": (1, 1), "rfm1_layout": (1, 1), "rfm1_alloc": (1, 1), "rfm1_free": (1, 0),
@@ -489,9 +500,10 @@ class Check:
 
         if exports.get("memory", (None,))[0] != 2:
             self.err("no memory exported as \"memory\"")
-        for nm, (na, nr) in list(EXPORTS.items()) + list(OPTIONAL_EXPORTS.items()) + list(AIN_EXPORTS.items()) + list(CPU2_EXPORTS.items()) + list(RD1_EXPORTS.items()):
+        for nm, (na, nr) in list(EXPORTS.items()) + list(OPTIONAL_EXPORTS.items()) + list(AIN_EXPORTS.items()) + list(CPU2_EXPORTS.items()) + list(RD1_EXPORTS.items()) + list(TK1_EXPORTS.items()):
             if nm not in exports:
-                if nm not in OPTIONAL_EXPORTS and nm not in AIN_EXPORTS and nm not in CPU2_EXPORTS and nm not in RD1_EXPORTS:
+                if (nm not in OPTIONAL_EXPORTS and nm not in AIN_EXPORTS and nm not in CPU2_EXPORTS and
+                        nm not in RD1_EXPORTS and nm not in TK1_EXPORTS):
                     self.err("no export %s" % nm)
                 continue
             kind, idx = exports[nm]
@@ -508,6 +520,7 @@ class Check:
         self.info["ain_exports"] = sorted(n for n in AIN_EXPORTS if n in exports)
         self.info["cpu2_exports"] = sorted(n for n in CPU2_EXPORTS if n in exports)
         self.info["rd1"] = "rfm1_readout" in exports
+        self.info["tk1_exports"] = sorted(n for n in TK1_EXPORTS if n in exports)
 
         # the custom sections (sections 1 and 4)
         if "rfm1" not in custom:
@@ -599,6 +612,26 @@ class Check:
         self.info["cpu2"] = bool(c2)
         if self.info.get("rd1") and "rd1" not in wants:
             self.err("exports rfm1_readout but the manifest has no \"rd1\" in wants (docs/RFM1.md \"Readouts (rd1)\")")
+        tk = self.info.get("tk1_exports", [])
+        if tk and len(tk) != len(TK1_EXPORTS):
+            self.err("exports %s but not %s (docs/RFM1-TAKEOVER.md 4.1: all three or none)" %
+                     (" and ".join(tk), " and ".join(n for n in sorted(TK1_EXPORTS) if n not in tk)))
+        if tk and "tk1" not in wants:
+            self.err("exports %s but the manifest has no \"tk1\" in wants (docs/RFM1-TAKEOVER.md 4.1)" %
+                     " and ".join(tk))
+        self.info["tk1"] = len(tk) == len(TK1_EXPORTS)
+        if "takeover" in m:
+            t = m["takeover"]
+            if not isinstance(t, dict):
+                self.err("the manifest's takeover is not an object")
+            else:
+                if not isinstance(t.get("name"), str) or not re.fullmatch(r"[ -~]{1,15}", t["name"]):
+                    self.err("the manifest's takeover.name %r is not 1..15 printable ASCII characters" % t.get("name"))
+                cl = t.get("claims", [])
+                if not isinstance(cl, list) or not all(isinstance(c, str) and c in TK1_CLAIMS for c in cl):
+                    self.err("the manifest's takeover.claims %r: names of %s" % (cl, ", ".join(TK1_CLAIMS)))
+            if not self.info["tk1"]:
+                self.err("the manifest has \"takeover\" but the module does not export the tk1 functions")
         host = False
         for mod, nm, ti in func_imports:
             what = "%s.%s" % (mod, nm)
@@ -674,6 +707,38 @@ class Check:
                     mm, self.info["memory"] / 1048576))
 
 
+def tk_record(c, path, run):
+    """the takeover's record after init (rfm1_run --tk-info): version, size, name, claims"""
+    import subprocess
+    try:
+        r = subprocess.run([run, "--tk-info", path], capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        c.err("rfm1_run --tk-info: %s" % e)
+        return
+    try:
+        rec = json.loads(r.stdout)
+    except ValueError:
+        c.err("rfm1_run --tk-info failed (%d): %s" % (r.returncode, (r.stderr or r.stdout).strip()[-300:]))
+        return
+    if rec.get("version") != TK1_VERSION:
+        c.err("the takeover record's version is %r (1)" % rec.get("version"))
+    if rec.get("size") != TK1_SIZE:
+        c.err("the takeover record's size is %r (1468)" % rec.get("size"))
+    name = rec.get("name")
+    if not rec.get("name_terminated"):
+        c.err("the takeover record's name is not NUL-terminated within its 16 bytes")
+    elif not isinstance(name, str) or not re.fullmatch(r"[ -~]*", name):
+        c.err("the takeover record's name %r is not printable ASCII" % name)
+    elif not name:
+        c.warn("the takeover record's name is empty after init (rfm1_tk_register not called?)")
+    if not isinstance(rec.get("claims"), int) or rec["claims"] & ~0xFF:
+        c.err("the takeover record's claims 0x%x has bits outside 0xFF" % (rec.get("claims") or 0))
+    t = c.info.get("manifest", {}).get("takeover")
+    if isinstance(t, dict) and isinstance(name, str) and name and t.get("name") != name:
+        c.warn("the manifest's takeover.name %r is not the record's %r" % (t.get("name"), name))
+    c.info["tk1_record"] = rec
+
+
 def sig(t):
     if t is None:
         return "(none)"
@@ -682,14 +747,25 @@ def sig(t):
 
 def main(argv):
     quiet = "--quiet" in argv
-    paths = [a for a in argv if a != "--quiet"]
+    argv = [a for a in argv if a != "--quiet"]
+    run = None
+    if "--run" in argv:
+        i = argv.index("--run")
+        if i + 1 >= len(argv):
+            print("usage: rfm1_check.py [--quiet] [--run <rfm1_run>] <file.rfm1>..", file=sys.stderr)
+            return 2
+        run = argv[i + 1]
+        del argv[i:i + 2]
+    paths = argv
     if not paths or any(p.startswith("-") for p in paths):
-        print("usage: rfm1_check.py [--quiet] <file.rfm1>..", file=sys.stderr)
+        print("usage: rfm1_check.py [--quiet] [--run <rfm1_run>] <file.rfm1>..", file=sys.stderr)
         return 2
     bad = False
     for p in paths:
         c = Check(p)
         c.run()
+        if run and c.info.get("tk1") and not c.errors:
+            tk_record(c, p, run)
         for w in c.warnings:
             print("%s: warning: %s" % (p, w))
         for e in c.errors:
@@ -699,7 +775,7 @@ def main(argv):
             print("%s: FAILED (%d errors)" % (p, len(c.errors)))
         elif not quiet:
             m = c.info.get("manifest", {})
-            print("%s: ok: %s %s (%s)%s%s%s%s, %d bytes, %g MiB memory, %d exports, %d licence texts%s%s%s" % (
+            print("%s: ok: %s %s (%s)%s%s%s%s%s, %d bytes, %g MiB memory, %d exports, %d licence texts%s%s%s" % (
                 p, m.get("id"), m.get("version"), m.get("license"),
                 ", virtual (Fantasy CFW, needs %s%s)" % (",".join(m.get("needs", [])) or "nothing",
                                                         ", imports rfm1_host_1" if c.info.get("host_imports") else "")
@@ -707,6 +783,9 @@ def main(argv):
                 ", audio input (ain1)" if c.info.get("ain") else "",
                 ", core 1 (cpu2)" if c.info.get("cpu2") else "",
                 ", readouts (rd1)" if c.info.get("rd1") else "",
+                (", takeover (tk1%s)" % (", \"%s\" claims 0x%02x" % (c.info["tk1_record"]["name"],
+                                                                       c.info["tk1_record"]["claims"])
+                                         if c.info.get("tk1_record") else "")) if c.info.get("tk1") else "",
                 c.size, c.info.get("memory", 0) / 1048576, c.info.get("exports", 0), c.info.get("licenses", 0),
                 ", skin: %s" % c.info["skin"] if c.info.get("skin") else "",
                 ", labels: %s" % c.info["labels"] if c.info.get("labels") else "",
