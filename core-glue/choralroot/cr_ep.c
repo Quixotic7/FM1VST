@@ -795,7 +795,7 @@ static int32_t cep_get(int layer, uint16_t pid)
     return v;
 }
 /* ce_knob's write for the cell, the value given (its three ways; the knob's alias skipping for an F_ENUM) */
-static void cep_set(int layer, uint16_t pid, int32_t v)
+static void cep_write(int layer, uint16_t pid, int32_t v)
 {
     track_t *t;
     ce_ref_t r;
@@ -837,6 +837,21 @@ static void cep_set(int layer, uint16_t pid, int32_t v)
     fm1_irq_on();
     if (v != v0)
         cu_edited(part);
+}
+/* the shim's set: a SET (rfm1_ep_host 1) is the editor's write, the sound marked edited when it changed; a lock's
+ * write or its return (rfm1_ep_host 2) the same write without the mark (a step lock is the sequencer's, not an edit of
+ * the sound: the part's edited flag and its "the slot's sound as stored" put back) */
+static void cep_set(int layer, uint16_t pid, int32_t v)
+{
+    const uint32_t part = (uint32_t)layer & 1u;
+    const cu_snd_t keep = psnd[part];
+    const uint8_t user = cep_trk(layer)->user;
+    const int lock = rfm1_ep_host == 2;
+    cep_write(layer, pid, v);
+    if (lock) {
+        psnd[part] = keep;
+        cep_trk(layer)->user = user;
+    }
 }
 /* the cell's name and words as the editor shows them now (its mode-dependent descriptor) */
 static int cep_wordsf(int layer, uint16_t pid, char name[11], char text[11])

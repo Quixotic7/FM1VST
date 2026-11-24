@@ -17,6 +17,7 @@
  *   cr_ep_test --gen     cr_ep_ids.h printed again with the cells it lacks appended (append-only: lines never move)
  *   cr_ep_test --dump    the description as made: engines, pages, each knob's pid, name, range and format */
 #include "../core_choralroot.c"
+volatile int rfm1_ep_host;             /* (the shim's, which this test does not link: 1 a SET, 2 a lock's write) */
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -176,8 +177,11 @@ static void child(int fd, int how, int part, const cep_at_t *at, int x, int32_t 
         ce_knob(at->col, s, 0);
         fm1_kn_back();
         landed = cep_get(part, cep_par[x].pid);
-    } else
+    } else {
+        rfm1_ep_host = how;            /* 1 a SET, 2 a lock's write */
         cep_set(part, cep_par[x].pid, v);
+        rfm1_ep_host = 0;
+    }
     state_take(&st);
     if (write(fd, &landed, sizeof landed) != sizeof landed || write(fd, &st, sizeof st) != (ssize_t)sizeof st)
         _exit(2);
@@ -218,7 +222,7 @@ static void place(int part, int x, int32_t v)
     psnd[part] = keep;
     cep_trk(part)->user = user;
 }
-static uint32_t n_cmp, n_skip, n_moved;
+static uint32_t n_cmp, n_skip, n_moved, n_lock;
 static void check_cell(int part, int x, const cep_at_t *at)
 {
     track_t *t = cep_trk(part);
@@ -280,6 +284,24 @@ static void check_cell(int part, int x, const cep_at_t *at)
             continue;
         }
         n_cmp++;
+        {   /* a lock's write: the same parameter bytes, the sound not marked edited (psnd and user as before) */
+            state_t c, pre;
+            int32_t l3 = 0;
+            uint32_t k;
+            state_take(&pre);
+            if (fork_write(2, part, at, x, l1, s, &c, &l3)) {
+                CHECK(!memcmp(c.psnd, pre.psnd, sizeof c.psnd) && c.trk[part ? CR_PART_BASS : CR_PART_CHORD].user ==
+                      pre.trk[part ? CR_PART_BASS : CR_PART_CHORD].user, "part %d pid %u: a lock's write marked the "
+                      "sound edited", part, cep_par[x].pid);
+                for (k = 0; k < NTRK; k++)
+                    c.trk[k].user = b.trk[k].user;
+                memcpy(c.psnd, b.psnd, sizeof c.psnd);
+                c.cs = b.cs;           /* (a chord send turns FX on either way: cs compared by the SET's test) */
+                CHECK(!state_diff(&c, &b) && l3 == l2, "part %d pid %u (%s) = %d: a lock's write differs from a SET in %s",
+                      part, cep_par[x].pid, cep_key_of((uint32_t)x), l1, state_diff(&c, &b) ? state_diff(&c, &b) : "the value");
+                n_lock++;
+            }
+        }
         why = state_diff(&a, &b);
         CHECK(!why && l1 == l2, "part %d %s pid %u %s (%s) = %d (from %d): ep1 SET and the editor's knob differ in %s "
               "(landed %d / %d)", part, ENGINES[eng_idx(t->eng_req)]->name, cep_par[x].pid, cep_key_of((uint32_t)x),
@@ -415,8 +437,8 @@ int main(int argc, char **argv)
     check_ids();
     check_reads();
     check_writes();
-    printf("%u writes compared (%u where the knob landed beside the value asked), %u cells skipped\n", n_cmp, n_moved,
-           n_skip);
+    printf("%u writes compared (%u where the knob landed beside the value asked), %u cells skipped; %u lock writes "
+           "compared with the SET's (the same bytes, no edit mark)\n", n_cmp, n_moved, n_skip, n_lock);
     printf(fails ? "rfm1_ep_choralroot: %d FAILED\n" : "rfm1_ep_choralroot: all passed%.0d\n", fails);
     return fails ? 1 : 0;
 }

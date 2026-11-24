@@ -72,6 +72,8 @@
  *                    ("ep-layers@MS: L:engine/channel"), the values ("ep-values@MS: layer L pid=v .."), the cells
  *     --ep-set L:PID=V@MS   rfm1_ep_set(SET, L, PID, V) before the tick of device ms MS (its answer printed)
  *     --ep-watch L:P@MS     rfm1_ep_watch(L, P) (P: a page index, -1 none)
+ *     --ep-lock L:PID=V@MS, --ep-free L:PID@MS, --ep-free-all L@MS (255: every layer)   LOCK, FREE, FREE_ALL
+ *     --midi HEX@MS  a three-byte MIDI message (B04A40: CC 74 = 64 on channel 1) into rfm1_midi_in at device ms MS
  *     --tk-info      no run: boot, init, then the record's header as JSON (version, size, name, claims; rfm1_check)
  *     --tk           drive the takeover as a Move host does: rfm1_tk_state(1, the record's claims, flags) at --tk-at,
  *                    the --tk-ev events through rfm1_tk_input (only the claimed controls'; the others are printed
@@ -1468,7 +1470,8 @@ static void ep_poll(uint32_t ms)       /* after a call: what moved */
         }
     }
 }
-/* --ep-set L:PID=V@MS, --ep-watch L:P@MS (P -1: none) */
+/* --ep-set / --ep-lock L:PID=V@MS, --ep-free L:PID@MS, --ep-free-all L@MS, --ep-watch L:P@MS (P -1: none); op: the
+ * export's 1 SET 2 LOCK 3 FREE 4 FREE_ALL, 10 the watch */
 static int ep_parse(const char *a, int op)
 {
     char *e;
@@ -1476,11 +1479,14 @@ static int ep_parse(const char *a, int op)
         return 0;
     g_ep.ev[g_ep.nev].op = op;
     g_ep.ev[g_ep.nev].layer = (int)strtol(a, &e, 10);
-    if (*e != ':')
-        return 0;
-    g_ep.ev[g_ep.nev].pid = (int)strtol(e + 1, &e, 10);
+    g_ep.ev[g_ep.nev].pid = 0;
     g_ep.ev[g_ep.nev].v = 0;
-    if (op == 1) {
+    if (op != 4) {
+        if (*e != ':')
+            return 0;
+        g_ep.ev[g_ep.nev].pid = (int)strtol(e + 1, &e, 10);
+    }
+    if (op == 1 || op == 2) {
         if (*e != '=')
             return 0;
         g_ep.ev[g_ep.nev].v = (int)strtol(e + 1, &e, 10);
@@ -1491,14 +1497,22 @@ static int ep_parse(const char *a, int op)
     g_ep.nev++;
     return !*e;
 }
-static void ep_ms(uint32_t ms)         /* the calls due at ms, before its tick */
+static struct { uint32_t pkt, at; } g_midi[64];   /* --midi */
+static int g_nmidi;
+static void ep_ms(uint32_t ms)         /* the calls due at ms, before its tick (and --midi's messages) */
 {
+    for (int k = 0; k < g_nmidi; k++)
+        if (g_midi[k].at == ms) {
+            (void)call(F_MIDI_IN, g_midi[k].pkt, 0, 0, 0);
+            printf("midi@%u: %06x\n", ms, g_midi[k].pkt >> 8);
+        }
     for (int k = 0; k < g_ep.nev; k++)
         if (g_ep.ev[k].at == ms) {
-            if (g_ep.ev[k].op == 1) {
+            if (g_ep.ev[k].op <= 4) {
+                static const char *const OPN[5] = {"", "set", "lock", "free", "free-all"};
                 const double t0 = now_s();
-                const int32_t r = (int32_t)call(F_EP_SET, 1, (uint32_t)g_ep.ev[k].layer, (uint32_t)g_ep.ev[k].pid,
-                                                (uint32_t)g_ep.ev[k].v);
+                const int32_t r = (int32_t)call(F_EP_SET, (uint32_t)g_ep.ev[k].op, (uint32_t)g_ep.ev[k].layer,
+                                                (uint32_t)g_ep.ev[k].pid, (uint32_t)g_ep.ev[k].v);
                 const double us = (now_s() - t0) * 1e6;
                 g_ep.sets++;
                 g_ep.set_us_total += us;
@@ -1506,7 +1520,8 @@ static void ep_ms(uint32_t ms)         /* the calls due at ms, before its tick *
                     g_ep.set_us_worst = us;
                 if (r)
                     g_ep.bad_sets++;
-                printf("ep-set@%u: layer %d pid %d = %d -> %d\n", ms, g_ep.ev[k].layer, g_ep.ev[k].pid, g_ep.ev[k].v, r);
+                printf("ep-%s@%u: layer %d pid %d = %d -> %d\n", OPN[g_ep.ev[k].op], ms, g_ep.ev[k].layer, g_ep.ev[k].pid,
+                       g_ep.ev[k].v, r);
             } else {
                 call(F_EP_WATCH, (uint32_t)g_ep.ev[k].layer, (uint32_t)g_ep.ev[k].pid, 0, 0);
                 printf("ep-watch@%u: layer %d page %d\n", ms, g_ep.ev[k].layer, g_ep.ev[k].pid);
@@ -1526,7 +1541,8 @@ static void usage(void)
           "                [--turn ROLE@MS[:N]].. [--readouts] [--expect-readout S].. [--verbose] [--describe [--labels] [--out FILE]]\n"
           "                [--tk-info] [--tk [--tk-at MS] [--tk-off-at MS] [--tk-speech] [--tk-ev SPEC].. [--tk-script FILE]\n"
           "                 [--tk-screen FILE.pbm|-] [--tk-leds]]\n"
-          "                [--ep-info] [--ep] [--ep-set L:PID=V@MS].. [--ep-watch L:P@MS].. <file.rfm1>\n", stderr);
+          "                [--ep-info] [--ep] [--ep-set L:PID=V@MS].. [--ep-lock L:PID=V@MS].. [--ep-free L:PID@MS]..\n"
+          "                [--ep-free-all L@MS].. [--ep-watch L:P@MS].. [--midi HEX@MS].. <file.rfm1>\n", stderr);
 }
 
 int main(int argc, char **argv)
@@ -1657,8 +1673,31 @@ int main(int argc, char **argv)
                 fprintf(stderr, "rfm1_run: --ep-set %s: LAYER:PID=VALUE@MS\n", argv[i]);
                 return 2;
             }
-        } else if (!strcmp(a, "--ep-watch") && more) {
+        } else if (!strcmp(a, "--ep-lock") && more) {
             if (!ep_parse(argv[++i], 2)) {
+                fprintf(stderr, "rfm1_run: --ep-lock %s: LAYER:PID=VALUE@MS\n", argv[i]);
+                return 2;
+            }
+        } else if (!strcmp(a, "--ep-free") && more) {
+            if (!ep_parse(argv[++i], 3)) {
+                fprintf(stderr, "rfm1_run: --ep-free %s: LAYER:PID@MS\n", argv[i]);
+                return 2;
+            }
+        } else if (!strcmp(a, "--ep-free-all") && more) {
+            if (!ep_parse(argv[++i], 4)) {
+                fprintf(stderr, "rfm1_run: --ep-free-all %s: LAYER@MS (255: every layer)\n", argv[i]);
+                return 2;
+            }
+        } else if (!strcmp(a, "--midi") && more && g_nmidi < 64) {   /* --midi HEX@MS: a short message into midi_in */
+            unsigned b0 = 0, b1 = 0, b2 = 0, at = 0;
+            if (sscanf(argv[++i], "%2x%2x%2x@%u", &b0, &b1, &b2, &at) != 4) {
+                fprintf(stderr, "rfm1_run: --midi %s: three bytes as hex, @MS (B04A40@5000)\n", argv[i]);
+                return 2;
+            }
+            g_midi[g_nmidi].pkt = (b0 >> 4) | b0 << 8 | b1 << 16 | b2 << 24;
+            g_midi[g_nmidi++].at = at;
+        } else if (!strcmp(a, "--ep-watch") && more) {
+            if (!ep_parse(argv[++i], 10)) {
                 fprintf(stderr, "rfm1_run: --ep-watch %s: LAYER:PAGE@MS\n", argv[i]);
                 return 2;
             }

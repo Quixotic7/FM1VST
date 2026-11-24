@@ -574,6 +574,15 @@ static uint32_t ep_epoch;
 static int16_t ep_wpage = -1;
 static uint8_t ep_wlayer;
 static uint32_t ep_nsets;              /* SETs applied (rfm1_run --ep reports it) */
+/* the holds (SPEC.md 5): per layer up to EP_HOLDS parameters a host LOCKed, each with its base (the value outside the
+ * lock: what FREE writes back) and the value it locked (what the firmware read after the write: a firmware that
+ * writes the parameter itself makes them differ, and the hold is dropped, its value the new base). An engine switch
+ * drops the layer's holds */
+#define EP_HOLDS 64
+typedef struct { uint16_t x; int16_t base, val; } ep_hold_t;
+static ep_hold_t ep_hold[EP_LAYERS][EP_HOLDS];
+static uint8_t ep_nhold[EP_LAYERS], ep_hold_eng[EP_LAYERS];
+static uint32_t ep_nlocks, ep_nfrees, ep_ndropped;
 
 static uint32_t ep_next(uint32_t s) { return s + 1u ? s + 1u : 1u; }
 static void ep_name(char *d, const char *s, uint32_t n)   /* printable ASCII, NUL-padded, cut at n - 1 */
@@ -840,6 +849,77 @@ static int ep_open(void)               /* the description and the record, once (
     ep_state = 1;
     return 1;
 }
+static int ep_find_hold(int l, int x)
+{
+    int i;
+    for (i = 0; i < ep_nhold[l]; i++)
+        if (ep_hold[l][i].x == x)
+            return i;
+    return -1;
+}
+static void ep_drop_hold(int l, int i)
+{
+    ep_hold[l][i] = ep_hold[l][--ep_nhold[l]];
+}
+/* the holds against the firmware now: an engine switch drops a layer's; a value the firmware changed itself drops
+ * that one (the firmware's value is the base now: nothing to write back). Before the values are read after a frame */
+static void ep_holds_check(void)
+{
+    int l, i;
+    for (l = 0; l < EPS->nlayers; l++) {
+        if (!ep_nhold[l])
+            continue;
+        if (EPR.lay[l][0] != ep_hold_eng[l]) {
+            ep_ndropped += ep_nhold[l];
+            ep_nhold[l] = 0;
+            continue;
+        }
+        for (i = ep_nhold[l] - 1; i >= 0; i--)
+            if (EPS->get(l, EPS->params[ep_hold[l][i].x].pid) != ep_hold[l][i].val) {
+                ep_ndropped++;
+                ep_drop_hold(l, i);
+            }
+    }
+}
+static void ep_value_one(int l, int x)  /* one value again (after a LOCK / FREE: no whole refresh) */
+{
+    int16_t *row = ep_val + l * EPS->nparams;
+    int32_t v = EPS->get(l, EPS->params[x].pid);
+    if (v != RFM1_EP_NONE)
+        v = v < -32767 ? -32767 : v > 32767 ? 32767 : v;
+    if (row[x] != (int16_t)v) {
+        row[x] = (int16_t)v;
+        if ((EPS->params[x].flags & RFM1_EPF_GLOBAL))
+            for (int k = 0; k < EPS->nlayers; k++)
+                ep_val[k * EPS->nparams + x] = (int16_t)v;
+        EPR.val_seq = ep_next(EPR.val_seq);
+    }
+}
+/* the firmware's set, quietly: how 1 a SET (the sound marked edited as its editor does), 2 a lock's write or its
+ * return (not an edit of the sound); readouts it pushed dropped */
+static void ep_write(int l, int x, int32_t v, int how)
+{
+#ifdef RFM1_RD1
+    const rfm1_readout_t rd = RD;
+    const uint32_t pushes = rd_pushes;
+#endif
+    rfm1_ep_host = how;
+    EPS->set(l, EPS->params[x].pid, v);
+    rfm1_ep_host = 0;
+#ifdef RFM1_RD1
+    RD = rd;
+    rd_pushes = pushes;
+#endif
+}
+static void ep_free_layer(int l)       /* every hold of layer l back to its base */
+{
+    while (ep_nhold[l]) {
+        const ep_hold_t h = ep_hold[l][--ep_nhold[l]];
+        ep_write(l, h.x, h.base, 2);
+        ep_value_one(l, h.x);
+        ep_nfrees++;
+    }
+}
 static void ep_refresh(void)
 {
     if (EPS->epoch && EPS->epoch() != ep_epoch) {   /* (a description made at run time: made again) */
@@ -854,6 +934,7 @@ static void ep_refresh(void)
         }
     }
     ep_layers();
+    ep_holds_check();
     ep_values();
     ep_cells();
 }
@@ -870,8 +951,20 @@ EXPORT(rfm1_ep_set) int32_t rfm1_ep_set(int32_t op, int32_t layer, int32_t pid, 
     uint8_t e;
     if (!ep_open())
         return -1;
-    if (op != 1)
-        return -3;                     /* (LOCK, FREE, FREE_ALL: stage 3) */
+    if (op < 1 || op > 4)
+        return -3;
+    if (op == 4) {                     /* FREE_ALL: the layer's holds (layer 0xFF or -1: every layer's) */
+        ep_layers();
+        ep_holds_check();
+        if (layer == 0xFF || layer < 0) {
+            for (int l = 0; l < EPS->nlayers; l++)
+                ep_free_layer(l);
+        } else if (layer < EPS->nlayers)
+            ep_free_layer(layer);
+        else
+            return -1;
+        return 0;
+    }
     if (layer < 0 || layer >= EPS->nlayers || pid <= 0 || pid >= 0xFFFF || (x = ep_pidx((uint16_t)pid)) < 0)
         return -1;
     q = &EPS->params[x];
@@ -882,22 +975,54 @@ EXPORT(rfm1_ep_set) int32_t rfm1_ep_set(int32_t op, int32_t layer, int32_t pid, 
     if (e == 0xFF || !ep_on[e * EPS->nparams + (uint32_t)x])
         return -1;
     value = value < q->min ? q->min : value > q->max ? q->max : value;
+    if (ep_nhold[layer] && EPR.lay[layer][0] != ep_hold_eng[layer])
+        ep_nhold[layer] = 0;           /* (an engine switch since the last frame: its holds gone) */
     {
-#ifdef RFM1_RD1
-        const rfm1_readout_t rd = RD;  /* (a readout the write pushes: dropped) */
-        const uint32_t pushes = rd_pushes;
-#endif
-        rfm1_ep_host = 1;
-        EPS->set(layer, (uint16_t)pid, value);
-        rfm1_ep_host = 0;
-#ifdef RFM1_RD1
-        RD = rd;
-        rd_pushes = pushes;
-#endif
+        const int h = ep_find_hold(layer, x);
+        if (op == 1) {                 /* SET: held, the base only (the step goes on as locked); else the value */
+            if (h >= 0 && EPS->get(layer, (uint16_t)pid) == ep_hold[layer][h].val) {
+                ep_hold[layer][h].base = (int16_t)value;
+                ep_nsets++;
+                return 0;
+            }
+            if (h >= 0)
+                ep_drop_hold(layer, h);
+            ep_write(layer, x, value, 1);
+            ep_nsets++;
+            ep_refresh();
+            return 0;
+        }
+        if (op == 2) {                 /* LOCK: the base kept at the first, the value written */
+            int32_t g;
+            if (q->flags & RFM1_EPF_NOLOCK)
+                return -2;
+            if (h < 0) {
+                if (ep_nhold[layer] >= EP_HOLDS)
+                    return -4;
+                g = EPS->get(layer, (uint16_t)pid);
+                if (g == RFM1_EP_NONE)
+                    return -1;
+                if (!ep_nhold[layer])
+                    ep_hold_eng[layer] = e;
+                ep_hold[layer][ep_nhold[layer]].x = (uint16_t)x;
+                ep_hold[layer][ep_nhold[layer]].base = (int16_t)g;
+                ep_nhold[layer]++;
+            }
+            ep_write(layer, x, value, 2);
+            ep_hold[layer][h >= 0 ? h : ep_nhold[layer] - 1].val = (int16_t)EPS->get(layer, (uint16_t)pid);
+            ep_value_one(layer, x);
+            ep_nlocks++;
+            return 0;
+        }
+        if (h >= 0) {                  /* FREE: the base written back (not held: nothing) */
+            const int16_t b = ep_hold[layer][h].base;
+            ep_drop_hold(layer, h);
+            ep_write(layer, x, b, 2);
+            ep_value_one(layer, x);
+            ep_nfrees++;
+        }
+        return 0;
     }
-    ep_nsets++;
-    ep_refresh();
-    return 0;
 }
 EXPORT(rfm1_ep_watch) void rfm1_ep_watch(int32_t layer, int32_t page)
 {

@@ -56,7 +56,9 @@ typedef struct {
 
 /* the firmware's (or its glue's), asked once after init; NULL: no ep1 */
 const rfm1_ep_src_t *fm1core_ep(void) __attribute__((weak));
-/* 1 while the shim's set() call runs: draw nothing, push no readout (the shim drops readouts pushed meanwhile) */
+/* while the shim's set() call runs: 1 a SET (the host's knob: an edit of the sound, as the firmware's own editor
+ * marks it), 2 a step lock's write or its return (the sequencer's: not an edit of the sound); 0 otherwise. Draw
+ * nothing, push no readout (the shim drops readouts pushed meanwhile) */
 extern volatile int rfm1_ep_host;
 #endif
 
