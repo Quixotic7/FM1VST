@@ -20,7 +20,11 @@ dinghy_core(fmav1 core_fmav1.c)
 # (the screen's text, rasterised into firmware/gen) and (0.6) the MPL-2.0 of fm1-base's announce.c (the screen reader,
 # built in: the tree has no copy of the text, so licences/fmav1/MPL-2.0.txt, the standard text). Not the JieLi SDK's
 # Apache-2.0 (device packages only).
-fm1_add_rfm1(fmav1 AUTHORS "wootrop & gpix" "zvenson"
+# rd1: the page's knobs as drawn, live labels and readouts (core_fmav1.c, common/rd_cols.h)
+fm1_add_rfm1(fmav1 WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_ATTACK_=_114ms --expect-readout ctl_6_RELEASE_=_469ms
+             AUTHORS "wootrop & gpix" "zvenson"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
                            "OFL-1.1 (Inter Tight, the screen's text in {name})=assets/fonts/InterTight-OFL.txt"
                            "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt"

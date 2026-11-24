@@ -135,4 +135,29 @@ static void fm1core_jo_ota_frame(const uint8_t *p, uint32_t n)   /* platform_pol
 }
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_jo_ota_frame((p), (n))
 
+/* the live knob labels and readouts (common/rd_cols.h): the four knob cards as JamesOS draws them, read the way its
+ * own screen reader does (instrument_reader.h rd_knob: br_control's label, br_control_text's value; the mixer's and
+ * KIT LEVEL's level in dB as the footer draws it, br_level_law); an empty card "" */
+#include "rd_cols.h"
+static void fm1core_jo_rd(void)
+{
+    uint32_t k;
+    rdc_begin();
+    for (k = 0; k < 4u; k++) {
+        char text[32];
+        br_control_t c = br_control(k);
+        text[0] = 0;
+        if (!c.label[0]) {
+            rdc_col(k, "", "");
+            continue;
+        }
+        if (rd_mixer())                   /* (as the footer draws the strip's level: through br_level_law, which
+                                           * the reader's rd_knob leaves out) */
+            br_level_db_text(text, br_level_law((uint32_t)c.value));
+        else
+            br_control_text(k, &c, text);
+        rdc_col(k, c.label, text);
+    }
+}
+#define FM1CORE_DG_AFTER_FRAME fm1core_jo_rd
 #include "dinghy_glue.h"
