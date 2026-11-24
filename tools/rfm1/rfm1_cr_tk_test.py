@@ -660,10 +660,20 @@ def main():
     ok(cpy.says[-1] == "Step 1 copied" and ink(cpy, 0, 0, 30, 30) and cpy.screen[37][1:7] == "111111",
        "Copy held: the copy icon, the steps (no step view)")
     PNGS["15-copy-held"] = cpy.screen
-    ac = Run([S6, "step:7@250+50", "pad:29@900+50"] + ["knob:1@%d:1" % (1200 + i * 15) for i in range(10)], 3000)
-    sc_ = Run([S6, "step:7@250+50", "pad:29@900+50"] + ["knob:1@%d:1" % (1200 + i * 150) for i in range(10)], 3000)
-    ok(ac.says[-1] == "Algo 32" and sc_.says[-1] == "Algo 15", "the editor's values accelerate: ten fast ticks the "
-       "end, ten slow ten steps (%s, %s)" % (ac.says[-1:], sc_.says[-1:]))
+    # values (the owner, 2026-11-24: "way too twitchy .. room size almost jumps from 0 to 127 while barely turning the
+    # knob", the cutoff slow to sweep): a step every 2 ticks (a turn's first tick at once), through the FM-1's own
+    # acceleration (kn_turn: slow, the finest step; quick, up to the range / 20 a detent); the editor's too
+    FXR = ["button:shift@200+900", "pad:%d@250+600" % SCP[5], "knob:0@1300:1"]     # FX held, the Reverb page
+    EDF = ["button:jogclick@200+50", "knob:0@400:1", "button:jogclick@700+50", S6.replace("200", "1000"),
+           "step:7@1050+50", "pad:29@1500+50"]                                    # FM TONE, the editor's filter
+    def turn(base, kn, t0, n, gap):
+        return Run(base + ["knob:%d@%d:-1" % (kn, t0 + i * gap) for i in range(n)], t0 + n * gap + 300).says[-1:]
+    rv = [turn(FXR, 1, 1800, 3, 10), turn(FXR, 1, 1800, 8, 200), turn(FXR, 1, 1800, 40, 8)]
+    ok(rv == [["Size 86"], ["Size 84"], ["Size 0"]], "FX Reverb Size (88): a quick nudge of 3 ticks two steps, 8 slow "
+       "ticks four, a quick spin of 40 the whole way (%s)" % rv)
+    fq = [turn(EDF, 5, 1900, 8, 200), turn(EDF, 5, 1900, 60, 8)]
+    ok(fq == [["Freq 126.96"], ["Freq 0.00"]], "the editor's FM TONE Freq (127.00, hi-res): 8 slow ticks 0.01 a "
+       "step, a quick spin of 60 the whole way (%s)" % fq)
     jt = Run([S6, "step:1@250+50", "touch:9@600+400", "knob:0@700:1"], 1100)
     ok(jt.says == ["Settings, Velocity: Dynamic", "Fixed level: 100"] and ink(jt, 0, 0, 100, 14) and
        jt.screen[16] == "1" * 128, "the Settings: the wheel touched and turned moves the row, no preset (%s)" % jt.says)
