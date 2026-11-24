@@ -110,4 +110,37 @@ static void fm1core_dg_info(char *buf, uint32_t n)
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
 #endif
 
+/* M-vance (the kit screens, MV_UI_KIT 1): the four cells as mv_kui_draw builds them, kui_knob (mv_kui.c, pure: it fills a kit_knob_t)
+ * with HOME_LABEL on HOME, the column's own label elsewhere; kit_cell draws k->lab and k->val as they are. A P_NONE column is empty.
+ * Nothing: the factory-bank question, a USB transfer, the piano roll (SEQ 2/2: no cells), DEBUG (its values are made inline). */
+#include "rd_cols.h"
+static void fm1core_mvance_rd(void)
+{
+    const ui_page_t *pg = &PAGES[ui.page];
+    kit_knob_t kn;
+    uint32_t k;
+    rdc_begin();
+    if (!KU.u || bank_ask)                      /* (KU.u: set by the first mv_kui_draw; kui_choice / kui_raw read it) */
+        return;
+#if MV_XFER
+    if (xfer_slots && xfer_busy())
+        return;
+#endif
+#if MV_SEQ
+    if (!mv_ui_home(&ui) && pg->p[0] == P_SQBAR)
+        return;
+#endif
+#if MV_DEBUG
+    if (!mv_ui_home(&ui) && page_kind(pg) == G_DEBUG)
+        return;
+#endif
+    for (k = 0; k < 4u; k++) {
+        if (mv_ui_home(&ui))
+            kui_knob(PAGES[0].p[k], HOME_LABEL[k], 0, &kn);
+        else
+            kui_knob(pg->p[k], 0, 0, &kn);
+        rdc_col(k, kn.lab, kn.val);
+    }
+}
+#define FM1CORE_DG_AFTER_FRAME fm1core_mvance_rd
 #include "dinghy_glue.h"

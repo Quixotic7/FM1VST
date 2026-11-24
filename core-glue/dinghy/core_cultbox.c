@@ -124,4 +124,30 @@ static void fm1core_dg_info(char *buf, uint32_t n)
 #define FM1CORE_DG_OTA_C "../../cores/CULTBOX/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
 
+/* CULTBOX: the four knobs of the page as app_main's draw_row draws them (param(p)->name, format_param), the page as app_main picks it
+ * (mix / SEQ / the engine's page); the mix page: mix_ui's channel names (its local NM / NM2 tables, copied), no value text drawn.
+ * Nothing: SEQ step edit (stepedit >= 0: sf_draw formats the four values inline). */
+#include "rd_cols.h"
+static void fm1core_cultbox_rd(void)
+{
+    static const char *const NM[4] = {"DRUMS", "PLVKS", "DUB", "MASTER"}, *const NM2[4] = {"DRUMS", "PLVKS", "DUB", "ECHO"};
+    uint32_t page = mixview ? mixpg : seqmode ? seqpg : set.page, k;
+    rdc_begin();
+    if (page >= npage())
+        page = 0;
+    if (mixview) {
+        for (k = 0; k < 4u; k++)
+            rdc_col(k, mixpg ? NM2[k] : NM[k], "");
+        return;
+    }
+    if (seqmode && stepedit >= 0)
+        return;
+    for (k = 0; k < 4u; k++) {
+        const unsigned p = page_param(page, k);
+        char s[24];
+        format_param(p, s);
+        rdc_col(k, param(p)->name, s);
+    }
+}
+#define FM1CORE_DG_AFTER_FRAME fm1core_cultbox_rd
 #include "dinghy_glue.h"
