@@ -12,7 +12,17 @@ are the reference; each item below says what the code does instead and why. Item
 2. **`text()` has no parameter argument**, so one function cannot word many parameters. Kept for a firmware with one
    curve per function; ChoralRoot's adapter gives `names` instead, made at init from the firmware's own formatter for
    every value (see 9). Proposal for a later version: `text2(pid, v, buf, n)`.
-3. **LOCK, FREE and FREE_ALL answer -3** (not yet taken) until stage 3; SET only. The shim has no hold table yet.
+3. **(Stage 3) The holds as SPEC.md 5, with these precisions.** Up to 64 a layer (a LOCK past them answers -4). The
+   locked value kept is the one the firmware reads back after the write (`get`), not the one asked, so a parameter
+   the firmware rounds or skips (an alias) is not taken for an outside edit. SET while held moves the base only while
+   the firmware still holds the locked value; after an outside edit (the hold already stale) it is a plain SET. The
+   check against outside edits runs after each frame and before a SET / LOCK of the layer; an engine switch is seen by
+   the layer's engine in the record differing from the one at the first LOCK. FREE_ALL's layer 0xFF (or -1): every
+   layer. LOCK / FREE refresh only that parameter's value in the record (not the whole record, as a SET does).
+   **`rfm1_ep_host` is 2 while a lock's write or its return runs** (1 for a SET): ChoralRoot's adapter then puts the
+   part's edited flag and its "slot's sound as stored" back, so a step lock never makes the sound "edited" (the
+   ctest compares every lock write with the SET's bytes). A lock on the chord's send still turns FX on, as every send
+   turned on the device does (`cu_send_set`).
 4. **Every SET refreshes the whole record** (all values of all layers, the layers, the cells) before it returns, so
    a host reading right after its call sees the result. ChoralRoot: about 170 `get` calls, 65 µs in wasm3 on the Mac
    (the Move runs wasm2c: a fraction of that). Stage 3's locks may want a refresh of the one value only.
@@ -70,7 +80,8 @@ are the reference; each item below says what the code does instead and why. Item
 
 21. **The record is asked for again after a snapshot's restore** (`fw_snap_restore` calls `rfm1_ep()` once): the
     snapshot format is unchanged (no new field), and once the module opened ep1 the call changes nothing.
-22. **The input queue stays at 256** (512 is stage 3's, with the locks).
+22. **The input queue is 512** (stage 3); a snapshot holds 256 queued inputs (the stored format's), so a snapshot asked
+    while more wait is refused for that moment (the host tries again, as for any refused snapshot).
 23. **`/api/status`'s per-slot `ep1`**: `desc`, `acts`, `watches`, `sets`, `refused`, `poll_us`, `layers`, `wlayer`,
     `wpage`, `cells` (SPEC.md 8 named "layers, engines, desc length, counts of sets / locks a second": counts since
     the slot's boot, not a rate).
@@ -102,3 +113,19 @@ are the reference; each item below says what the code does instead and why. Item
 37. The list's title line and the arrival popup's layer / engine line use the 1x font (the only small text), as
     DESIGN.md's layouts do; every value and name is 2x or larger.
 38. The watch includes the track: selecting another track sends EP_WATCH again even for the same page.
+
+## A proposal: recording knob turns as locks (the owner's answer 4, a later stage)
+
+The owner: "Yes but we should have a record toggle for automation", for CCs and engine parameters together. Proposal:
+
+- **Where**: a row **Automate** (Off / On) in the Record Shift menu (Shift + the Record step, beside the count-in and
+  the capture rows), so it sits with the other recording choices and is reached the same way; **Shift + Record**
+  (the button) toggles it directly, at the press, with a one-second popup "Automate On" / "Off" and speech.
+- **What it shows**: while armed, the Record button lights in a second colour (amber, against the note recording's
+  red), so arming is visible at a glance and never confused with note recording; when both are on, it alternates.
+- **What it does**: with Automate on and the transport playing in a clip of the track, a knob turned on ENGINE (or on
+  a CC bank) writes a lock on each step the playhead passes while the knob is touched (the Move's own automation),
+  one undo step per touch; a touched, unturned knob writes nothing. The steps written show the lock dot as any lock.
+  Recording notes (Record) and Automate are independent.
+- **Why a separate toggle**: the owner's word; and a performance turn of a knob must stay a performance unless asked
+  for, as on Elektron boxes (their "parameter recording" needs REC armed too, but here REC already means notes).
