@@ -138,8 +138,13 @@ Ableton Move: its knob popup). Built with `WANTS rd1`:
   `rfm1_run --turn K1@2000:3` turns a knob (SELECT ALGO PRESETS K1..K4) by detents at a device ms;
   `--expect-readout ctl_3_E5_CUT_=_412_Hz` fails the run unless a readout `ctl C title = value` contains it ('_' a
   space). `fm1_add_rfm1(.. WANTS rd1 READOUT_TEST <turns and expectations>)` makes that the ctest `rfm1_rd_<id>`.
+- **An adapter, without a map:** a glue that reads a firmware's own tables defines `fm1core_rd_knob(role, title,
+  value, n, &frac, &flags)` (rfm1_ext.h; weak): the bridge asks it, for a core with no Tier 2 map, about each knob the
+  core took in the frame; with `fm1core_labels_epoch` / `fm1core_label` beside it the same adapter gives the live
+  labels. The pattern: core-glue/dinghy/grimm_rd.h (GR!MM 2, Glitch, Arctic Scream).
 - **Built with it:** ChoralRoot (its own lines and the bridge), Melodee and Felucca (the bridge over their Tier 2
-  maps, core_melodee_params.c / core_felucca_params.c: the audio is bit-identical to the build without rd1).
+  maps, core_melodee_params.c / core_felucca_params.c), GR!MM 2, Glitch and Arctic Scream (grimm_rd.h). The audio is
+  bit-identical to the released files over the same run.
 
 ## Check it
 

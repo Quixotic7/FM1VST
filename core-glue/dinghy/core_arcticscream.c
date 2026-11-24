@@ -219,3 +219,14 @@ static void fm1core_grm_render(int32_t *o, uint32_t frames, int32_t master_q12)
 #define FM1CORE_DG_SYSEX_READY() fm1core_grm_sx_ready()
 
 #include "dinghy_glue.h"
+
+/* the live labels and readouts: GR!MM's control map read as the screen reads it (grimm_rd.h) */
+#define FM1CORE_GRM_KT_PAGES                 /* (arctic.c's knob_text: GR!MM's pages and its own, SPACE the default) */ \
+    (FM1CORE_GRM_PG(PG_SOUND) | FM1CORE_GRM_PG(PG_SOURCE) | FM1CORE_GRM_PG(PG_ENV) | FM1CORE_GRM_PG(PG_LFO) | \
+     FM1CORE_GRM_PG(PG_SCALE) | FM1CORE_GRM_PG(PG_CHORD) | FM1CORE_GRM_PG(PG_SONG) | FM1CORE_GRM_PG(PG_HOME) | \
+     FM1CORE_GRM_PG(PG_MIX1) | FM1CORE_GRM_PG(PG_MIX2) | FM1CORE_GRM_PG(PG_ARP) | FM1CORE_GRM_PG(PG_TAPE) | \
+     FM1CORE_GRM_PG(PG_GRAIN) | FM1CORE_GRM_PG(PG_DELAY) | FM1CORE_GRM_PG(PG_SPACE) | FM1CORE_GRM_PG(PG_MASTER) | \
+     FM1CORE_GRM_PG(PG_DRIVE) | FM1CORE_GRM_PG(PG_DRONE) | FM1CORE_GRM_PG(PG_SYS3) | FM1CORE_GRM_PG(PG_LOOP) | \
+     FM1CORE_GRM_PG(PG_AIR) | FM1CORE_GRM_PG(PG_JIEHKKI) | FM1CORE_GRM_PG(PG_RUOHCAT) | FM1CORE_GRM_PG(PG_JAHKI) | \
+     FM1CORE_GRM_PG(PG_ENV2) | FM1CORE_GRM_PG(PG_SYS4) | FM1CORE_GRM_PG(PG_TIDE))
+#include "grimm_rd.h"
