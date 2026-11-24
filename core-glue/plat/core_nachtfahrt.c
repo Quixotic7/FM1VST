@@ -79,7 +79,26 @@ static void fm1core_nachtfahrt_sx_service(void)   /* main_fm1.c fm1_main, each p
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME "NACHTFAHRT"
-#define FM1CORE_PL_UI_FRAME() ui_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the knob row as app/ui.c draw_knobs draws it (VIEW_KNOB[ui.view],
+ * its KNOB_LABEL, knob_text without a leading plus, as drawn); REC held (the effects' grid over the whole screen): not
+ * given; no knob there "" */
+#include "rd_cols.h"
+static void fm1core_nachtfahrt_rd(void)
+{
+    int i;
+    rdc_begin();
+    if (grid_up())
+        return;
+    for (i = 0; i < 4; i++) {
+        const int k = VIEW_KNOB[ui.view][i];
+        char t[24];
+        t[0] = 0;
+        if (k != K_NONE)
+            knob_text(k, t);
+        rdc_col((uint32_t)i, k == K_NONE ? "" : KNOB_LABEL[ui.view][i], t + (t[0] == '+'));
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (ui_frame(), fm1core_nachtfahrt_rd())
 #define FM1CORE_PL_UI_INPUT() ui_input_only()
 #define FM1CORE_PL_DIM_LEVEL FM1P_LED_DIM /* the buttons' glow: one scan frame in GLOW_DIV */
 static void fm1core_pl_flash_boot(void) {}

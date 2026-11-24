@@ -14,7 +14,11 @@ fm1_add_core(zen1 ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_zen1} UNIT core_zen1.c DES
 
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: its GPL, its LICENSING.md, msfa's
 # Apache-2.0, the fonts' OFL, and the recordings' and the moon's sources (CC0, public domain: assets/*/README.md)
-fm1_add_rfm1(zen1 AUTHORS "aceyprime"
+# rd1: the knob row as drawn, live labels and readouts (core_zen1.c, common/rd_cols.h)
+fm1_add_rfm1(zen1 WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_Mood_=_Morning --expect-readout ctl_6_Space_=_56
+             AUTHORS "aceyprime"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
                            "Apache-2.0 (msfa in {name})=LICENSES/Apache-2.0-msfa.txt"
                            "OFL-1.1 (the Barlow font in {name})=assets/fonts/Barlow-OFL.txt"

@@ -34,7 +34,11 @@ fm1_add_core(mightyarp ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_ma} UNIT core_mightya
 
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: Mighty Arp's LICENSE (MPL-2.0) and
 # LICENSING.md, fm1-base's and felucca-bsp's MPL-2.0 with their notes, the Barlow OFL (gen_font.py's set; Terminus is not built in).
-fm1_add_rfm1(mightyarp AUTHORS "Nick Culbertson"
+# rd1: the knobs as drawn, live labels and readouts (core_mightyarp.c, common/rd_cols.h)
+fm1_add_rfm1(mightyarp WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_6_RELEASE_=_2.1_S
+             AUTHORS "Nick Culbertson"
              LICENSE_FILES "MPL-2.0 ({name}, LICENSE)=LICENSE"
                            "{name} licensing (LICENSING.md)=LICENSING.md"
                            "MPL-2.0 (fm1-base, base/LICENSE)=base/LICENSE"

@@ -28,7 +28,11 @@ fm1_add_core(fmkick ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_fk} UNIT core_fmkick.c D
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: the repository's MPL-2.0 (LICENSE),
 # LICENSING.md and CREDITS.md (fm1-base's, which FM-KICK is), felucca-bsp's MPL-2.0 with its notes, the Barlow OFL
 # (gen_font.py's set; Terminus is not built in)
-fm1_add_rfm1(fmkick AUTHORS "David Amo"
+# rd1: the footer's knobs as drawn, live labels and readouts (core_fmkick.c, common/rd_cols.h)
+fm1_add_rfm1(fmkick WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press LFO@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_TARGET_=_TYPE --expect-readout ctl_6_LENGTH_=_17
+             AUTHORS "David Amo"
              LICENSE_FILES "MPL-2.0 ({name}, LICENSE)=LICENSE"
                            "{name} licensing (LICENSING.md)=LICENSING.md"
                            "fm1-base credits (CREDITS.md)=CREDITS.md"

@@ -14,4 +14,8 @@ plat_golden(fomni GEN_TARGET gen_fomni SOURCES ${_fomni}/host/omni_host.c ${_fom
             DEFINES OM_HOST INCLUDES ${_fomni}/firmware/src ${_fomni}/firmware/src/dsp ${_fomni}/build/gen
             SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden_fomni.txt)
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
-fm1_add_rfm1(fomni AUTHORS "Charles Vestal")
+# rd1: the knob row as drawn, live labels and readouts (core_fomni.c, common/rd_cols.h)
+fm1_add_rfm1(fomni WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press FX@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_Reverb_=_31 --expect-readout ctl_6_Chord_rev_=_26
+             AUTHORS "Charles Vestal")

@@ -75,7 +75,23 @@ static void fm1core_fomni_sx_service(void)   /* main_fm1.c fm1_main, each pass (
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME "FoMni"
-#define FM1CORE_PL_UI_FRAME() ui_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the knob row as app/ui.c draws it (VIEW_KNOB[ui.view],
+ * knob_name, knob_text); no knob there "" */
+#include "rd_cols.h"
+static void fm1core_fomni_rd(void)
+{
+    int i;
+    rdc_begin();
+    for (i = 0; i < 4; i++) {
+        const int k = VIEW_KNOB[ui.view][i];
+        char t[24];
+        t[0] = 0;
+        if (k != K_NONE)
+            knob_text(k, t);
+        rdc_col((uint32_t)i, k == K_NONE ? "" : knob_name(k), t);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (ui_frame(), fm1core_fomni_rd())
 #define FM1CORE_PL_UI_INPUT() ui_input_only()
 #define FM1CORE_PL_DIM_LEVEL FM1P_LED_DIM /* the buttons' glow: one scan frame in GLOW_DIV */
 static void fm1core_pl_flash_boot(void) {}

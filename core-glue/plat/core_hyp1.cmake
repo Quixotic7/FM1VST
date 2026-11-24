@@ -17,7 +17,11 @@ fm1_add_core(hyp1 ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_hyp1} UNIT core_hyp1.c DES
 
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: its GPL, its LICENSING.md and the
 # fonts' OFL (Chakra Petch on the screen; Barlow and Terminus in assets/fonts/)
-fm1_add_rfm1(hyp1 AUTHORS "RedtailWorks"
+# rd1: the knob row as drawn, live labels and readouts (core_hyp1.c, common/rd_cols.h)
+fm1_add_rfm1(hyp1 WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_Level_=_24 --expect-readout ctl_6_Detune_=_31
+             AUTHORS "RedtailWorks"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
                            "OFL-1.1 (the Chakra Petch font in {name})=assets/fonts/ChakraPetch-OFL.txt"
                            "OFL-1.1 (the Barlow font in {name})=assets/fonts/Barlow-OFL.txt"

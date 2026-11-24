@@ -295,7 +295,22 @@ static void fm1core_fk_sx_service(void)
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME APP_NAME
-#define FM1CORE_PL_UI_FRAME() app_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the footer's four knobs as kick/app.c draw_footer draws them
+ * (knob_info: name, text); HOME (no knobs, its two inits): not given */
+#include "rd_cols.h"
+static void fm1core_fmkick_rd(void)
+{
+    int i;
+    rdc_begin();
+    if (ui.mode == M_HOME)
+        return;
+    for (i = 0; i < 4; i++) {
+        knob_t k;
+        knob_info(i, &k);
+        rdc_col((uint32_t)i, k.name, k.val);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (app_frame(), fm1core_fmkick_rd())
 #define FM1CORE_PL_UI_INPUT() app_input_only()
 #define FM1CORE_PL_DIM_LEVEL (fm1core_fb_dim_lo ? FM1P_LED_FAINT : FM1P_LED_DIM)   /* the glow: DIM LO / HI */
 #define FM1CORE_PL_DIM_ON 1               /* (plat_lights fills the dim plane only while glowing) */

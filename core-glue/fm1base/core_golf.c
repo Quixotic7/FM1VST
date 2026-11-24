@@ -222,7 +222,23 @@ static void fm1core_golf_sx_service(void)
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME APP_NAME
-#define FM1CORE_PL_UI_FRAME() app_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the page's four knobs as eigen/app.c draw_bot draws them
+ * (PAGE[ui.page][k].name, par_text); a knob with nothing there "" */
+#include "rd_cols.h"
+static void fm1core_golf_rd(void)
+{
+    uint32_t k;
+    rdc_begin();
+    for (k = 0; k < 4u; k++) {
+        const par_t *q = &PAGE[ui.page][k];
+        char t[24];
+        t[0] = 0;
+        if (q->kind != K_NONE)
+            par_text(q, t);
+        rdc_col(k, q->kind == K_NONE ? "" : q->name, t);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (app_frame(), fm1core_golf_rd())
 #define FM1CORE_PL_UI_INPUT() app_input_only()
 #define FM1CORE_PL_DIM_LEVEL (fm1core_fb_dim_lo ? FM1P_LED_FAINT : FM1P_LED_DIM)   /* the glow: DIM LO / HI */
 #define FM1CORE_PL_DIM_ON 1               /* (plat_lights fills the dim plane only while glowing) */
