@@ -3,4 +3,5 @@
  * felucca.c has SLOOP's include list, so the SLOOP-family glue (sloop_core.c) runs it as SLOOP */
 #define FM1CORE_SL_C1_BAR 1                /* SLOOP 2.8.3's fm1_cpu1_bar / fm1_cpu1_halt / fm1_c1_mb (sloop_hal.h) */
 #define FM1CORE_SL_FW 1                   /* FM1CORE_SL_SLOOP (sloop_firmware.h) */
+#define FM1CORE_SL_RD 1                   /* the live knob labels and readouts (sloop_rd.h) */
 #include "sloop_core.c"

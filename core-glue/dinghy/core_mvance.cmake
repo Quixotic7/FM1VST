@@ -32,7 +32,11 @@ dinghy_core(mvance core_mvance.c)
 # the SMK-37 layer, Skiff's arpeggiator), the Terminus font's OFL and DejaVu's licence (mv_kit_gen.h's font tables,
 # MV_UI_KIT 1). Not the MPL-2.0 of uac_out.c (USB audio) nor fm1-kit's fk_ble (MPL-2.0 / Apache-2.0, Bluetooth): the
 # device branch only; nor the JieLi SDK's Apache-2.0 (device packages only).
-fm1_add_rfm1(mvance AUTHORS "Kris (bk40-home)" "zvenson"
+# rd1: its knob row as drawn, live labels and readouts (core_mvance.c, common/rd_cols.h)
+fm1_add_rfm1(mvance WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_DEPTH_=_+1
+             AUTHORS "Kris (bk40-home)" "zvenson"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name}: who made what)=LICENSING.md"
                            "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt"
                            "Bitstream Vera / DejaVu (DejaVu Sans Condensed Bold in {name})=assets/fonts/dejavu/LICENSE")

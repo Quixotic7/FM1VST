@@ -150,7 +150,26 @@ static void fm1core_ma_sx_service(void)
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME APP_NAME
-#define FM1CORE_PL_UI_FRAME() app_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the four knobs as app/app.c draws them (HOME: the page's macros
+ * pg->p; a page: page_knob, PX_NONE an empty place ""; par_name, param_text) */
+#include "rd_cols.h"
+static void fm1core_mightyarp_rd(void)
+{
+    uint32_t i;
+    rdc_begin();
+    for (i = 0; i < 4u; i++) {
+        const uint32_t p = ui.page == PG_HOME ? PAGE[ui.page].p[i] : page_knob(i);
+        char t[32];
+        t[0] = 0;
+        if (p == PX_NONE) {
+            rdc_col(i, "", "");
+            continue;
+        }
+        param_text(p, t);
+        rdc_col(i, par_name(p), t);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (app_frame(), fm1core_mightyarp_rd())
 #define FM1CORE_PL_UI_INPUT() app_input_only()
 #define FM1CORE_PL_DIM_LEVEL (fm1core_fb_dim_lo ? FM1P_LED_FAINT : FM1P_LED_DIM)   /* the glow: DIM LO / HI */
 #define FM1CORE_PL_DIM_ON 1               /* (plat_lights fills the dim plane only while glowing) */

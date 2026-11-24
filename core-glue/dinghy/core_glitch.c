@@ -215,3 +215,7 @@ static void fm1core_grm_render(int32_t *o, uint32_t frames, int32_t master_q12)
 #define FM1CORE_DG_SYSEX_READY() fm1core_grm_sx_ready()
 
 #include "dinghy_glue.h"
+
+/* the live labels and readouts: GR!MM's control map read as the screen reads it (grimm_rd.h) */
+#define FM1CORE_GRM_MIX1_TILE 1             /* (MIXER 1: SELECT picks the tile) */
+#include "grimm_rd.h"

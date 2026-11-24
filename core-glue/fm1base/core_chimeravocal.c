@@ -212,7 +212,72 @@ static void fm1core_chv_sx_service(void)
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME APP_NAME
-#define FM1CORE_PL_UI_FRAME() app_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the knob row as app/app.c draws it on each page of draw():
+ * draw_home (PAGE[page][i], KNOB[id].name, "NASAL" for VELUM on VOWEL, knob_text), draw_seal (CRE_PAGE, CRE->p[id].name,
+ * seal_text), draw_beat (TEMPO / SWING / STEP, K4 none) and draw_song (TEMPO / KEY / VIBRATO / SLOT), as drawn.
+ * Not given: the word editor (ed.on: its legend, K1 moves the cursor, K2 types marks) and the debug page (page_debug). */
+#include "rd_cols.h"
+static void fm1core_chimeravocal_rd(void)
+{
+    char t[32];
+    int i;
+    rdc_begin();
+    if (ed.on || page_debug)
+        return;
+    if (bt.on) {                              /* draw_beat's strip */
+        int_text(beats.b[bt.slot].bpm, t);
+        rdc_col(0, "TEMPO", t);
+        int_text(beats.b[bt.slot].swing, t);
+        text_cat(t, "%");
+        rdc_col(1, "SWING", t);
+        int_text(bt.cur + 1, t);
+        rdc_col(2, "STEP", t);
+        rdc_col(3, "", "");
+        return;
+    }
+    if (sg.on) {                              /* draw_song's strip */
+        static const char *const NM[4] = {"TEMPO", "KEY", "VIBRATO", "SLOT"};
+        for (i = 0; i < 4; i++) {
+            t[0] = 0;
+            if (i == 0) {
+                text_cat(t, "X");
+                fmt1((float)sng.tempo / 100.0f, t + 1);
+                if (sng.tempo % 10) {
+                    char d[2] = {(char)('0' + sng.tempo % 10), 0};
+                    text_cat(t, d);
+                }
+            } else if (i == 1) {
+                if (sng.key > 0)
+                    text_cat(t, "+");
+                int_text(sng.key, t + (sng.key > 0));
+            } else if (i == 2)
+                int_text(sng.vibrato, t);
+            else
+                int_text(set.slot + 1, t);
+            rdc_col((uint32_t)i, NM[i], t);
+        }
+        return;
+    }
+    if (body_cur == BODY_SEAL) {              /* draw_seal's settings */
+        const ch_cdef_t *d = CRE;
+        for (i = 0; i < 4; i++) {
+            const int id = CRE_PAGE[cre.which][seal_page][i];
+            if (id < 0) {
+                rdc_col((uint32_t)i, "", "");
+                continue;
+            }
+            seal_text(id, t);
+            rdc_col((uint32_t)i, d->p[id].name, t);
+        }
+        return;
+    }
+    for (i = 0; i < 4; i++) {                 /* draw_home's readouts */
+        const int id = PAGE[page][i];
+        knob_text(id, t);
+        rdc_col((uint32_t)i, page == PAGE_VOWEL && id == K_VELUM ? "NASAL" : KNOB[id].name, t);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (app_frame(), fm1core_chimeravocal_rd())
 #define FM1CORE_PL_UI_INPUT() app_input_only()
 #define FM1CORE_PL_DIM_LEVEL (fm1core_fb_dim_lo ? FM1P_LED_FAINT : FM1P_LED_DIM)   /* the glow: DIM LO / HI */
 #define FM1CORE_PL_DIM_ON 1               /* (plat_lights fills the dim plane only while glowing) */

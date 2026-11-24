@@ -95,7 +95,11 @@ dinghy_core(jamesos core_jamesos.c)
 # (tools/rfm1/rfm1_link.cmake). The licence texts: its GPL, the MIT texts of Plaits, Braids and stmlib, the notices
 # (the CC BY-SA 3.0 symbols and the CC0 drum kits are described there), the HD font's notice and its OFL; Emscripten's
 # and musl's are added by fm1_add_rfm1
-fm1_add_rfm1(jamesos AUTHORS "Aaron Grando"
+# rd1: its knob cards as its screen reader reads them, live labels and readouts (core_jamesos.c, common/rd_cols.h)
+fm1_add_rfm1(jamesos WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --press GLO@4900 --turn K2@5200:-3 --settle 5400 --seconds 0.15
+                          --expect-readout ctl_3_ATTACK_=_0.77MS --expect-readout ctl_6_RELEASE_=_40.4MS --expect-readout ctl_4_TRACK_2_=_-0.4_dB
+             AUTHORS "Aaron Grando"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
                            "Third-party notices ({name}, docs/legal/THIRD-PARTY-NOTICES.md)=docs/legal/THIRD-PARTY-NOTICES.md"
                            "MIT (Plaits in {name})=firmware/plaits/upstream/MIT-LICENSE.txt"

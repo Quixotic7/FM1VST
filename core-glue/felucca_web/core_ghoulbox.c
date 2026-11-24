@@ -16,3 +16,27 @@
 #define FM1CORE_FW_OTA_C "../../cores/ghoulbox-fm1-dungeon-synth/firmware/src/ota.c"         /* the M-UPGRADE identity */
 #define FELUCCA_ID "FM-1_900"                                             /* (felucca.c) */
 #include "fw_core.h"
+
+/* the Tier 2 map in the .rfm1 (readouts, live knob labels): Felucca's, checked against this fork (fw_map_fork.h) */
+#ifdef FM1CORE_RFM1
+/* GHOULBOX's differences from Felucca 1.8.2's dispatch (its ui_input.c, from Felucca 1.4.1): SELECT is the crank
+ * while any part plays the crank (crank_select), else the tempo (BPM LOCK: GLO held only); no SELECT modes, no EUCLID,
+ * no HOME LEVELS (HOME's knobs are the selected part's) */
+static int32_t fm1core_gb_select_target(void);
+#define FE_SELECT_TARGET fm1core_gb_select_target()
+#define FE_EUCLID_ON 0
+#define FE_HOME_TRK(k) TSEL
+#endif
+#include "fw_map_fork.h"
+#ifdef FM1CORE_RFM1
+static int32_t fm1core_gb_select_target(void)
+{
+    const int glo = layer_held() && ui.ly == LAYER_GLO;
+    uint32_t k;
+    for (k = 0; k < NTRK && !crank_track(&trk[k]); k++)
+        ;
+    if ((!glo && k < NTRK) || (!glo && (ui_prefs & PREF_BPM_LOCK)))
+        return -1;                                /* (the crank; BPM LOCK) */
+    return fe_index_of(FEK_GP, G_BPM);
+}
+#endif

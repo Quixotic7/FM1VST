@@ -65,7 +65,31 @@ static void fm1core_fart_sx_service(void)   /* main_fm1.c fm1_main, each pass (t
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME "Fart Machine One"
-#define FM1CORE_PL_UI_FRAME() ui_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the one screen's control strip as app/ui.c draw_controls
+ * draws it: the fixed names ("1 REV" .. "4 RPTS") and decimal(proj.par[k]) with "ms" (TIME) or "%"; the strip is
+ * always there (no menus, no overlays): every frame gives all four */
+#include "rd_cols.h"
+static void fm1core_fartmachine_rd(void)
+{
+    static const char *const names[4] = {"1 REV", "2 DELAY", "3 TIME", "4 RPTS"};
+    int k;
+    rdc_begin();
+    for (k = 0; k < 4; k++) {
+        char value[16];
+        int n;
+        decimal(proj.par[k], value);
+        for (n = 0; value[n]; n++)
+            ;
+        if (k == P_TIME) {
+            value[n++] = 'm';
+            value[n++] = 's';
+        } else
+            value[n++] = '%';
+        value[n] = 0;
+        rdc_col((uint32_t)k, names[k], value);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (ui_frame(), fm1core_fartmachine_rd())
 #define FM1CORE_PL_UI_INPUT() ui_input_only()
 #define FM1CORE_PL_DIM_LEVEL FM1P_LED_DIM /* the buttons' glow: one scan frame in GLOW_DIV */
 static void fm1core_pl_flash_boot(void) {}

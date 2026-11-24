@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "labels": {
+    "knobs": {
+      "SELECT": "PAGES",
+      "ALGO": "OSC",
+      "PRESETS": "BPM",
+      "K1": "PRESSURE",
+      "K2": "BALANCE",
+      "K3": "MEMORY",
+      "K4": "DENSITY"
+    },
+    "buttons": {
+      "EDIT": "EQ"
+    }
+  }
+}

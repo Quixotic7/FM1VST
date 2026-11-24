@@ -62,7 +62,12 @@ set_source_files_properties(${_karma_cc} PROPERTIES
 # Apache-2.0, Plaits' MIT, the LXR-02 notice, its LICENSING.md and the Terminus font's OFL (the screen font).
 # The C++ units see firmware/cxx, the few standard headers the device build uses (no C++ library in the module:
 # its <algorithm>'s sort, as on the FM-1)
-fm1_add_rfm1(karma AUTHORS "Ariel Muchnik" MEMORY_MIB 16
+# rd1: sloop_rd.h's live knob labels and readouts (the columns as drawn)
+fm1_add_rfm1(karma WANTS rd1
+             READOUT_TEST --press ENV@4100 --turn K1@4450:1 --turn K2@4550:1 --turn K3@4650:1 --turn K4@4750:1
+                          --settle 4900 --seconds 0.15 --min-rms 0
+                          --expect-readout ctl_3_ATK_=_1.1_ms --expect-readout ctl_6_REL_=_1.7_ms
+             AUTHORS "Ariel Muchnik" MEMORY_MIB 16
              INCLUDES ${CMAKE_SOURCE_DIR}/cores/karma-fm1/firmware/cxx
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "Apache-2.0 (msfa in {name})=LICENSES/Apache-2.0-msfa.txt"
                            "MIT (Plaits, Elements, Clouds in {name})=LICENSES/MIT-plaits.txt"

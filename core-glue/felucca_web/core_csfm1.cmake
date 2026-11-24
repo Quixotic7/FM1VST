@@ -21,7 +21,11 @@ fw_golden(csfm1 ${_cs} web/emu/felucca_web.c)
 # RUN_ARGS: cursed os powers on with empty patterns and its keys are trigs, mutes and sections, not notes (docs/GUIDE.md),
 # so rfm1_run's chord alone is silent. The guide's quick start instead: SAVE four times (SAVE > START), OCT+ loads a
 # loop (HYPNO, the session seed 1), PLAY, HOME; the "chord" is white key 16 (G5), which HOME leaves alone.
-fm1_add_rfm1(csfm1 AUTHORS "cursedsound" "juanjiant-bit (JIANT)" "Leo Kuroshita (Hügelton Instruments) (Felucca)"
+# rd1: its knob row as drawn, live labels and readouts (core_csfm1.c, common/rd_cols.h)
+fm1_add_rfm1(csfm1 WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press FX@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_DJ_FILT_=_+1 --expect-readout ctl_6_HIGH_=_+1
+             AUTHORS "cursedsound" "juanjiant-bit (JIANT)" "Leo Kuroshita (Hügelton Instruments) (Felucca)"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
                            "LICENSING.md ({name})=LICENSING.md"
                            "MIT (cursedsound's own files in {name})=LICENSES/MIT-cursedsound.txt"

@@ -21,7 +21,11 @@ set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/carnacos_dsp.c ${CMAKE_CUR
 
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: its GPL, LICENSING.md (where each
 # part comes from: X0X, Felucca) and the two fonts' OFL (Barlow, Terminus, from X0X's tree)
-fm1_add_rfm1(carnacos AUTHORS "OrbVorgis"
+# rd1: its knob row as drawn, live labels and readouts (core_carnacos.c, common/rd_cols.h)
+fm1_add_rfm1(carnacos WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_ATTACK_=_1 --expect-readout ctl_6_RELEASE_=_41
+             AUTHORS "OrbVorgis"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
                            "OFL-1.1 (the Barlow font in {name})=x0x-firmware/assets/fonts/Barlow-OFL.txt"
                            "OFL-1.1 (the Terminus font in {name})=x0x-firmware/assets/fonts/Terminus-LICENSE.txt"

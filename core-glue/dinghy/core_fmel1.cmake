@@ -42,7 +42,11 @@ dinghy_golden_check(fmel1 SCRIPT golden_fmel1.txt AT 5000 SOURCE ${_mel}/firmwar
 # the main loop on the coroutine, so Asyncify (tools/rfm1/rfm1_link.cmake). The licence texts: its GPL, its
 # LICENSING.md (the tapes' terms, the drawings' permission) and the Terminus fonts' OFL; Emscripten's and musl's are
 # added by fm1_add_rfm1
-fm1_add_rfm1(fmel1 AUTHORS "AntonioAltea"
+# rd1: the plate's knobs as drawn, live labels and readouts (core_fmel1.c, common/rd_cols.h)
+fm1_add_rfm1(fmel1 WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_TONE_=_73 --expect-readout ctl_6_RELEASE_=_19
+             AUTHORS "AntonioAltea"
              HOSTED_DESPITE_GATE "the M400S tapes (non-commercial terms) and Javi's sprites (by permission): hosted at RemoteFM1FW only, the owner's call 2026-11-02"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
                            "OFL-1.1 (the Terminus fonts in {name})=assets/fonts/Terminus-LICENSE.txt")

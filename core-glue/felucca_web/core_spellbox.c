@@ -221,7 +221,25 @@ void fm1core_sb_init(int demo)
     fm1core_sb_out();
 }
 void fm1core_sb_tick(uint32_t ms) { (void)ms; } /* (web.c keeps the device's ms: one per pass) */
-void fm1core_sb_frame(void) { fm1core_sb_pass(); }
+/* SPELLBOX's knob row as draw_knobs draws it (src/main.c:499, every frame's loop() at :701): the page's four knobs
+ * (HOME page 0: PITCH SPEED CLOCK TONE; ENV page 1: BEND STUTTER MONO CRUSH), each KN_NAME and knob_text. main.c is
+ * its own unit: read through b_spellbox_app.c's fm1core_sb_app_knob (that wrapper unit in place of main.c in
+ * EXTRA_SOURCES). No screen hides the row (the VFD and the keys share the screen with it). */
+#include "rd_cols.h"
+void fm1core_sb_app_knob(int i, const char **label, char *val);
+static void fm1core_spellbox_rd(void)
+{
+    uint32_t k;
+    rdc_begin();
+    for (k = 0; k < 4u; k++) {
+        const char *l;
+        char v[16];
+        fm1core_sb_app_knob((int)k, &l, v);
+        rdc_col(k, l, v);
+    }
+}
+
+void fm1core_sb_frame(void) { fm1core_sb_pass(); fm1core_spellbox_rd(); }
 void fm1core_sb_idle(void) { fm1core_sb_pass(); }
 void fm1core_sb_audio(int16_t *out, uint32_t frames)
 {

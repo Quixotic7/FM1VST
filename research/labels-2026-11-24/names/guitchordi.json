@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "labels": {
+    "knobs": {
+      "SELECT": "BPM",
+      "ALGO": "INSTR",
+      "PRESETS": "STYLE",
+      "K1": "PATTERN",
+      "K2": "DIV",
+      "K3": "GATE",
+      "K4": "STRM/SWNG"
+    },
+    "buttons": {
+      "SEL": "OK",
+      "ENV": "LOCK",
+      "LFO": "",
+      "EDIT": "CHORD",
+      "ARP": "MODE",
+      "SEQ": "",
+      "PLAY": "DAMP",
+      "REC": ""
+    }
+  }
+}

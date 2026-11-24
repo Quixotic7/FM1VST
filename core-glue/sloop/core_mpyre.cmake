@@ -25,7 +25,12 @@ fm1_add_core(mpyre ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/m-
 # the sound pack's recordings (soundpack.bin, a release file the web editor installs into the user slots: not in the
 # .rfm1), silent without it; the web editor's own ED_TRACK SysEx (editor.c: F0 7D 46 4C 1B 03 F7) selects track 4,
 # the HEAVY KIT, and the chord plays its drums.
-fm1_add_rfm1(mpyre AUTHORS "History Of Sky" MEMORY_MIB 16
+# rd1: sloop_rd.h's live knob labels and readouts (the columns as drawn)
+fm1_add_rfm1(mpyre WANTS rd1
+             READOUT_TEST --press ENV@4100 --turn K1@4450:1 --turn K2@4550:1 --turn K3@4650:1 --turn K4@4750:1
+                          --settle 6000 --seconds 0.15 --min-rms 0   # (its bank SysEx: from 5200)
+                          --expect-readout ctl_3_ATK_=_1.1_ms --expect-readout ctl_6_REL_=_4.0_ms
+             AUTHORS "History Of Sky" MEMORY_MIB 16
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
                            "LICENSING.md ({name})=LICENSING.md"
                            "Apache-2.0 (msfa in {name})=LICENSES/Apache-2.0-msfa.txt"

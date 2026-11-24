@@ -1,0 +1,23 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== GLO rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4110: epoch 2 knobs "" "" "" "IN CH" "LOWEST" "TRANSP" "VEL" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "IN CH" "2"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "LOWEST" "C#-1"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "TRANSP" "+1"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "VEL" "103"
+== SEQ rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""

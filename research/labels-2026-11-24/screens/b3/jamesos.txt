@@ -1,0 +1,52 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "TIMBRE" "HARMONICS" "MORPH" "OSC MIX" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "TIMBRE" "46%"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "HARMONICS" "51%"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "MORPH" "7%"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "OSC MIX" "1% AUX"
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "TIMBRE" "HARMONICS" "MORPH" "OSC MIX" ""
+   labels@4110: epoch 2 knobs "" "" "" "ATTACK" "DECAY" "SUSTAIN" "RELEASE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "ATTACK" "0.77MS"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "DECAY" "206MS"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "RELEASE" "40.4MS"
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "TIMBRE" "HARMONICS" "MORPH" "OSC MIX" ""
+   labels@4110: epoch 2 knobs "" "" "" "WAVE" "RATE" "TARGET" "DEPTH" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "WAVE" "TRIANGLE"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "RATE" "5.42HZ"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "TARGET" "PITCH"
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "TIMBRE" "HARMONICS" "MORPH" "OSC MIX" ""
+   labels@4110: epoch 2 knobs "" "" "" "DRIVE" "DELAY" "MODULATION" "REVERB" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "DRIVE" "1%"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "DELAY" "1%"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "MODULATION" "1%"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "REVERB" "1%"
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "TIMBRE" "HARMONICS" "MORPH" "OSC MIX" ""
+   labels@4110: epoch 2 knobs "" "" "" "MODE" "RATE" "OCTAVES" "GATE" ""
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "TIMBRE" "HARMONICS" "MORPH" "OSC MIX" ""
+   labels@4170: epoch 2 knobs "" "" "" "MODE" "RATE" "OCTAVES" "GATE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "MODE" "DOWN"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "RATE" "1/16T"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "OCTAVES" "2"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "GATE" "51%"
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "TIMBRE" "HARMONICS" "MORPH" "OSC MIX" ""
+   labels@4110: epoch 2 knobs "" "" "" "KICK1" "SNARE" "OHAT" "CYMB" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "KICK1" "-0.9 dB"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SNARE" "-0.9 dB"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "OHAT" "-0.9 dB"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "CYMB" "-0.9 dB"
+== GLO rc 0
+   labels@0: epoch 1 knobs "" "" "" "TIMBRE" "HARMONICS" "MORPH" "OSC MIX" ""
+   labels@4170: epoch 2 knobs "" "" "" "TRACK 1" "TRACK 2" "TRACK 3" "DRUM KIT" ""
+== SEQ rc 0
+   labels@0: epoch 1 knobs "" "" "" "TIMBRE" "HARMONICS" "MORPH" "OSC MIX" ""
+   labels@4110: epoch 2 knobs "" "" "" "NOTE" "LENGTH" "VELOCITY" "CONDITION" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "NOTE" "C#4"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "LENGTH" "1+1/16 STEP"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "VELOCITY" "101"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "CONDITION" "1%"

@@ -4,7 +4,7 @@
 # so not fw_core.h either): foma's own browser emulator, platform/web.c (fm1.h's API over a simulated FM-1),
 # unmodified, driven by core_spellbox.c as web/worklet.js drives it (cmake/FM1Cores.cmake fm1_add_core). The family's
 # descriptor (fw_desc.h), as Hortator's and MONO2K's.
-# Built as tools/build.py builds the firmware: the app (src/main.c, speech.c, tts.c) its own units (EXTRA_SOURCES),
+# Built as tools/build.py builds the firmware: the app (src/main.c, compiled as spellbox_app_rd.c, speech.c, tts.c) its own units (EXTRA_SOURCES),
 # platform, platform/hal, platform/src and platform/gen on the path (compile_flags.txt), APP_NAME / APP_VER and the
 # package identity FELUCCA_ID from firmware.json (name SPELLBOX, version 0.3, "identity" FM-1_57 + the minor
 # version's last digit: FM-1_573), its options all on (usb_audio, trs_midi, midi_clock: build.py's FOMA_* defines),
@@ -13,7 +13,7 @@
 set(_sb ${CMAKE_SOURCE_DIR}/cores/spellbox)
 fm1_add_core(spellbox ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_sb} UNIT core_spellbox.c
              DESC core_spellbox_desc.c FAMILY felucca_web LICENSE GPL-3.0-only
-             EXTRA_SOURCES ../../cores/spellbox/src/main.c ../../cores/spellbox/src/speech.c
+             EXTRA_SOURCES spellbox_app_rd.c ../../cores/spellbox/src/speech.c
                            ../../cores/spellbox/src/tts.c
              CREDITS "SPELLBOX by pjac1810, GPL-3.0-only, on foma by konsumer (the platform, the emulator, the API), which carries Felucca by Leo Kuroshita (Hügelton Instruments) with the changes of SLOOP (isod89), Dinghy (zvenson) and X0X (Charles Vestal). The speech: made with espeak-ng (GPL-3.0, only its output, coded to LPC frames by tools/gen_speech.py). The pronouncing dictionary's word list: from wordfreq by Robyn Speer (CC BY-SA 4.0). The screen's type: Terminus (ter-u16n, SIL OFL 1.1). No data of the original toys' ROMs is used. Speak & Spell is a trademark of Texas Instruments, and SPELLBOX is not made or endorsed by Texas Instruments or M-VAVE."
              NO_GEN
@@ -26,7 +26,11 @@ fm1_add_core(spellbox ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_sb} UNIT core_spellbox
 # list's CC BY-SA 4.0), the Terminus font's OFL (platform/gen/felucca_font.h, the screen's type). Not platform/mvave
 # (M-VAVE's SDK and its binary engine: the "mvave" platform, not built here), nor the JieLi boot resources'
 # Apache-2.0 (device packages only). No RUN_ARGS: setup() says "Hello" and the first word at power-on.
-fm1_add_rfm1(spellbox AUTHORS "pjac1810"
+# rd1: its knob row as drawn (spellbox_app_rd.c: the app unit, src/main.c, with its row's reader; core_spellbox.c)
+fm1_add_rfm1(spellbox WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_PITCH_=_+1 --expect-readout ctl_6_TONE_=_65
+             AUTHORS "pjac1810"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
                            "LICENSING.md ({name})=LICENSING.md"
                            "OFL-1.1 (the Terminus font in {name})=platform/gen/Terminus-LICENSE.txt")

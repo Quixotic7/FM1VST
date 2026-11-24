@@ -97,4 +97,22 @@ static void fm1core_dg_info(char *buf, uint32_t n)
 #define FM1CORE_DG_OTA_C "../../cores/bytemania/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
 
+/* the live knob labels and readouts (common/rd_cols.h): the knob bank as bytemania.c draws it on the main screen and the
+ * editor (knob_text: the variable's letter, its value; a cell with nothing on it ""); the other screens (CC, SAVE, NAME,
+ * ENV): not given */
+#include "rd_cols.h"
+static void fm1core_bytemania_rd(void)
+{
+    uint32_t k;
+    rdc_begin();
+    if (scr != SCR_MAIN && scr != SCR_EDIT)
+        return;
+    for (k = 0; k < 4u; k++) {
+        char name[8], v[24];
+        name[0] = v[0] = 0;
+        knob_text(bank, k, name, v);
+        rdc_col(k, name, v);
+    }
+}
+#define FM1CORE_DG_AFTER_FRAME fm1core_bytemania_rd
 #include "dinghy_glue.h"

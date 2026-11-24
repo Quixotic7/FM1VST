@@ -270,10 +270,43 @@ void fm1core_mt_tick(uint32_t ms)
     fm1core_mt_clock_ms();
     fm1core_mt_pass();
 }
+/* Matryoshka: the device page's four bars (pages_ui.c pages_draw -> bars_get -> pages_row, bar_row draws name, num and
+ * unit), also on GLO's settings tabs drawn as a device page (menu_tab_page). The unit after the number, a space between.
+ * Nothing: the loading screen (booting), a help card, the menu's INFO / MANUAL, SEQ, SONG, ENV, FX and the sandbox page
+ * (ui.c view_draw's other branches), and a frame whose page list is due to be rebuilt (pages_ensure: not called here). */
+#include "rd_cols.h"
+static void fm1core_matryoshka_rd(void)
+{
+    const ppage_t *pg;
+    const uint8_t *src;
+    uint32_t len, k;
+    rdc_begin();
+    if (booting || help_on || (page == PAGE_MENU && !menu_page()) || page == 8u || page == 11u || page == PAGE_ENV ||
+        page == PAGE_FX || (sb_on && page == 0u))
+        return;
+    src = pages_src(&len);                                /* (pages_ensure's test: a rebuild waits for the next frame) */
+    if (pg_built_gen != pages_gen() || (src && pages_at(src, len) != pg_built_at))
+        return;
+    pg = menu_page() ? menu_tab_page() : pg_ndev ? &pg_page[pg_dev[pg_cur_dev].pg0 + pg_cur_page] : 0;
+    for (k = 0; k < 4u; k++) {
+        bar_t b;
+        char v[RDC_LEN];
+        pages_row(pg, k, &b);
+        if (!b.used) {
+            rdc_col(k, "", "");                           /* ("-") */
+            continue;
+        }
+        snprintf(v, sizeof v, "%s%s%s", b.num, b.unit[0] ? " " : "", b.unit);
+        rdc_col(k, b.name, v);
+    }
+}
+
 void fm1core_mt_frame(void)
 {
-    if (fm1core_mt_running())
+    if (fm1core_mt_running()) {
         fm1core_mt_out();
+        fm1core_matryoshka_rd();
+    }
 }
 void fm1core_mt_idle(void)
 {

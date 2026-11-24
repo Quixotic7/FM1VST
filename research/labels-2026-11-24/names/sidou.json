@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "labels": {
+    "knobs": {
+      "SELECT": "PAGE",
+      "ALGO": "PROFILE",
+      "PRESETS": "PRESET",
+      "K1": "CUTOFF",
+      "K2": "RESO",
+      "K3": "DECAY",
+      "K4": "RELEASE"
+    },
+    "buttons": {
+      "FX": "LAB FX",
+      "SEL": "FX SLOT",
+      "ENV": "LAB ENV",
+      "LFO": "LAB MOD",
+      "EDIT": "FX EDIT",
+      "GLO": "MUTE/SOLO",
+      "HOME": "MENU",
+      "SEQ": "SONG"
+    }
+  }
+}

@@ -283,8 +283,12 @@ void fm1core_dg_tick(uint32_t ms)
 }
 void fm1core_dg_frame(void)
 {
-    if (fm1core_dg_running())
+    if (fm1core_dg_running()) {
         fm1core_dg_out();
+#ifdef FM1CORE_DG_AFTER_FRAME
+        FM1CORE_DG_AFTER_FRAME();         /* (a core's: after the frame, e.g. its knob row for the host) */
+#endif
+    }
 }
 void fm1core_dg_idle(void)
 {

@@ -1,0 +1,48 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "FREQ" "RES" "AMOUNT" "GAIN" ""
+   readout@4560: seq 1 ctl 4 kind 1 flags 0 frac -1 "RES" "1"
+   readout@4650: seq 2 ctl 5 kind 1 flags 0 frac -1 "AMOUNT" "+1"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "GAIN" "65"
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "FREQ" "RES" "AMOUNT" "GAIN" ""
+   labels@4110: epoch 2 knobs "" "" "" "ATTACK" "DECAY" "AMOUNT" "" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "ATTACK" "1"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "DECAY" "1"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "AMOUNT" "+1"
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "FREQ" "RES" "AMOUNT" "GAIN" ""
+   labels@4110: epoch 2 knobs "" "" "" "WAVE" "SPEED" "DEPTH" "DEST" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "WAVE" "RAMP"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SPEED" "0.74 Hz"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "DEPTH" "1"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "DEST" "FM"
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "FREQ" "RES" "AMOUNT" "GAIN" ""
+   labels@4110: epoch 2 knobs "" "" "" "EFFECT" "DELAY" "CHORUS" "" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "EFFECT" "ON"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "DELAY" "ON"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "CHORUS" "ON"
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "FREQ" "RES" "AMOUNT" "GAIN" ""
+   labels@4110: epoch 2 knobs "" "" "" "TYPE" "FREQ" "RES" "AMOUNT" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "TYPE" "LP24"
+   readout@4650: seq 2 ctl 5 kind 1 flags 0 frac -1 "RES" "1"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "AMOUNT" "+1"
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "FREQ" "RES" "AMOUNT" "GAIN" ""
+   readout@4560: seq 1 ctl 4 kind 1 flags 0 frac -1 "RES" "1"
+   readout@4650: seq 2 ctl 5 kind 1 flags 0 frac -1 "AMOUNT" "+1"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "GAIN" "65"
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "FREQ" "RES" "AMOUNT" "GAIN" ""
+   labels@4110: epoch 2 knobs "" "" "" "SHAPE" "DETUNE" "FM" "PHASE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "SHAPE" "PULSE"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "DETUNE" "1"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "FM" "1"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "PHASE" "1"
+== GLO rc 0
+   labels@0: epoch 1 knobs "" "" "" "FREQ" "RES" "AMOUNT" "GAIN" ""
+   labels@4110: epoch 2 knobs "" "" "" "MODE" "POLY" "PORTA" "AUTO" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "MODE" "MONO"
+   readout@4650: seq 2 ctl 5 kind 1 flags 0 frac -1 "PORTA" "1"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "AUTO" "ON"

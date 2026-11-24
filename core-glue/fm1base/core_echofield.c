@@ -308,7 +308,27 @@ static void fm1core_ef_sx_service(void)
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME APP_NAME
-#define FM1CORE_PL_UI_FRAME() app_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the knob row as app/app.c draw_knobs draws it (knob_text:
+ * the label and the value, on every page, GLO's SYSTEM / AUDIO / PRESETS / STORAGE too); a knob with nothing there "".
+ * Not given: ARP held on a knob page (ARP + a knob locks / unlocks that knob's parameter, input()). */
+#include "rd_cols.h"
+static void fm1core_echofield_rd(void)
+{
+    int k;
+    rdc_begin();
+    if (held(B_ARP) && ui.page < NPAGES)
+        return;
+    for (k = 0; k < 4; k++) {
+        char lab[24], val[24];
+        float v0, v1;
+        int id;
+        if (!knob_text(k, lab, val, &v0, &v1, &id))
+            rdc_col((uint32_t)k, "", "");
+        else
+            rdc_col((uint32_t)k, lab, val);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (app_frame(), fm1core_echofield_rd())
 #define FM1CORE_PL_UI_INPUT() app_input_only()
 #define FM1CORE_PL_DIM_LEVEL (fm1core_fb_dim_lo ? FM1P_LED_FAINT : FM1P_LED_DIM)   /* the glow: DIM LO / HI */
 #define FM1CORE_PL_DIM_ON 1               /* (plat_lights fills the dim plane only while glowing) */

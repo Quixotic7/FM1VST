@@ -94,7 +94,11 @@ set_source_files_properties(${_eg_quiet} TARGET_DIRECTORY core_evilgenius_obj PR
 # FTL, Inter Tight's OFL (fm1_add_rfm1 adds the glue's GPL-3.0 and the runtime's); not LICENSES/GPL-3.0.txt, which
 # is the test oracles' (core/tests/ref), nothing in this file. No RUN_ARGS: rfm1_run's chord sounds as it is (a key
 # in the step view previews track 1's sound, DRUMS: ZAP, about a second)
-fm1_add_rfm1(evilgenius
+# rd1 (docs/RFM1.md "Readouts (rd1)"): core_evilgenius.c's live labels (qd_ctl_labels) and readouts (qd_view_turn), FIZZ's adapter
+# (the test: the CHNC mode it powers on in, the chord held: KNOB 1 the default chance, KNOB 2 its condition)
+fm1_add_rfm1(evilgenius WANTS rd1
+             READOUT_TEST --turn K1@4100:2 --turn K2@4400:2 --seconds 1
+                          --expect-readout ctl_-1_CHANCE_=_100% --expect-readout ctl_-1_CONDITION_=_!FILL
              HOSTED_DESPITE_GATE "SAM (no licence) is compiled in: built as the author ships it, hosted on RemoteFM1FW only, the owner call of 2026-11-14"
              AUTHORS "Michael P Jones (Quixotic7)"
              MEMORY_MIB 16

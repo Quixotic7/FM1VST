@@ -1,0 +1,46 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4110: epoch 2 knobs "" "" "" "ATK" "DEC" "SUS" "REL" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "ATK" "1.1 ms"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "DEC" "3.62 s"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "SUS" "1 %"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "REL" "47 ms"
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4110: epoch 2 knobs "" "" "" "RATE" "WAVE" "PHS" "FADE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "RATE" "1.24 Hz"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "WAVE" "TRI"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "PHS" "1"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "FADE" "1.1 ms"
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4170: epoch 2 knobs "" "" "" "DST" "CHO" "DLY" "REV" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "DST" "1 %"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "CHO" "1 %"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "DLY" "1 %"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "REV" "1 %"
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4170: epoch 2 knobs "" "" "" "ROOT" "SCL" "QNT" "CHORD" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "ROOT" "C#"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SCL" "MAJ"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "QNT" "SNAP"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "CHORD" "TRIAD"
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4170: epoch 2 knobs "" "" "" "MODE" "RATE" "OCT" "GATE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "MODE" "UP"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "RATE" "1/32"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "OCT" "2"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "GATE" "51 %"
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4170: epoch 2 knobs "" "" "" "WAVE" "DTN" "MIX" "NOIS" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "WAVE" "PWM"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "DTN" "1 ct"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "MIX" "1 %"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "NOIS" "1 %"
+== GLO+hold rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""

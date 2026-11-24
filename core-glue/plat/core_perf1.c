@@ -356,7 +356,38 @@ static void perf1_ui_frame(void)
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME "PERF-1"
-#define FM1CORE_PL_UI_FRAME() perf1_ui_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the knob row as app/ui.c draw_knobs draws it (view_label in
+ * capitals, knob_text in capitals but a chord's name as written); no knob there "". Nothing given on the boot cards,
+ * remote, the secret game, the screensaver, and SEL held on SEQ (the knobs are the tricks); SEL held on TEMPO and on
+ * AC LINE: K4 (DRIFT's unit, MUTATES) not given */
+#include "rd_cols.h"
+static void fm1core_perf1_rd(void)
+{
+    int i;
+    const int sel = (int)(ui.btn >> B_SEL & 1u);
+    rdc_begin();
+    if (ui.splash || rm.on || kr.on || ui.saver_on || (sel && ui.view == V_SEQ))
+        return;
+    for (i = 0; i < 4; i++) {
+        const int k = view_knob(i);
+        char l[16], t[24], vt[16];
+        if (i == 3 && sel && (ui.view == V_TEMPO || ui.view == V_ACLINE))
+            continue;
+        if (k == K_NONE) {
+            rdc_col((uint32_t)i, "", "");
+            continue;
+        }
+        caps(l, view_label(i), sizeof l);
+        t[0] = 0;
+        knob_text(k, t);
+        if (k == K_PGCH && knob_get(k))          /* (a chord's name as written: Am7) */
+            snprintf(vt, sizeof vt, "%s", t);
+        else
+            caps(vt, t, sizeof vt);
+        rdc_col((uint32_t)i, l, vt);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (perf1_ui_frame(), fm1core_perf1_rd())
 #define FM1CORE_PL_UI_INPUT() ui_input_only()
 #define FM1CORE_PL_DIM_LEVEL FM1P_LED_DIM /* the buttons' glow: one scan frame in GLOW_DIV (4) */
 #define FM1CORE_PL_DIM2_PLANE fm1_led_dim2

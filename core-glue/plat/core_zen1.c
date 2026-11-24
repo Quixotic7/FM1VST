@@ -71,7 +71,33 @@ static void fm1core_zen1_sx_service(void)   /* main_fm1.c fm1_main, each pass (t
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME "ZEN-1"
-#define FM1CORE_PL_UI_FRAME() ui_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the knob row as app/ui.c draw_knobs draws it (VIEW_KNOB[ui.view],
+ * fm_param_info's name, fm_param_text); in a scene (proj.mode) the scene's knob bar (amb_knob_text of amb_knob_at, the page
+ * shown); no knob there "" */
+#include "rd_cols.h"
+static void fm1core_zen1_rd(void)
+{
+    int i;
+    rdc_begin();
+    if (proj.mode) {                      /* a scene: its knob bar (the page's four, amb_knob_text, as drawn) */
+        for (i = 0; i < 4; i++) {
+            char n[12], v[12];
+            n[0] = v[0] = 0;
+            amb_knob_text(amb_knob_at(amb.page * 4 + i), n, v);
+            rdc_col((uint32_t)i, n, v);
+        }
+        return;
+    }
+    for (i = 0; i < 4; i++) {
+        const int p = VIEW_KNOB[ui.view][i];
+        char t[24];
+        t[0] = 0;
+        if (p != K_NONE)
+            fm_param_text(p, proj.par[p], t);
+        rdc_col((uint32_t)i, p == K_NONE ? "" : fm_param_info(p)->name, t);
+    }
+}
+#define FM1CORE_PL_UI_FRAME() (ui_frame(), fm1core_zen1_rd())
 #define FM1CORE_PL_UI_INPUT() ui_input_only()
 #define FM1CORE_PL_DIM_LEVEL FM1P_LED_DIM /* the buttons' glow: one scan frame in GLOW_DIV */
 static void fm1core_pl_flash_boot(void) {}

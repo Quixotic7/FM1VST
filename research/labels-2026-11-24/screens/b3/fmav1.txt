@@ -1,0 +1,55 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "LEVEL 1" "LEVEL 2" "LEVEL 3" "LEVEL 4" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "LEVEL 1" "81"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "LEVEL 2" "81"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "LEVEL 3" "81"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "LEVEL 4" "81"
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "LEVEL 1" "LEVEL 2" "LEVEL 3" "LEVEL 4" ""
+   labels@4170: epoch 2 knobs "" "" "" "ATTACK" "DECAY" "SUSTAIN" "RELEASE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "ATTACK" "114ms"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "DECAY" "497ms"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "SUSTAIN" "6.3"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "RELEASE" "469ms"
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "LEVEL 1" "LEVEL 2" "LEVEL 3" "LEVEL 4" ""
+   labels@4170: epoch 2 knobs "" "" "" "LFO RATE" "LFO WAVE" "SYNC" "RATE FINE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "LFO RATE" "3.43Hz"
+   readout@4650: seq 2 ctl 5 kind 1 flags 0 frac -1 "SYNC" "8/1"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "RATE FINE" "+3c"
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "LEVEL 1" "LEVEL 2" "LEVEL 3" "LEVEL 4" ""
+   labels@4170: epoch 2 knobs "" "" "" "DELAY" "SEND" "TIME L" "TIME R" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "DELAY" "ON"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SEND" "24%"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "TIME L" "1/4T"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "TIME R" "1/4D"
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "LEVEL 1" "LEVEL 2" "LEVEL 3" "LEVEL 4" ""
+   labels@4170: epoch 2 knobs "" "" "" "FOLD" "ONE LVL" "ATTENUATOR" "NOISE" ""
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "LEVEL 1" "LEVEL 2" "LEVEL 3" "LEVEL 4" ""
+   labels@4170: epoch 2 knobs "" "" "" "ARP" "MODE" "OCTAVES" "RATE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "ARP" "ON"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "MODE" "DOWN"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "OCTAVES" "2"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "RATE" "1/16T"
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "LEVEL 1" "LEVEL 2" "LEVEL 3" "LEVEL 4" ""
+   labels@4170: epoch 2 knobs "" "" "" "PITCH" "VCO WAVE" "PULSE WIDT" "FINE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "PITCH" "+1 st"
+   readout@4755: seq 2 ctl 6 kind 1 flags 0 frac -1 "FINE" "+1c"
+== SEQ rc 0
+   labels@0: epoch 1 knobs "" "" "" "LEVEL 1" "LEVEL 2" "LEVEL 3" "LEVEL 4" ""
+   labels@4170: epoch 2 knobs "" "" "" "" "" "" "" ""
+== GLO rc 0
+   labels@0: epoch 1 knobs "" "" "" "LEVEL 1" "LEVEL 2" "LEVEL 3" "LEVEL 4" ""
+   labels@4170: epoch 2 knobs "" "" "" "CUTOFF" "RESONANCE" "CUT FINE" "" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "CUTOFF" "558"
+   readout@4650: seq 2 ctl 5 kind 1 flags 0 frac -1 "CUT FINE" "+3c"
+== SAVE rc 0
+   labels@0: epoch 1 knobs "" "" "" "LEVEL 1" "LEVEL 2" "LEVEL 3" "LEVEL 4" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "LEVEL 1" "81"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "LEVEL 2" "81"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "LEVEL 3" "81"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "LEVEL 4" "81"

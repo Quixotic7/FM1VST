@@ -182,4 +182,32 @@ static void fm1core_fma_sx_in(const uint8_t *p, uint32_t n)   /* (0.6) a screen 
 }
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_fma_sx_in((p), (n))
 
+/* the live knob labels and readouts (common/rd_cols.h): the page's four knobs as fmav1.c's knob_view draws them (the
+ * parameter page_param gives, plabel, param_value; LFO RATE under SYNC its division), read without knob_view itself (it
+ * moves the drawn knobs' glide); the patchbay's overview (no knobs): not given */
+#include "rd_cols.h"
+static void fm1core_fma_rd(void)
+{
+    uint32_t k;
+    rdc_begin();
+    if (on_patchbay())
+        return;
+    for (k = 0; k < 4u; k++) {
+        const int32_t id = page_param(k);
+        char v[24];
+        if (id < 0) {
+            rdc_col(k, "", "");
+            continue;
+        }
+        v[0] = 0;
+        param_value(v, id, pget(id));
+        if (id == P_LFO_RATE && live.v[P_LFO_SYNC]) {
+            v[0] = 0;
+            scat(v, "SYNC ");
+            scat(v, DIV_NAME[(live.v[P_LFO_SYNC] - 1u) % NCLKDIV]);
+        }
+        rdc_col(k, plabel(id), v);
+    }
+}
+#define FM1CORE_DG_AFTER_FRAME fm1core_fma_rd
 #include "dinghy_glue.h"

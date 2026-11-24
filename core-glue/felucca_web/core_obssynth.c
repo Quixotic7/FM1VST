@@ -264,7 +264,32 @@ static void fm1core_ob_ms_run(void)      /* frame / idle: the input, the device'
     ota_service();                        /* main.c's loop: the M-UPGRADE handshake */
     fm1core_ob_out();
 }
-void fm1core_ob_frame(void) { fm1core_ob_ms_run(); }
+/* ObsSynth's knob row as draw_nums draws it in the top strip (firmware/src/ui.c:484, from draw_top): the shown page
+ * (ui_view: the + page while HOME's shift is on), each knob's parameter (page_param), its label (PW1 / PW2: "SHAPE"
+ * off SQR) and param_text; a column with no parameter (0xFF): empty. Nothing given on SAVE (the knobs pick the slot,
+ * the cursor, the letter: draw_save shows them); INFO's knobs do nothing (four empty columns). */
+#include "rd_cols.h"
+static void fm1core_obssynth_rd(void)
+{
+    uint32_t k, v = ui_view();
+    rdc_begin();
+    if (v == PG_SAVE)
+        return;
+    for (k = 0; k < 4u; k++) {
+        uint32_t id = page_param(v, k);
+        const char *lb;
+        char b[16];
+        if (id >= P_COUNT) {
+            rdc_col(k, "", "");
+            continue;
+        }
+        lb = (id == P_PW1 || id == P_PW2) && par[id == P_PW1 ? P_WAVE : P_WAVE2] != W_SQR ? "SHAPE" : PARAMS[id].label;
+        param_text(b, id);
+        rdc_col(k, lb, b);
+    }
+}
+
+void fm1core_ob_frame(void) { fm1core_ob_ms_run(); fm1core_obssynth_rd(); }
 void fm1core_ob_idle(void) { fm1core_ob_ms_run(); }
 void fm1core_ob_audio(int16_t *out, uint32_t frames)
 {

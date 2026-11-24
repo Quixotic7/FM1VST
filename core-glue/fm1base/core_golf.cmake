@@ -69,7 +69,11 @@ endif()
 # MIT notices those tables need (Golf's repository names a licences/ folder for them that it does not have:
 # golf_third_party.txt and FM1VST's own GPL-3.0 text), fm1-base's MPL-2.0 with its notes and credits, felucca-bsp's
 # MPL-2.0 with its notes, the Barlow OFL
-fm1_add_rfm1(golf AUTHORS "BARNIR"
+# rd1: the page's knobs as drawn, live labels and readouts (core_golf.c, common/rd_cols.h)
+fm1_add_rfm1(golf WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_TYPE_=_LOW_12 --expect-readout ctl_6_DRIVE_=_21
+             AUTHORS "BARNIR"
              LICENSE_FILES "MPL-2.0 ({name}, LICENSE)=LICENSE"
                            "Wavetables: sources and credits ({name}, TABELLEN.md)=TABELLEN.md"
                            "Wavetables: MIT notices and the GPL-3.0 tables (golf_third_party.txt)=${CMAKE_CURRENT_LIST_DIR}/golf_third_party.txt"

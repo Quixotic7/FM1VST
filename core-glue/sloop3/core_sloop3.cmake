@@ -42,7 +42,11 @@ endif()
 
 # the .rfm1 (cmake/FM1Rfm1.cmake; docs/RFM1.md). Its GPL, the samples' CC0 credits, the Terminus font's OFL and Inter's
 # OFL (assets/fonts/OFL-Inter.txt: the big screen type, app/fonts.c from Inter Bold by tools/mkfont.py)
-fm1_add_rfm1(sloop3 AUTHORS "isod89" MEMORY_MIB 16
+# rd1: the view main.c draws as live knob labels and readouts (core_sloop3.c, common/rd_cols.h)
+fm1_add_rfm1(sloop3 WANTS rd1
+             READOUT_TEST --press ENV@4100 --turn K2@4550:1 --turn K4@4750:1 --keys none --settle 4900 --seconds 0.15 --min-rms 0
+                          --expect-readout ctl_4_DEC_=_3.6s --expect-readout ctl_6_REL_=_47ms
+             AUTHORS "isod89" MEMORY_MIB 16
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
                            "CC0-1.0 (the samples in {name})=assets/CREDITS-SAMPLES.txt"
                            "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt"

@@ -6,7 +6,8 @@
  *   rfm1_run [options] <file.rfm1>
  *     --seconds S    the chord held for S device seconds (default 5)
  *     --settle MS    device ms after init before the chord (default 4000)
- *     --keys K,K,..  the chord's key numbers (default 9,13,16: D4 F#4 A4, as core_bench / core_conformance)
+ *     --keys K,K,..  the chord's key numbers (default 9,13,16: D4 F#4 A4, as core_bench / core_conformance); none: no
+ *                    keys at all (with --min-rms 0: a screen the keys would change)
  *     --vel V        the chord's velocity, key_vel (default 100; 0: none given, the core's default)
  *     --lean L       the chord's aftertouch, key_lean 0..100 % (default 0)
  *     --tap B,B,..   buttons tapped 1 s before the chord, by label (fm1core.h FM1P_B_*: PLAY 10): a firmware that
@@ -29,6 +30,8 @@
  *     --turn R@MS[:N] knob R (SELECT ALGO PRESETS K1..K4) turned N detents (default 1, - anticlockwise) at device ms MS
  *     --readouts     each new readout (rd1, docs/RFM1.md "Readouts (rd1)": seq, control, kind, bar, title, value) and
  *                    the knobs' live labels when their epoch moves, after each frame
+ *     --expect-readout S  (implies --readouts) fail unless a readout, as `ctl C title = value`, contains S, each
+ *                    '_' in S a space (repeat; e.g. ctl_3_E5_CUT_=_412_Hz)
  *     --expect-ui S  fail unless the final ui_info contains S (repeat)
  *     --flash-in F   boot from this flash image (a save) instead of a fresh flash
  *     --flash-out F  the flash image after the run (flash_sync first): a save
@@ -1010,7 +1013,7 @@ static void usage(void)
           "                [--profile] [--frame-ms N] [--helpers]\n"
           "                [--audio-in FILE.wav [--audio-in-once] [--audio-in-latency N] [--audio-in-off-at MS]]\n"
           "                [--no-aout] [--aout-wav FILE] [--expect-aout N]\n"
-          "                [--turn ROLE@MS[:N]].. [--readouts] [--verbose] [--describe [--labels] [--out FILE]] <file.rfm1>\n", stderr);
+          "                [--turn ROLE@MS[:N]].. [--readouts] [--expect-readout S].. [--verbose] [--describe [--labels] [--out FILE]] <file.rfm1>\n", stderr);
 }
 
 int main(int argc, char **argv)
@@ -1024,8 +1027,10 @@ int main(int argc, char **argv)
     int describe = 0, labels = 0, readouts = 0, nturn = 0;
     struct { int r, n; uint32_t at; } turn[256];
     uint32_t rd_ptr = 0, rd_last = 0, lb_last = 0;
+    const char *expect_rd[16];                   /* --expect-readout */
+    int nexpect_rd = 0, expect_rd_seen[16] = {0};
     const char *out_path = NULL, *wav_path = NULL, *sysex_path = NULL, *path = NULL, *midi_out_path = NULL;
-    int keys[FM1P_NKEY], nkeys = 0, vel = 100, lean = 0;
+    int keys[FM1P_NKEY], nkeys = 0, vel = 100, lean = 0, no_keys = 0;
     uint32_t taps = 0;                           /* (label bits: --tap) */
     static const char *const LABEL[FM1P_NB] = {"FX", "SEL", "ENV", "LFO", "EDIT", "GLO", "HOME", "SAVE", "ARP", "SEQ",
                                                "PLAY", "REC", "OCT-", "OCT+"};
@@ -1053,6 +1058,16 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--describe")) describe = 1;
         else if (!strcmp(a, "--labels")) labels = 1;
         else if (!strcmp(a, "--readouts")) readouts = 1;
+        else if (!strcmp(a, "--expect-readout") && more && nexpect_rd < 16) {
+            static char pat[16][96];             /* ('_' stands for a space: a pattern through ctest's quoting) */
+            snprintf(pat[nexpect_rd], sizeof pat[0], "%s", argv[++i]);
+            for (char *c = pat[nexpect_rd]; *c; c++)
+                if (*c == '_')
+                    *c = ' ';
+            expect_rd[nexpect_rd] = pat[nexpect_rd];
+            nexpect_rd++;
+            readouts = 1;
+        }
         else if (!strcmp(a, "--audio-in") && more) ain_path = argv[++i];
         else if (!strcmp(a, "--audio-in-once")) ain_once = 1;
         else if (!strcmp(a, "--audio-in-latency") && more) ain_latency = (uint32_t)strtoul(argv[++i], NULL, 10);
@@ -1127,6 +1142,8 @@ int main(int argc, char **argv)
                 while (*s == ',' || *s == ' ')
                     s++;
             }
+        } else if (!strcmp(a, "--keys") && more && !strcmp(argv[i + 1], "none")) {
+            no_keys = 1, i++;                    /* --keys none: no chord (a screen check the keys would change) */
         } else if (!strcmp(a, "--keys") && more) {
             char *s = argv[++i];
             nkeys = 0;
@@ -1150,7 +1167,7 @@ int main(int argc, char **argv)
         usage();
         return 2;
     }
-    if (!nkeys) {
+    if (!nkeys && !no_keys) {
         keys[0] = 9; keys[1] = 13; keys[2] = 16;   /* D4 F#4 A4 */
         nkeys = 3;
     }
@@ -1581,6 +1598,13 @@ int main(int argc, char **argv)
                         printf("readout@%u: seq %u ctl %d kind %u flags %u frac %d \"%.16s\" \"%.16s\"\n", ms, seq,
                                (int)(int8_t)m[rd_ptr + 8], m[rd_ptr + 9], m[rd_ptr + 10], frac,
                                (const char *)m + rd_ptr + 14, (const char *)m + rd_ptr + 31);
+                        if (nexpect_rd) {   /* --expect-readout: matched against `ctl C title = value` */
+                            char line[96];
+                            snprintf(line, sizeof line, "ctl %d %.16s = %.16s", (int)(int8_t)m[rd_ptr + 8],
+                                     (const char *)m + rd_ptr + 14, (const char *)m + rd_ptr + 31);
+                            for (int k = 0; k < nexpect_rd; k++)
+                                expect_rd_seen[k] |= strstr(line, expect_rd[k]) != NULL;
+                        }
                     }
                 }
                 if (g_fn[F_LABELS_EPOCH]) {
@@ -1593,6 +1617,17 @@ int main(int argc, char **argv)
                             printf(" \"%s\"", l ? l : "");
                         }
                         printf("\n");
+                        int nb = 0;              /* the buttons' (FM1P_B_* order) when any is given: null as - */
+                        for (int k = 8; k < 22; k++)
+                            nb += str(C1(F_LABEL, k)) != NULL;
+                        if (nb) {
+                            printf("labels@%u: buttons", ms);
+                            for (int k = 8; k < 22; k++) {
+                                const char *l = str(C1(F_LABEL, k));
+                                printf(l ? " \"%s\"" : " -", l ? l : "");
+                            }
+                            printf("\n");
+                        }
                     }
                 }
             }
@@ -1771,6 +1806,9 @@ int main(int argc, char **argv)
     for (int k = 0; k < nexpect; k++)
         if (!strstr(info, expect[k]))
             bad |= fail("ui_info has no \"%s\"", expect[k]);
+    for (int k = 0; k < nexpect_rd; k++)
+        if (!expect_rd_seen[k])
+            bad |= fail("no readout matched \"%s\"%s", expect_rd[k], rd_ptr ? "" : " (no rfm1_readout: not built with rd1)");
     if (!bad && rms < min_rms)
         bad |= fail("silent: the chord's RMS %.6f is under %.6f", rms, min_rms);
     if (!bad && !lcd_writes)

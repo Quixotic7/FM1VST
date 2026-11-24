@@ -1,0 +1,41 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "TARGET" "DEPTH" "SHAPE" "LENGTH" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "TARGET" "TYPE"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "DEPTH" "+1%"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "SHAPE" "RAMP UP"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "LENGTH" "17"
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "DRIVE" "TONE" "MIX" "OUTPUT" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "DRIVE" "48%"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "TONE" "7.0K"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "OUTPUT" "71%"
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "-" "-" "-" "-" ""
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "TYPE" "TUNE" "DECAY" "LEVEL" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "TYPE" "FM"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "TUNE" "G#1"
+   readout@4665: seq 3 ctl 5 kind 1 flags 0 frac -1 "DECAY" "1.09S"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "LEVEL" "111"
+== GLO rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "PATTERN" "ACTION" "-" "DO IT" ""
+   readout@4470: seq 1 ctl 3 kind 1 flags 0 frac -1 "PATTERN" "A02"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "ACTION" "COPY"
+== SEQ rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "TYPE" "TUNE" "ATTACK" "DECAY" ""
+   labels@4470: epoch 3 knobs "" "" "" "*TYPE" "TUNE" "ATTACK" "DECAY" ""
+   labels@4560: epoch 4 knobs "" "" "" "*TYPE" "*TUNE" "ATTACK" "DECAY" ""
+   labels@4665: epoch 5 knobs "" "" "" "*TYPE" "*TUNE" "*ATTACK" "DECAY" ""
+   labels@4755: epoch 6 knobs "" "" "" "*TYPE" "*TUNE" "*ATTACK" "*DECAY" ""

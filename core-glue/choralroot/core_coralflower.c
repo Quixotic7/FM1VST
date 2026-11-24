@@ -79,4 +79,23 @@ static int fm1core_cf_sync(void)
 #define FM1CORE_CRF_SX 1                  /* cf_backup.c: the installer's backup and restore */
 #define FM1CORE_CRF_OTA_C "../../cores/CoralFlower/firmware/src/ota.c"
 #define FELUCCA_ID "FM-1_930"             /* (coralflower.c: the package identity) */
+/* the live knob labels and readouts (common/rd_cols.h): CoralFlower's own knob row, ui_knob_info (cf_ui.c: each knob's
+ * name and value on the screen showing, what cf_draw.c draw_knobs draws on every screen), copied after each frame */
+#include "rd_cols.h"
+static void fm1core_cf_rd(void)
+{
+    int k;
+    rdc_begin();
+    if (cu.upd_left || cf_intro_on)
+        return;                           /* (the update countdown, the intro: no knob row) */
+    for (k = 0; k < 4; k++) {
+        cf_knob_t o;
+        o.name[0] = o.val[0] = 0, o.bar = -1, o.dis = 0, o.sel = 0;
+        ui_knob_info(k, &o);
+        for (char *c = o.val; *c; c++)    /* (fb_signs' glyphs: 0x80 sharp, 0x81 flat, as letters) */
+            *c = *c == (char)0x80 ? '#' : *c == (char)0x81 ? 'b' : *c;
+        rdc_col((uint32_t)k, o.name, o.val);
+    }
+}
+#define FM1CORE_CRF_AFTER_FRAME fm1core_cf_rd
 #include "crf_glue.h"

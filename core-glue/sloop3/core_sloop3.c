@@ -546,7 +546,20 @@ static void fm1core_s3_run(void)               /* frame and idle: the firmware u
     if (!fm1core_halted())
         fm1core_s3_out();
 }
-void fm1core_s3_frame(void) { fm1core_s3_run(); }
+/* the live knob labels and readouts (common/rd_cols.h): the view main.c draws (V, ui_view: each knob's label and value,
+ * as app/ui.c draws them; a knob without a label is not drawn), copied after each frame */
+#include "rd_cols.h"
+static void fm1core_s3_rd(void)
+{
+    uint32_t k;
+    rdc_begin();
+    if (V.page == UI_SPLASH || V.page == UI_VIS)
+        return;
+    for (k = 0; k < 4u; k++)
+        if (V.knob[k].label && V.knob[k].label[0])
+            rdc_col(k, V.knob[k].label, V.knob[k].value);
+}
+void fm1core_s3_frame(void) { fm1core_s3_run(); fm1core_s3_rd(); }
 void fm1core_s3_idle(void) { fm1core_s3_run(); }
 
 void fm1core_s3_audio(int16_t *out, uint32_t frames)

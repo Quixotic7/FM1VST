@@ -32,7 +32,11 @@ dinghy_core(mvsynth2 core_mvsynth2.c)
 # ported engine and the factory bank), the Terminus font's OFL and DejaVu's licence (vs_ui_gen.h's font tables),
 # (1.5) the MPL-2.0 of fm1-base's announce.c (the screen reader, vs_speak.c: built in; the text: licences/mvsynth2/MPL-2.0.txt, as fm1-kit is a nested submodule). Not
 # the MPL-2.0 of uac_out.c (USB audio: the device branch only) nor the JieLi SDK's Apache-2.0 (device packages only).
-fm1_add_rfm1(mvsynth2 AUTHORS "Kris (bk40-home)" "zvenson"
+# rd1: the page's and HOME's knobs as drawn, live labels and readouts (core_mvsynth2.c, common/rd_cols.h)
+fm1_add_rfm1(mvsynth2 WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K3@4650:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_ATTACK_=_1 --expect-readout ctl_5_AMOUNT_=_+1
+             AUTHORS "Kris (bk40-home)" "zvenson"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name}, with Synth2's MIT notice)=LICENSING.md"
                            "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt"
                            "Bitstream Vera / DejaVu (DejaVu Sans Condensed Bold in {name})=assets/fonts/dejavu/LICENSE"

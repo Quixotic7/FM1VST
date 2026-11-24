@@ -98,4 +98,27 @@ static void fm1core_dg_info(char *buf, uint32_t n)
 #define FM1CORE_DG_SYSEX_IN(p, n) \
     ((n) && (p)[0] == APP_SYSEX_ID ? APP_SYSEX((p), (n)) : fm1core_dg_ota_frame((p), (n)))
 
+/* the live knob labels and readouts (common/rd_cols.h): a page's knobs (VS_PAGES[page].id) and HOME's (the patch's
+ * HOME KNOBS, eng.patch.home), each named and written as vs_ui.c knob_param draws them (vs_param_label, ptext); the bank,
+ * SAVE and GLOBAL screens: not given */
+#include "rd_cols.h"
+static void fm1core_vs2_rd(void)
+{
+    uint32_t k;
+    rdc_begin();
+    if (scr != SCR_PAGE && scr != SCR_HOME)
+        return;
+    for (k = 0; k < 4u; k++) {
+        const uint32_t id = scr == SCR_PAGE ? VS_PAGES[page].id[k] : eng.patch.home[k];
+        char v[24];
+        if (id == 0xFFu) {
+            rdc_col(k, "", "");
+            continue;
+        }
+        v[0] = 0;
+        ptext(id, v, sizeof v);
+        rdc_col(k, vs_param_label(id, pval(VS_P_FX_TYPE)), v);
+    }
+}
+#define FM1CORE_DG_AFTER_FRAME fm1core_vs2_rd
 #include "dinghy_glue.h"

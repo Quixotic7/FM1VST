@@ -21,7 +21,8 @@ endif()
 if(NOT EXISTS ${_vs}/core/vsc.h OR NOT EXISTS ${_vs}/web/vsc_wasm.c)
     message(FATAL_ERROR "viscera: no core/vsc.h or web/vsc_wasm.c in ${_vs} (a new pin: check the glue)")
 endif()
-set(_vs_units ${_vs_rel}/core/vsc_engine.c ${_vs_rel}/core/vsc_params.c ${_vs_rel}/core/vsc_ui.c ${_vs_rel}/core/vsc_midi.c)
+# (vsc_ui.c compiled as viscera_ui_rd.c: the unit with its knob row's reader for the host, core_viscera.c)
+set(_vs_units ${_vs_rel}/core/vsc_engine.c ${_vs_rel}/core/vsc_params.c viscera_ui_rd.c ${_vs_rel}/core/vsc_midi.c)
 fm1_add_core(viscera ${_vs_glue} SOURCE ${_vs} UNIT core_viscera.c DESC core_viscera_desc.c
              EXTRA_SOURCES ${_vs_units}
              FAMILY fm1open LICENSE GPL-3.0-only
@@ -41,6 +42,10 @@ endif()
 # is silent). The licence text: Viscera's LICENSE.md (GPL-3.0 with the SDK linking exception). RUN_ARGS: the run feeds
 # Elasticat's test loop as the input; track 1 is armed at power-on and INPUT's MONITOR is AUTO (while a track is armed),
 # so the chord's time hears the input through the desk (the chord's keys play RESON, which is OFF)
-fm1_add_rfm1(viscera WANTS ain1 AUTHORS "De-Pattern"
+# rd1: its knob row as drawn, live labels and readouts (viscera_ui_rd.c, core_viscera.c, common/rd_cols.h)
+fm1_add_rfm1(viscera WANTS ain1 rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_MODE_=_RADIO --expect-readout ctl_6_WIDTH_=_17%
+             AUTHORS "De-Pattern"
              LICENSE_FILES "GPL-3.0-only with the FM1 SDK linking exception ({name})=LICENSE.md"
              RUN_ARGS --audio-in ${CMAKE_SOURCE_DIR}/core-glue/elasticat/test_folder/audio/testloop_bpm120.wav)

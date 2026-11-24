@@ -28,7 +28,11 @@ dinghy_core(orgigs core_orgigs.c)
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md): the main loop on the coroutine, so Asyncify
 # (tools/rfm1/rfm1_link.cmake). The licence texts: its GPL, its LICENSING.md, the Terminus font's OFL and the
 # SEQTRAK docs' MIT; Emscripten's and musl's are added by fm1_add_rfm1
-fm1_add_rfm1(orgigs AUTHORS "Bobo (orgelbobo)"
+# rd1: its knob row as drawn, live labels and readouts (core_orgigs.c, common/rd_cols.h)
+fm1_add_rfm1(orgigs WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press GLO@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_IN_CH_=_2 --expect-readout ctl_6_VEL_=_103
+             AUTHORS "Bobo (orgelbobo)"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
                            "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt"
                            "MIT (the SEQTRAK sound list in {name}, jaeggerr/seqtrak-docs)=assets/seqtrak/LICENSE.seqtrak-docs")

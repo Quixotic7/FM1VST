@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "labels": {
+    "knobs": {
+      "SELECT": "LEVEL",
+      "ALGO": "PAN",
+      "PRESETS": "ENGINE",
+      "K1": "FILTER",
+      "K2": "GRAIN",
+      "K3": "CRUSH",
+      "K4": "REV SEND"
+    },
+    "buttons": {
+      "FX": "TRACK 1",
+      "SEL": "TRACK 2",
+      "ENV": "TRACK 3",
+      "LFO": "TRACK 4",
+      "EDIT": "TRACK 5",
+      "GLO": "TRACK 6",
+      "HOME": "NEW SOUND",
+      "SAVE": "SESSIONS",
+      "ARP": "SCALE",
+      "SEQ": "FX/MOD"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "TEMPO" "PART" "" "" "" "" "" ""
+== ENV rc 0
+   labels@0: epoch 1 knobs "TEMPO" "PART" "" "" "" "" "" ""
+== LFO rc 0
+   labels@0: epoch 1 knobs "TEMPO" "PART" "" "" "" "" "" ""
+== FX rc 0
+   labels@0: epoch 1 knobs "TEMPO" "PART" "" "" "" "" "" ""
+== SEL rc 0
+   labels@0: epoch 1 knobs "TEMPO" "PART" "" "" "" "" "" ""
+== ARP rc 0
+   labels@0: epoch 1 knobs "TEMPO" "PART" "" "" "" "" "" ""
+== EDIT rc 0
+   labels@0: epoch 1 knobs "TEMPO" "PART" "" "" "" "" "" ""
+== GLO+hold rc 0
+   labels@0: epoch 1 knobs "TEMPO" "PART" "" "" "" "" "" ""
+   labels@4305: epoch 2 knobs "TEMPO" "" "" "T1 LEVEL" "T2 LEVEL" "T3 LEVEL" "T4 LEVEL" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac 826 "T1 Level" "-3.5 dB"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac 826 "T2 Level" "-3.5 dB"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac 826 "T3 Level" "-3.5 dB"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac 818 "T4 Level" "-4.0 dB"
+   labels@5010: epoch 3 knobs "TEMPO" "PART" "" "E1 SRC" "E2 DIV" "E4 PTCH" "E7 DCAY" ""
+   labels@5055: epoch 4 knobs "TEMPO" "PART" "" "" "" "" "" ""

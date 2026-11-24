@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "labels": {
+    "knobs": {
+      "SELECT": "TAPE",
+      "ALGO": "PAGE",
+      "PRESETS": "CHANNEL",
+      "K1": "TEMPO",
+      "K2": "LEVEL",
+      "K3": "SLIDE",
+      "K4": "DUCK"
+    },
+    "buttons": {
+      "FX": "PUNCH-IN",
+      "SEL": "COPY",
+      "ENV": "ACCENT",
+      "LFO": "UNDO",
+      "EDIT": "CONSOLE",
+      "GLO": "HELP",
+      "HOME": "VIEW",
+      "ARP": "TAILS",
+      "SEQ": "STEP"
+    }
+  }
+}

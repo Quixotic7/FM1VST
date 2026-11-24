@@ -258,6 +258,9 @@ void FM1CORE_CRF(frame)(void)
         fm1core_crf_sx_service();
 #endif
     fm1core_crf_out();
+#ifdef FM1CORE_CRF_AFTER_FRAME
+    FM1CORE_CRF_AFTER_FRAME();            /* (a fork's: after the frame drew, e.g. its knob row for the host) */
+#endif
 }
 void FM1CORE_CRF(idle)(void)
 {

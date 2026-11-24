@@ -182,7 +182,109 @@ static void fm1core_dab_sx_service(void)
 
 /* ---------------------------------------------------------------- the hooks (plat_glue.h) --- */
 #define FM1CORE_PL_NAME APP_NAME
-#define FM1CORE_PL_UI_FRAME() app_frame()
+/* the live knob labels and readouts (common/rd_cols.h): the knob boxes as app/app.c draws them (knob_value, cut to
+ * its box as T() cuts it): a knob page (knob_boxes: KROW, "VOLUME" for the mixer rows' K1), the step view's strip
+ * (panel.c seq_view: STRIP_ROW), ARP's panel (arp_page: the row the knobs turn, "ARP " dropped) and the maqam page
+ * (maqam_page's four boxes, their "K1 " tags dropped). Not given: START FRESH, SAVE's slots, the home page without
+ * step mode (no row drawn; K1..K4 the strip or the parts' volumes), ARP held before its panel shows. */
+#include "rd_cols.h"
+static void fm1core_dabke_fit(char *d, const char *s, int size, int32_t maxw)   /* T()'s text, not drawn */
+{
+    char u[48];
+    int f = size <= 10 ? 0 : size <= 13 ? 1 : size <= 17 ? 2 : size <= 24 ? 3 : 4, n = 0, lo = 0;
+    int32_t w;
+    while (s[n] && n < 47) {
+        int flat = s[n] == 'b' && n > 0 && s[n - 1] >= 'A' && s[n - 1] <= 'G' && (s[n + 1] < 'a' || s[n + 1] > 'z');
+        u[n] = flat ? 'b' : (char)up_char((uint8_t)s[n]);
+        n++;
+    }
+    u[n] = 0;
+    w = text_w(FACE[f], u);
+    while (maxw && w > maxw && f > lo)
+        w = text_w(FACE[--f], u);
+    if (FACE[f]->last < 'b')
+        for (n = 0; u[n]; n++)
+            u[n] = (char)up_char((uint8_t)u[n]);
+    while (maxw && w > maxw && n > 1) {
+        u[--n] = 0;
+        w = text_w(FACE[f], u);
+    }
+    snprintf(d, RDC_LEN, "%s", u);
+}
+static void fm1core_dabke_box(uint32_t c, int id, int first_vol)   /* knob_boxes' one box */
+{
+    char b[24], l[RDC_LEN], v[RDC_LEN];
+    const char *label = "";
+    int pid;
+    if (id == K_NONE) {
+        rdc_col(c, "", "");
+        return;
+    }
+    knob_value(id, b, &label);
+    if (first_vol)
+        label = "VOLUME";
+    pid = strip_id(id) >= 0 ? strip_id(id) : id;
+    fm1core_dabke_fit(l, label, 9, set.track && lk_ok(pid) && lk_has(picked(), pid) ? 44 : 51);
+    fm1core_dabke_fit(v, b, 15, 53);
+    rdc_col(c, l, v);
+}
+static void fm1core_dabke_rd(void)
+{
+    uint32_t c;
+    rdc_begin();
+    if (ui.fresh || (ui.arp_held && !arp_panel_up()))
+        return;
+    if (arp_panel_up()) {                     /* arp_page, the row framed */
+        for (c = 0; c < 4u; c++) {
+            char b[24], l[RDC_LEN], v[RDC_LEN];
+            const char *label = "";
+            knob_value(ARP_ROW[ui.arp_row & 1u][c], b, &label);
+            if (label[0] == 'A' && label[1] == 'R' && label[2] == 'P' && label[3] == ' ')
+                label += 4;
+            fm1core_dabke_fit(l, label, 9, 51);
+            fm1core_dabke_fit(v, b, 13, 51);
+            rdc_col(c, l, v);
+        }
+        return;
+    }
+    if (ui.save)
+        return;
+    if (ui.page == PG_HOME) {
+        if (!ui.seq || !set.track)            /* (no row; or the step view's strip while K1..K4 turn the parts) */
+            return;
+        for (c = 0; c < 4u; c++)
+            fm1core_dabke_box(c, STRIP_ROW[c], 0);
+        return;
+    }
+    if (ui.page == PG_SEL) {                  /* maqam_page's boxes */
+        static const char *const LAB[4] = {"CENTS", "MAQAM", "ROOT", "DEPTH"};
+        for (c = 0; c < 4u; c++) {
+            char b[40], t[12], v[RDC_LEN];
+            b[0] = 0;
+            if (c == 0) {
+                text_cat(b, NOTE_NAME[ui.cur]);
+                text_cat(b, " ");
+                int_text(set.ntune[ui.cur], t);
+                text_cat(b, t);
+            } else if (c == 1)
+                maqam_name(b, 0);
+            else if (c == 2)
+                text_cat(b, NOTE_NAME[set.ch[C_ROOT] % 12]);
+            else {
+                int_text(set.qdepth, t);
+                text_cat(b, t);
+                text_cat(b, " CT");
+            }
+            fm1core_dabke_fit(v, b, 13, 50);
+            rdc_col(c, LAB[c], v);
+        }
+        return;
+    }
+    for (c = 0; c < 4u; c++)                  /* knob_page */
+        fm1core_dabke_box(c, KROW[ui.page - PG_FX][ui.row[ui.page - PG_FX]][c],
+                          c == 0 && ui.page == PG_FX && ui.row[0] >= MIX_ROW);
+}
+#define FM1CORE_PL_UI_FRAME() (app_frame(), fm1core_dabke_rd())
 #define FM1CORE_PL_UI_INPUT() app_input_only()
 #define FM1CORE_PL_DIM_LEVEL (fm1core_fb_dim_lo ? FM1P_LED_FAINT : FM1P_LED_DIM)   /* the glow: DIM LO / HI */
 #define FM1CORE_PL_DIM_ON 1               /* (plat_lights fills the dim plane only while glowing) */

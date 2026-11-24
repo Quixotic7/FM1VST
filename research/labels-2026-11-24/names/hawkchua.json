@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "labels": {
+    "knobs": {
+      "SELECT": "OCTAVE",
+      "ALGO": "OSC",
+      "PRESETS": "PRESET",
+      "K1": "CHAOS",
+      "K2": "SHAPE",
+      "K3": "OUTPUT",
+      "K4": "RING"
+    },
+    "buttons": {
+      "SEL": "PAN",
+      "LFO": "FREE EG",
+      "GLO": "MIDI",
+      "SEQ": "KARMA",
+      "REC": "TAPE"
+    }
+  }
+}

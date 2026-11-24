@@ -26,7 +26,11 @@ fm1_add_core(mono2k ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/m
 # (firmware/fm1/gen/felucca_font.h: the platform's crash and update text, not in the core), Inter Tight (the site),
 # the JieLi SDK's Apache-2.0 (device packages only). RUN_ARGS: PLAY pressed once the splash and its wipe are over
 # (2.5 s; a press during the splash only skips it): bank A's A01 plays.
-fm1_add_rfm1(mono2k AUTHORS "Iñigo Hernandez (Sequencist)"
+# rd1: its knob row as drawn, live labels and readouts (core_mono2k.c, common/rd_cols.h)
+fm1_add_rfm1(mono2k WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_ATCK_=_1.8 --expect-readout ctl_6_REL_=_44
+             AUTHORS "Iñigo Hernandez (Sequencist)"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
                            "The FM-1 platform's licensing notes ({name})=firmware/fm1/LICENSES/CS-1-LICENSING.md"
                            "CC-BY-SA-4.0 (the pixel font in {name}, adapted)=assets/fonts/mono2k-pixel/ADAPTATION.md"

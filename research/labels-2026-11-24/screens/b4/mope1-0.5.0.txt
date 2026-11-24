@@ -1,0 +1,25 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4470: epoch 2 knobs "" "" "" "EYES" "BITE" "NERVE" "ROOM" ""
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "ATK" "DEC" "SUS" "REL" ""
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "RATE" "DPTH" "SHPE" "DEST" ""
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "VERB" "SIZE" "TONE" "RAIN" ""
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "MODE" "RATE" "OCT" "GATE" ""
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "CUT" "RES" "TYPE" "DRIV" ""
+== GLO rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4125: epoch 2 knobs "" "" "" "BPM" "VOX" "DRUM" "BASS" ""
+== SEQ rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""

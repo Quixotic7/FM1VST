@@ -58,7 +58,11 @@ endif()
 
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: h1's MIT, the recordings' sources
 # (docs/SAMPLES.md, CC0), fm1-base's and felucca-bsp's MPL-2.0 with their notes, the Barlow OFL and Terminus's licence
-fm1_add_rfm1(h1 AUTHORS "Jake Handy"
+# rd1: h1_control's per-encoder names and values as live labels and readouts (core_h1.c, common/rd_cols.h)
+fm1_add_rfm1(h1 WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K2@4550:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_4_DECAY_=_61 --expect-readout ctl_6_RELEASE_=_51
+             AUTHORS "Jake Handy"
              LICENSE_FILES "MIT ({name}, LICENSE)=LICENSE"
                            "The recordings in {name} (docs/SAMPLES.md: CC0)=docs/SAMPLES.md"
                            "MPL-2.0 (fm1-base, base/LICENSE)=base/LICENSE"

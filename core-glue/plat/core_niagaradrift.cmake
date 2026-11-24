@@ -15,7 +15,11 @@ fm1_add_core(niagaradrift ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_nd} UNIT core_niag
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: the firmware's own (its LICENSE,
 # LICENSING.md), MPL-2.0 (LICENSES/: ota.c's update rule from felucca-bsp, 0.3's screen reader announce.c from
 # fm1-base, both built in), the fonts' (Barlow, the UI face; Inter Tight and IBM Plex Mono, its browser emulator's faces)
-fm1_add_rfm1(niagaradrift AUTHORS "Evan Yerburgh"
+# rd1: its knob row as drawn, live labels and readouts (core_niagaradrift.c, common/rd_cols.h)
+fm1_add_rfm1(niagaradrift WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_Level_=_85 --expect-readout ctl_6_Cutoff_=_61
+             AUTHORS "Evan Yerburgh"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
                            "LICENSING.md ({name})=LICENSING.md"
                            "MPL-2.0 (ota.c and announce.c in {name})=LICENSES/MPL-2.0.txt"

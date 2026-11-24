@@ -107,4 +107,21 @@ static void fm1core_dg_info(char *buf, uint32_t n)
 #define FM1CORE_DG_OTA_C "../../cores/AURORA/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
 
+/* the live knob labels and readouts (common/rd_cols.h): the page's four knob cells as aurora.c draw_knob draws them
+ * (PAGES[page].p[k].name, fmt_value of *param_ptr; the cells stay under SAVE's slot picker); no knob there "" */
+#include "rd_cols.h"
+static void fm1core_aurora_rd(void)
+{
+    uint32_t k;
+    rdc_begin();
+    for (k = 0; k < 4u; k++) {
+        const pdesc_t *d = &PAGES[page].p[k];
+        char v[24];
+        v[0] = 0;
+        if (d->name)
+            fmt_value(d, *param_ptr(d), v);
+        rdc_col(k, d->name ? d->name : "", v);
+    }
+}
+#define FM1CORE_DG_AFTER_FRAME fm1core_aurora_rd
 #include "dinghy_glue.h"

@@ -20,7 +20,13 @@ fw_golden(dungeontracker ${CMAKE_SOURCE_DIR}/cores/Dungeon-Tracker web/emu/feluc
 # Fukiai icon font and Inter Tight (rasterised into ui_icons.h / ui_fonts.h / ui_keycaps.h); the CC0 samples'
 # provenance (felucca_samples.h). Not the JieLi SDK's Apache-2.0 (device packages only), DotGothic16 (the browser
 # page's labels), felucca-bsp's MPL-2.0 (not in the web unit) nor snes_spc's LGPL (the ADPCM engine, built off).
-fm1_add_rfm1(dungeontracker AUTHORS "BourbonWX"
+# rd1: Felucca's map (fw_map_fork.h), checked against this fork's screens (HOME, ENV, LFO, FX, SCL, ARP, EDIT, GLO
+# held); the test: ENV's ATTACK, ALGORITHM to part 2, FX's chorus send
+fm1_add_rfm1(dungeontracker WANTS rd1
+             READOUT_TEST --press ENV@4100 --turn K1@4400:2 --turn K4@4600:-1 --turn ALGO@4800:1 --press FX@5000
+                          --turn K2@5300:3 --seconds 3 --expect-readout ctl_3_Attack_=_1.2_ms
+                          --expect-readout ctl_1_Part_=_Part_2 --expect-readout ctl_4_Chorus_Send_=_42_%
+             AUTHORS "BourbonWX"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
                            "LICENSING.md ({name})=LICENSING.md"
                            "Apache-2.0 (msfa in {name})=LICENSES/Apache-2.0-msfa.txt"

@@ -120,6 +120,41 @@ static void fm1core_org_sysex(const uint8_t *p, uint32_t n);
 #define FM1CORE_DG_OTA_C "../../cores/orgigs/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_org_sysex((p), (n))
 
+/* OrGigs: the row of cells the knobs hold (KNOB1..4, or SEL + them: ui.shift), filled by ui_draw's own cell builders (ins_cells,
+ * mst_cells, midi_cells, light_cells, fx_cells: they only fill the struct handed to them). Nothing: the intro, PLAY (drawbars,
+ * no labels drawn), the FX grid and the MIDI mixer (both format inline in their draw functions), INSERT with the effect off. */
+#include "rd_cols.h"
+static void fm1core_orgigs_rd(void)
+{
+    cells_t top, sel;
+    const cells_t *row;
+    uint32_t k;
+    rdc_begin();
+    if (intro.on)
+        return;
+    if (ui.mode == MODE_INS) {
+        if (fxi_st.type == FXI_OFF)
+            return;
+        ins_cells(&top, &sel);
+        row = ui.shift ? &sel : &top;
+    } else if (ui.mode == MODE_MST) {
+        mst_cells(&top, &sel);
+        row = ui.shift ? &sel : &top;
+    } else if (ui.mode == MODE_MIDI) {
+        midi_cells(&top, &sel);
+        row = ui.shift ? &sel : &top;
+    } else if (ui.mode == MODE_LIGHT) {
+        light_cells(&top);
+        row = &top;
+    } else if (ui.mode == MODE_FX && ui.shift) {
+        fx_cells(&sel);
+        row = &sel;
+    } else
+        return;
+    for (k = 0; k < 4u; k++)
+        rdc_col(k, row->lab[k], row->val[k]);
+}
+#define FM1CORE_DG_AFTER_FRAME fm1core_orgigs_rd
 #include "dinghy_glue.h"
 
 static void fm1core_org_sysex(const uint8_t *p, uint32_t n)

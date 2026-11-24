@@ -1,0 +1,47 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "PITCH" "SPEED" "CLOCK" "TONE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "PITCH" "+1"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SPEED" "65"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "TONE" "65"
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "PITCH" "SPEED" "CLOCK" "TONE" ""
+   labels@4110: epoch 2 knobs "" "" "" "BEND" "STUTTER" "MONO" "CRUSH" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "BEND" "1"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "STUTTER" "1"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "MONO" "1"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "CRUSH" "7 BIT"
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "PITCH" "SPEED" "CLOCK" "TONE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "PITCH" "+1"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SPEED" "65"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "TONE" "65"
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "PITCH" "SPEED" "CLOCK" "TONE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "PITCH" "+1"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SPEED" "65"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "TONE" "65"
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "PITCH" "SPEED" "CLOCK" "TONE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "PITCH" "+1"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SPEED" "65"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "TONE" "65"
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "PITCH" "SPEED" "CLOCK" "TONE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "PITCH" "+1"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SPEED" "65"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "TONE" "65"
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "PITCH" "SPEED" "CLOCK" "TONE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "PITCH" "+1"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SPEED" "65"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "TONE" "65"
+== GLO rc 0
+   labels@0: epoch 1 knobs "" "" "" "PITCH" "SPEED" "CLOCK" "TONE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "PITCH" "+1"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SPEED" "65"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "TONE" "65"
+== SEQ rc 0
+   labels@0: epoch 1 knobs "" "" "" "PITCH" "SPEED" "CLOCK" "TONE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "PITCH" "+1"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SPEED" "65"
+   readout@4755: seq 3 ctl 6 kind 1 flags 0 frac -1 "TONE" "65"

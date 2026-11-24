@@ -25,7 +25,12 @@ dinghy_golden_check(arcticscream SCRIPT golden_arcticscream.txt AT 6000
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). The licence texts: the firmware's own (its LICENSE,
 # LICENSES/, LICENSING.md, the fonts'). MEMORY_MIB 12 (2.0): web/fm1_web.c's RAM sample area is 4 MiB now (the browser's
 # 1 MiB slots; the glue uses its first 288 KiB, the FM-1's 72 KiB slots: grimm_hook/analog_tables.h)
-fm1_add_rfm1(arcticscream AUTHORS "PolarPatch" MEMORY_MIB 12
+# rd1 (docs/RFM1.md "Readouts (rd1)"): grimm_rd.h's live labels and readouts (the knob turned: its name and value)
+fm1_add_rfm1(arcticscream WANTS rd1
+             READOUT_TEST --press ENV@4100 --turn K1@4400:4 --turn ALGO@4600:1 --turn PRESETS@4800:1 --seconds 1
+                          --expect-readout ctl_3_ATTACK_=_1.3_s --expect-readout ctl_1_TRACK_=_T2
+                          --expect-readout ctl_-1_SOUND_=_POLAR_NIGHT
+             AUTHORS "PolarPatch" MEMORY_MIB 12
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
                            "LICENSING.md ({name})=LICENSING.md"
                            "Apache-2.0 (msfa in {name})=LICENSES/Apache-2.0-msfa.txt"

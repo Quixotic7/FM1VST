@@ -15,3 +15,13 @@
 #define FM1CORE_FW_OTA_C "../../cores/Dungeon-Tracker/firmware/src/ota.c"         /* the M-UPGRADE identity */
 #define FELUCCA_ID "FM-1_915"                                                     /* (build.py --release 1.0) */
 #include "fw_core.h"
+
+/* the Tier 2 map in the .rfm1 (readouts, live knob labels): Felucca's, checked against this fork (fw_map_fork.h) */
+#ifdef FM1CORE_RFM1
+/* Dungeon Tracker's differences from Felucca 1.8.2's dispatch (ui_input.c): SEQ held, SELECT is the RONDO track
+ * picker (tk_pick_turn); the DICE page's knobs are its own (relative) */
+#define FE_SELECT_FELUCCA 1
+#define FE_SELECT_TARGET (ui.ly == LAYER_SEQ && ly_down(LAYER_SEQ) ? -1 : fe_select_target())
+#define FE_PAGE_OWN(pg, k) ((pg)->graph == GR_DICE)
+#endif
+#include "fw_map_fork.h"

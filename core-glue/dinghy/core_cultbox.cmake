@@ -39,7 +39,11 @@ dinghy_golden_check(cultbox SCRIPT golden_cultbox.txt AT 3000 SOURCE ${_cb}/firm
 # (tools/rfm1/rfm1_link.cmake). The licence texts: its GPL, its LICENSING.md (the samples' and the logo's notes) and
 # the Terminus font's OFL; Emscripten's and musl's are added by fm1_add_rfm1. rfm1_run plays its chord on PLVKS (the
 # INIT preset): no RUN_ARGS
-fm1_add_rfm1(cultbox AUTHORS "beatcult"
+# rd1: its knob row as drawn, live labels and readouts (core_cultbox.c, common/rd_cols.h)
+fm1_add_rfm1(cultbox WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press SEQ@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_Tempo_=_121 --expect-readout ctl_6_Rate_=_1/32
+             AUTHORS "beatcult"
              HOSTED_DESPITE_GATE "the author ships the samples and the logo in every package: built as shipped, hosted at RemoteFM1FW only, never bundled (owner, 2026-11-06)"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
                            "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt")
