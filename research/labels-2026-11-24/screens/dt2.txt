@@ -1,0 +1,26 @@
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "PART" "" "E2 DECAY" "E3 COLOR" "E1 TUNE" "E5 CLICK" ""
+   labels@4110: epoch 2 knobs "" "" "" "" "" "" "" ""
+   labels@4170: epoch 3 knobs "" "PART" "" "" "" "" "" ""
+== GLO+hold rc 0
+   labels@0: epoch 1 knobs "" "PART" "" "E2 DECAY" "E3 COLOR" "E1 TUNE" "E5 CLICK" ""
+   labels@4305: epoch 2 knobs "TEMPO" "" "" "T1 LEVEL" "T2 LEVEL" "T3 LEVEL" "T4 LEVEL" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac 826 "T1 Level" "-3.5 dB"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac 826 "T2 Level" "-3.5 dB"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac 826 "T3 Level" "-3.5 dB"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac 826 "T4 Level" "-3.5 dB"
+   labels@5010: epoch 3 knobs "" "PART" "" "E2 DECAY" "E3 COLOR" "E1 TUNE" "E5 CLICK" ""
+== EDITx2 rc 0
+   labels@0: epoch 1 knobs "" "PART" "" "E2 DECAY" "E3 COLOR" "E1 TUNE" "E5 CLICK" ""
+   labels@4005: epoch 2 knobs "" "" "" "" "" "" "" ""
+   labels@4065: epoch 3 knobs "" "PART" "" "" "" "" "" ""
+   labels@4200: epoch 4 knobs "" "" "" "" "" "" "" ""
+== LFOx2 rc 0
+   labels@0: epoch 1 knobs "" "PART" "" "E2 DECAY" "E3 COLOR" "E1 TUNE" "E5 CLICK" ""
+   labels@4005: epoch 2 knobs "" "PART" "" "" "" "" "" ""
+   labels@4065: epoch 3 knobs "" "PART" "" "LFO RATE" "LFO WAVE" "LFO PHASE" "LFO FADE" ""
+   labels@4200: epoch 4 knobs "" "PART" "" "" "" "" "" ""
+   labels@4260: epoch 5 knobs "" "PART" "" "LFO 2 SYNC" "LFO 2 TRIG" "LFO 2 POL" "" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac 100 "LFO 2 SYNC" "4BAR"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac 1000 "LFO 2 TRIG" "FREE"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac 1000 "LFO 2 POL" "UNI"

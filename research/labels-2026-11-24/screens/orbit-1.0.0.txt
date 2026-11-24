@@ -1,0 +1,26 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4170: epoch 2 knobs "" "" "" "ROOT" "SCL" "QNT" "CHORD" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "ROOT" "C#"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SCL" "MAJ"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "QNT" "SNAP"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "CHORD" "TRIAD"
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4170: epoch 2 knobs "" "" "" "MODE" "RATE" "OCT" "GATE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "MODE" "UP"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "RATE" "1/32"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "OCT" "2"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "GATE" "51 %"
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== GLO+hold rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""

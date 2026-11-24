@@ -143,8 +143,11 @@ Ableton Move: its knob popup). Built with `WANTS rd1`:
   core took in the frame; with `fm1core_labels_epoch` / `fm1core_label` beside it the same adapter gives the live
   labels. The pattern: core-glue/dinghy/grimm_rd.h (GR!MM 2, Glitch, Arctic Scream).
 - **Built with it:** ChoralRoot (its own lines and the bridge), Melodee and Felucca (the bridge over their Tier 2
-  maps, core_melodee_params.c / core_felucca_params.c), GR!MM 2, Glitch and Arctic Scream (grimm_rd.h). The audio is
-  bit-identical to the released files over the same run.
+  maps, core_melodee_params.c / core_felucca_params.c), GR!MM 2, Glitch and Arctic Scream (grimm_rd.h), EVILGENIUS
+  (core_evilgenius.c: FIZZ's own label and turn models), Dungeon Tracker, GHOULBOX and Mini-Tone (Felucca's map in their
+  .rfm1 only, with each fork's dispatch differences as the map's options: fw_map_fork.h), SLOOP, Clipper, KARMA,
+  M-PYRE, ORBIT and Stallion (core-glue/sloop/sloop_rd.h: the four columns as the screen drew them), Elasticat (its own
+  lines, with a tree that has them: EC_SOURCE). The audio is bit-identical to the released files over the same run.
 
 ## Check it
 

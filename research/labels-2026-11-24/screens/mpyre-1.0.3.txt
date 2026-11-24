@@ -1,0 +1,31 @@
+== HOME0 rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== ENV rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4110: epoch 2 knobs "" "" "" "ATK" "DEC" "SUS" "REL" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "ATK" "1.1 ms"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "DEC" "10.0 s"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "SUS" "100 %"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "REL" "4.0 ms"
+== LFO rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4110: epoch 2 knobs "" "" "" "RATE" "WAVE" "PHS" "FADE" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "RATE" "1.24 Hz"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "WAVE" "TRI"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "PHS" "1"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "FADE" "1.1 ms"
+== FX rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== SEL rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+   labels@4170: epoch 2 knobs "" "" "" "ROOT" "SCL" "QNT" "CHORD" ""
+   readout@4455: seq 1 ctl 3 kind 1 flags 0 frac -1 "ROOT" "C#"
+   readout@4560: seq 2 ctl 4 kind 1 flags 0 frac -1 "SCL" "MAJ"
+   readout@4650: seq 3 ctl 5 kind 1 flags 0 frac -1 "QNT" "SNAP"
+   readout@4755: seq 4 ctl 6 kind 1 flags 0 frac -1 "CHORD" "PW"
+== ARP rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== EDIT rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
+== GLO+hold rc 0
+   labels@0: epoch 1 knobs "" "" "" "" "" "" "" ""
