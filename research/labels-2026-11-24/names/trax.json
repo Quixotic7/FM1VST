@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "labels": {
+    "knobs": {
+      "SELECT": "ROW",
+      "ALGO": "CHANNEL",
+      "PRESETS": "KEY INSTR",
+      "K1": "NOTE",
+      "K2": "INSTR",
+      "K3": "VOLUME",
+      "K4": "FX VALUE"
+    },
+    "buttons": {
+      "FX": "FX COLUMNS",
+      "SEL": "COPY/PASTE",
+      "ENV": "KEY-OFF",
+      "LFO": "MUTE",
+      "EDIT": "INSTRUMENT",
+      "GLO": "SONGS",
+      "HOME": "PATTERN",
+      "ARP": "UNDO",
+      "SEQ": "ORDER",
+      "REC": "EDIT MODE"
+    }
+  }
+}

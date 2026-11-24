@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "labels": {
+    "knobs": {
+      "ALGO": "PAGE",
+      "PRESETS": "",
+      "K1": "HEAR WPM",
+      "K2": "SPACING",
+      "K3": "PITCH",
+      "K4": "SEND WPM"
+    },
+    "buttons": {
+      "FX": "SOUND",
+      "SEL": "CHOOSE",
+      "ENV": "",
+      "LFO": "",
+      "EDIT": "",
+      "GLO": "",
+      "HOME": "MENU",
+      "ARP": "",
+      "SEQ": "VIEW",
+      "REC": "DEL / EDIT",
+      "OCT-": "PREV",
+      "OCT+": "NEXT"
+    }
+  }
+}

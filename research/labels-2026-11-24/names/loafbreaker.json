@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "labels": {
+    "knobs": {
+      "SELECT": "TEMPO",
+      "ALGO": "BREAK",
+      "PRESETS": "PATTERN",
+      "K1": "GATE",
+      "K2": "FILTER",
+      "K3": "DRUM FLT",
+      "K4": "SUB DECAY"
+    },
+    "buttons": {
+      "FX": "EFFECTS",
+      "SEL": "SHIFT",
+      "ENV": "SONG",
+      "LFO": "MIX",
+      "EDIT": "SOUNDS",
+      "GLO": "SYSTEM",
+      "SEQ": "PATTERN",
+      "OCT-": "PITCH -",
+      "OCT+": "PITCH +"
+    }
+  }
+}

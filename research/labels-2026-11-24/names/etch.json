@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "labels": {
+    "knobs": {
+      "SELECT": "PAGE",
+      "ALGO": "",
+      "PRESETS": "BPM",
+      "K1": "MORPH",
+      "K2": "ETCH",
+      "K3": "TONE",
+      "K4": "SPACE"
+    },
+    "buttons": {
+      "SEL": "GUIDE",
+      "LFO": "MOD",
+      "EDIT": "DRAW",
+      "GLO": "SYSTEM"
+    }
+  }
+}
