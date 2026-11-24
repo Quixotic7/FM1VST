@@ -1614,6 +1614,17 @@ int main(int argc, char **argv)
                             printf(" \"%s\"", l ? l : "");
                         }
                         printf("\n");
+                        int nb = 0;              /* the buttons' (FM1P_B_* order) when any is given: null as - */
+                        for (int k = 8; k < 22; k++)
+                            nb += str(C1(F_LABEL, k)) != NULL;
+                        if (nb) {
+                            printf("labels@%u: buttons", ms);
+                            for (int k = 8; k < 22; k++) {
+                                const char *l = str(C1(F_LABEL, k));
+                                printf(l ? " \"%s\"" : " -", l ? l : "");
+                            }
+                            printf("\n");
+                        }
                     }
                 }
             }

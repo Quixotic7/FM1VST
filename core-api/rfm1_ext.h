@@ -28,6 +28,12 @@
 /* (the shim's, weak: a host build without it links, and the macros do nothing) */
 void rfm1_readout_push(int ctl, int kind, unsigned flags, int frac, const char *title, const char *value,
                        const char *sub) __attribute__((weak));
+/* An adapter's answer (optional; a glue that reads a firmware's own tables, as core-glue/dinghy/grimm_rd.h): the shim
+ * calls it after a frame for each knob (role FM1P_E_SELECT .. FM1P_E_K4) whose detents the core took and said nothing
+ * about, when the core has no Tier 2 map. Fill title and value (n bytes each, NUL-terminated), *frac (0..1000, or -1)
+ * and *flags (RFM1_RD_BIPOLAR) and return RFM1_RD_PARAM (or RFM1_RD_PRESET: a sound's name); 0: nothing to say. */
+int fm1core_rd_knob(int role, char *title, char *value, unsigned n, int32_t *frac, unsigned *flags)
+    __attribute__((weak));
 #define RFM1_FRAC(v, lo, hi) \
     ((hi) > (lo) ? (int)((((int64_t)(v) - (int64_t)(lo)) * 1000) / ((int64_t)(hi) - (int64_t)(lo))) : -1)
 #define RFM1_READOUT(ctl, title, value) \

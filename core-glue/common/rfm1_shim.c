@@ -405,12 +405,13 @@ static void rd_bridge(void)                     /* (after a frame: the knobs the
     int r;
     if (!rd_pending || !core() || !(P = C->panel))
         return;
-    if (rd_pushes != rd_seen || !C->knob_target || !C->params) {   /* the core spoke (or has no map): its own wins */
+    const int map = C->knob_target && C->params;
+    if (rd_pushes != rd_seen || (!map && !fm1core_rd_knob)) {   /* the core spoke (or has no map, no adapter): its own wins */
         rd_seen = rd_pushes;
         rd_pending = 0;
         return;
     }
-    if (C->param_epoch)
+    if (map && C->param_epoch)
         (void)C->param_epoch();
     for (r = FM1P_E_SELECT; r <= FM1P_E_K4; r++) {
         const fm1param_t *p;
@@ -419,6 +420,16 @@ static void rd_bridge(void)                     /* (after a frame: the knobs the
         if (!(rd_pending >> r & 1u) || P->enc[P->enc_id[r]] != 0)
             continue;                           /* (not turned, or not taken yet: the next frame) */
         rd_pending &= (uint8_t)~(1u << r);
+        if (!map) {                             /* the glue's adapter (rfm1_ext.h fm1core_rd_knob): its words */
+            char val[24];
+            int32_t fr = -1;
+            uint32_t fl = 0;
+            const int kind = fm1core_rd_knob(r, t, val, sizeof t, &fr, &fl);
+            t[sizeof t - 1] = val[sizeof val - 1] = 0;
+            if (kind == RFM1_RD_PARAM || kind == RFM1_RD_PRESET)
+                rd_set(kind == RFM1_RD_PARAM ? FM1CORE_LBL_KNOB0 + r : -1, kind, fl, fr, t, val, 0);
+            continue;
+        }
         if (!(p = rd_target(r)) || !p->get)
             continue;
         v = p->get();
