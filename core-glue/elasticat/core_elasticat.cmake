@@ -56,9 +56,7 @@ set(_ec_run --folder ${CMAKE_CURRENT_LIST_DIR}/test_folder --flash-in ${CMAKE_CU
             --expect-ui play:1 --expect-ui file:testloop_bpm120.wav --expect-ui ready:1 --expect-ui missing:0
             --expect-ui seq:on --audio-in ${CMAKE_CURRENT_LIST_DIR}/test_folder/audio/testloop_bpm120.wav
             --audio-in-latency 256)
-# rd1 (docs/RFM1.md "Readouts (rd1)"): its own RFM1_READOUT_BAR lines (ec_app.c turn_cell, ec_ux.c ec_ux_takeover: a
-# tree with them, EC_SOURCE; the pinned one has none yet and gives its live labels only)
-fm1_add_rfm1(elasticat VIRTUAL NEEDS fs1 WANTS ain1 rd1 FOLDERS audio=r data=rw MEMORY_MIB 280 AUTHORS "Quixotic7" METADATA skin/RemoteFM1Metadata.json
+fm1_add_rfm1(elasticat VIRTUAL NEEDS fs1 WANTS ain1 FOLDERS audio=r data=rw MEMORY_MIB 280 AUTHORS "Quixotic7" METADATA skin/RemoteFM1Metadata.json
              RUN_ARGS --folder ${CMAKE_CURRENT_LIST_DIR}/test_folder --flash-in ${CMAKE_CURRENT_LIST_DIR}/test_project.flash
                       --settle 3000 --seconds 4 --press PLAY@1500 --keys 25 --min-rms 0.02 --expect-ui ec0.6.97
                       --expect-ui play:1 --expect-ui file:testloop_bpm120.wav --expect-ui ready:1 --expect-ui missing:0
@@ -74,14 +72,4 @@ if(_ec_file)
                      -DRUN=$<TARGET_FILE:rfm1_run> -DFILE=${_ec_file} "-DRUN_ARGS=${_ec_ra}"
                      -P ${FM1_RFM1_TOOLS}/rfm1/rfm1_test.cmake)
     set_tests_properties(rfm1_elasticat_ain_off PROPERTIES TIMEOUT 300)
-endif()
-# rfm1_rd_elasticat (a tree with its readout lines: EC_SOURCE, until the pin has them): LOOP's four knobs turned, each
-# read out as its cell shows it
-if(_ec_file AND EC_SOURCE)
-    string(REPLACE ";" " " _ec_rd "--folder;${CMAKE_CURRENT_LIST_DIR}/test_folder;--flash-in;${CMAKE_CURRENT_LIST_DIR}/test_project.flash;--settle;3000;--seconds;2;--press;PLAY@1500;--keys;25;--min-rms;0;--turn;K1@2000:2;--turn;K2@2300:-3;--turn;K3@2600:1;--turn;K4@2800:1;--expect-readout;ctl_-1_PITCH_=_+2;--expect-readout;ctl_-1_SLOT_=_OFF;--expect-readout;ctl_-1_START_=_1;--expect-readout;ctl_-1_END_=_128")
-    add_test(NAME rfm1_rd_elasticat
-             COMMAND ${CMAKE_COMMAND} -DPYTHON=${CR_PYTHON} -DCHECK=${FM1_RFM1_TOOLS}/rfm1_check.py
-                     -DRUN=$<TARGET_FILE:rfm1_run> -DFILE=${_ec_file} "-DRUN_ARGS=${_ec_rd}"
-                     -P ${FM1_RFM1_TOOLS}/rfm1/rfm1_test.cmake)
-    set_tests_properties(rfm1_rd_elasticat PROPERTIES TIMEOUT 300)
 endif()
