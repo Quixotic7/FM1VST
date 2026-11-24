@@ -329,6 +329,9 @@ int rfm1_cpu2_core(void)
 #include <stdio.h>
 #include <string.h>
 #include "rfm1_ext.h"
+/* (the adapter hooks, declared here too: a core may put its own older copy of rfm1_ext.h first on the include path) */
+int fm1core_rd_knob(int role, char *title, char *value, unsigned n, int32_t *frac, unsigned *flags) __attribute__((weak));
+void fm1core_rd_turn(int role) __attribute__((weak));
 typedef struct {
     uint16_t version, size;    /* 1, sizeof (48) */
     uint32_t seq;              /* moves on every new readout; 0: none yet */
