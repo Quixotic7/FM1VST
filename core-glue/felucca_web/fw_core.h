@@ -213,6 +213,9 @@ static void fm1core_fw_sx_service(void)  /* main.c's loop: ed_service (editor fr
 #ifndef FM1CORE_FW_AFTER_MS
 #define FM1CORE_FW_AFTER_MS() ((void)0)
 #endif
+#ifndef FM1CORE_FW_AFTER_FRAME
+#define FM1CORE_FW_AFTER_FRAME() ((void)0)   /* (a fork's, after a host frame: its knob row for the host, rd_cols.h) */
+#endif
 #ifndef FM1CORE_FW_LED
 #define FM1CORE_FW_LED(c, r, lv) ((void)0)
 #endif
@@ -551,6 +554,8 @@ static void fm1core_fw_ms_run(int host_frame)   /* frame / idle: the input, the 
     FM1CORE_FW_AFTER_MS();
     if (fm1core_halted())
         return;
+    if (host_frame)
+        FM1CORE_FW_AFTER_FRAME();
     if (web_booted && !web_boot_ms)       /* (main.c's loop has started) */
         fm1core_fw_sx_service();
     fm1core_fw_out();

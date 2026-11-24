@@ -16,7 +16,11 @@ fm1_add_core(golana ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/G
 # font and Inter Tight (rasterised into ui_icons.h / ui_fonts.h); the CC0 samples' provenance (felucca_samples.h). Not
 # the JieLi SDK's Apache-2.0 (device packages only) nor DotGothic16 (the browser page's labels); the tree's second
 # copies of the same texts (assets/fonts/OFL.txt, web/FUKIAI-LICENSE.txt, ..) left out.
-fm1_add_rfm1(golana AUTHORS "Gadlele"
+# rd1: its knob row as drawn, live labels and readouts (core_golana.c, common/rd_cols.h)
+fm1_add_rfm1(golana WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_ATTACK_=_1 --expect-readout ctl_6_RELEASE_=_51
+             AUTHORS "Gadlele"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
                            "LICENSING.md ({name})=LICENSING.md"
                            "Apache-2.0 (msfa in {name})=LICENSES/Apache-2.0-msfa.txt"
