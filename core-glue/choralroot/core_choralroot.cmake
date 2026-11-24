@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-only
-# ChoralRoot 0.45 (https://github.com/Quixotic7/ChoralRootFM1, branch claude/engine-readout f72ffdf2: 0.45 with the engine
-# picker's readout; the Move takeover, cr_move.c; the FM-1 packages unchanged): its own emulator's unit,
+# ChoralRoot 0.45 (https://github.com/Quixotic7/ChoralRootFM1, branch claude/engine-readout fa9ab7a9: 0.45 with the engine
+# picker's readout and the takeover's knob steps; the Move takeover, cr_move.c; the FM-1 packages unchanged): its own emulator's unit,
 # tools/emu/emu_fw.c, through core_choralroot.c and the family's glue (crf_glue.h; cmake/FM1Cores.cmake: fm1_add_core)
 include(${CMAKE_CURRENT_LIST_DIR}/crf.cmake)
 set(_cr ${CMAKE_SOURCE_DIR}/cores/ChoralRootFM1)
