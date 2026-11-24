@@ -409,7 +409,8 @@ int main(int argc, char **argv)
         uint32_t e, np = 0;
         for (e = 0; e < CEP_NENG; e++)
             np += cep_eng[e].npages;
-        printf("description: 2 layers, %u engines, %u pages, %u params\n", (unsigned)CEP_NENG, np, cep_np);
+        printf("description: 2 layers, %u engines, %u pages, %u params (%u shown as numbers: no format gives their "
+               "words and they are too many for a table)\n", (unsigned)CEP_NENG, np, cep_np, cep_approx);
     }
     check_ids();
     check_reads();

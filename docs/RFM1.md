@@ -188,6 +188,40 @@ and its LEDs and gets the Move's raw input for the parts it claims. Built with `
   ("PAD 5", "CC 50", "K1 +3"), lights a pad while pressed, says "pad N", and toggles its claims to ALL with Shift.
   `ctest -R rfm1_tk` runs it through all of the above (`tools/rfm1/rfm1_tk_test.py`).
 
+### Engine parameters (`ep1`)
+
+A firmware's sound engines' parameters for its host, by frozen id (the protocol: `engine-params/SPEC.md` beside this
+repository; [SPEC-NOTES.md](SPEC-NOTES.md) what the implementation changed): its layers (ChoralRoot: Chord, Bass),
+its engines, each engine's pages of up to eight parameters, every parameter with its range and its words. A host
+reads them without a call per frame and sets them absolutely (RemoteFM14Move: rfm1cs's ENGINE knob page). Built with
+`WANTS ep1`:
+
+- **The firmware's side** is `core-api/rfm1_ep.h` (MPL-2.0: vendor it): `const rfm1_ep_src_t *fm1core_ep(void)`
+  (weak; asked once after init) gives the layer names, the engines and their pages (`rfm1_ep_page_t`: an id, a name,
+  a group, eight pids), the parameters (`rfm1_ep_param_t`: pid, name, min, max, def, fmt INT / FIXED / TABLE / NOTE /
+  PERCENT / ONOFF, flags BIPOLAR LIST DYN NOLOCK SOUND GLOBAL RETIRED, a unit, a step, the CC that reaches it, and for
+  a TABLE its names or a `text()` the shim calls for every value) and the callbacks `layer(l, &engine, &ch)`,
+  `get(l, pid)`, `set(l, pid, v)` (as the firmware's own editor writes it, quietly), optional `words(l, pid, name,
+  text)` (the watched cells: a DYN parameter's words now) and `epoch()` (the description made again). Every unit of
+  an ep1 build has `FM1_HOST_EP1`; without it the header declares nothing.
+- **The module's side** (the shim, `RFM1_EP1`): the EP1D description (SPEC.md 3: header, layers, engines, pages,
+  params, tables, strings; tables with the same words shared; FNV-1a), the 264-byte EP1R record (SPEC.md 4: the layers'
+  engines and channels, every value of every layer, the watched page's cells; each part's seq moves only when it
+  changed), refreshed after each `rfm1_frame` and each `rfm1_ep_set`; `rfm1_ep() -> ptr`, `rfm1_ep_set(op, layer,
+  pid, value) -> 0 | -1` (SET; LOCK / FREE / FREE_ALL answer -3 until the locks' stage) with `rfm1_ep_host` set and the
+  readouts it pushed dropped, `rfm1_ep_watch(layer, page)`. No import: hosts without ep1 ignore the exports.
+- `rfm1_check` requires all three exports or none, `ep1` in `wants` with them and them with it; with `--run` it boots
+  the module, reads the record and checks the whole description. `rfm1_run --ep-info [--out F]` prints the record
+  (and writes the blob), `--ep` prints the description and every change of the record, `--ep-set L:PID=V@MS` and
+  `--ep-watch L:P@MS` call the exports as a host's queue does.
+- **ChoralRoot** (`core-glue/choralroot/cr_ep.c`, no change to its source): the editor's own walk (cr_edit.c's
+  screens and lanes, the same the MIDI CC blocks use) paired into Move pages of eight, the editor's long labels, its
+  words for every value fitted to a format or kept as a table, writes through `ce_knob`'s three ways; the ids frozen
+  in `cr_ep_ids.h` (append-only; `cr_ep_test --gen` appends new cells). `ctest -R ep` runs `rfm1_ep_choralroot` (the
+  whole unit natively: the ids against the firmware, every parameter of every engine of both layers written by ep1
+  and by the editor's knob from the same state, byte for byte; the audio bit-identical with every value read after
+  every frame) and `rfm1_cr_ep` (the .rfm1 through `rfm1_run`).
+
 ## Check it
 
 ```sh

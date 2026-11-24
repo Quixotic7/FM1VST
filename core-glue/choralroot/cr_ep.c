@@ -58,7 +58,8 @@ static rfm1_ep_engine_t cep_eng[CEP_NENG];
 static char cep_pool[CEP_POOL];
 static const char *cep_ptr[CEP_PTRS];
 static uint32_t cep_npool, cep_nptr;
-static uint16_t cep_missing;           /* cells whose key cr_ep_ids.h lacks (the ctest fails) */
+static uint16_t cep_missing;
+static uint16_t cep_approx;            /* parameters whose words no format gives and too many for a table (numbers) */           /* cells whose key cr_ep_ids.h lacks (the ctest fails) */
 static const char *const CEP_LAYERS[2] = {"Chord", "Bass"};
 static rfm1_ep_src_t cep_src;
 static int cep_made;
@@ -210,6 +211,7 @@ static void cep_format(rfm1_ep_param_t *q, const track_t *t, ce_ref_t r, const p
         }
     q->flags = (uint8_t)((q->flags & ~RFM1_EPF_BIPOLAR) | bip);
     if (n > 512) {                     /* (too many words: the nearest number, the hundredths of F_FIX2) */
+        cep_approx++;
         q->fmt = d->fmt == F_FIX2 ? RFM1_EP_FIXED : RFM1_EP_INT;
         q->arg = d->fmt == F_FIX2 ? 2 : 0;
         return;

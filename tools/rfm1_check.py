@@ -34,6 +34,11 @@ present. The record itself is only there once the module ran: with --run (tools/
 (rfm1_run --tk-info) and the record rfm1_tk() gives after init is checked: version 1, size 1468, a printable,
 NUL-terminated name, claims within 0xFF.
 
+Engine parameters (docs/RFM1.md "Engine parameters (ep1)", engine-params/SPEC.md): the optional exports rfm1_ep
+([] -> [i32]), rfm1_ep_set ([i32 i32 i32 i32] -> [i32]) and rfm1_ep_watch ([i32 i32] -> []), all three or none, and
+"ep1" in "wants" exactly when they are exported. With --run, the module is booted (rfm1_run --ep-info --out) and the
+record (version 1, size >= 264, 1..8 layers) and the whole EP1D description are checked (ep1_blob_errors).
+
 A skin (section 8, optional: tools/rfm1_skin.py): rfm1.skin's JSON ({"skin": 1}, dim 0 .. 0.8, a theme of all fourteen
 roles or the five picked ones as "#RRGGBB"), each image a PNG or JPEG of at most 4 MiB, its longer side at most 4096 px.
 The static labels of a RemoteFM1Metadata.json (tools/rfm1_labels.py, in the module's data) are reported when present.
