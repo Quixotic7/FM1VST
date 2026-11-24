@@ -45,6 +45,9 @@
 #                                   (core-api/rfm1_ext.h's macros). tk1 in WANTS: the Move takeover
 #                                   (docs/RFM1-TAKEOVER.md): the shim's rfm1_tk record, rfm1_tk_input /
 #                                   rfm1_tk_state, and FM1_HOST_TK for every unit (core-api/rfm1_move.h's calls)
+#                                   ep1 in WANTS: engine parameters (docs/RFM1.md "Engine parameters (ep1)"): the
+#                                   shim's EP1D description and EP1R record, rfm1_ep / rfm1_ep_set / rfm1_ep_watch from
+#                                   the glue's fm1core_ep() tables, and FM1_HOST_EP1 for every unit (core-api/rfm1_ep.h)
 #       [TAKEOVER_NAME <name>]      (with tk1) the manifest's informative "takeover": the mode's name (at most 15
 #       [TAKEOVER_CLAIMS <names..>] printable ASCII characters) and its claims (screen pads steps knobs jog volume
 #                                   buttons tracks, or all): a catalog can mark the file "made for Move"
@@ -295,6 +298,9 @@ function(fm1_add_rfm1 id)
     if("tk1" IN_LIST A_WANTS)     # the Move takeover (docs/RFM1-TAKEOVER.md): core-api/rfm1_move.h's calls reach the shim
         list(APPEND _base -DFM1_HOST_TK=1)
     endif()
+    if("ep1" IN_LIST A_WANTS)     # engine parameters (docs/RFM1.md "Engine parameters (ep1)"): core-api/rfm1_ep.h declares
+        list(APPEND _base -DFM1_HOST_EP1=1)   # fm1core_ep for the glue that gives the tables
+    endif()
     foreach(_i IN LISTS _tinc A_INCLUDES)
         list(APPEND _base -I${_i})
     endforeach()
@@ -353,6 +359,9 @@ function(fm1_add_rfm1 id)
     endif()
     if("tk1" IN_LIST A_WANTS)     # the takeover: the shim's record, rfm1_tk, rfm1_tk_input, rfm1_tk_state
         list(APPEND _shim_opt -DRFM1_TK=1)
+    endif()
+    if("ep1" IN_LIST A_WANTS)     # engine parameters: the shim's description, record, rfm1_ep, rfm1_ep_set, rfm1_ep_watch
+        list(APPEND _shim_opt -DRFM1_EP1=1)
     endif()
     if(A_AUDIO_OUT)               # more output channels (aout1): the shim's two exports, only for a core that gives some
         if(NOT A_AUDIO_OUT MATCHES "^(2|4|6|8|10)$")

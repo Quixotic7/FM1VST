@@ -65,6 +65,13 @@
  *     --expect-aout N   fail unless the module gives N channels and channels 3..N sounded (some RMS above --min-rms)
  *     the Move takeover (tk1, docs/RFM1-TAKEOVER.md): a module that exports rfm1_tk has its record checked after init
  *                    (version 1, size 1468, a NUL-terminated name), always; a bad one fails the run
+ *     engine parameters (ep1, docs/RFM1.md "Engine parameters (ep1)"; engine-params/SPEC.md):
+ *     --ep-info      no run: boot, init, rfm1_ep(), then the record's header as JSON (rfm1_check --run); with --out FILE
+ *                    the description blob (EP1D) written there
+ *     --ep           the description printed after init, then every change of the record after each call: the layers
+ *                    ("ep-layers@MS: L:engine/channel"), the values ("ep-values@MS: layer L pid=v .."), the cells
+ *     --ep-set L:PID=V@MS   rfm1_ep_set(SET, L, PID, V) before the tick of device ms MS (its answer printed)
+ *     --ep-watch L:P@MS     rfm1_ep_watch(L, P) (P: a page index, -1 none)
  *     --tk-info      no run: boot, init, then the record's header as JSON (version, size, name, claims; rfm1_check)
  *     --tk           drive the takeover as a Move host does: rfm1_tk_state(1, the record's claims, flags) at --tk-at,
  *                    the --tk-ev events through rfm1_tk_input (only the claimed controls'; the others are printed
@@ -124,6 +131,7 @@ enum {
     F_AUDIO_OUT_INFO, F_AUDIO_OUT,         /* (optional: aout1, more output channels) */
     F_READOUT,                             /* (optional: rd1, docs/RFM1.md "Readouts (rd1)") */
     F_TK, F_TK_INPUT, F_TK_STATE,          /* (optional: tk1, docs/RFM1-TAKEOVER.md) */
+    F_EP, F_EP_SET, F_EP_WATCH,            /* (optional: ep1, docs/RFM1.md "Engine parameters (ep1)") */
     F_N
 };
 static const struct {
@@ -141,6 +149,7 @@ static const struct {
     {"rfm1_audio_out_info", 0, 1}, {"rfm1_audio_out", 2, 0},
     {"rfm1_readout", 0, 1},
     {"rfm1_tk", 0, 1}, {"rfm1_tk_input", 1, 1}, {"rfm1_tk_state", 3, 0},
+    {"rfm1_ep", 0, 1}, {"rfm1_ep_set", 4, 1}, {"rfm1_ep_watch", 2, 0},
 };
 
 static IM3Environment g_env;
@@ -1319,6 +1328,193 @@ static int16_t *wav_read(const char *path, uint32_t *frames)
     return out;
 }
 
+/* ------------------------------------------------------------------- engine parameters (ep1) ----------------- */
+/* engine-params/SPEC.md 3-5: the record rfm1_ep() gives (264 bytes), its description (EP1D); --ep prints the
+ * description and every change of the layers, values and cells after each frame; --ep-set / --ep-watch call the
+ * exports at a device ms, as a host's queued input */
+#define EP_O_DSEQ 4
+#define EP_O_DPTR 8
+#define EP_O_DLEN 12
+#define EP_O_LSEQ 16
+#define EP_O_NLAY 20
+#define EP_O_LAY 24
+#define EP_O_VSEQ 56
+#define EP_O_VPTR 60
+#define EP_O_CSEQ 64
+#define EP_O_WPAGE 68
+#define EP_O_CELL 72
+static struct {
+    uint32_t rec, dseq, lseq, vseq, cseq;
+    uint8_t *desc;                     /* a copy */
+    uint32_t dlen, np, ne, ng, nl, nt;
+    int16_t *val;                      /* the last seen, [nl][np] */
+    int print;                         /* --ep */
+    struct { int op, layer, pid, v; uint32_t at; } ev[256];
+    int nev;
+    int sets, bad_sets;
+    double set_us_total, set_us_worst, frame_us_total, frame_us_worst;
+    uint32_t frames;
+} g_ep;
+static uint16_t ep_u16(const uint8_t *p) { return (uint16_t)(p[0] | p[1] << 8); }
+static const uint8_t *ep_param(uint32_t i) { return g_ep.desc + 32 + 16 * g_ep.nl + 16 * g_ep.ne + 32 * g_ep.ng + 32 * i; }
+static const char *ep_pname(uint32_t i) { return (const char *)ep_param(i) + 2; }
+static void ep_take_desc(void)         /* the description copied (desc_seq moved) */
+{
+    const uint32_t ptr = rd32(g_ep.rec + EP_O_DPTR), len = rd32(g_ep.rec + EP_O_DLEN);
+    free(g_ep.desc);
+    g_ep.desc = NULL;
+    g_ep.dlen = 0;
+    if (!len || len > 65536 || !in_mem(ptr, len))
+        return;
+    g_ep.desc = malloc(len);
+    memcpy(g_ep.desc, mem(NULL) + ptr, len);
+    g_ep.dlen = len;
+    g_ep.np = ep_u16(g_ep.desc + 8), g_ep.ne = g_ep.desc[10], g_ep.nl = g_ep.desc[11];
+    g_ep.ng = ep_u16(g_ep.desc + 12), g_ep.nt = ep_u16(g_ep.desc + 14);
+    free(g_ep.val);
+    g_ep.val = malloc(sizeof(int16_t) * g_ep.np * g_ep.nl);
+    for (uint32_t i = 0; i < g_ep.np * g_ep.nl; i++)
+        g_ep.val[i] = (int16_t)0x7FFF;
+}
+static void ep_print_desc(void)
+{
+    const uint8_t *L = g_ep.desc + 32, *E = L + 16 * g_ep.nl, *G = E + 16 * g_ep.ne;
+    printf("ep: description %u bytes: %u layers, %u engines, %u pages, %u params, %u tables\n", g_ep.dlen, g_ep.nl,
+           g_ep.ne, g_ep.ng, g_ep.np, g_ep.nt);
+    for (uint32_t i = 0; i < g_ep.nl; i++)
+        printf("ep: layer %u \"%.11s\" flags %u\n", i, (const char *)L + 16 * i, L[16 * i + 11]);
+    for (uint32_t e = 0; e < g_ep.ne; e++) {
+        const uint8_t *q = E + 16 * e;
+        printf("ep: engine %u id %u \"%.11s\" %u pages\n", e, ep_u16(q), (const char *)q + 2, q[13]);
+        for (uint32_t k = 0; k < q[13]; k++) {
+            const uint8_t *g = G + 32 * (ep_u16(q + 14) + k);
+            printf("ep:   page %u id %u \"%.11s\":", ep_u16(q + 14) + k, g[0], (const char *)g + 1);
+            for (int j = 0; j < 8; j++) {
+                const uint16_t x = ep_u16(g + 12 + 2 * j);
+                if (x == 0xFFFF)
+                    printf(" -");
+                else
+                    printf(" %u:\"%.11s\"", ep_u16(ep_param(x)), ep_pname(x));
+            }
+            printf("\n");
+        }
+    }
+}
+static void ep_poll(uint32_t ms)       /* after a call: what moved */
+{
+    uint32_t s;
+    if (!g_ep.rec)
+        return;
+    if ((s = rd32(g_ep.rec + EP_O_DSEQ)) != g_ep.dseq) {
+        g_ep.dseq = s;
+        ep_take_desc();
+        if (g_ep.print && g_ep.desc)
+            ep_print_desc();
+        g_ep.lseq = g_ep.vseq = g_ep.cseq = 0;
+    }
+    if (!g_ep.desc)
+        return;
+    if ((s = rd32(g_ep.rec + EP_O_LSEQ)) != g_ep.lseq) {
+        g_ep.lseq = s;
+        if (g_ep.print) {
+            printf("ep-layers@%u:", ms);
+            for (uint32_t i = 0; i < g_ep.nl; i++)
+                printf(" %u:%d/%d", i, rd8(g_ep.rec + EP_O_LAY + 4 * i) == 0xFF ? -1 : rd8(g_ep.rec + EP_O_LAY + 4 * i),
+                       rd8(g_ep.rec + EP_O_LAY + 4 * i + 1) == 0xFF ? -1 : rd8(g_ep.rec + EP_O_LAY + 4 * i + 1));
+            printf("\n");
+        }
+    }
+    if ((s = rd32(g_ep.rec + EP_O_VSEQ)) != g_ep.vseq) {
+        const uint32_t vp = rd32(g_ep.rec + EP_O_VPTR);
+        g_ep.vseq = s;
+        if (in_mem(vp, 2 * g_ep.np * g_ep.nl))
+            for (uint32_t l = 0; l < g_ep.nl; l++) {
+                int n = 0;
+                for (uint32_t i = 0; i < g_ep.np; i++) {
+                    int16_t v;
+                    memcpy(&v, mem(NULL) + vp + 2 * (l * g_ep.np + i), 2);
+                    const int16_t was = g_ep.val[l * g_ep.np + i];
+                    if (v == was)
+                        continue;
+                    g_ep.val[l * g_ep.np + i] = v;
+                    if (v == (int16_t)0x8000 && was == (int16_t)0x7FFF)
+                        continue;                /* (the first time: only the values the layer's engine has) */
+                    if (!g_ep.print)
+                        continue;
+                    if (!n++)
+                        printf("ep-values@%u: layer %u", ms, l);
+                    if (v == (int16_t)0x8000)
+                        printf(" %u=-", ep_u16(ep_param(i)));
+                    else
+                        printf(" %u=%d", ep_u16(ep_param(i)), v);
+                }
+                if (n)
+                    printf("\n");
+            }
+    }
+    if ((s = rd32(g_ep.rec + EP_O_CSEQ)) != g_ep.cseq) {
+        g_ep.cseq = s;
+        if (g_ep.print) {
+            printf("ep-cells@%u: page %d layer %u:", ms, (int16_t)rd16(g_ep.rec + EP_O_WPAGE), rd8(g_ep.rec + 70));
+            for (int k = 0; k < 8; k++) {
+                const uint32_t c = g_ep.rec + EP_O_CELL + 24u * (uint32_t)k;
+                if (!rd16(c))
+                    printf(" -");
+                else
+                    printf(" %u:\"%.11s\"=\"%.11s\"", rd16(c), (const char *)mem(NULL) + c + 2,
+                           (const char *)mem(NULL) + c + 13);
+            }
+            printf("\n");
+        }
+    }
+}
+/* --ep-set L:PID=V@MS, --ep-watch L:P@MS (P -1: none) */
+static int ep_parse(const char *a, int op)
+{
+    char *e;
+    if (g_ep.nev >= 256)
+        return 0;
+    g_ep.ev[g_ep.nev].op = op;
+    g_ep.ev[g_ep.nev].layer = (int)strtol(a, &e, 10);
+    if (*e != ':')
+        return 0;
+    g_ep.ev[g_ep.nev].pid = (int)strtol(e + 1, &e, 10);
+    g_ep.ev[g_ep.nev].v = 0;
+    if (op == 1) {
+        if (*e != '=')
+            return 0;
+        g_ep.ev[g_ep.nev].v = (int)strtol(e + 1, &e, 10);
+    }
+    if (*e != '@')
+        return 0;
+    g_ep.ev[g_ep.nev].at = (uint32_t)strtoul(e + 1, &e, 10);
+    g_ep.nev++;
+    return !*e;
+}
+static void ep_ms(uint32_t ms)         /* the calls due at ms, before its tick */
+{
+    for (int k = 0; k < g_ep.nev; k++)
+        if (g_ep.ev[k].at == ms) {
+            if (g_ep.ev[k].op == 1) {
+                const double t0 = now_s();
+                const int32_t r = (int32_t)call(F_EP_SET, 1, (uint32_t)g_ep.ev[k].layer, (uint32_t)g_ep.ev[k].pid,
+                                                (uint32_t)g_ep.ev[k].v);
+                const double us = (now_s() - t0) * 1e6;
+                g_ep.sets++;
+                g_ep.set_us_total += us;
+                if (us > g_ep.set_us_worst)
+                    g_ep.set_us_worst = us;
+                if (r)
+                    g_ep.bad_sets++;
+                printf("ep-set@%u: layer %d pid %d = %d -> %d\n", ms, g_ep.ev[k].layer, g_ep.ev[k].pid, g_ep.ev[k].v, r);
+            } else {
+                call(F_EP_WATCH, (uint32_t)g_ep.ev[k].layer, (uint32_t)g_ep.ev[k].pid, 0, 0);
+                printf("ep-watch@%u: layer %d page %d\n", ms, g_ep.ev[k].layer, g_ep.ev[k].pid);
+            }
+            ep_poll(ms);
+        }
+}
+
 static void usage(void)
 {
     fputs("usage: rfm1_run [--seconds S] [--settle MS] [--keys K,K,..] [--vel V] [--lean L] [--tap B,..] [--sysex FILE] [--wav FILE]\n"
@@ -1329,7 +1525,8 @@ static void usage(void)
           "                [--no-aout] [--aout-wav FILE] [--expect-aout N]\n"
           "                [--turn ROLE@MS[:N]].. [--readouts] [--expect-readout S].. [--verbose] [--describe [--labels] [--out FILE]]\n"
           "                [--tk-info] [--tk [--tk-at MS] [--tk-off-at MS] [--tk-speech] [--tk-ev SPEC].. [--tk-script FILE]\n"
-          "                 [--tk-screen FILE.pbm|-] [--tk-leds]] <file.rfm1>\n", stderr);
+          "                 [--tk-screen FILE.pbm|-] [--tk-leds]]\n"
+          "                [--ep-info] [--ep] [--ep-set L:PID=V@MS].. [--ep-watch L:P@MS].. <file.rfm1>\n", stderr);
 }
 
 int main(int argc, char **argv)
@@ -1360,6 +1557,7 @@ int main(int argc, char **argv)
     int aout_off = 0, expect_aout = 0;           /* --no-aout, --expect-aout */
     const char *aout_wav_path = NULL;            /* --aout-wav */
     int tk_info = 0, tk_next = 0;                /* --tk-info; the next --tk-ev due */
+    int ep_info = 0;                             /* --ep-info */
     uint32_t tk_on_at = 100, tk_off_at = UINT32_MAX;
     const char *tk_screen = NULL;
     int tk_leds = 0;                             /* --tk-leds */
@@ -1452,6 +1650,19 @@ int main(int argc, char **argv)
         }
         else if (!strcmp(a, "--tk")) g_tk.drive = 1;
         else if (!strcmp(a, "--tk-info")) tk_info = 1;
+        else if (!strcmp(a, "--ep")) g_ep.print = 1;
+        else if (!strcmp(a, "--ep-info")) ep_info = 1;
+        else if (!strcmp(a, "--ep-set") && more) {
+            if (!ep_parse(argv[++i], 1)) {
+                fprintf(stderr, "rfm1_run: --ep-set %s: LAYER:PID=VALUE@MS\n", argv[i]);
+                return 2;
+            }
+        } else if (!strcmp(a, "--ep-watch") && more) {
+            if (!ep_parse(argv[++i], 2)) {
+                fprintf(stderr, "rfm1_run: --ep-watch %s: LAYER:PAGE@MS\n", argv[i]);
+                return 2;
+            }
+        }
         else if (!strcmp(a, "--tk-speech")) g_tk.speech = 1;
         else if (!strcmp(a, "--tk-at") && more) tk_on_at = (uint32_t)strtoul(argv[++i], NULL, 10);
         else if (!strcmp(a, "--tk-off-at") && more) tk_off_at = (uint32_t)strtoul(argv[++i], NULL, 10);
@@ -1590,7 +1801,7 @@ int main(int argc, char **argv)
             g_fn[f] = NULL;
             if (f == F_INITIALIZE || f == F_AUDIO_IN || f == F_AUDIO_IN_INFO || f == F_LABELS_EPOCH || f == F_LABEL ||
                 f == F_AUDIO_OUT_INFO || f == F_AUDIO_OUT || f == F_READOUT || f == F_TK || f == F_TK_INPUT ||
-                f == F_TK_STATE)
+                f == F_TK_STATE || f == F_EP || f == F_EP_SET || f == F_EP_WATCH)
                 continue;
             return fail("export %s: %s", FN[f].name, r);
         }
@@ -1776,6 +1987,36 @@ int main(int argc, char **argv)
         return 1;
     } else if (g_tk.drive)
         return fail("--tk: the module exports no rfm1_tk (not built with tk1)");
+    if (g_fn[F_EP]) {                            /* ep1: the record after init (engine-params/SPEC.md 4) */
+        if (!g_fn[F_EP_SET] || !g_fn[F_EP_WATCH])
+            return fail("ep1: rfm1_ep without rfm1_ep_set and rfm1_ep_watch");
+        g_ep.rec = C0(F_EP);
+        if (g_ep.rec && !in_mem(g_ep.rec, 264))
+            return fail("ep1: rfm1_ep() = %u, outside the memory", g_ep.rec);
+        if (g_ep.rec)
+            ep_poll(0);
+        if (ep_info) {
+            if (!g_ep.rec || !g_ep.desc) {
+                printf("{\"record\": %u, \"desc_len\": 0}\n", g_ep.rec);
+                return 1;
+            }
+            printf("{\"record\": %u, \"version\": %u, \"size\": %u, \"nlayers\": %u, \"nengines\": %u, "
+                   "\"npages\": %u, \"nparams\": %u, \"ntables\": %u, \"desc_len\": %u}\n", g_ep.rec,
+                   rd16(g_ep.rec), rd16(g_ep.rec + 2), rd8(g_ep.rec + EP_O_NLAY), g_ep.ne, g_ep.ng, g_ep.np, g_ep.nt,
+                   g_ep.dlen);
+            if (out_path) {
+                FILE *f = fopen(out_path, "wb");
+                if (!f || fwrite(g_ep.desc, 1, g_ep.dlen, f) != g_ep.dlen)
+                    return fail("--out %s: not written", out_path);
+                fclose(f);
+            }
+            return 0;
+        }
+    } else if (ep_info) {
+        printf("{\"record\": 0, \"error\": \"no rfm1_ep export\"}\n");
+        return 1;
+    } else if (g_ep.print || g_ep.nev)
+        return fail("--ep: the module exports no rfm1_ep (not built with ep1)");
     tk_sort();
     if (ain_on) {                                /* (the input buffer: rfm1_alloc'd like the output's) */
         ain_buf = C1(F_ALLOC, FM1P_BLOCK * 4u);
@@ -1962,10 +2203,12 @@ int main(int argc, char **argv)
                 printf("ui@%u: %s\n", ms, ui ? ui : "");
             }
         tk_ms(ms, tk_on_at, tk_off_at, &tk_next);   /* --tk: the takeover's events, between two ticks */
+        ep_ms(ms);                               /* --ep-set, --ep-watch: between two ticks, as a host's queue */
         C1(F_TICK, ms);
         if (ms == 0 || ms - last_frame >= frame_ms) {
             last_frame = ms;
             C0(F_FRAME);
+            ep_poll(ms);
             if (g_tk.drive)
                 tk_poll(ms);
             if (readouts) {   /* --readouts: each new readout (rd1), and the knobs' live labels when they move */
@@ -2173,6 +2416,9 @@ int main(int argc, char **argv)
            (long)(n / 1024), info[0] ? "; ui_info: " : "", info);
     if (helpers)
         printf("helpers: %d bound, %u native calls\n", nhelpers, g_helper_calls);
+    if (g_ep.sets)
+        printf("ep: %d sets (%d refused), %.1f us mean, %.1f us worst\n", g_ep.sets, g_ep.bad_sets,
+               g_ep.set_us_total / g_ep.sets, g_ep.set_us_worst);
     if (g_profile) {   /* the exports' share of the run's wall time (the rest: rfm1_run itself) */
         static const int SHOW[] = {F_TICK, F_FRAME, F_IDLE, F_AUDIO, F_MIDI_IN, F_MIDI_OUT_TAKE, F_HALTED};
         double in = 0;

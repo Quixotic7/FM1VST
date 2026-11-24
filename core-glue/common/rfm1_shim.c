@@ -108,6 +108,11 @@ static void rd_bridge(void);
 #define rd_note() ((void)0)
 #define rd_bridge() ((void)0)
 #endif
+#ifdef RFM1_EP1
+static void ep_frame(void);
+#else
+#define ep_frame() ((void)0)
+#endif
 EXPORT(rfm1_tick) void rfm1_tick(uint32_t ms)
 {
     rd_note();
@@ -120,6 +125,7 @@ EXPORT(rfm1_frame) void rfm1_frame(void)
     if (core() && C->frame)
         C->frame();
     rd_bridge();
+    ep_frame();
 }
 EXPORT(rfm1_idle) void rfm1_idle(void)
 {
@@ -523,6 +529,386 @@ EXPORT(rfm1_label) uint32_t rfm1_label(int32_t which)
     if (!own && which >= FM1CORE_LBL_KNOB0 && which <= FM1CORE_LBL_KNOB0 + FM1P_E_K4 && rd_kl[which][0])
         return (uint32_t)(uintptr_t)rd_kl[which];
     return base_rfm1_label(which);
+}
+#endif
+
+/* engine parameters (engine-params/SPEC.md, capability ep1; docs/RFM1.md "Engine parameters (ep1)"): only in a module
+ * built with ep1 in its fm1_add_rfm1 WANTS (RFM1_EP1; its units get FM1_HOST_EP1, so core-api/rfm1_ep.h declares
+ * fm1core_ep). The firmware's tables (fm1core_ep(), asked once after init) become the EP1D description blob; one EP1R
+ * record at a stable address (rfm1_ep() -> ptr) holds the layers, every value and the watched page's cells, refreshed
+ * after each rfm1_frame and after each rfm1_ep_set; each part's seq moves (+1, never 0) after its data is written, and
+ * only on a change. rfm1_ep_set (SET; LOCK / FREE / FREE_ALL are stage 3: -3 for now) calls the firmware's set with
+ * rfm1_ep_host = 1 and drops the readouts pushed meanwhile (a host write is never drawn by the firmware). */
+#ifdef RFM1_EP1
+#include <string.h>
+#include "rfm1_ep.h"
+#define EP_DESC_MAX 65536u
+#define EP_LAYERS 8
+#define EP_PARAMS 2048
+typedef struct {
+    uint16_t version, size;            /* 1, 264 */
+    uint32_t desc_seq, desc_ptr, desc_len;
+    uint32_t lay_seq;
+    uint8_t nlayers, rsv0[3];
+    uint8_t lay[EP_LAYERS][4];         /* engine (0xFF none), midi_ch (0xFF none), flags, 0 */
+    uint32_t val_seq, val_ptr;
+    uint32_t cell_seq;
+    uint16_t wpage;                    /* the watched page, 0xFFFF none */
+    uint8_t wlayer, rsv1;
+    struct { uint16_t pid; char name[11], text[11]; } cell[8];
+} rfm1_ep_rec_t;
+_Static_assert(offsetof(rfm1_ep_rec_t, desc_seq) == 4 && offsetof(rfm1_ep_rec_t, lay_seq) == 16, "ep1 record");
+_Static_assert(offsetof(rfm1_ep_rec_t, nlayers) == 20 && offsetof(rfm1_ep_rec_t, lay) == 24, "ep1 record");
+_Static_assert(offsetof(rfm1_ep_rec_t, val_seq) == 56 && offsetof(rfm1_ep_rec_t, cell_seq) == 64, "ep1 record");
+_Static_assert(offsetof(rfm1_ep_rec_t, wpage) == 68 && offsetof(rfm1_ep_rec_t, wlayer) == 70, "ep1 record");
+_Static_assert(offsetof(rfm1_ep_rec_t, cell) == 72 && sizeof(rfm1_ep_rec_t) == 264, "ep1 record: 264 bytes");
+static rfm1_ep_rec_t EPR = {1, sizeof(rfm1_ep_rec_t), 0, 0, 0, 0, 0, {0, 0, 0}, {{0}}, 0, 0, 0, 0xFFFFu, 0, 0, {{0}}};
+volatile int rfm1_ep_host;
+static const rfm1_ep_src_t *EPS;
+static uint8_t *ep_blob;               /* the description */
+static int16_t *ep_val;                /* [nlayers][nparams] */
+static uint16_t *ep_order;             /* param indices sorted by pid (set's lookup) */
+static uint8_t *ep_on;                 /* [nengines][nparams]: the param is on that engine's pages (or GLOBAL) */
+static int ep_state;                   /* 0 not tried, 1 on, -1 none */
+static uint32_t ep_epoch;
+static int16_t ep_wpage = -1;
+static uint8_t ep_wlayer;
+static uint32_t ep_nsets;              /* SETs applied (rfm1_run --ep reports it) */
+
+static uint32_t ep_next(uint32_t s) { return s + 1u ? s + 1u : 1u; }
+static void ep_name(char *d, const char *s, uint32_t n)   /* printable ASCII, NUL-padded, cut at n - 1 */
+{
+    uint32_t i = 0;
+    while (s && *s && i + 1 < n) {
+        const unsigned char c = (unsigned char)*s++;
+        d[i++] = c >= 32 && c < 127 ? (char)c : ' ';
+    }
+    while (i < n)
+        d[i++] = 0;
+}
+static void ep_w16(uint8_t *p, uint32_t v) { p[0] = (uint8_t)v, p[1] = (uint8_t)(v >> 8); }
+static void ep_w32(uint8_t *p, uint32_t v) { ep_w16(p, v), ep_w16(p + 2, v >> 16); }
+static int ep_pidx(uint16_t pid)       /* the param index of pid, -1 none (binary search) */
+{
+    int lo = 0, hi = (int)EPS->nparams - 1;
+    while (lo <= hi) {
+        const int mid = (lo + hi) / 2, p = EPS->params[ep_order[mid]].pid;
+        if (p == pid)
+            return ep_order[mid];
+        if (p < pid)
+            lo = mid + 1;
+        else
+            hi = mid - 1;
+    }
+    return -1;
+}
+
+/* the blob (SPEC.md 3): header, layers, engines, pages, params, tables, strings. A TABLE's strings: its names, or its
+ * text() at each value; two params whose tables are the same strings share one. 0: it does not fit */
+static int ep_build(void)
+{
+    const rfm1_ep_src_t *s = EPS;
+    uint32_t npages = 0, ntab = 0, e, p, k, i, sl = 0, off, total;
+    static uint8_t tmp[EP_DESC_MAX];   /* (the strings, then copied after the fixed sections) */
+    uint16_t *ptab = malloc(sizeof(uint16_t) * s->nparams);
+    uint32_t *toff = malloc(sizeof(uint32_t) * s->nparams), *tlen = malloc(sizeof(uint32_t) * s->nparams);
+    uint16_t *tcnt = malloc(sizeof(uint16_t) * s->nparams);
+    int16_t *tfirst = malloc(sizeof(int16_t) * s->nparams);
+    if (!ptab || !toff || !tlen || !tcnt || !tfirst)
+        return 0;
+    for (e = 0; e < s->nengines; e++)
+        npages += s->engines[e].npages;
+    for (p = 0; p < s->nparams; p++) {
+        const rfm1_ep_param_t *q = &s->params[p];
+        uint32_t a = sl, j;
+        ptab[p] = 0xFFFFu;
+        if (q->fmt != RFM1_EP_TABLE)
+            continue;
+        for (j = 0; j < p; j++)        /* (the same names, the same range: the same table) */
+            if (q->names && s->params[j].fmt == RFM1_EP_TABLE && s->params[j].names == q->names &&
+                s->params[j].min == q->min && s->params[j].max == q->max) {
+                ptab[p] = ptab[j];
+                break;
+            }
+        if (ptab[p] != 0xFFFFu)
+            continue;
+        for (i = 0; i <= (uint32_t)(q->max - q->min); i++) {
+            char b[24];
+            b[0] = 0;
+            if (q->names)
+                ep_name(b, q->names[i], 11);
+            else if (q->text) {
+                q->text(q->min + (int32_t)i, b, sizeof b);
+                ep_name(b, b, 11);
+            }
+            k = (uint32_t)strlen(b) + 1u;
+            if (sl + k > sizeof tmp)
+                return 0;
+            memcpy(tmp + sl, b, k);
+            sl += k;
+        }
+        for (j = 0; j < ntab; j++)     /* (the same strings as a table made before) */
+            if (tcnt[j] == q->max - q->min + 1 && tfirst[j] == q->min && tlen[j] == sl - a &&
+                !memcmp(tmp + toff[j], tmp + a, sl - a))
+                break;
+        if (j < ntab)
+            sl = a;
+        else {
+            toff[ntab] = a, tlen[ntab] = sl - a, tcnt[ntab] = (uint16_t)(q->max - q->min + 1), tfirst[ntab] = q->min;
+            ntab++;
+        }
+        ptab[p] = (uint16_t)j;
+    }
+    off = 32u + 16u * s->nlayers + 16u * s->nengines + 32u * npages + 32u * s->nparams + 8u * ntab;
+    total = off + sl;
+    if (total > EP_DESC_MAX || !(ep_blob = calloc(1, total)))
+        return 0;
+    {
+        uint8_t *b = ep_blob, *q = b + 32;
+        uint32_t pg = 0, h = 2166136261u;
+        memcpy(b, "EP1D", 4);
+        ep_w16(b + 4, 1), ep_w16(b + 6, 32), ep_w16(b + 8, s->nparams);
+        b[10] = s->nengines, b[11] = s->nlayers;
+        ep_w16(b + 12, npages), ep_w16(b + 14, ntab), ep_w32(b + 16, total);
+        for (i = 0; i < s->nlayers; i++, q += 16) {
+            ep_name((char *)q, s->layer_names[i], 11);
+            q[11] = s->layer_flags;
+        }
+        for (e = 0; e < s->nengines; e++, q += 16) {
+            ep_w16(q, s->engines[e].id);
+            ep_name((char *)q + 2, s->engines[e].name, 11);
+            q[13] = s->engines[e].npages;
+            ep_w16(q + 14, pg);
+            pg += s->engines[e].npages;
+        }
+        for (e = 0; e < s->nengines; e++)
+            for (p = 0; p < s->engines[e].npages; p++, q += 32) {
+                const rfm1_ep_page_t *g = &s->engines[e].pages[p];
+                q[0] = g->id;
+                ep_name((char *)q + 1, g->name, 11);
+                for (k = 0; k < 8; k++) {
+                    const int x = g->pid[k] ? ep_pidx(g->pid[k]) : -1;
+                    ep_w16(q + 12 + 2 * k, x < 0 ? 0xFFFFu : (uint32_t)x);
+                }
+                q[28] = g->group;
+            }
+        for (p = 0; p < s->nparams; p++, q += 32) {
+            const rfm1_ep_param_t *r = &s->params[p];
+            ep_w16(q, r->pid);
+            ep_name((char *)q + 2, r->name, 11);
+            q[13] = r->flags;
+            ep_w16(q + 14, (uint16_t)r->min), ep_w16(q + 16, (uint16_t)r->max), ep_w16(q + 18, (uint16_t)r->def);
+            q[20] = r->fmt, q[21] = r->arg;
+            ep_w16(q + 22, ptab[p]);
+            ep_name((char *)q + 24, r->unit, 5);
+            q[29] = r->step, q[30] = r->cc;
+        }
+        for (i = 0; i < ntab; i++, q += 8) {
+            ep_w32(q, toff[i]);
+            ep_w16(q + 4, tcnt[i]), ep_w16(q + 6, (uint16_t)tfirst[i]);
+        }
+        memcpy(q, tmp, sl);
+        for (i = 32; i < total; i++)   /* FNV-1a 32 of everything after the header */
+            h = (h ^ b[i]) * 16777619u;
+        ep_w32(b + 20, h);
+    }
+    free(ptab), free(toff), free(tlen), free(tcnt), free(tfirst);
+    EPR.desc_ptr = (uint32_t)(uintptr_t)ep_blob;
+    EPR.desc_len = total;
+    EPR.desc_seq = ep_next(EPR.desc_seq);
+    return 1;
+}
+
+static void ep_layers(void)            /* the layers' engines and channels: lay_seq when one changed */
+{
+    uint8_t n[EP_LAYERS][4];
+    int i;
+    memset(n, 0, sizeof n);
+    for (i = 0; i < EPS->nlayers; i++) {
+        int e = -1, ch = -1;
+        EPS->layer(i, &e, &ch);
+        n[i][0] = (uint8_t)(e >= 0 && e < EPS->nengines ? e : 0xFF);
+        n[i][1] = (uint8_t)(ch >= 0 && ch < 16 ? ch : 0xFF);
+    }
+    if (memcmp(n, EPR.lay, sizeof n)) {
+        memcpy(EPR.lay, n, sizeof n);
+        EPR.lay_seq = ep_next(EPR.lay_seq);
+    }
+}
+static void ep_values(void)            /* every value: val_seq when one changed */
+{
+    int l, p, moved = 0;
+    for (l = 0; l < EPS->nlayers; l++) {
+        const uint8_t e = EPR.lay[l][0];
+        int16_t *row = ep_val + l * EPS->nparams;
+        for (p = 0; p < EPS->nparams; p++) {
+            int32_t v = RFM1_EP_NONE;
+            if (e != 0xFF && ep_on[e * EPS->nparams + p]) {
+                v = EPS->get(l, EPS->params[p].pid);
+                if (v != RFM1_EP_NONE)
+                    v = v < -32767 ? -32767 : v > 32767 ? 32767 : v;
+            }
+            if (row[p] != (int16_t)v)
+                row[p] = (int16_t)v, moved = 1;
+        }
+    }
+    if (moved)
+        EPR.val_seq = ep_next(EPR.val_seq);
+}
+static void ep_cells(void)             /* the watched page's eight cells: cell_seq when one changed */
+{
+    __typeof__(EPR.cell) c;
+    const rfm1_ep_page_t *g = 0;
+    int e, k, pg = ep_wpage;
+    memset(c, 0, sizeof c);
+    for (e = 0; pg >= 0 && e < EPS->nengines; e++) {
+        if (pg < EPS->engines[e].npages) {
+            g = &EPS->engines[e].pages[pg];
+            break;
+        }
+        pg -= EPS->engines[e].npages;
+    }
+    for (k = 0; g && ep_wlayer < EPS->nlayers && k < 8; k++) {
+        const int x = g->pid[k] ? ep_pidx(g->pid[k]) : -1;
+        char nm[11], tx[11];
+        if (x < 0)
+            continue;
+        c[k].pid = g->pid[k];
+        nm[0] = tx[0] = 0;
+        if (!EPS->words || !EPS->words(ep_wlayer, g->pid[k], nm, tx))
+            nm[0] = tx[0] = 0;
+        nm[10] = tx[10] = 0;
+        ep_name(c[k].name, nm[0] ? nm : EPS->params[x].name, 11);
+        ep_name(c[k].text, tx, 11);
+    }
+    if (memcmp(c, EPR.cell, sizeof c) || EPR.wpage != (uint16_t)ep_wpage || EPR.wlayer != ep_wlayer) {
+        memcpy(EPR.cell, c, sizeof c);
+        EPR.wpage = (uint16_t)ep_wpage;
+        EPR.wlayer = ep_wlayer;
+        EPR.cell_seq = ep_next(EPR.cell_seq);
+    }
+}
+static int ep_cmp_pid(const void *a, const void *b)
+{
+    return (int)EPS->params[*(const uint16_t *)a].pid - (int)EPS->params[*(const uint16_t *)b].pid;
+}
+static int ep_open(void)               /* the description and the record, once (after init) */
+{
+    uint32_t e, p, k, n;
+    if (ep_state)
+        return ep_state > 0;
+    ep_state = -1;
+    if (!fm1core_ep || !(EPS = fm1core_ep()) || !EPS->nlayers || EPS->nlayers > EP_LAYERS || !EPS->nengines ||
+        !EPS->nparams || EPS->nparams > EP_PARAMS || !EPS->layer || !EPS->get || !EPS->set)
+        return 0;
+    n = EPS->nparams;
+    ep_order = malloc(sizeof(uint16_t) * n);
+    ep_val = malloc(sizeof(int16_t) * n * EPS->nlayers);
+    ep_on = calloc(EPS->nengines, n);
+    if (!ep_order || !ep_val || !ep_on)
+        return 0;
+    for (p = 0; p < n; p++)
+        ep_order[p] = (uint16_t)p;
+    qsort(ep_order, n, sizeof ep_order[0], ep_cmp_pid);
+    for (p = 1; p < n; p++)            /* (a pid twice, 0 or 0xFFFF: no ep1) */
+        if (EPS->params[ep_order[p]].pid == EPS->params[ep_order[p - 1]].pid)
+            return 0;
+    if (!EPS->params[ep_order[0]].pid || EPS->params[ep_order[n - 1]].pid == 0xFFFFu)
+        return 0;
+    for (e = 0; e < EPS->nengines; e++) {
+        for (p = 0; p < EPS->engines[e].npages; p++)
+            for (k = 0; k < 8; k++) {
+                const int x = EPS->engines[e].pages[p].pid[k] ? ep_pidx(EPS->engines[e].pages[p].pid[k]) : -1;
+                if (x >= 0)
+                    ep_on[e * n + (uint32_t)x] = 1;
+            }
+        for (p = 0; p < n; p++)
+            if (EPS->params[p].flags & (RFM1_EPF_GLOBAL | RFM1_EPF_RETIRED))
+                ep_on[e * n + p] = 1;
+    }
+    for (p = 0; p < n * EPS->nlayers; p++)
+        ep_val[p] = (int16_t)RFM1_EP_NONE;
+    ep_epoch = EPS->epoch ? EPS->epoch() : 0u;
+    if (!ep_build())
+        return 0;
+    EPR.nlayers = EPS->nlayers;
+    memset(EPR.lay, 0xFF, sizeof EPR.lay);
+    EPR.val_ptr = (uint32_t)(uintptr_t)ep_val;
+    ep_layers();
+    ep_values();
+    ep_cells();
+    ep_state = 1;
+    return 1;
+}
+static void ep_refresh(void)
+{
+    if (EPS->epoch && EPS->epoch() != ep_epoch) {   /* (a description made at run time: made again) */
+        ep_epoch = EPS->epoch();
+        free(ep_blob);
+        ep_blob = 0;
+        if (!ep_build()) {
+            ep_state = -1;
+            EPR.desc_ptr = EPR.desc_len = 0;
+            EPR.desc_seq = ep_next(EPR.desc_seq);
+            return;
+        }
+    }
+    ep_layers();
+    ep_values();
+    ep_cells();
+}
+static void ep_frame(void)
+{
+    if (ep_state > 0)
+        ep_refresh();
+}
+EXPORT(rfm1_ep) uint32_t rfm1_ep(void) { return ep_open() ? (uint32_t)(uintptr_t)&EPR : 0u; }
+EXPORT(rfm1_ep_set) int32_t rfm1_ep_set(int32_t op, int32_t layer, int32_t pid, int32_t value)
+{
+    const rfm1_ep_param_t *q;
+    int x;
+    uint8_t e;
+    if (!ep_open())
+        return -1;
+    if (op != 1)
+        return -3;                     /* (LOCK, FREE, FREE_ALL: stage 3) */
+    if (layer < 0 || layer >= EPS->nlayers || pid <= 0 || pid >= 0xFFFF || (x = ep_pidx((uint16_t)pid)) < 0)
+        return -1;
+    q = &EPS->params[x];
+    if (q->flags & RFM1_EPF_GLOBAL)
+        layer = 0;
+    ep_layers();
+    e = EPR.lay[layer][0];
+    if (e == 0xFF || !ep_on[e * EPS->nparams + (uint32_t)x])
+        return -1;
+    value = value < q->min ? q->min : value > q->max ? q->max : value;
+    {
+#ifdef RFM1_RD1
+        const rfm1_readout_t rd = RD;  /* (a readout the write pushes: dropped) */
+        const uint32_t pushes = rd_pushes;
+#endif
+        rfm1_ep_host = 1;
+        EPS->set(layer, (uint16_t)pid, value);
+        rfm1_ep_host = 0;
+#ifdef RFM1_RD1
+        RD = rd;
+        rd_pushes = pushes;
+#endif
+    }
+    ep_nsets++;
+    ep_refresh();
+    return 0;
+}
+EXPORT(rfm1_ep_watch) void rfm1_ep_watch(int32_t layer, int32_t page)
+{
+    uint32_t e, np = 0;
+    if (!ep_open())
+        return;
+    for (e = 0; e < EPS->nengines; e++)
+        np += EPS->engines[e].npages;
+    ep_wpage = (int16_t)(page >= 0 && (uint32_t)page < np && layer >= 0 && layer < EPS->nlayers ? page : -1);
+    ep_wlayer = (uint8_t)(ep_wpage >= 0 ? layer : 0);
+    ep_cells();
 }
 #endif
 
