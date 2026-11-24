@@ -49,4 +49,8 @@ if(TARGET speak37_core AND NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     set_tests_properties(golden_speak37 PROPERTIES TIMEOUT 300)
 endif()
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
-fm1_add_rfm1(speak37 AUTHORS "genkigenki")
+# rd1: its knob row as drawn, live labels and readouts (core_speak37.c, common/rd_cols.h)
+fm1_add_rfm1(speak37 WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_ATTACK_=_235_ms --expect-readout ctl_6_GLIDE_=_0_ms
+             AUTHORS "genkigenki")

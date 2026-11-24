@@ -24,7 +24,11 @@ fm1_add_core(obssynth ${CMAKE_CURRENT_LIST_DIR} SOURCE ${_ob} UNIT core_obssynth
 # (LICENSING.md): the GPL (ObsSynth, Felucca, Hortator), LICENSING.md, and the CC0 samples' provenance
 # (assets/samples/README.md). Not the JieLi SDK's Apache-2.0 (device packages only) nor jl-uboot-tool's MIT (the
 # recovery tool): neither is in the firmware. RUN_ARGS: none (the keys play the power-on INIT sound).
-fm1_add_rfm1(obssynth AUTHORS "Orian Beltrame" "DEADACTIVE" "Leo Kuroshita (Hügelton Instruments)"
+# rd1: its knob row as drawn, live labels and readouts (core_obssynth.c, common/rd_cols.h)
+fm1_add_rfm1(obssynth WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_ATK_=_1 --expect-readout ctl_6_REL_=_51
+             AUTHORS "Orian Beltrame" "DEADACTIVE" "Leo Kuroshita (Hügelton Instruments)"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
                            "LICENSING.md ({name})=LICENSING.md"
                            "CC0-1.0 (VCSL, GRAIN's samples in {name})=assets/samples/README.md")

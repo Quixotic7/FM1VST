@@ -48,7 +48,11 @@ endif()
 # "What a release ships", less the JieLi SDK's Apache-2.0, which only a device package embeds): the GPL, LICENSING.md,
 # Barlow Condensed's OFL (the LCD's bitmaps) and ymfm's notice. Not the other LICENSES/ texts (Felucca's own material,
 # none of it in Matryoshka's firmware: LICENSING.md says releases do not ship them) nor the web app's fonts.
-fm1_add_rfm1(matryoshka AUTHORS "michael glaviano (glvno)" "morgulbrut"
+# rd1: its knob row as drawn, live labels and readouts (core_matryoshka.c, common/rd_cols.h)
+fm1_add_rfm1(matryoshka WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --turn K1@6000:2 --turn K2@6300:2 --settle 6800 --seconds 0.1
+                          --expect-readout ctl_4_GLIDE_=_47.4_ms
+             AUTHORS "michael glaviano (glvno)" "morgulbrut"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE"
                            "LICENSING.md ({name})=LICENSING.md"
                            "OFL-1.1 (Barlow Condensed, the screen's type in {name})=web/public/fonts/OFL-BarlowCondensed.txt"

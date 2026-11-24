@@ -228,7 +228,30 @@ void fm1core_m2_init(int demo)
     fm1core_m2_screen();
 }
 void fm1core_m2_tick(uint32_t ms) { fm1_ms = ms; }
-void fm1core_m2_frame(void) { fm1core_m2_pass(); }
+/* MONO2K: the four knobs along the top (m2k_ui.c knobs(), drawn on HOME and every parameter page, the panels below
+ * them from row 64): the label pi->s4 and the value fmt() writes (the text the knob shows, in its picture or in the
+ * label's place while turned; the unit is not drawn). A free knob ("-"): empty. Nothing: the splash (2.1 s + skip). */
+#include "rd_cols.h"
+static void fm1core_mono2k_rd(void)
+{
+    rdc_begin();
+    if (ui.boot_t0 == 0xFFFFFFFFu || ui.now - ui.boot_t0 < ui.splash_end)
+        return;
+    for (int k = 0; k < 4; k++) {
+        const int code = knob_at(k);                 /* (perf_own: its ui.paway as the frame left it) */
+        const pi_t *pi = code == NONE ? 0 : pinfo(ui.trk, code);
+        char o[16];
+        const char *u;
+        if (!pi || pi->s4[0] == '-') {
+            rdc_col((uint32_t)k, "", "");
+            continue;
+        }
+        fmt(pi, ui.trk, knob_value(code), o, &u);
+        rdc_col((uint32_t)k, pi->s4, o);
+    }
+}
+
+void fm1core_m2_frame(void) { fm1core_m2_pass(); fm1core_mono2k_rd(); }
 void fm1core_m2_idle(void) { fm1core_m2_pass(); }
 void fm1core_m2_audio(int16_t *out, uint32_t frames)
 {

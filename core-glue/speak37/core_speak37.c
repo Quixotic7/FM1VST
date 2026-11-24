@@ -330,14 +330,60 @@ void fm1core_sp_tick(uint32_t ms)
         enc[i] = fm1p_take_enc(p, i);
     fm1core_sp_timer(ms, buttons, keys, enc);
 }
+/* Speak37: the knob block's lower row (sp_ui.c sp_draw_knobs / sp_cell, default branch): SK_NAME[k] and sk_text,
+ * each cut by sp_fit as drawn (54 / 52 px); the page is SP_PAGE[SETUP or su.page]. The upper row's SELECT (PAGE),
+ * ALGORITHM (VOICE) and PRESETS (PAD / MEMORY) as sp_cell's own cases. Nothing (rdc_begin) while the USER editor
+ * is open (ue.open: ue_draw) or in MOPE (sp.mode == SP_MODE_MOPE: mo_draw_legend, no knob cells). */
+#include "rd_cols.h"
+static void fm1core_speak37_rd(void)
+{
+    const uint8_t *pg = SP_PAGE[su.setup ? SP_PG_SETUP : su.page % SP_NPAGE];
+    uint32_t k;
+    char l[16], t[24];
+    rdc_begin();
+    if (ue.open || sp.mode == SP_MODE_MOPE)
+        return;
+    for (k = 0; k < 4u; k++) {
+        if (pg[k] == SK_NONE) {
+            rdc_col(k, "", "");
+            continue;
+        }
+        str_cpy(l, SK_NAME[pg[k]], sizeof l);
+        sp_fit(l, 54);
+        sk_text(&sp.snd, pg[k], t);
+        sp_fit(t, 52);
+        rdc_col(k, l, t);
+    }
+    /* the upper row (sp_cell cases SC_PAGE, SC_VOICE, SC_PAD / SC_MEM; sp_panel_top: id[3] = sf.memsel ? MEM : PAD) */
+    sp_s(t, su.setup ? "SETUP" : SP_PAGE_NAME[su.page % SP_NPAGE]);
+    sp_fit(t, 52);
+    rdc_knob(FM1P_E_SELECT, "PAGE", t);
+    sp_s(t, SP_VOICE_NAME[sp.snd.voice % SP_NVOICE]);
+    sp_fit(t, 52);
+    rdc_knob(FM1P_E_ALGO, "VOICE", t);
+    if (sf.memsel) {
+        sp_d(sp_s(t, "M"), (int32_t)su.msel + 1, 0);
+        if (!(vst.used >> su.msel & 1u))
+            sp_s(t + str_len(t), " -");
+        sp_fit(t, 52);
+        rdc_knob(FM1P_E_PRESETS, "MEMORY", t);
+    } else {
+        sp_d(sp_s(sp_d(sp_s(t, "B"), (int32_t)sp_bank_of(sp.sent) + 1, 0), " P"), (int32_t)(sp.sent % 16u) + 1, 0);
+        sp_fit(t, 52);
+        rdc_knob(FM1P_E_PRESETS, "PAD", t);
+    }
+}
+
 void fm1core_sp_frame(void)
 {
     if (fm1core_halted())
         return;
     fm1core_sp_in();
     fm1core_sp_loop();
-    if (!fm1core_halted())
+    if (!fm1core_halted()) {
         fm1core_sp_out();
+        fm1core_speak37_rd();
+    }
 }
 void fm1core_sp_idle(void)                        /* fm1_main's wait for the next pass: sp_ui_input */
 {
