@@ -1,0 +1,6482 @@
+{
+ "format": "ableton-move-designer",
+ "version": 3,
+ "name": "ChoralRoot takeover",
+ "items": [
+  {
+   "id": "ujzde8gxd6nc",
+   "x": -60,
+   "y": -60,
+   "w": 3524,
+   "h": 2060,
+   "type": "group",
+   "title": "ChoralRoot takeover (tk1) - proposal 1, 2026-11-19",
+   "color": "#d36cff"
+  },
+  {
+   "id": "f10epf91dhod",
+   "x": 0,
+   "y": 120,
+   "w": 1048,
+   "h": 616,
+   "type": "layout",
+   "name": "1. CHORDS: Scale (Key Mode)",
+   "description": "The takeover's home. D pressed with m7 held: Dm7. Top row the chord keys, rows 1-3 the key's degrees, an octave a row.",
+   "scope": [
+    "screen",
+    "knob-1",
+    "knob-2",
+    "knob-3",
+    "knob-4",
+    "knob-5",
+    "knob-6",
+    "knob-7",
+    "knob-8",
+    "knobled-1",
+    "knobled-2",
+    "knobled-3",
+    "knobled-4",
+    "knobled-5",
+    "knobled-6",
+    "knobled-7",
+    "knobled-8",
+    "volume",
+    "wheel",
+    "back",
+    "menu",
+    "track-1",
+    "track-2",
+    "track-3",
+    "track-4",
+    "pad-1-1",
+    "pad-1-2",
+    "pad-1-3",
+    "pad-1-4",
+    "pad-1-5",
+    "pad-1-6",
+    "pad-1-7",
+    "pad-1-8",
+    "pad-2-1",
+    "pad-2-2",
+    "pad-2-3",
+    "pad-2-4",
+    "pad-2-5",
+    "pad-2-6",
+    "pad-2-7",
+    "pad-2-8",
+    "pad-3-1",
+    "pad-3-2",
+    "pad-3-3",
+    "pad-3-4",
+    "pad-3-5",
+    "pad-3-6",
+    "pad-3-7",
+    "pad-3-8",
+    "pad-4-1",
+    "pad-4-2",
+    "pad-4-3",
+    "pad-4-4",
+    "pad-4-5",
+    "pad-4-6",
+    "pad-4-7",
+    "pad-4-8",
+    "capture",
+    "sample",
+    "loop",
+    "mute",
+    "delete",
+    "copy",
+    "undo",
+    "shift",
+    "play",
+    "record",
+    "step-1",
+    "step-2",
+    "step-3",
+    "step-4",
+    "step-5",
+    "step-6",
+    "step-7",
+    "step-8",
+    "step-9",
+    "step-10",
+    "step-11",
+    "step-12",
+    "step-13",
+    "step-14",
+    "step-15",
+    "step-16",
+    "stepicon-1",
+    "stepicon-2",
+    "stepicon-3",
+    "stepicon-4",
+    "stepicon-5",
+    "stepicon-6",
+    "stepicon-7",
+    "stepicon-8",
+    "stepicon-9",
+    "stepicon-10",
+    "stepicon-11",
+    "stepicon-12",
+    "stepicon-13",
+    "stepicon-14",
+    "stepicon-15",
+    "stepicon-16",
+    "left",
+    "right",
+    "up",
+    "down",
+    "power"
+   ],
+   "controls": {
+    "track-1": {
+     "meta": {
+      "label": "FM-1 / CHORDS",
+      "function": "RemoteFM1's (not claimed): Track 1 cycles FM-1 mode and this takeover.",
+      "click": "Back to FM-1 mode (again: the takeover)",
+      "hold": "RemoteFM1's Shift layer (FM-1 mode only)"
+     },
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "track-2": {
+     "meta": {
+      "label": "MIDI",
+      "function": "RemoteFM1's (not claimed): Track 2's mode, as ever.",
+      "click": "Midi mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#c8ff2a"
+     }
+    },
+    "track-3": {
+     "meta": {
+      "label": "CONTROL",
+      "function": "RemoteFM1's (not claimed): Track 3's mode, as ever.",
+      "click": "Control mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#1ae4ff"
+     }
+    },
+    "track-4": {
+     "meta": {
+      "label": "SEQ",
+      "function": "RemoteFM1's (not claimed): Track 4's mode, as ever.",
+      "click": "Seq mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#ff2a2a"
+     }
+    },
+    "volume": {
+     "meta": {
+      "label": "MASTER",
+      "function": "RemoteFM1's (not claimed): the master volume.",
+      "turn": "Master volume",
+      "touch": "Touched + Back: out of any takeover to FM-1 mode"
+     }
+    },
+    "back": {
+     "meta": {
+      "label": "BACK",
+      "function": "Closes a popup or the Prog layout. Touch Volume + Back: FM-1 mode.",
+      "click": "Close / up one level (sent at release: Back + Track switches slots)",
+      "description": "ChoralRoot claims the buttons but not the Track buttons, so the host gives Back at its release."
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "menu": {
+     "meta": {
+      "label": "LAYOUT",
+      "function": "The root pads' layout: Scale <-> Chromatic.",
+      "click": "Scale / Chromatic"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "wheel": {
+     "meta": {
+      "label": "SOUND",
+      "function": "The chord sound, by name (popup).",
+      "turn": "Next / previous sound",
+      "shiftTurn": "The engine (FM6, FM TONE, VA, CZ-1, P5, WHEEL, GRAIN)",
+      "click": "Favourite on / off",
+      "touch": "The sound's name"
+     }
+    },
+    "play": {
+     "meta": {
+      "label": "LOOP PLAY",
+      "function": "The looper: play / stop.",
+      "click": "Play / stop",
+      "shift": "The PLAY menu's next slot"
+     },
+     "led": {
+      "color": "#004400"
+     }
+    },
+    "record": {
+     "meta": {
+      "label": "LOOP REC",
+      "function": "The looper: record (the record mode in Shift).",
+      "click": "Record / overdub"
+     },
+     "led": {
+      "color": "#440000"
+     }
+    },
+    "loop": {
+     "meta": {
+      "label": "LATCH",
+      "function": "LATCH: chords keep sounding after the pads are let go.",
+      "click": "Latch on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "copy": {
+     "meta": {
+      "label": "LOCK",
+      "function": "LOCK: the chord keys held now stay lit (latched); the roots play them.",
+      "click": "Lock on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "mute": {
+     "meta": {
+      "label": "BASS",
+      "function": "The bass part on / off.",
+      "click": "Bass on / off",
+      "shift": "The bass sound's popup"
+     },
+     "led": {
+      "brightness": 1
+     }
+    },
+    "delete": {
+     "meta": {
+      "label": "PANIC",
+      "function": "All notes off, here and to every routed firmware (CC 123).",
+      "click": "Panic"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "shift": {
+     "meta": {
+      "label": "SHIFT",
+      "function": "Held: the knobs' second page.",
+      "hold": "Knobs page 2 on the screen"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "up": {
+     "meta": {
+      "label": "OCT +",
+      "function": "The root pads an octave up (-2..+2).",
+      "click": "Octave up"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "down": {
+     "meta": {
+      "label": "OCT -",
+      "function": "The root pads an octave down (-2..+2).",
+      "click": "Octave down"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "left": {
+     "meta": {
+      "label": "PROG <",
+      "function": "In Prog: the previous 24 chords (keys 1-24).",
+      "click": "Keys 1-24"
+     }
+    },
+    "right": {
+     "meta": {
+      "label": "PROG >",
+      "function": "In Prog: the next 24 chords (keys 25-48).",
+      "click": "Keys 25-48"
+     }
+    },
+    "capture": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "sample": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "undo": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "knob-1": {
+     "meta": {
+      "label": "VOICING",
+      "function": "Revoice: up moves the lowest note an octave up, down the highest down (-12..+12)",
+      "turn": "Change Voicing",
+      "touch": "Fullscreen popup: Voicing and its value",
+      "shiftTurn": "Sound"
+     }
+    },
+    "knobled-1": {
+     "led": {
+      "color": "#ff7800"
+     }
+    },
+    "knob-2": {
+     "meta": {
+      "label": "PERFORM",
+      "function": "Off, Strum, Strum 2, Slop, Arp, Arp 2, Pattern, Harp",
+      "turn": "Change Perform",
+      "touch": "Fullscreen popup: Perform and its value",
+      "shiftTurn": "Bass sound"
+     }
+    },
+    "knobled-2": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-3": {
+     "meta": {
+      "label": "RATE",
+      "function": "The mode's first value: strum rate, slop amount, arp division, pattern, harp rate",
+      "turn": "Change Rate",
+      "touch": "Fullscreen popup: Rate and its value",
+      "shiftTurn": "Gate"
+     }
+    },
+    "knobled-3": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-4": {
+     "meta": {
+      "label": "DIRECTION",
+      "function": "The mode's second value (Direction; Pattern: its division)",
+      "turn": "Change Direction",
+      "touch": "Fullscreen popup: Direction and its value",
+      "shiftTurn": "Swing"
+     }
+    },
+    "knobled-4": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-5": {
+     "meta": {
+      "label": "BASS REG.",
+      "function": "The bass register, -2..+4 octaves",
+      "turn": "Change Bass reg.",
+      "touch": "Fullscreen popup: Bass reg. and its value",
+      "shiftTurn": "Bass level"
+     }
+    },
+    "knobled-5": {
+     "led": {
+      "color": "#ff5a1e"
+     }
+    },
+    "knob-6": {
+     "meta": {
+      "label": "KEY",
+      "function": "The tonic (Key Mode on)",
+      "turn": "Change Key",
+      "touch": "Fullscreen popup: Key and its value",
+      "shiftTurn": "Velocity"
+     }
+    },
+    "knobled-6": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "knob-7": {
+     "meta": {
+      "label": "SCALE",
+      "function": "Major / Minor",
+      "turn": "Change Scale",
+      "touch": "Fullscreen popup: Scale and its value",
+      "shiftTurn": "Humanize"
+     }
+    },
+    "knobled-7": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "knob-8": {
+     "meta": {
+      "label": "TRANSPOSE",
+      "function": "-24..+24 semitones, everything played",
+      "turn": "Change Transpose",
+      "touch": "Fullscreen popup: Transpose and its value",
+      "shiftTurn": "Tempo"
+     }
+    },
+    "knobled-8": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-4-1": {
+     "meta": {
+      "label": "I C3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-4-2": {
+     "meta": {
+      "label": "ii D3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-4-3": {
+     "meta": {
+      "label": "iii E3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-4": {
+     "meta": {
+      "label": "IV F3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-4-5": {
+     "meta": {
+      "label": "V G3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-6": {
+     "meta": {
+      "label": "vi A3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-4-7": {
+     "meta": {
+      "label": "vii B3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-8": {
+     "meta": {
+      "label": "I C4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-3-1": {
+     "meta": {
+      "label": "I C4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-3-2": {
+     "meta": {
+      "label": "ii D4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffffff"
+     }
+    },
+    "pad-3-3": {
+     "meta": {
+      "label": "iii E4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-4": {
+     "meta": {
+      "label": "IV F4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-3-5": {
+     "meta": {
+      "label": "V G4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-6": {
+     "meta": {
+      "label": "vi A4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-3-7": {
+     "meta": {
+      "label": "vii B4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-8": {
+     "meta": {
+      "label": "I C5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-2-1": {
+     "meta": {
+      "label": "I C5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-2-2": {
+     "meta": {
+      "label": "ii D5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-2-3": {
+     "meta": {
+      "label": "iii E5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-4": {
+     "meta": {
+      "label": "IV F5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-2-5": {
+     "meta": {
+      "label": "V G5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-6": {
+     "meta": {
+      "label": "vi A5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-2-7": {
+     "meta": {
+      "label": "vii B5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-8": {
+     "meta": {
+      "label": "I C6",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-1-1": {
+     "meta": {
+      "label": "DIM",
+      "function": "Chord type DIM: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-2": {
+     "meta": {
+      "label": "MIN",
+      "function": "Chord type MIN: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-3": {
+     "meta": {
+      "label": "MAJ",
+      "function": "Chord type MAJ: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-4": {
+     "meta": {
+      "label": "SUS",
+      "function": "Chord type SUS: held + a root pad = that type (SUS: also MIN + MAJ together)",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-5": {
+     "meta": {
+      "label": "6",
+      "function": "Extension 6: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-6": {
+     "meta": {
+      "label": "m7",
+      "function": "Extension m7: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#ffffff"
+     }
+    },
+    "pad-1-7": {
+     "meta": {
+      "label": "M7",
+      "function": "Extension M7: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-8": {
+     "meta": {
+      "label": "9",
+      "function": "Extension 9: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "step-1": {
+     "meta": {
+      "label": "POP",
+      "function": "Progression 1: Pop Four",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-1": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-2": {
+     "meta": {
+      "label": "JAZZ",
+      "function": "Progression 2: Jazz ii-V-I",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-2": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-3": {
+     "meta": {
+      "label": "NEO",
+      "function": "Progression 3: Neo Soul",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-3": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-4": {
+     "meta": {
+      "label": "GOSP",
+      "function": "Progression 4: Gospel Walk",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-4": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-5": {
+     "meta": {
+      "label": "EPIC",
+      "function": "Progression 5: Minor Epic",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-5": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-6": {
+     "meta": {
+      "label": "DOR",
+      "function": "Progression 6: Dorian Days",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-6": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-7": {
+     "meta": {
+      "label": "7",
+      "function": "Progression 7: Progression 7 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-7": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-8": {
+     "meta": {
+      "label": "8",
+      "function": "Progression 8: Progression 8 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-8": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-9": {
+     "meta": {
+      "label": "9",
+      "function": "Progression 9: Progression 9 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-9": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-10": {
+     "meta": {
+      "label": "10",
+      "function": "Progression 10: Progression 10 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-10": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-11": {
+     "meta": {
+      "label": "11",
+      "function": "Progression 11: Progression 11 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-11": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-12": {
+     "meta": {
+      "label": "12",
+      "function": "Progression 12: Progression 12 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-12": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-13": {
+     "meta": {
+      "label": "13",
+      "function": "Progression 13: Progression 13 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-13": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-14": {
+     "meta": {
+      "label": "14",
+      "function": "Progression 14: Progression 14 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-14": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-15": {
+     "meta": {
+      "label": "15",
+      "function": "Progression 15: Progression 15 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-15": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-16": {
+     "meta": {
+      "label": "16",
+      "function": "Progression 16: Progression 16 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-16": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "screen": {
+     "meta": {
+      "label": "Chord view",
+      "function": "The key (top left) and the performance mode (top right) in the bar; the chord's name big, its numeral, the voicing; the voiced notes on a two-octave keyboard (lit white keys: a block at the foot; lit black keys: hollow).",
+      "description": "The name stays until the next chord, as on the FM-1's Chord view."
+     }
+    }
+   },
+   "screen": "/////////////////////+B//5+eB/gf/////geAeAfgf/+fngf4H/////4HgHgHn5//hhn5/n/////5+Z+Z+Z+f/4YZ+f5/////+fmfmfmf//+Zmfn+f/////n5n5n5n///mZn5/n/////5+Z+Z+Z///5mZ+f5/////+fmAeAef//+Zmfn+f/////n5gHgHn///n5gB/n/////4AZn5/5///5+YAf5/////+AGZ+f+fn/+fmfmef/////n5nnn/n5//n5n5nn/////5+Z55/+B//5+Z+eH/////+fmfmf/gf/+fmfnh//////n5n5n//////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/gAAAAAf//4AAAAYAYH/n/4AAAAAH//+AAAAGAGB/5/+AAAAAB///gAAAAAAAAGf/gAAAAAf//4AAAAAAAABngHgAAAAAAAeAAAAeAeABh4B4AAAAAAAHgAAAHgHgAYeAeAAAAAAAB4AAAAYAYAYHgHgAAAAAAAeAAAAGAGAGB4AHh/h4AAB4AAAABgBgGAeAB4f4eAAAeAAAAAYAYBgHgAeH+HgAAHgAAAAGAGAYB4AHh/h4AAB4AAAABgBgGAeAB4eHh4AHgAAAAB+B+BgHgAeHh4eAB4AAAAAfgfgYB4AHh4eHgAeAAAAAAAAAAAeAB4eHh4AHgAAAAAAAAB+HgAeHh4eAeAAAAAAAAAAfh4AHh4eHgHgAAAAAAABgYGeAB4eHh4B4AAAAAAAAYGBngAeHh4eAeAAAAAAAAGAAZ4B4B4AHgHgAAAAAAABgAGeAeAeAB4B4AAAAAAAH/gGHgHgHgAeAeAAAAAAAB/4Bh4B4B4AHgHgAAAAAAABgBgf/gAeAB4B4AAAAAAAAYAYH/4AHgAeAeAAAAAAAAGAYB/+AB4AHgHgAAAAAAABgGAf/gAeAB4B4AAAAAAAAAH/gAAAAAAAAAAAAAAAAAAB/4AAAAAAAAAAAAAAAAAAAAAf////////////////////0H4/Ag/H4/Ag/H4EH4/H4FB+PwIPx+PwIPx+BB+Px+BQfj8CD8fj8CD8fgQfj8fgUH4/Ag/H4/Ag/H4EH4/H4FB+PwIPx+PwIPx+BB+Px+BQfj8CD8fj8CD8fgQfj8fgUH4/Ag/H4/Ag/H4EH4/H4FB+PwIPx+PwIPx+BB+Px+BQCAQCAQCAQCAQCAQCAQCAUAv0Av0Av0Av0AgEAgEAgFAL9AL9AL9AL9AIBAIBAIBQC/QC/QC/QC/QCAQCAQCAUAv0Av0Av0Av0AgEAgEAgF/////////////////////AAAAAAAAAAAAAAAAAAAAAA=="
+  },
+  {
+   "id": "zdoc9is0j8ht",
+   "x": 0,
+   "y": 760,
+   "w": 1048,
+   "h": 200,
+   "type": "note",
+   "text": "Pads, rows 1-3: degrees I..VII and I' of the key, bottom row C3; each plays the scale's chord (Key Mode). The tonic yellow, the sounding chord's tones cyan, the pressed pad white.\nTop row: DIM MIN MAJ SUS (violet), 6 m7 M7 9 (orange); held or locked, they override the scale's chord. Two types: the last pressed (MIN + MAJ = SUS).\nSteps: the 16 progressions (lit: the six that have chords).",
+   "color": "#ffe58a"
+  },
+  {
+   "id": "9lgmxg9edn58",
+   "x": 1148,
+   "y": 120,
+   "w": 1048,
+   "h": 616,
+   "type": "layout",
+   "name": "2. CHORDS: Chromatic (Menu)",
+   "description": "For chords outside the key: rows a 4th apart from C3, as Move's chromatic layout. Hold SUS, press Eb: Ebsus.",
+   "scope": [
+    "screen",
+    "knob-1",
+    "knob-2",
+    "knob-3",
+    "knob-4",
+    "knob-5",
+    "knob-6",
+    "knob-7",
+    "knob-8",
+    "knobled-1",
+    "knobled-2",
+    "knobled-3",
+    "knobled-4",
+    "knobled-5",
+    "knobled-6",
+    "knobled-7",
+    "knobled-8",
+    "volume",
+    "wheel",
+    "back",
+    "menu",
+    "track-1",
+    "track-2",
+    "track-3",
+    "track-4",
+    "pad-1-1",
+    "pad-1-2",
+    "pad-1-3",
+    "pad-1-4",
+    "pad-1-5",
+    "pad-1-6",
+    "pad-1-7",
+    "pad-1-8",
+    "pad-2-1",
+    "pad-2-2",
+    "pad-2-3",
+    "pad-2-4",
+    "pad-2-5",
+    "pad-2-6",
+    "pad-2-7",
+    "pad-2-8",
+    "pad-3-1",
+    "pad-3-2",
+    "pad-3-3",
+    "pad-3-4",
+    "pad-3-5",
+    "pad-3-6",
+    "pad-3-7",
+    "pad-3-8",
+    "pad-4-1",
+    "pad-4-2",
+    "pad-4-3",
+    "pad-4-4",
+    "pad-4-5",
+    "pad-4-6",
+    "pad-4-7",
+    "pad-4-8",
+    "capture",
+    "sample",
+    "loop",
+    "mute",
+    "delete",
+    "copy",
+    "undo",
+    "shift",
+    "play",
+    "record",
+    "step-1",
+    "step-2",
+    "step-3",
+    "step-4",
+    "step-5",
+    "step-6",
+    "step-7",
+    "step-8",
+    "step-9",
+    "step-10",
+    "step-11",
+    "step-12",
+    "step-13",
+    "step-14",
+    "step-15",
+    "step-16",
+    "stepicon-1",
+    "stepicon-2",
+    "stepicon-3",
+    "stepicon-4",
+    "stepicon-5",
+    "stepicon-6",
+    "stepicon-7",
+    "stepicon-8",
+    "stepicon-9",
+    "stepicon-10",
+    "stepicon-11",
+    "stepicon-12",
+    "stepicon-13",
+    "stepicon-14",
+    "stepicon-15",
+    "stepicon-16",
+    "left",
+    "right",
+    "up",
+    "down",
+    "power"
+   ],
+   "controls": {
+    "track-1": {
+     "meta": {
+      "label": "FM-1 / CHORDS",
+      "function": "RemoteFM1's (not claimed): Track 1 cycles FM-1 mode and this takeover.",
+      "click": "Back to FM-1 mode (again: the takeover)",
+      "hold": "RemoteFM1's Shift layer (FM-1 mode only)"
+     },
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "track-2": {
+     "meta": {
+      "label": "MIDI",
+      "function": "RemoteFM1's (not claimed): Track 2's mode, as ever.",
+      "click": "Midi mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#c8ff2a"
+     }
+    },
+    "track-3": {
+     "meta": {
+      "label": "CONTROL",
+      "function": "RemoteFM1's (not claimed): Track 3's mode, as ever.",
+      "click": "Control mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#1ae4ff"
+     }
+    },
+    "track-4": {
+     "meta": {
+      "label": "SEQ",
+      "function": "RemoteFM1's (not claimed): Track 4's mode, as ever.",
+      "click": "Seq mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#ff2a2a"
+     }
+    },
+    "volume": {
+     "meta": {
+      "label": "MASTER",
+      "function": "RemoteFM1's (not claimed): the master volume.",
+      "turn": "Master volume",
+      "touch": "Touched + Back: out of any takeover to FM-1 mode"
+     }
+    },
+    "back": {
+     "meta": {
+      "label": "BACK",
+      "function": "Closes a popup or the Prog layout. Touch Volume + Back: FM-1 mode.",
+      "click": "Close / up one level (sent at release: Back + Track switches slots)",
+      "description": "ChoralRoot claims the buttons but not the Track buttons, so the host gives Back at its release."
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "menu": {
+     "meta": {
+      "label": "LAYOUT",
+      "function": "The root pads' layout: Scale <-> Chromatic.",
+      "click": "Scale / Chromatic"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "wheel": {
+     "meta": {
+      "label": "SOUND",
+      "function": "The chord sound, by name (popup).",
+      "turn": "Next / previous sound",
+      "shiftTurn": "The engine (FM6, FM TONE, VA, CZ-1, P5, WHEEL, GRAIN)",
+      "click": "Favourite on / off",
+      "touch": "The sound's name"
+     }
+    },
+    "play": {
+     "meta": {
+      "label": "LOOP PLAY",
+      "function": "The looper: play / stop.",
+      "click": "Play / stop",
+      "shift": "The PLAY menu's next slot"
+     },
+     "led": {
+      "color": "#004400"
+     }
+    },
+    "record": {
+     "meta": {
+      "label": "LOOP REC",
+      "function": "The looper: record (the record mode in Shift).",
+      "click": "Record / overdub"
+     },
+     "led": {
+      "color": "#440000"
+     }
+    },
+    "loop": {
+     "meta": {
+      "label": "LATCH",
+      "function": "LATCH: chords keep sounding after the pads are let go.",
+      "click": "Latch on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "copy": {
+     "meta": {
+      "label": "LOCK",
+      "function": "LOCK: the chord keys held now stay lit (latched); the roots play them.",
+      "click": "Lock on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "mute": {
+     "meta": {
+      "label": "BASS",
+      "function": "The bass part on / off.",
+      "click": "Bass on / off",
+      "shift": "The bass sound's popup"
+     },
+     "led": {
+      "brightness": 1
+     }
+    },
+    "delete": {
+     "meta": {
+      "label": "PANIC",
+      "function": "All notes off, here and to every routed firmware (CC 123).",
+      "click": "Panic"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "shift": {
+     "meta": {
+      "label": "SHIFT",
+      "function": "Held: the knobs' second page.",
+      "hold": "Knobs page 2 on the screen"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "up": {
+     "meta": {
+      "label": "OCT +",
+      "function": "The root pads an octave up (-2..+2).",
+      "click": "Octave up"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "down": {
+     "meta": {
+      "label": "OCT -",
+      "function": "The root pads an octave down (-2..+2).",
+      "click": "Octave down"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "left": {
+     "meta": {
+      "label": "PROG <",
+      "function": "In Prog: the previous 24 chords (keys 1-24).",
+      "click": "Keys 1-24"
+     }
+    },
+    "right": {
+     "meta": {
+      "label": "PROG >",
+      "function": "In Prog: the next 24 chords (keys 25-48).",
+      "click": "Keys 25-48"
+     }
+    },
+    "capture": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "sample": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "undo": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "knob-1": {
+     "meta": {
+      "label": "VOICING",
+      "function": "Revoice: up moves the lowest note an octave up, down the highest down (-12..+12)",
+      "turn": "Change Voicing",
+      "touch": "Fullscreen popup: Voicing and its value",
+      "shiftTurn": "Sound"
+     }
+    },
+    "knobled-1": {
+     "led": {
+      "color": "#ff7800"
+     }
+    },
+    "knob-2": {
+     "meta": {
+      "label": "PERFORM",
+      "function": "Off, Strum, Strum 2, Slop, Arp, Arp 2, Pattern, Harp",
+      "turn": "Change Perform",
+      "touch": "Fullscreen popup: Perform and its value",
+      "shiftTurn": "Bass sound"
+     }
+    },
+    "knobled-2": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-3": {
+     "meta": {
+      "label": "RATE",
+      "function": "The mode's first value: strum rate, slop amount, arp division, pattern, harp rate",
+      "turn": "Change Rate",
+      "touch": "Fullscreen popup: Rate and its value",
+      "shiftTurn": "Gate"
+     }
+    },
+    "knobled-3": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-4": {
+     "meta": {
+      "label": "DIRECTION",
+      "function": "The mode's second value (Direction; Pattern: its division)",
+      "turn": "Change Direction",
+      "touch": "Fullscreen popup: Direction and its value",
+      "shiftTurn": "Swing"
+     }
+    },
+    "knobled-4": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-5": {
+     "meta": {
+      "label": "BASS REG.",
+      "function": "The bass register, -2..+4 octaves",
+      "turn": "Change Bass reg.",
+      "touch": "Fullscreen popup: Bass reg. and its value",
+      "shiftTurn": "Bass level"
+     }
+    },
+    "knobled-5": {
+     "led": {
+      "color": "#ff5a1e"
+     }
+    },
+    "knob-6": {
+     "meta": {
+      "label": "KEY",
+      "function": "The tonic (Key Mode on)",
+      "turn": "Change Key",
+      "touch": "Fullscreen popup: Key and its value",
+      "shiftTurn": "Velocity"
+     }
+    },
+    "knobled-6": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "knob-7": {
+     "meta": {
+      "label": "SCALE",
+      "function": "Major / Minor",
+      "turn": "Change Scale",
+      "touch": "Fullscreen popup: Scale and its value",
+      "shiftTurn": "Humanize"
+     }
+    },
+    "knobled-7": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "knob-8": {
+     "meta": {
+      "label": "TRANSPOSE",
+      "function": "-24..+24 semitones, everything played",
+      "turn": "Change Transpose",
+      "touch": "Fullscreen popup: Transpose and its value",
+      "shiftTurn": "Tempo"
+     }
+    },
+    "knobled-8": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-4-1": {
+     "meta": {
+      "label": "C3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-4-2": {
+     "meta": {
+      "label": "C#3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0c0c0e"
+     }
+    },
+    "pad-4-3": {
+     "meta": {
+      "label": "D3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-4": {
+     "meta": {
+      "label": "Eb3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffffff"
+     }
+    },
+    "pad-4-5": {
+     "meta": {
+      "label": "E3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-6": {
+     "meta": {
+      "label": "F3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-7": {
+     "meta": {
+      "label": "F#3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0c0c0e"
+     }
+    },
+    "pad-4-8": {
+     "meta": {
+      "label": "G3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-1": {
+     "meta": {
+      "label": "F3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-2": {
+     "meta": {
+      "label": "F#3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0c0c0e"
+     }
+    },
+    "pad-3-3": {
+     "meta": {
+      "label": "G3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-4": {
+     "meta": {
+      "label": "Ab3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0c0c0e"
+     }
+    },
+    "pad-3-5": {
+     "meta": {
+      "label": "A3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-6": {
+     "meta": {
+      "label": "Bb3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0c0c0e"
+     }
+    },
+    "pad-3-7": {
+     "meta": {
+      "label": "B3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-8": {
+     "meta": {
+      "label": "C4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-2-1": {
+     "meta": {
+      "label": "Bb3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0c0c0e"
+     }
+    },
+    "pad-2-2": {
+     "meta": {
+      "label": "B3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-3": {
+     "meta": {
+      "label": "C4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-2-4": {
+     "meta": {
+      "label": "C#4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0c0c0e"
+     }
+    },
+    "pad-2-5": {
+     "meta": {
+      "label": "D4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-6": {
+     "meta": {
+      "label": "Eb4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0c0c0e"
+     }
+    },
+    "pad-2-7": {
+     "meta": {
+      "label": "E4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-8": {
+     "meta": {
+      "label": "F4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-1-1": {
+     "meta": {
+      "label": "DIM",
+      "function": "Chord type DIM: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-2": {
+     "meta": {
+      "label": "MIN",
+      "function": "Chord type MIN: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-3": {
+     "meta": {
+      "label": "MAJ",
+      "function": "Chord type MAJ: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-4": {
+     "meta": {
+      "label": "SUS",
+      "function": "Chord type SUS: held + a root pad = that type (SUS: also MIN + MAJ together)",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-5": {
+     "meta": {
+      "label": "6",
+      "function": "Extension 6: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-6": {
+     "meta": {
+      "label": "m7",
+      "function": "Extension m7: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-7": {
+     "meta": {
+      "label": "M7",
+      "function": "Extension M7: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-8": {
+     "meta": {
+      "label": "9",
+      "function": "Extension 9: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "step-1": {
+     "meta": {
+      "label": "POP",
+      "function": "Progression 1: Pop Four",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-1": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-2": {
+     "meta": {
+      "label": "JAZZ",
+      "function": "Progression 2: Jazz ii-V-I",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-2": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-3": {
+     "meta": {
+      "label": "NEO",
+      "function": "Progression 3: Neo Soul",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-3": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-4": {
+     "meta": {
+      "label": "GOSP",
+      "function": "Progression 4: Gospel Walk",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-4": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-5": {
+     "meta": {
+      "label": "EPIC",
+      "function": "Progression 5: Minor Epic",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-5": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-6": {
+     "meta": {
+      "label": "DOR",
+      "function": "Progression 6: Dorian Days",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-6": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-7": {
+     "meta": {
+      "label": "7",
+      "function": "Progression 7: Progression 7 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-7": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-8": {
+     "meta": {
+      "label": "8",
+      "function": "Progression 8: Progression 8 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-8": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-9": {
+     "meta": {
+      "label": "9",
+      "function": "Progression 9: Progression 9 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-9": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-10": {
+     "meta": {
+      "label": "10",
+      "function": "Progression 10: Progression 10 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-10": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-11": {
+     "meta": {
+      "label": "11",
+      "function": "Progression 11: Progression 11 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-11": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-12": {
+     "meta": {
+      "label": "12",
+      "function": "Progression 12: Progression 12 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-12": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-13": {
+     "meta": {
+      "label": "13",
+      "function": "Progression 13: Progression 13 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-13": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-14": {
+     "meta": {
+      "label": "14",
+      "function": "Progression 14: Progression 14 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-14": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-15": {
+     "meta": {
+      "label": "15",
+      "function": "Progression 15: Progression 15 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-15": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-16": {
+     "meta": {
+      "label": "16",
+      "function": "Progression 16: Progression 16 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-16": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "screen": {
+     "meta": {
+      "label": "Chord view",
+      "function": "As the Scale layout's; no numeral for a chord outside the key."
+     }
+    }
+   },
+   "screen": "/////////////////////+B//5+eB/gf/gGAGAefmfngf/+fngf4H/4BgBgHn5n5n5//hhn5/n/5//n5+Z+YYZ+f/4YZ+f5/+f/5+fmfmGGf//+Zmfn+f/n/+fn5n5mZn///mZn5/n/5//n5+Z+ZmZ///5mZ+f5//gf5+AefmZmf//+Zmfn+f/4H+fgHn5mZn///n5gB/n//+fn5n5+Z+Z///5+YAf5///n5+Z+fmfmfn/+fmfmef//5+fnnn5n5n5//n5n5nn//+fn555+Z+eB//5+Z+eH/+Af5+fngefngf/+fmfnh//gH+fn54Hn5/////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf//4eAAAAAAAAAAAAAAAAH//+HgAAAAAAAAAAAAAAAB///h4AAAAAAAAAAAAAAAAf//4eAAAAAAAAAAAAAAAAHgAAHgAAAAAAAAAAAAAAAB4AAB4AAAAAAAAAAAAAAAAeAAAeAAAAAAAAAAAAAAAAHgAAHgAAAAAAAAAAAAAAAB4AAB4f4AH/4B4AHgH/4AAeAAAeH+AB/+AeAB4B/+AAHgAAHh/gAf/gHgAeAf/gAB4AAB4f4AH/4B4AHgH/4AAf/+Af4B4eAAAeAB4eAAAAH//gH+AeHgAAHgAeHgAAAB//4B/gHh4AAB4AHh4AAAAf/+Af4B4eAAAeAB4eAAAAHgAAHgAeAf/gHgAeAf/gAB4AAB4AHgH/4B4AHgH/4AAeAAAeAB4B/+AeAB4B/+AAHgAAHgAeAf/gHgAeAf/gAB4AAB4AHgAAHh4B/gAAHgAeAAAeAB4AAB4eAf4AAB4AHgAAHgAeAAAeHgH+AAAeAB4AAB4AHgAAHh4B/gAAHgAf//4f/+Af/+AB/h4f/+AAH//+H//gH//gAf4eH//gAB///h//4B//4AH+Hh//4AAf//4f/+Af/+AB/h4f/+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf////////////////////0H4hAg/EIhAg/H4EH4/H4FB+IQIPxCIQIPx+BB+Px+BQfiECD8QiECD8fgQfj8fgUH4hAg/EIhAg/H4EH4/H4FB+IQIPxCIQIPx+BB+Px+BQfiECD8QiECD8fgQfj8fgUH4hAg/EIhAg/H4EH4/H4FB+PwIPx+PwIPx+BB+Px+BQCAQCAQCAQCAQCAQCAQCAUAgEAgEAgEAgEAgEAgEAgFAIBAIBAIBAIBAIBAIBAIBQCAQCAQCAQCAQCAQCAQCAUAgEAgEAgEAgEAgEAgEAgF/////////////////////AAAAAAAAAAAAAAAAAAAAAA=="
+  },
+  {
+   "id": "1u33xtplpft7",
+   "x": 1148,
+   "y": 760,
+   "w": 1048,
+   "h": 200,
+   "type": "note",
+   "text": "The key's notes lit dim, the tonic yellow, the others dark. Menu again: back to Scale.",
+   "color": "#ffe58a"
+  },
+  {
+   "id": "5v2seh60kvj5",
+   "x": 2296,
+   "y": 120,
+   "w": 1048,
+   "h": 616,
+   "type": "layout",
+   "name": "3. PROG: a progression on the pads",
+   "description": "Step 3 (Neo Soul) tapped: the 24 root pads play its chords 1-24 (Left / Right: 25-48). Chord 4 pressed: Am11.",
+   "scope": [
+    "screen",
+    "knob-1",
+    "knob-2",
+    "knob-3",
+    "knob-4",
+    "knob-5",
+    "knob-6",
+    "knob-7",
+    "knob-8",
+    "knobled-1",
+    "knobled-2",
+    "knobled-3",
+    "knobled-4",
+    "knobled-5",
+    "knobled-6",
+    "knobled-7",
+    "knobled-8",
+    "volume",
+    "wheel",
+    "back",
+    "menu",
+    "track-1",
+    "track-2",
+    "track-3",
+    "track-4",
+    "pad-1-1",
+    "pad-1-2",
+    "pad-1-3",
+    "pad-1-4",
+    "pad-1-5",
+    "pad-1-6",
+    "pad-1-7",
+    "pad-1-8",
+    "pad-2-1",
+    "pad-2-2",
+    "pad-2-3",
+    "pad-2-4",
+    "pad-2-5",
+    "pad-2-6",
+    "pad-2-7",
+    "pad-2-8",
+    "pad-3-1",
+    "pad-3-2",
+    "pad-3-3",
+    "pad-3-4",
+    "pad-3-5",
+    "pad-3-6",
+    "pad-3-7",
+    "pad-3-8",
+    "pad-4-1",
+    "pad-4-2",
+    "pad-4-3",
+    "pad-4-4",
+    "pad-4-5",
+    "pad-4-6",
+    "pad-4-7",
+    "pad-4-8",
+    "capture",
+    "sample",
+    "loop",
+    "mute",
+    "delete",
+    "copy",
+    "undo",
+    "shift",
+    "play",
+    "record",
+    "step-1",
+    "step-2",
+    "step-3",
+    "step-4",
+    "step-5",
+    "step-6",
+    "step-7",
+    "step-8",
+    "step-9",
+    "step-10",
+    "step-11",
+    "step-12",
+    "step-13",
+    "step-14",
+    "step-15",
+    "step-16",
+    "stepicon-1",
+    "stepicon-2",
+    "stepicon-3",
+    "stepicon-4",
+    "stepicon-5",
+    "stepicon-6",
+    "stepicon-7",
+    "stepicon-8",
+    "stepicon-9",
+    "stepicon-10",
+    "stepicon-11",
+    "stepicon-12",
+    "stepicon-13",
+    "stepicon-14",
+    "stepicon-15",
+    "stepicon-16",
+    "left",
+    "right",
+    "up",
+    "down",
+    "power"
+   ],
+   "controls": {
+    "track-1": {
+     "meta": {
+      "label": "FM-1 / CHORDS",
+      "function": "RemoteFM1's (not claimed): Track 1 cycles FM-1 mode and this takeover.",
+      "click": "Back to FM-1 mode (again: the takeover)",
+      "hold": "RemoteFM1's Shift layer (FM-1 mode only)"
+     },
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "track-2": {
+     "meta": {
+      "label": "MIDI",
+      "function": "RemoteFM1's (not claimed): Track 2's mode, as ever.",
+      "click": "Midi mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#c8ff2a"
+     }
+    },
+    "track-3": {
+     "meta": {
+      "label": "CONTROL",
+      "function": "RemoteFM1's (not claimed): Track 3's mode, as ever.",
+      "click": "Control mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#1ae4ff"
+     }
+    },
+    "track-4": {
+     "meta": {
+      "label": "SEQ",
+      "function": "RemoteFM1's (not claimed): Track 4's mode, as ever.",
+      "click": "Seq mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#ff2a2a"
+     }
+    },
+    "volume": {
+     "meta": {
+      "label": "MASTER",
+      "function": "RemoteFM1's (not claimed): the master volume.",
+      "turn": "Master volume",
+      "touch": "Touched + Back: out of any takeover to FM-1 mode"
+     }
+    },
+    "back": {
+     "meta": {
+      "label": "BACK",
+      "function": "Closes a popup or the Prog layout. Touch Volume + Back: FM-1 mode.",
+      "click": "Close / up one level (sent at release: Back + Track switches slots)",
+      "description": "ChoralRoot claims the buttons but not the Track buttons, so the host gives Back at its release."
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "menu": {
+     "meta": {
+      "label": "LAYOUT",
+      "function": "The root pads' layout: Scale <-> Chromatic.",
+      "click": "Scale / Chromatic"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "wheel": {
+     "meta": {
+      "label": "SOUND",
+      "function": "The chord sound, by name (popup).",
+      "turn": "Next / previous sound",
+      "shiftTurn": "The engine (FM6, FM TONE, VA, CZ-1, P5, WHEEL, GRAIN)",
+      "click": "Favourite on / off",
+      "touch": "The sound's name"
+     }
+    },
+    "play": {
+     "meta": {
+      "label": "LOOP PLAY",
+      "function": "The looper: play / stop.",
+      "click": "Play / stop",
+      "shift": "The PLAY menu's next slot"
+     },
+     "led": {
+      "color": "#004400"
+     }
+    },
+    "record": {
+     "meta": {
+      "label": "LOOP REC",
+      "function": "The looper: record (the record mode in Shift).",
+      "click": "Record / overdub"
+     },
+     "led": {
+      "color": "#440000"
+     }
+    },
+    "loop": {
+     "meta": {
+      "label": "LATCH",
+      "function": "LATCH: chords keep sounding after the pads are let go.",
+      "click": "Latch on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "copy": {
+     "meta": {
+      "label": "LOCK",
+      "function": "LOCK: the chord keys held now stay lit (latched); the roots play them.",
+      "click": "Lock on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "mute": {
+     "meta": {
+      "label": "BASS",
+      "function": "The bass part on / off.",
+      "click": "Bass on / off",
+      "shift": "The bass sound's popup"
+     },
+     "led": {
+      "brightness": 1
+     }
+    },
+    "delete": {
+     "meta": {
+      "label": "PANIC",
+      "function": "All notes off, here and to every routed firmware (CC 123).",
+      "click": "Panic"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "shift": {
+     "meta": {
+      "label": "SHIFT",
+      "function": "Held: the knobs' second page.",
+      "hold": "Knobs page 2 on the screen"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "up": {
+     "meta": {
+      "label": "OCT +",
+      "function": "The root pads an octave up (-2..+2).",
+      "click": "Octave up"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "down": {
+     "meta": {
+      "label": "OCT -",
+      "function": "The root pads an octave down (-2..+2).",
+      "click": "Octave down"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "left": {
+     "meta": {
+      "label": "PROG <",
+      "function": "In Prog: the previous 24 chords (keys 1-24).",
+      "click": "Keys 1-24"
+     }
+    },
+    "right": {
+     "meta": {
+      "label": "PROG >",
+      "function": "In Prog: the next 24 chords (keys 25-48).",
+      "click": "Keys 25-48"
+     }
+    },
+    "capture": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "sample": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "undo": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "knob-1": {
+     "meta": {
+      "label": "VOICING",
+      "function": "Revoice: up moves the lowest note an octave up, down the highest down (-12..+12)",
+      "turn": "Change Voicing",
+      "touch": "Fullscreen popup: Voicing and its value",
+      "shiftTurn": "Sound"
+     }
+    },
+    "knobled-1": {
+     "led": {
+      "color": "#ff7800"
+     }
+    },
+    "knob-2": {
+     "meta": {
+      "label": "PERFORM",
+      "function": "Off, Strum, Strum 2, Slop, Arp, Arp 2, Pattern, Harp",
+      "turn": "Change Perform",
+      "touch": "Fullscreen popup: Perform and its value",
+      "shiftTurn": "Bass sound"
+     }
+    },
+    "knobled-2": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-3": {
+     "meta": {
+      "label": "RATE",
+      "function": "The mode's first value: strum rate, slop amount, arp division, pattern, harp rate",
+      "turn": "Change Rate",
+      "touch": "Fullscreen popup: Rate and its value",
+      "shiftTurn": "Gate"
+     }
+    },
+    "knobled-3": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-4": {
+     "meta": {
+      "label": "DIRECTION",
+      "function": "The mode's second value (Direction; Pattern: its division)",
+      "turn": "Change Direction",
+      "touch": "Fullscreen popup: Direction and its value",
+      "shiftTurn": "Swing"
+     }
+    },
+    "knobled-4": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-5": {
+     "meta": {
+      "label": "BASS REG.",
+      "function": "The bass register, -2..+4 octaves",
+      "turn": "Change Bass reg.",
+      "touch": "Fullscreen popup: Bass reg. and its value",
+      "shiftTurn": "Bass level"
+     }
+    },
+    "knobled-5": {
+     "led": {
+      "color": "#ff5a1e"
+     }
+    },
+    "knob-6": {
+     "meta": {
+      "label": "KEY",
+      "function": "The tonic (Key Mode on)",
+      "turn": "Change Key",
+      "touch": "Fullscreen popup: Key and its value",
+      "shiftTurn": "Velocity"
+     }
+    },
+    "knobled-6": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "knob-7": {
+     "meta": {
+      "label": "SCALE",
+      "function": "Major / Minor",
+      "turn": "Change Scale",
+      "touch": "Fullscreen popup: Scale and its value",
+      "shiftTurn": "Humanize"
+     }
+    },
+    "knobled-7": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "knob-8": {
+     "meta": {
+      "label": "TRANSPOSE",
+      "function": "-24..+24 semitones, everything played",
+      "turn": "Change Transpose",
+      "touch": "Fullscreen popup: Transpose and its value",
+      "shiftTurn": "Tempo"
+     }
+    },
+    "knobled-8": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-4-1": {
+     "meta": {
+      "label": "1 Em9",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-4-2": {
+     "meta": {
+      "label": "2 Cmaj9",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-4-3": {
+     "meta": {
+      "label": "3 G6/B",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-4-4": {
+     "meta": {
+      "label": "4 Am11",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffffff"
+     }
+    },
+    "pad-4-5": {
+     "meta": {
+      "label": "5 Em9",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-4-6": {
+     "meta": {
+      "label": "6 D/F#",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-4-7": {
+     "meta": {
+      "label": "7 Cmaj7",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-4-8": {
+     "meta": {
+      "label": "8 B7#5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#7f4cd8"
+     }
+    },
+    "pad-3-1": {
+     "meta": {
+      "label": "9",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-3-2": {
+     "meta": {
+      "label": "10",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-3-3": {
+     "meta": {
+      "label": "11",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-3-4": {
+     "meta": {
+      "label": "12",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-3-5": {
+     "meta": {
+      "label": "13",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-3-6": {
+     "meta": {
+      "label": "14",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-3-7": {
+     "meta": {
+      "label": "15",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-3-8": {
+     "meta": {
+      "label": "16",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-2-1": {
+     "meta": {
+      "label": "17",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-2-2": {
+     "meta": {
+      "label": "18",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-2-3": {
+     "meta": {
+      "label": "19",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-2-4": {
+     "meta": {
+      "label": "20",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-2-5": {
+     "meta": {
+      "label": "21",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-2-6": {
+     "meta": {
+      "label": "22",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-2-7": {
+     "meta": {
+      "label": "23",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-2-8": {
+     "meta": {
+      "label": "24",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#0e0e12"
+     }
+    },
+    "pad-1-1": {
+     "meta": {
+      "label": "DIM",
+      "function": "Chord type DIM: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-2": {
+     "meta": {
+      "label": "MIN",
+      "function": "Chord type MIN: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-3": {
+     "meta": {
+      "label": "MAJ",
+      "function": "Chord type MAJ: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-4": {
+     "meta": {
+      "label": "SUS",
+      "function": "Chord type SUS: held + a root pad = that type (SUS: also MIN + MAJ together)",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-5": {
+     "meta": {
+      "label": "6",
+      "function": "Extension 6: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-6": {
+     "meta": {
+      "label": "m7",
+      "function": "Extension m7: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-7": {
+     "meta": {
+      "label": "M7",
+      "function": "Extension M7: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-8": {
+     "meta": {
+      "label": "9",
+      "function": "Extension 9: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "step-1": {
+     "meta": {
+      "label": "POP",
+      "function": "Progression 1: Pop Four",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-1": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-2": {
+     "meta": {
+      "label": "JAZZ",
+      "function": "Progression 2: Jazz ii-V-I",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-2": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-3": {
+     "meta": {
+      "label": "NEO",
+      "function": "Progression 3: Neo Soul",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#965aff"
+     }
+    },
+    "stepicon-3": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-4": {
+     "meta": {
+      "label": "GOSP",
+      "function": "Progression 4: Gospel Walk",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-4": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-5": {
+     "meta": {
+      "label": "EPIC",
+      "function": "Progression 5: Minor Epic",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-5": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-6": {
+     "meta": {
+      "label": "DOR",
+      "function": "Progression 6: Dorian Days",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-6": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-7": {
+     "meta": {
+      "label": "7",
+      "function": "Progression 7: Progression 7 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-7": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-8": {
+     "meta": {
+      "label": "8",
+      "function": "Progression 8: Progression 8 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-8": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-9": {
+     "meta": {
+      "label": "9",
+      "function": "Progression 9: Progression 9 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-9": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-10": {
+     "meta": {
+      "label": "10",
+      "function": "Progression 10: Progression 10 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-10": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-11": {
+     "meta": {
+      "label": "11",
+      "function": "Progression 11: Progression 11 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-11": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-12": {
+     "meta": {
+      "label": "12",
+      "function": "Progression 12: Progression 12 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-12": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-13": {
+     "meta": {
+      "label": "13",
+      "function": "Progression 13: Progression 13 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-13": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-14": {
+     "meta": {
+      "label": "14",
+      "function": "Progression 14: Progression 14 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-14": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-15": {
+     "meta": {
+      "label": "15",
+      "function": "Progression 15: Progression 15 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-15": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-16": {
+     "meta": {
+      "label": "16",
+      "function": "Progression 16: Progression 16 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-16": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "screen": {
+     "meta": {
+      "label": "Prog view",
+      "function": "The progression's name and the chord's number in the bar; the chord big; which keys the pads hold."
+     }
+    }
+   },
+   "screen": "/////////////////////5+YAeB//+AeB5+Z////+AGfmAHgf//gHgefmf////gBn5n/n5//n/n5n5n////5/5+Z/5+f/5/5+Z+Z////+f+Hmf+fn/+f+fmfmf////gHh5n/n5//n/n5n5n////4B5mYB5+f/+B5+Z+Z//////mZmAefn//gefmfmf/////5nhn/n5///5n5n5n/////+Z4Z/5+f//+Z+Z+Z//////mfmf+fn///mfmfmf////n5n5n/n5///5n5n5n////5+Z+YAeB//4B+B+B4Af///gefmAHgf/+AfgfgeAH///4H/////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//AAAAAADwAADwAAAAAAAP/wAAAAAA8AAA8AAAAAAAD/8AAAAAAPAAAPAAAAAAAA//AAAAAADwAADwAAAAAADwAPAAAAAP8AAP8AAAAAAA8ADwAAAAD/AAD/AAAAAAAPAA8AAAAA/wAA/wAAAAAADwAPAAAAAP8AAP8AAAAAAA8ADw/w8AAPAAAPAAAAAAAPAA8P8PAADwAADwAAAAAADwAPD/DwAA8AAA8AAAAAAA8ADw/w8AAPAAAPAAAAAAAPAA8PDw8ADwAADwAAAAAADwAPDw8PAA8AAA8AAAAAAA8ADw8PDwAPAAAPAAAAAAAPAA8PDw8ADwAADwAAAAAAD///Dw8PAA8AAA8AAAAAAA///w8PDwAPAAAPAAAAAAAP//8PDw8ADwAADwAAAAAAD///Dw8PAA8AAA8AAAAAAA8ADw8ADwAPAAAPAAAAAAAPAA8PAA8ADwAADwAAAAAADwAPDwAPAA8AAA8AAAAAAA8ADw8ADwAPAAAPAAAAAAAPAA8PAA8A//AA//AAAAAADwAPDwAPAP/wAP/wAAAAAA8ADw8ADwD/8AD/8AAAAAAPAA8PAA8A//AA//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAGAAAfgBgAAAYAAAAAAAAABgAAH4AYAAAGAAAAAAAAAB4AAGBgeAAABgAAAAAAAAAeAABgYHgAAAYYH4YGH4AABgAAAGGYAAAGGB+GBh+AAAYAAABhmAAABmBgZgZgAAAGB/4BhhgAAAZgYGYGYAAABgf+AYYYAAAHgH/mBh+AAAYAAAYH/gAAB4B/5gYfgAAGAAAGB/4AAAZgYAH+AGAABgAAGAAYAAAGYGAB/gBgAAYAABgAGAAABhgfgAZ/gAAfgAB/4BgAAAYYH4AGf4AAH4AAf+AYAAAA=="
+  },
+  {
+   "id": "0ce9uvw53efr",
+   "x": 2296,
+   "y": 760,
+   "w": 1048,
+   "h": 200,
+   "type": "note",
+   "text": "A chord key held + a pad: your own chord on that pad's progression root, as the FM-1's Prog keyboard. The lit step tapped again: back to Scale. Empty chords: dark pads, silent.",
+   "color": "#ffe58a"
+  },
+  {
+   "id": "4edt2sywb3wk",
+   "x": 0,
+   "y": 1040,
+   "w": 1048,
+   "h": 616,
+   "type": "layout",
+   "name": "4. A knob touched",
+   "description": "Voicing touched: its name, then its value, full screen (RemoteFM1's rule for every knob). Gone a second after it is let go.",
+   "scope": [
+    "screen",
+    "knob-1",
+    "knob-2",
+    "knob-3",
+    "knob-4",
+    "knob-5",
+    "knob-6",
+    "knob-7",
+    "knob-8",
+    "knobled-1",
+    "knobled-2",
+    "knobled-3",
+    "knobled-4",
+    "knobled-5",
+    "knobled-6",
+    "knobled-7",
+    "knobled-8",
+    "volume",
+    "wheel",
+    "back",
+    "menu",
+    "track-1",
+    "track-2",
+    "track-3",
+    "track-4",
+    "pad-1-1",
+    "pad-1-2",
+    "pad-1-3",
+    "pad-1-4",
+    "pad-1-5",
+    "pad-1-6",
+    "pad-1-7",
+    "pad-1-8",
+    "pad-2-1",
+    "pad-2-2",
+    "pad-2-3",
+    "pad-2-4",
+    "pad-2-5",
+    "pad-2-6",
+    "pad-2-7",
+    "pad-2-8",
+    "pad-3-1",
+    "pad-3-2",
+    "pad-3-3",
+    "pad-3-4",
+    "pad-3-5",
+    "pad-3-6",
+    "pad-3-7",
+    "pad-3-8",
+    "pad-4-1",
+    "pad-4-2",
+    "pad-4-3",
+    "pad-4-4",
+    "pad-4-5",
+    "pad-4-6",
+    "pad-4-7",
+    "pad-4-8",
+    "capture",
+    "sample",
+    "loop",
+    "mute",
+    "delete",
+    "copy",
+    "undo",
+    "shift",
+    "play",
+    "record",
+    "step-1",
+    "step-2",
+    "step-3",
+    "step-4",
+    "step-5",
+    "step-6",
+    "step-7",
+    "step-8",
+    "step-9",
+    "step-10",
+    "step-11",
+    "step-12",
+    "step-13",
+    "step-14",
+    "step-15",
+    "step-16",
+    "stepicon-1",
+    "stepicon-2",
+    "stepicon-3",
+    "stepicon-4",
+    "stepicon-5",
+    "stepicon-6",
+    "stepicon-7",
+    "stepicon-8",
+    "stepicon-9",
+    "stepicon-10",
+    "stepicon-11",
+    "stepicon-12",
+    "stepicon-13",
+    "stepicon-14",
+    "stepicon-15",
+    "stepicon-16",
+    "left",
+    "right",
+    "up",
+    "down",
+    "power"
+   ],
+   "controls": {
+    "track-1": {
+     "meta": {
+      "label": "FM-1 / CHORDS",
+      "function": "RemoteFM1's (not claimed): Track 1 cycles FM-1 mode and this takeover.",
+      "click": "Back to FM-1 mode (again: the takeover)",
+      "hold": "RemoteFM1's Shift layer (FM-1 mode only)"
+     },
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "track-2": {
+     "meta": {
+      "label": "MIDI",
+      "function": "RemoteFM1's (not claimed): Track 2's mode, as ever.",
+      "click": "Midi mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#c8ff2a"
+     }
+    },
+    "track-3": {
+     "meta": {
+      "label": "CONTROL",
+      "function": "RemoteFM1's (not claimed): Track 3's mode, as ever.",
+      "click": "Control mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#1ae4ff"
+     }
+    },
+    "track-4": {
+     "meta": {
+      "label": "SEQ",
+      "function": "RemoteFM1's (not claimed): Track 4's mode, as ever.",
+      "click": "Seq mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#ff2a2a"
+     }
+    },
+    "volume": {
+     "meta": {
+      "label": "MASTER",
+      "function": "RemoteFM1's (not claimed): the master volume.",
+      "turn": "Master volume",
+      "touch": "Touched + Back: out of any takeover to FM-1 mode"
+     }
+    },
+    "back": {
+     "meta": {
+      "label": "BACK",
+      "function": "Closes a popup or the Prog layout. Touch Volume + Back: FM-1 mode.",
+      "click": "Close / up one level (sent at release: Back + Track switches slots)",
+      "description": "ChoralRoot claims the buttons but not the Track buttons, so the host gives Back at its release."
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "menu": {
+     "meta": {
+      "label": "LAYOUT",
+      "function": "The root pads' layout: Scale <-> Chromatic.",
+      "click": "Scale / Chromatic"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "wheel": {
+     "meta": {
+      "label": "SOUND",
+      "function": "The chord sound, by name (popup).",
+      "turn": "Next / previous sound",
+      "shiftTurn": "The engine (FM6, FM TONE, VA, CZ-1, P5, WHEEL, GRAIN)",
+      "click": "Favourite on / off",
+      "touch": "The sound's name"
+     }
+    },
+    "play": {
+     "meta": {
+      "label": "LOOP PLAY",
+      "function": "The looper: play / stop.",
+      "click": "Play / stop",
+      "shift": "The PLAY menu's next slot"
+     },
+     "led": {
+      "color": "#004400"
+     }
+    },
+    "record": {
+     "meta": {
+      "label": "LOOP REC",
+      "function": "The looper: record (the record mode in Shift).",
+      "click": "Record / overdub"
+     },
+     "led": {
+      "color": "#440000"
+     }
+    },
+    "loop": {
+     "meta": {
+      "label": "LATCH",
+      "function": "LATCH: chords keep sounding after the pads are let go.",
+      "click": "Latch on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "copy": {
+     "meta": {
+      "label": "LOCK",
+      "function": "LOCK: the chord keys held now stay lit (latched); the roots play them.",
+      "click": "Lock on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "mute": {
+     "meta": {
+      "label": "BASS",
+      "function": "The bass part on / off.",
+      "click": "Bass on / off",
+      "shift": "The bass sound's popup"
+     },
+     "led": {
+      "brightness": 1
+     }
+    },
+    "delete": {
+     "meta": {
+      "label": "PANIC",
+      "function": "All notes off, here and to every routed firmware (CC 123).",
+      "click": "Panic"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "shift": {
+     "meta": {
+      "label": "SHIFT",
+      "function": "Held: the knobs' second page.",
+      "hold": "Knobs page 2 on the screen"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "up": {
+     "meta": {
+      "label": "OCT +",
+      "function": "The root pads an octave up (-2..+2).",
+      "click": "Octave up"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "down": {
+     "meta": {
+      "label": "OCT -",
+      "function": "The root pads an octave down (-2..+2).",
+      "click": "Octave down"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "left": {
+     "meta": {
+      "label": "PROG <",
+      "function": "In Prog: the previous 24 chords (keys 1-24).",
+      "click": "Keys 1-24"
+     }
+    },
+    "right": {
+     "meta": {
+      "label": "PROG >",
+      "function": "In Prog: the next 24 chords (keys 25-48).",
+      "click": "Keys 25-48"
+     }
+    },
+    "capture": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "sample": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "undo": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "knob-1": {
+     "meta": {
+      "label": "VOICING",
+      "function": "Revoice: up moves the lowest note an octave up, down the highest down (-12..+12)",
+      "turn": "Change Voicing",
+      "touch": "Fullscreen popup: Voicing and its value",
+      "shiftTurn": "Sound"
+     }
+    },
+    "knobled-1": {
+     "led": {
+      "color": "#ff7800"
+     }
+    },
+    "knob-2": {
+     "meta": {
+      "label": "PERFORM",
+      "function": "Off, Strum, Strum 2, Slop, Arp, Arp 2, Pattern, Harp",
+      "turn": "Change Perform",
+      "touch": "Fullscreen popup: Perform and its value",
+      "shiftTurn": "Bass sound"
+     }
+    },
+    "knobled-2": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-3": {
+     "meta": {
+      "label": "RATE",
+      "function": "The mode's first value: strum rate, slop amount, arp division, pattern, harp rate",
+      "turn": "Change Rate",
+      "touch": "Fullscreen popup: Rate and its value",
+      "shiftTurn": "Gate"
+     }
+    },
+    "knobled-3": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-4": {
+     "meta": {
+      "label": "DIRECTION",
+      "function": "The mode's second value (Direction; Pattern: its division)",
+      "turn": "Change Direction",
+      "touch": "Fullscreen popup: Direction and its value",
+      "shiftTurn": "Swing"
+     }
+    },
+    "knobled-4": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-5": {
+     "meta": {
+      "label": "BASS REG.",
+      "function": "The bass register, -2..+4 octaves",
+      "turn": "Change Bass reg.",
+      "touch": "Fullscreen popup: Bass reg. and its value",
+      "shiftTurn": "Bass level"
+     }
+    },
+    "knobled-5": {
+     "led": {
+      "color": "#ff5a1e"
+     }
+    },
+    "knob-6": {
+     "meta": {
+      "label": "KEY",
+      "function": "The tonic (Key Mode on)",
+      "turn": "Change Key",
+      "touch": "Fullscreen popup: Key and its value",
+      "shiftTurn": "Velocity"
+     }
+    },
+    "knobled-6": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "knob-7": {
+     "meta": {
+      "label": "SCALE",
+      "function": "Major / Minor",
+      "turn": "Change Scale",
+      "touch": "Fullscreen popup: Scale and its value",
+      "shiftTurn": "Humanize"
+     }
+    },
+    "knobled-7": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "knob-8": {
+     "meta": {
+      "label": "TRANSPOSE",
+      "function": "-24..+24 semitones, everything played",
+      "turn": "Change Transpose",
+      "touch": "Fullscreen popup: Transpose and its value",
+      "shiftTurn": "Tempo"
+     }
+    },
+    "knobled-8": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-4-1": {
+     "meta": {
+      "label": "I C3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-4-2": {
+     "meta": {
+      "label": "ii D3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-3": {
+     "meta": {
+      "label": "iii E3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-4": {
+     "meta": {
+      "label": "IV F3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-5": {
+     "meta": {
+      "label": "V G3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-6": {
+     "meta": {
+      "label": "vi A3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-7": {
+     "meta": {
+      "label": "vii B3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-8": {
+     "meta": {
+      "label": "I C4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-3-1": {
+     "meta": {
+      "label": "I C4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-3-2": {
+     "meta": {
+      "label": "ii D4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-3": {
+     "meta": {
+      "label": "iii E4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-4": {
+     "meta": {
+      "label": "IV F4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-5": {
+     "meta": {
+      "label": "V G4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-6": {
+     "meta": {
+      "label": "vi A4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-7": {
+     "meta": {
+      "label": "vii B4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-8": {
+     "meta": {
+      "label": "I C5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-2-1": {
+     "meta": {
+      "label": "I C5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-2-2": {
+     "meta": {
+      "label": "ii D5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-3": {
+     "meta": {
+      "label": "iii E5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-4": {
+     "meta": {
+      "label": "IV F5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-5": {
+     "meta": {
+      "label": "V G5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-6": {
+     "meta": {
+      "label": "vi A5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-7": {
+     "meta": {
+      "label": "vii B5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-8": {
+     "meta": {
+      "label": "I C6",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-1-1": {
+     "meta": {
+      "label": "DIM",
+      "function": "Chord type DIM: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-2": {
+     "meta": {
+      "label": "MIN",
+      "function": "Chord type MIN: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-3": {
+     "meta": {
+      "label": "MAJ",
+      "function": "Chord type MAJ: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-4": {
+     "meta": {
+      "label": "SUS",
+      "function": "Chord type SUS: held + a root pad = that type (SUS: also MIN + MAJ together)",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-5": {
+     "meta": {
+      "label": "6",
+      "function": "Extension 6: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-6": {
+     "meta": {
+      "label": "m7",
+      "function": "Extension m7: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-7": {
+     "meta": {
+      "label": "M7",
+      "function": "Extension M7: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-8": {
+     "meta": {
+      "label": "9",
+      "function": "Extension 9: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "step-1": {
+     "meta": {
+      "label": "POP",
+      "function": "Progression 1: Pop Four",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-1": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-2": {
+     "meta": {
+      "label": "JAZZ",
+      "function": "Progression 2: Jazz ii-V-I",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-2": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-3": {
+     "meta": {
+      "label": "NEO",
+      "function": "Progression 3: Neo Soul",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-3": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-4": {
+     "meta": {
+      "label": "GOSP",
+      "function": "Progression 4: Gospel Walk",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-4": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-5": {
+     "meta": {
+      "label": "EPIC",
+      "function": "Progression 5: Minor Epic",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-5": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-6": {
+     "meta": {
+      "label": "DOR",
+      "function": "Progression 6: Dorian Days",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-6": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-7": {
+     "meta": {
+      "label": "7",
+      "function": "Progression 7: Progression 7 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-7": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-8": {
+     "meta": {
+      "label": "8",
+      "function": "Progression 8: Progression 8 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-8": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-9": {
+     "meta": {
+      "label": "9",
+      "function": "Progression 9: Progression 9 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-9": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-10": {
+     "meta": {
+      "label": "10",
+      "function": "Progression 10: Progression 10 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-10": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-11": {
+     "meta": {
+      "label": "11",
+      "function": "Progression 11: Progression 11 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-11": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-12": {
+     "meta": {
+      "label": "12",
+      "function": "Progression 12: Progression 12 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-12": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-13": {
+     "meta": {
+      "label": "13",
+      "function": "Progression 13: Progression 13 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-13": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-14": {
+     "meta": {
+      "label": "14",
+      "function": "Progression 14: Progression 14 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-14": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-15": {
+     "meta": {
+      "label": "15",
+      "function": "Progression 15: Progression 15 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-15": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-16": {
+     "meta": {
+      "label": "16",
+      "function": "Progression 16: Progression 16 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-16": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "screen": {
+     "meta": {
+      "label": "Knob popup",
+      "function": "The name (2x) at the top, the value as big as fits, a bar for a value with a range (none for a choice).",
+      "description": "Said by the screen reader: \"Voicing: plus 2\"."
+     }
+    }
+   },
+   "screen": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGBgAAYAAAYAAAAAAAAAAABgYAAGAAAGAAAAAAAAAAAAYGAAAAAAAAAAAAAAAAAAAGBgAAAAAAAAAAAAAAAAAABgYfgeAfgeBngf4AAAAAAAYGH4HgH4HgZ4H+AAAAAAAGBmBgYGAAYHhmBgAAAAAABgZgYGBgAGB4ZgYAAAAAAAYGYGBgYABgYGYGAAAAAAAGBmBgYGAAYGBmBgAAAAAAAZhgYGBgYGBgYf4AAAAAAAGYYGBgYGBgYGH+AAAAAAAAYB+B+B+B+GBgBgAAAAAAAGAfgfgfgfhgYAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/8AAAAAAAAAAAAAAAAAAA//AAAAAAAAAAAAAAAAAAAP/wAAAAAAAAAAAAAAAAAAD/8AAAAAAAAAAAAAAADwAPAA8AAAAAAAAAAAAAAA8ADwAPAAAAAAAAAAAAAAAPAA8ADwAAAAAAAAAAAAAADwAPAA8AAAAAAAAAAAAAAA8AAAAPAAAAAAAAAAAAAAAPAAAADwAAAAAAAAAAAAAADwAAAA8AAAAAAAAAAAAAAA8AAAAPAAAAAAAAAAAAAA///wAA8AAAAAAAAAAAAAAP//8AAPAAAAAAAAAAAAAAD///AADwAAAAAAAAAAAAAA///wAA8AAAAAAAAAAAAAAADwAADwAAAAAAAAAAAAAAAA8AAA8AAAAAAAAAAAAAAAAPAAAPAAAAAAAAAAAAAAAADwAADwAAAAAAAAAAAAAAAA8AAPAAAAAAAAAAAAAAAAAPAADwAAAAAAAAAAAAAAAADwAA8AAAAAAAAAAAAAAAAA8AAPAAAAAAAAAAAAAAAAAAAA///wAAAAAAAAAAAAAAAAAP//8AAAAAAAAAAAAAAAAAD///AAAAAAAAAAAAAAAAAA///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//////////////////wAA//////////+AAAAAAAEAAP//////////gAAAAAABAAD//////////4AAAAAAAQAA//////////////////8AAAAAAAAAAAAAAAAAAAAAAA=="
+  },
+  {
+   "id": "h5dnsipzz5fk",
+   "x": 0,
+   "y": 1680,
+   "w": 1048,
+   "h": 200,
+   "type": "note",
+   "text": "Every knob, touched or turned; the wheel's sound popup the same way (the engine above, the sound's name big).",
+   "color": "#ffe58a"
+  },
+  {
+   "id": "2z9ri19r0wyo",
+   "x": 1148,
+   "y": 1040,
+   "w": 1048,
+   "h": 616,
+   "type": "layout",
+   "name": "5. Shift held: knobs page 2",
+   "description": "Shift held: the eight knobs' second page, their names where the knobs are. Touch one: its popup.",
+   "scope": [
+    "screen",
+    "knob-1",
+    "knob-2",
+    "knob-3",
+    "knob-4",
+    "knob-5",
+    "knob-6",
+    "knob-7",
+    "knob-8",
+    "knobled-1",
+    "knobled-2",
+    "knobled-3",
+    "knobled-4",
+    "knobled-5",
+    "knobled-6",
+    "knobled-7",
+    "knobled-8",
+    "volume",
+    "wheel",
+    "back",
+    "menu",
+    "track-1",
+    "track-2",
+    "track-3",
+    "track-4",
+    "pad-1-1",
+    "pad-1-2",
+    "pad-1-3",
+    "pad-1-4",
+    "pad-1-5",
+    "pad-1-6",
+    "pad-1-7",
+    "pad-1-8",
+    "pad-2-1",
+    "pad-2-2",
+    "pad-2-3",
+    "pad-2-4",
+    "pad-2-5",
+    "pad-2-6",
+    "pad-2-7",
+    "pad-2-8",
+    "pad-3-1",
+    "pad-3-2",
+    "pad-3-3",
+    "pad-3-4",
+    "pad-3-5",
+    "pad-3-6",
+    "pad-3-7",
+    "pad-3-8",
+    "pad-4-1",
+    "pad-4-2",
+    "pad-4-3",
+    "pad-4-4",
+    "pad-4-5",
+    "pad-4-6",
+    "pad-4-7",
+    "pad-4-8",
+    "capture",
+    "sample",
+    "loop",
+    "mute",
+    "delete",
+    "copy",
+    "undo",
+    "shift",
+    "play",
+    "record",
+    "step-1",
+    "step-2",
+    "step-3",
+    "step-4",
+    "step-5",
+    "step-6",
+    "step-7",
+    "step-8",
+    "step-9",
+    "step-10",
+    "step-11",
+    "step-12",
+    "step-13",
+    "step-14",
+    "step-15",
+    "step-16",
+    "stepicon-1",
+    "stepicon-2",
+    "stepicon-3",
+    "stepicon-4",
+    "stepicon-5",
+    "stepicon-6",
+    "stepicon-7",
+    "stepicon-8",
+    "stepicon-9",
+    "stepicon-10",
+    "stepicon-11",
+    "stepicon-12",
+    "stepicon-13",
+    "stepicon-14",
+    "stepicon-15",
+    "stepicon-16",
+    "left",
+    "right",
+    "up",
+    "down",
+    "power"
+   ],
+   "controls": {
+    "track-1": {
+     "meta": {
+      "label": "FM-1 / CHORDS",
+      "function": "RemoteFM1's (not claimed): Track 1 cycles FM-1 mode and this takeover.",
+      "click": "Back to FM-1 mode (again: the takeover)",
+      "hold": "RemoteFM1's Shift layer (FM-1 mode only)"
+     },
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "track-2": {
+     "meta": {
+      "label": "MIDI",
+      "function": "RemoteFM1's (not claimed): Track 2's mode, as ever.",
+      "click": "Midi mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#c8ff2a"
+     }
+    },
+    "track-3": {
+     "meta": {
+      "label": "CONTROL",
+      "function": "RemoteFM1's (not claimed): Track 3's mode, as ever.",
+      "click": "Control mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#1ae4ff"
+     }
+    },
+    "track-4": {
+     "meta": {
+      "label": "SEQ",
+      "function": "RemoteFM1's (not claimed): Track 4's mode, as ever.",
+      "click": "Seq mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#ff2a2a"
+     }
+    },
+    "volume": {
+     "meta": {
+      "label": "MASTER",
+      "function": "RemoteFM1's (not claimed): the master volume.",
+      "turn": "Master volume",
+      "touch": "Touched + Back: out of any takeover to FM-1 mode"
+     }
+    },
+    "back": {
+     "meta": {
+      "label": "BACK",
+      "function": "Closes a popup or the Prog layout. Touch Volume + Back: FM-1 mode.",
+      "click": "Close / up one level (sent at release: Back + Track switches slots)",
+      "description": "ChoralRoot claims the buttons but not the Track buttons, so the host gives Back at its release."
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "menu": {
+     "meta": {
+      "label": "LAYOUT",
+      "function": "The root pads' layout: Scale <-> Chromatic.",
+      "click": "Scale / Chromatic"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "wheel": {
+     "meta": {
+      "label": "SOUND",
+      "function": "The chord sound, by name (popup).",
+      "turn": "Next / previous sound",
+      "shiftTurn": "The engine (FM6, FM TONE, VA, CZ-1, P5, WHEEL, GRAIN)",
+      "click": "Favourite on / off",
+      "touch": "The sound's name"
+     }
+    },
+    "play": {
+     "meta": {
+      "label": "LOOP PLAY",
+      "function": "The looper: play / stop.",
+      "click": "Play / stop",
+      "shift": "The PLAY menu's next slot"
+     },
+     "led": {
+      "color": "#004400"
+     }
+    },
+    "record": {
+     "meta": {
+      "label": "LOOP REC",
+      "function": "The looper: record (the record mode in Shift).",
+      "click": "Record / overdub"
+     },
+     "led": {
+      "color": "#440000"
+     }
+    },
+    "loop": {
+     "meta": {
+      "label": "LATCH",
+      "function": "LATCH: chords keep sounding after the pads are let go.",
+      "click": "Latch on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "copy": {
+     "meta": {
+      "label": "LOCK",
+      "function": "LOCK: the chord keys held now stay lit (latched); the roots play them.",
+      "click": "Lock on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "mute": {
+     "meta": {
+      "label": "BASS",
+      "function": "The bass part on / off.",
+      "click": "Bass on / off",
+      "shift": "The bass sound's popup"
+     },
+     "led": {
+      "brightness": 1
+     }
+    },
+    "delete": {
+     "meta": {
+      "label": "PANIC",
+      "function": "All notes off, here and to every routed firmware (CC 123).",
+      "click": "Panic"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "shift": {
+     "meta": {
+      "label": "SHIFT",
+      "function": "Held: the knobs' second page.",
+      "hold": "Knobs page 2 on the screen"
+     },
+     "led": {
+      "brightness": 1
+     }
+    },
+    "up": {
+     "meta": {
+      "label": "OCT +",
+      "function": "The root pads an octave up (-2..+2).",
+      "click": "Octave up"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "down": {
+     "meta": {
+      "label": "OCT -",
+      "function": "The root pads an octave down (-2..+2).",
+      "click": "Octave down"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "left": {
+     "meta": {
+      "label": "PROG <",
+      "function": "In Prog: the previous 24 chords (keys 1-24).",
+      "click": "Keys 1-24"
+     }
+    },
+    "right": {
+     "meta": {
+      "label": "PROG >",
+      "function": "In Prog: the next 24 chords (keys 25-48).",
+      "click": "Keys 25-48"
+     }
+    },
+    "capture": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "sample": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "undo": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "knob-1": {
+     "meta": {
+      "label": "SOUND",
+      "function": "Shift page: Sound",
+      "turn": "Change Sound",
+      "touch": "Fullscreen popup: Sound and its value",
+      "shiftTurn": "Voicing (Shift let go)"
+     }
+    },
+    "knobled-1": {
+     "led": {
+      "color": "#ffffff"
+     }
+    },
+    "knob-2": {
+     "meta": {
+      "label": "BASS SOUND",
+      "function": "Shift page: Bass sound",
+      "turn": "Change Bass sound",
+      "touch": "Fullscreen popup: Bass sound and its value",
+      "shiftTurn": "Perform (Shift let go)"
+     }
+    },
+    "knobled-2": {
+     "led": {
+      "color": "#ff5a1e"
+     }
+    },
+    "knob-3": {
+     "meta": {
+      "label": "GATE",
+      "function": "Shift page: Gate",
+      "turn": "Change Gate",
+      "touch": "Fullscreen popup: Gate and its value",
+      "shiftTurn": "Rate (Shift let go)"
+     }
+    },
+    "knobled-3": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-4": {
+     "meta": {
+      "label": "SWING",
+      "function": "Shift page: Swing",
+      "turn": "Change Swing",
+      "touch": "Fullscreen popup: Swing and its value",
+      "shiftTurn": "Direction (Shift let go)"
+     }
+    },
+    "knobled-4": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-5": {
+     "meta": {
+      "label": "BASS LEVEL",
+      "function": "Shift page: Bass level",
+      "turn": "Change Bass level",
+      "touch": "Fullscreen popup: Bass level and its value",
+      "shiftTurn": "Bass reg. (Shift let go)"
+     }
+    },
+    "knobled-5": {
+     "led": {
+      "color": "#ff5a1e"
+     }
+    },
+    "knob-6": {
+     "meta": {
+      "label": "VELOCITY",
+      "function": "Shift page: Velocity",
+      "turn": "Change Velocity",
+      "touch": "Fullscreen popup: Velocity and its value",
+      "shiftTurn": "Key (Shift let go)"
+     }
+    },
+    "knobled-6": {
+     "led": {
+      "color": "#965aff"
+     }
+    },
+    "knob-7": {
+     "meta": {
+      "label": "HUMANIZE",
+      "function": "Shift page: Humanize",
+      "turn": "Change Humanize",
+      "touch": "Fullscreen popup: Humanize and its value",
+      "shiftTurn": "Scale (Shift let go)"
+     }
+    },
+    "knobled-7": {
+     "led": {
+      "color": "#965aff"
+     }
+    },
+    "knob-8": {
+     "meta": {
+      "label": "TEMPO",
+      "function": "Shift page: Tempo",
+      "turn": "Change Tempo",
+      "touch": "Fullscreen popup: Tempo and its value",
+      "shiftTurn": "Transpose (Shift let go)"
+     }
+    },
+    "knobled-8": {
+     "led": {
+      "color": "#ffffff"
+     }
+    },
+    "pad-4-1": {
+     "meta": {
+      "label": "I C3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-4-2": {
+     "meta": {
+      "label": "ii D3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-3": {
+     "meta": {
+      "label": "iii E3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-4": {
+     "meta": {
+      "label": "IV F3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-5": {
+     "meta": {
+      "label": "V G3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-6": {
+     "meta": {
+      "label": "vi A3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-7": {
+     "meta": {
+      "label": "vii B3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-8": {
+     "meta": {
+      "label": "I C4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-3-1": {
+     "meta": {
+      "label": "I C4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-3-2": {
+     "meta": {
+      "label": "ii D4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-3": {
+     "meta": {
+      "label": "iii E4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-4": {
+     "meta": {
+      "label": "IV F4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-5": {
+     "meta": {
+      "label": "V G4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-6": {
+     "meta": {
+      "label": "vi A4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-7": {
+     "meta": {
+      "label": "vii B4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-8": {
+     "meta": {
+      "label": "I C5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-2-1": {
+     "meta": {
+      "label": "I C5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-2-2": {
+     "meta": {
+      "label": "ii D5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-3": {
+     "meta": {
+      "label": "iii E5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-4": {
+     "meta": {
+      "label": "IV F5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-5": {
+     "meta": {
+      "label": "V G5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-6": {
+     "meta": {
+      "label": "vi A5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-7": {
+     "meta": {
+      "label": "vii B5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-8": {
+     "meta": {
+      "label": "I C6",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-1-1": {
+     "meta": {
+      "label": "DIM",
+      "function": "Chord type DIM: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-2": {
+     "meta": {
+      "label": "MIN",
+      "function": "Chord type MIN: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-3": {
+     "meta": {
+      "label": "MAJ",
+      "function": "Chord type MAJ: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-4": {
+     "meta": {
+      "label": "SUS",
+      "function": "Chord type SUS: held + a root pad = that type (SUS: also MIN + MAJ together)",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-5": {
+     "meta": {
+      "label": "6",
+      "function": "Extension 6: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-6": {
+     "meta": {
+      "label": "m7",
+      "function": "Extension m7: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-7": {
+     "meta": {
+      "label": "M7",
+      "function": "Extension M7: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-8": {
+     "meta": {
+      "label": "9",
+      "function": "Extension 9: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "step-1": {
+     "meta": {
+      "label": "POP",
+      "function": "Progression 1: Pop Four",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-1": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-2": {
+     "meta": {
+      "label": "JAZZ",
+      "function": "Progression 2: Jazz ii-V-I",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-2": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-3": {
+     "meta": {
+      "label": "NEO",
+      "function": "Progression 3: Neo Soul",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-3": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-4": {
+     "meta": {
+      "label": "GOSP",
+      "function": "Progression 4: Gospel Walk",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-4": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-5": {
+     "meta": {
+      "label": "EPIC",
+      "function": "Progression 5: Minor Epic",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-5": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-6": {
+     "meta": {
+      "label": "DOR",
+      "function": "Progression 6: Dorian Days",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-6": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-7": {
+     "meta": {
+      "label": "7",
+      "function": "Progression 7: Progression 7 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-7": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-8": {
+     "meta": {
+      "label": "8",
+      "function": "Progression 8: Progression 8 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-8": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-9": {
+     "meta": {
+      "label": "9",
+      "function": "Progression 9: Progression 9 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-9": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-10": {
+     "meta": {
+      "label": "10",
+      "function": "Progression 10: Progression 10 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-10": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-11": {
+     "meta": {
+      "label": "11",
+      "function": "Progression 11: Progression 11 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-11": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-12": {
+     "meta": {
+      "label": "12",
+      "function": "Progression 12: Progression 12 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-12": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-13": {
+     "meta": {
+      "label": "13",
+      "function": "Progression 13: Progression 13 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-13": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-14": {
+     "meta": {
+      "label": "14",
+      "function": "Progression 14: Progression 14 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-14": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-15": {
+     "meta": {
+      "label": "15",
+      "function": "Progression 15: Progression 15 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-15": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-16": {
+     "meta": {
+      "label": "16",
+      "function": "Progression 16: Progression 16 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-16": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "screen": {
+     "meta": {
+      "label": "Shift page",
+      "function": "The page's eight knob names, 1-4 on the left, 5-8 on the right; a value only in a knob's popup."
+     }
+    }
+   },
+   "screen": "AAAAAAAAAAEAAAAAAAAAAB/gAAAAAABhH+AAAAGAAAAf4AAAAAAAYR/gAAABgAAAYAAAAAAAAGEYGAAAAYAAAGAAAAAAAABhGBgAAAGAAABgAfhgZngeYRgYfgfhgBgYYAH4YGZ4HmEYGH4H4YAYGB+GBmBnhmHhH+ABmAGAGBgfhgZgZ4Zh4R/gAZgBgBgYAGYGYGYGYGEYGH+H4YAYGABmBmBmBmBhGBh/h+GAGBgAZgZh5gZgYRgZgYAZgAZgAGYGYeYGYGEYGYGAGYAGYH+B+B5mBh/hH+B/n+H/gYB/gfgeZgYf4R/gf5/h/4GAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAB/gAAAAAAAARgYAAeAAAAAf4AAAAAAAAEYGAAHgAAAAGBgAAAAAAABGBgAAYAAAABgYAAAAAAAARgYAAGAAAAAYGH4H4H4AAEYGH4BgH4AAGBh+B+B+AABGBh+AYB+AAB/gAZgBgAAARgZgYGBgYAAf4AGYAYAAAEYGYGBgYGAAGBh/h+B+AABGBn/gYGBgABgYf4fgfgAARgZ/4GBgYAAYGYGAGAGAAEGYYABgYGAAGBmBgBgBgABBmGAAYGBgAB/gf5/h/gAAQGAfgfgfgAAf4H+f4f4AAEBgH4H4H4AAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAH4AAGAAAAAEYGAAAAAAAAB+AABgAAAABGBgAAAAAAABgYAAYAAAAARgYAAAAAAAAYGAAGAAAAAEYGAAAAAAAAGAB+H4B+AABGBmBnmB+GeBgAfh+AfgAARgZgZ5gfhngZ+AGGAYGAAEf+YGZmAGeGGfgBhgGBgABH/mBmZgBnhhgYf4YB/4AARgZgZmYf5gYYGH+GAf+AAEYGYGZmH+YGGBmBhhmAAABGBmHmBmBmBhgZgYYZgAAARgZh5gZgZgYH+H+B4H4AAEYGHmYGH+YGB/h/geB+AABGBh5mBh/mBgAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAB/gAAYAAAABH/gAAAAAAAAf4AAGAAAAAR/4AAAAAAAAYAAAAAAAAAEBgAAAAAAAAGAAAAAAAAABAYAAAAAAAABgBgYeBngf4QGAfh5h/gfgYAYGHgZ4H+EBgH4eYf4H4B+GBgYHhmBhAYGBmZmBmBgfhgYGB4ZgYQGBgZmZgZgYAGZmBgYGYGEBgf+ZmYGYGABmZgYGBmBhAYH/mZmBmBgAZmYGBgYf4QGBgBgZ/hgYAGZmBgYGH+EBgYAYGf4YGH+BmB+GBgBhAYB+GBmAB+B/gZgfhgYAYQGAfhgZgAfgAAAAAAAAAAEAAAAAAAAAAA=="
+  },
+  {
+   "id": "jfljooa5lqsa",
+   "x": 1148,
+   "y": 1680,
+   "w": 1048,
+   "h": 200,
+   "type": "note",
+   "text": "Sound, Bass sound, Gate, Swing, Bass level, the progression's Velocity and Humanize, Tempo.",
+   "color": "#ffe58a"
+  },
+  {
+   "id": "j08xui6d39zz",
+   "x": 2296,
+   "y": 1040,
+   "w": 1048,
+   "h": 616,
+   "type": "layout",
+   "name": "6. An arpeggio running",
+   "description": "Perform = Arp: the chord's notes on a line, the sounding one lifted onto a block that hops, as the FM-1's Chord view (animated: hover).",
+   "scope": [
+    "screen",
+    "knob-1",
+    "knob-2",
+    "knob-3",
+    "knob-4",
+    "knob-5",
+    "knob-6",
+    "knob-7",
+    "knob-8",
+    "knobled-1",
+    "knobled-2",
+    "knobled-3",
+    "knobled-4",
+    "knobled-5",
+    "knobled-6",
+    "knobled-7",
+    "knobled-8",
+    "volume",
+    "wheel",
+    "back",
+    "menu",
+    "track-1",
+    "track-2",
+    "track-3",
+    "track-4",
+    "pad-1-1",
+    "pad-1-2",
+    "pad-1-3",
+    "pad-1-4",
+    "pad-1-5",
+    "pad-1-6",
+    "pad-1-7",
+    "pad-1-8",
+    "pad-2-1",
+    "pad-2-2",
+    "pad-2-3",
+    "pad-2-4",
+    "pad-2-5",
+    "pad-2-6",
+    "pad-2-7",
+    "pad-2-8",
+    "pad-3-1",
+    "pad-3-2",
+    "pad-3-3",
+    "pad-3-4",
+    "pad-3-5",
+    "pad-3-6",
+    "pad-3-7",
+    "pad-3-8",
+    "pad-4-1",
+    "pad-4-2",
+    "pad-4-3",
+    "pad-4-4",
+    "pad-4-5",
+    "pad-4-6",
+    "pad-4-7",
+    "pad-4-8",
+    "capture",
+    "sample",
+    "loop",
+    "mute",
+    "delete",
+    "copy",
+    "undo",
+    "shift",
+    "play",
+    "record",
+    "step-1",
+    "step-2",
+    "step-3",
+    "step-4",
+    "step-5",
+    "step-6",
+    "step-7",
+    "step-8",
+    "step-9",
+    "step-10",
+    "step-11",
+    "step-12",
+    "step-13",
+    "step-14",
+    "step-15",
+    "step-16",
+    "stepicon-1",
+    "stepicon-2",
+    "stepicon-3",
+    "stepicon-4",
+    "stepicon-5",
+    "stepicon-6",
+    "stepicon-7",
+    "stepicon-8",
+    "stepicon-9",
+    "stepicon-10",
+    "stepicon-11",
+    "stepicon-12",
+    "stepicon-13",
+    "stepicon-14",
+    "stepicon-15",
+    "stepicon-16",
+    "left",
+    "right",
+    "up",
+    "down",
+    "power"
+   ],
+   "controls": {
+    "track-1": {
+     "meta": {
+      "label": "FM-1 / CHORDS",
+      "function": "RemoteFM1's (not claimed): Track 1 cycles FM-1 mode and this takeover.",
+      "click": "Back to FM-1 mode (again: the takeover)",
+      "hold": "RemoteFM1's Shift layer (FM-1 mode only)"
+     },
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "track-2": {
+     "meta": {
+      "label": "MIDI",
+      "function": "RemoteFM1's (not claimed): Track 2's mode, as ever.",
+      "click": "Midi mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#c8ff2a"
+     }
+    },
+    "track-3": {
+     "meta": {
+      "label": "CONTROL",
+      "function": "RemoteFM1's (not claimed): Track 3's mode, as ever.",
+      "click": "Control mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#1ae4ff"
+     }
+    },
+    "track-4": {
+     "meta": {
+      "label": "SEQ",
+      "function": "RemoteFM1's (not claimed): Track 4's mode, as ever.",
+      "click": "Seq mode",
+      "shift": "Back + Track 1..3: the firmware slots"
+     },
+     "led": {
+      "color": "#ff2a2a"
+     }
+    },
+    "volume": {
+     "meta": {
+      "label": "MASTER",
+      "function": "RemoteFM1's (not claimed): the master volume.",
+      "turn": "Master volume",
+      "touch": "Touched + Back: out of any takeover to FM-1 mode"
+     }
+    },
+    "back": {
+     "meta": {
+      "label": "BACK",
+      "function": "Closes a popup or the Prog layout. Touch Volume + Back: FM-1 mode.",
+      "click": "Close / up one level (sent at release: Back + Track switches slots)",
+      "description": "ChoralRoot claims the buttons but not the Track buttons, so the host gives Back at its release."
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "menu": {
+     "meta": {
+      "label": "LAYOUT",
+      "function": "The root pads' layout: Scale <-> Chromatic.",
+      "click": "Scale / Chromatic"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "wheel": {
+     "meta": {
+      "label": "SOUND",
+      "function": "The chord sound, by name (popup).",
+      "turn": "Next / previous sound",
+      "shiftTurn": "The engine (FM6, FM TONE, VA, CZ-1, P5, WHEEL, GRAIN)",
+      "click": "Favourite on / off",
+      "touch": "The sound's name"
+     }
+    },
+    "play": {
+     "meta": {
+      "label": "LOOP PLAY",
+      "function": "The looper: play / stop.",
+      "click": "Play / stop",
+      "shift": "The PLAY menu's next slot"
+     },
+     "led": {
+      "color": "#004400"
+     }
+    },
+    "record": {
+     "meta": {
+      "label": "LOOP REC",
+      "function": "The looper: record (the record mode in Shift).",
+      "click": "Record / overdub"
+     },
+     "led": {
+      "color": "#440000"
+     }
+    },
+    "loop": {
+     "meta": {
+      "label": "LATCH",
+      "function": "LATCH: chords keep sounding after the pads are let go.",
+      "click": "Latch on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "copy": {
+     "meta": {
+      "label": "LOCK",
+      "function": "LOCK: the chord keys held now stay lit (latched); the roots play them.",
+      "click": "Lock on / off"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "mute": {
+     "meta": {
+      "label": "BASS",
+      "function": "The bass part on / off.",
+      "click": "Bass on / off",
+      "shift": "The bass sound's popup"
+     },
+     "led": {
+      "brightness": 1
+     }
+    },
+    "delete": {
+     "meta": {
+      "label": "PANIC",
+      "function": "All notes off, here and to every routed firmware (CC 123).",
+      "click": "Panic"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "shift": {
+     "meta": {
+      "label": "SHIFT",
+      "function": "Held: the knobs' second page.",
+      "hold": "Knobs page 2 on the screen"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "up": {
+     "meta": {
+      "label": "OCT +",
+      "function": "The root pads an octave up (-2..+2).",
+      "click": "Octave up"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "down": {
+     "meta": {
+      "label": "OCT -",
+      "function": "The root pads an octave down (-2..+2).",
+      "click": "Octave down"
+     },
+     "led": {
+      "brightness": 0.3
+     }
+    },
+    "left": {
+     "meta": {
+      "label": "PROG <",
+      "function": "In Prog: the previous 24 chords (keys 1-24).",
+      "click": "Keys 1-24"
+     }
+    },
+    "right": {
+     "meta": {
+      "label": "PROG >",
+      "function": "In Prog: the next 24 chords (keys 25-48).",
+      "click": "Keys 25-48"
+     }
+    },
+    "capture": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "sample": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "undo": {
+     "meta": {
+      "label": "",
+      "function": "Not used yet."
+     }
+    },
+    "knob-1": {
+     "meta": {
+      "label": "VOICING",
+      "function": "Revoice: up moves the lowest note an octave up, down the highest down (-12..+12)",
+      "turn": "Change Voicing",
+      "touch": "Fullscreen popup: Voicing and its value",
+      "shiftTurn": "Sound"
+     }
+    },
+    "knobled-1": {
+     "led": {
+      "color": "#ff7800"
+     }
+    },
+    "knob-2": {
+     "meta": {
+      "label": "PERFORM",
+      "function": "Off, Strum, Strum 2, Slop, Arp, Arp 2, Pattern, Harp",
+      "turn": "Change Perform",
+      "touch": "Fullscreen popup: Perform and its value",
+      "shiftTurn": "Bass sound"
+     }
+    },
+    "knobled-2": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-3": {
+     "meta": {
+      "label": "RATE",
+      "function": "The mode's first value: strum rate, slop amount, arp division, pattern, harp rate",
+      "turn": "Change Rate",
+      "touch": "Fullscreen popup: Rate and its value",
+      "shiftTurn": "Gate"
+     }
+    },
+    "knobled-3": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-4": {
+     "meta": {
+      "label": "DIRECTION",
+      "function": "The mode's second value (Direction; Pattern: its division)",
+      "turn": "Change Direction",
+      "touch": "Fullscreen popup: Direction and its value",
+      "shiftTurn": "Swing"
+     }
+    },
+    "knobled-4": {
+     "led": {
+      "color": "#c43aff"
+     }
+    },
+    "knob-5": {
+     "meta": {
+      "label": "BASS REG.",
+      "function": "The bass register, -2..+4 octaves",
+      "turn": "Change Bass reg.",
+      "touch": "Fullscreen popup: Bass reg. and its value",
+      "shiftTurn": "Bass level"
+     }
+    },
+    "knobled-5": {
+     "led": {
+      "color": "#ff5a1e"
+     }
+    },
+    "knob-6": {
+     "meta": {
+      "label": "KEY",
+      "function": "The tonic (Key Mode on)",
+      "turn": "Change Key",
+      "touch": "Fullscreen popup: Key and its value",
+      "shiftTurn": "Velocity"
+     }
+    },
+    "knobled-6": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "knob-7": {
+     "meta": {
+      "label": "SCALE",
+      "function": "Major / Minor",
+      "turn": "Change Scale",
+      "touch": "Fullscreen popup: Scale and its value",
+      "shiftTurn": "Humanize"
+     }
+    },
+    "knobled-7": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "knob-8": {
+     "meta": {
+      "label": "TRANSPOSE",
+      "function": "-24..+24 semitones, everything played",
+      "turn": "Change Transpose",
+      "touch": "Fullscreen popup: Transpose and its value",
+      "shiftTurn": "Tempo"
+     }
+    },
+    "knobled-8": {
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-4-1": {
+     "meta": {
+      "label": "I C3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-4-2": {
+     "meta": {
+      "label": "ii D3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-4-3": {
+     "meta": {
+      "label": "iii E3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-4": {
+     "meta": {
+      "label": "IV F3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-4-5": {
+     "meta": {
+      "label": "V G3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-6": {
+     "meta": {
+      "label": "vi A3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-4-7": {
+     "meta": {
+      "label": "vii B3",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-4-8": {
+     "meta": {
+      "label": "I C4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-3-1": {
+     "meta": {
+      "label": "I C4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-3-2": {
+     "meta": {
+      "label": "ii D4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffffff"
+     }
+    },
+    "pad-3-3": {
+     "meta": {
+      "label": "iii E4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-4": {
+     "meta": {
+      "label": "IV F4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-3-5": {
+     "meta": {
+      "label": "V G4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-6": {
+     "meta": {
+      "label": "vi A4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-3-7": {
+     "meta": {
+      "label": "vii B4",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-3-8": {
+     "meta": {
+      "label": "I C5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-2-1": {
+     "meta": {
+      "label": "I C5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-2-2": {
+     "meta": {
+      "label": "ii D5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-2-3": {
+     "meta": {
+      "label": "iii E5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-4": {
+     "meta": {
+      "label": "IV F5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-2-5": {
+     "meta": {
+      "label": "V G5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-6": {
+     "meta": {
+      "label": "vi A5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#13abbf"
+     }
+    },
+    "pad-2-7": {
+     "meta": {
+      "label": "vii B5",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#515151"
+     }
+    },
+    "pad-2-8": {
+     "meta": {
+      "label": "I C6",
+      "function": "A root: plays its chord (velocity from the pad, pressure = aftertouch)",
+      "click": "Play the chord",
+      "hold": "Sounds while held (LATCH: keeps sounding)"
+     },
+     "led": {
+      "color": "#ffd228"
+     }
+    },
+    "pad-1-1": {
+     "meta": {
+      "label": "DIM",
+      "function": "Chord type DIM: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-2": {
+     "meta": {
+      "label": "MIN",
+      "function": "Chord type MIN: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-3": {
+     "meta": {
+      "label": "MAJ",
+      "function": "Chord type MAJ: held + a root pad = that type",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-4": {
+     "meta": {
+      "label": "SUS",
+      "function": "Chord type SUS: held + a root pad = that type (SUS: also MIN + MAJ together)",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#361047"
+     }
+    },
+    "pad-1-5": {
+     "meta": {
+      "label": "6",
+      "function": "Extension 6: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-6": {
+     "meta": {
+      "label": "m7",
+      "function": "Extension m7: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#ffffff"
+     }
+    },
+    "pad-1-7": {
+     "meta": {
+      "label": "M7",
+      "function": "Extension M7: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "pad-1-8": {
+     "meta": {
+      "label": "9",
+      "function": "Extension 9: held + a root pad adds it; stacks with the others",
+      "click": "Held: the next root plays it",
+      "shift": "In Key Mode: MAJ / MIN set the scale"
+     },
+     "led": {
+      "color": "#472100"
+     }
+    },
+    "step-1": {
+     "meta": {
+      "label": "POP",
+      "function": "Progression 1: Pop Four",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-1": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-2": {
+     "meta": {
+      "label": "JAZZ",
+      "function": "Progression 2: Jazz ii-V-I",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-2": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-3": {
+     "meta": {
+      "label": "NEO",
+      "function": "Progression 3: Neo Soul",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-3": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-4": {
+     "meta": {
+      "label": "GOSP",
+      "function": "Progression 4: Gospel Walk",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-4": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-5": {
+     "meta": {
+      "label": "EPIC",
+      "function": "Progression 5: Minor Epic",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-5": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-6": {
+     "meta": {
+      "label": "DOR",
+      "function": "Progression 6: Dorian Days",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": "#341f59"
+     }
+    },
+    "stepicon-6": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-7": {
+     "meta": {
+      "label": "7",
+      "function": "Progression 7: Progression 7 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-7": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-8": {
+     "meta": {
+      "label": "8",
+      "function": "Progression 8: Progression 8 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-8": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-9": {
+     "meta": {
+      "label": "9",
+      "function": "Progression 9: Progression 9 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-9": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-10": {
+     "meta": {
+      "label": "10",
+      "function": "Progression 10: Progression 10 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-10": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-11": {
+     "meta": {
+      "label": "11",
+      "function": "Progression 11: Progression 11 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-11": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-12": {
+     "meta": {
+      "label": "12",
+      "function": "Progression 12: Progression 12 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-12": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-13": {
+     "meta": {
+      "label": "13",
+      "function": "Progression 13: Progression 13 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-13": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-14": {
+     "meta": {
+      "label": "14",
+      "function": "Progression 14: Progression 14 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-14": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-15": {
+     "meta": {
+      "label": "15",
+      "function": "Progression 15: Progression 15 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-15": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "step-16": {
+     "meta": {
+      "label": "16",
+      "function": "Progression 16: Progression 16 (empty)",
+      "click": "Prog: the root pads play its chords (the lit step again: back to Scale)",
+      "shift": "Its name in a popup"
+     },
+     "led": {
+      "color": null
+     }
+    },
+    "stepicon-16": {
+     "led": {
+      "brightness": 0
+     }
+    },
+    "screen": {
+     "meta": {
+      "label": "Arp view",
+      "function": "The chord's name, the division top right, the notes in a row, the sounding one inverted on a block.",
+      "description": "Strum, Slop and Harp keep the Chord view."
+     }
+    }
+   },
+   "screen": "/////////////////////+B//5+eB/gf/////geAeAfgf/+fngf4H/////4HgHgHn5//hhn5/n/////5+Z+Z+Z+f/4YZ+f5/////+fmfmfmf//+Zmfn+f/////n5n5n5n///mZn5/n/////5+Z+Z+Z///5mZ+f5/////+fmAeAef//+Zmfn+f/////n5gHgHn///n5gB/n/////4AZn5/5///5+YAf5/////+AGZ+f+fn/+fmfmef/////n5nnn/n5//n5n5nn/////5+Z55/+B//5+Z+eH/////+fmfmf/gf/+fmfnh//////n5n5n//////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/AAAAH//AAAAAAAGAAAfh/wAAAB//wAAAAAABgAAH4f8AAAAf/8AAAAAAB4ABmBnA4AAAAAHAAAAAAAeAAZgZwOAAAAABwAAAAAABgAYYGcDgAAAAAcAAAAAAAYAGGBnAHH44AA4AAAAAAAGAGAfhwBx+OAAOAAAAAAABgBgH4cAcfjgADgAAAAAAAYBgGBnAHHHHAHAAAAAAAAGAYBgZwBxxxwBwAAAAAAABgYAYGcAccccAcAAAAAAAAYGAGBnAHHHHA4AAAAAAAAfgAAfhwBxxxwOAAAAAAAAH4AAH4cAccccDgAAAAAAAAAAAAAHA4HAHA4AAAAAAAAAAAAABwOBwBwOAAAAAAAAAAAAAAcDgcAcDgAAAAAAAAAAAAAH/AHAHA4AAAAAAAAAAAAAB////xwOAAAAAAAAAAAAAAf///8cDgAAAAAAAAAAAAAAP///AAAAAAAAAAAAAAAAAD///wAAAAAAAAAAAAAAAAA/A/8AAAAAAAAAAAAAAAAAPwP/AAAAAAAAAAAAAAAAAD88/wAAAAAAAAAAAAAAAAA/PP8AAAAAAAAAAAAAAAAAPz8/AAAAAAAAAAAAAAAAAD8/PwAAAAAAAAAAAAAAAAA/Pz8AAAAAAAAAAAAAAAAAPz8/AAAAAAAAAAAAAAAAAD8/PwAD/wAAA/AAAA/AAAA/Pz8AA/8AAAPwAAAPwAAAPzz/AAMAAAAMDAAAMDAAAD88/wADAAAADAwAADAwAAA/A/8AAwAAAAwMAAAwAAAAPwP/AAMAAAAMDAAAMAAAAD///wAD/AAADAwAADAAAAA///8AA/wAAAwMAAAwAAAAP///AAMAAAAP/AAAMAAAAD///wADAAAAD/wAADAAAAAAAAAAAwAAAAwMAAAwMAAP////////////////////8AAAAAADAAAADAwAAA/AAAAAAAAAAwAAAAwMAAAPwAAA==",
+   "screenFrames": [
+    {
+     "id": "zzg4zdmen2kh",
+     "duration": 250,
+     "image": "/////////////////////+B//5+eB/gf/////geAeAfgf/+fngf4H/////4HgHgHn5//hhn5/n/////5+Z+Z+Z+f/4YZ+f5/////+fmfmfmf//+Zmfn+f/////n5n5n5n///mZn5/n/////5+Z+Z+Z///5mZ+f5/////+fmAeAef//+Zmfn+f/////n5gHgHn///n5gB/n/////4AZn5/5///5+YAf5/////+AGZ+f+fn/+fmfmef/////n5nnn/n5//n5n5nn/////5+Z55/+B//5+Z+eH/////+fmfmf/gf/+fmfnh//////n5n5n//////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/AAAAH//AAAAAAAGAAAfh/wAAAB//wAAAAAABgAAH4f8AAAAf/8AAAAAAB4ABmBnA4AAAAAHAAAAAAAeAAZgZwOAAAAABwAAAAAABgAYYGcDgAAAAAcAAAAAAAYAGGBnAHH44AA4AAAAAAAGAGAfhwBx+OAAOAAAAAAABgBgH4cAcfjgADgAAAAAAAYBgGBnAHHHHAHAAAAAAAAGAYBgZwBxxxwBwAAAAAAABgYAYGcAccccAcAAAAAAAAYGAGBnAHHHHA4AAAAAAAAfgAAfhwBxxxwOAAAAAAAAH4AAH4cAccccDgAAAAAAAAAAAAAHA4HAHA4AAAAAAAAAAAAABwOBwBwOAAAAAAAAAAAAAAcDgcAcDgAAAAAAAAAAAAAH/AHAHA4AAAAAAAAAAAAAB////xwOAAAAAAAAAAAAAAf///8cDgAAAAAAAAAAAAAAP///AAAAAAAAAAAAAAAAAD///wAAAAAAAAAAAAAAAAA/A/8AAAAAAAAAAAAAAAAAPwP/AAAAAAAAAAAAAAAAAD88/wAAAAAAAAAAAAAAAAA/PP8AAAAAAAAAAAAAAAAAPz8/AAAAAAAAAAAAAAAAAD8/PwAAAAAAAAAAAAAAAAA/Pz8AAAAAAAAAAAAAAAAAPz8/AAAAAAAAAAAAAAAAAD8/PwAD/wAAA/AAAA/AAAA/Pz8AA/8AAAPwAAAPwAAAPzz/AAMAAAAMDAAAMDAAAD88/wADAAAADAwAADAwAAA/A/8AAwAAAAwMAAAwAAAAPwP/AAMAAAAMDAAAMAAAAD///wAD/AAADAwAADAAAAA///8AA/wAAAwMAAAwAAAAP///AAMAAAAP/AAAMAAAAD///wADAAAAD/wAADAAAAAAAAAAAwAAAAwMAAAwMAAP////////////////////8AAAAAADAAAADAwAAA/AAAAAAAAAAwAAAAwMAAAPwAAA==",
+     "layers": [
+      {
+       "id": "vdgaj8gxbeny",
+       "type": "raster",
+       "name": "Frame",
+       "visible": true,
+       "x": 0,
+       "y": 0,
+       "data": "/////////////////////+B//5+eB/gf/////geAeAfgf/+fngf4H/////4HgHgHn5//hhn5/n/////5+Z+Z+Z+f/4YZ+f5/////+fmfmfmf//+Zmfn+f/////n5n5n5n///mZn5/n/////5+Z+Z+Z///5mZ+f5/////+fmAeAef//+Zmfn+f/////n5gHgHn///n5gB/n/////4AZn5/5///5+YAf5/////+AGZ+f+fn/+fmfmef/////n5nnn/n5//n5n5nn/////5+Z55/+B//5+Z+eH/////+fmfmf/gf/+fmfnh//////n5n5n//////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/AAAAH//AAAAAAAGAAAfh/wAAAB//wAAAAAABgAAH4f8AAAAf/8AAAAAAB4ABmBnA4AAAAAHAAAAAAAeAAZgZwOAAAAABwAAAAAABgAYYGcDgAAAAAcAAAAAAAYAGGBnAHH44AA4AAAAAAAGAGAfhwBx+OAAOAAAAAAABgBgH4cAcfjgADgAAAAAAAYBgGBnAHHHHAHAAAAAAAAGAYBgZwBxxxwBwAAAAAAABgYAYGcAccccAcAAAAAAAAYGAGBnAHHHHA4AAAAAAAAfgAAfhwBxxxwOAAAAAAAAH4AAH4cAccccDgAAAAAAAAAAAAAHA4HAHA4AAAAAAAAAAAAABwOBwBwOAAAAAAAAAAAAAAcDgcAcDgAAAAAAAAAAAAAH/AHAHA4AAAAAAAAAAAAAB////xwOAAAAAAAAAAAAAAf///8cDgAAAAAAAAAAAAAAP///AAAAAAAAAAAAAAAAAD///wAAAAAAAAAAAAAAAAA/A/8AAAAAAAAAAAAAAAAAPwP/AAAAAAAAAAAAAAAAAD88/wAAAAAAAAAAAAAAAAA/PP8AAAAAAAAAAAAAAAAAPz8/AAAAAAAAAAAAAAAAAD8/PwAAAAAAAAAAAAAAAAA/Pz8AAAAAAAAAAAAAAAAAPz8/AAAAAAAAAAAAAAAAAD8/PwAD/wAAA/AAAA/AAAA/Pz8AA/8AAAPwAAAPwAAAPzz/AAMAAAAMDAAAMDAAAD88/wADAAAADAwAADAwAAA/A/8AAwAAAAwMAAAwAAAAPwP/AAMAAAAMDAAAMAAAAD///wAD/AAADAwAADAAAAA///8AA/wAAAwMAAAwAAAAP///AAMAAAAP/AAAMAAAAD///wADAAAAD/wAADAAAAAAAAAAAwAAAAwMAAAwMAAP////////////////////8AAAAAADAAAADAwAAA/AAAAAAAAAAwAAAAwMAAAPwAAA==",
+       "alpha": "/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////w=="
+      }
+     ]
+    },
+    {
+     "id": "jqwx4hh5344t",
+     "duration": 250,
+     "image": "/////////////////////+B//5+eB/gf/////geAeAfgf/+fngf4H/////4HgHgHn5//hhn5/n/////5+Z+Z+Z+f/4YZ+f5/////+fmfmfmf//+Zmfn+f/////n5n5n5n///mZn5/n/////5+Z+Z+Z///5mZ+f5/////+fmAeAef//+Zmfn+f/////n5gHgHn///n5gB/n/////4AZn5/5///5+YAf5/////+AGZ+f+fn/+fmfmef/////n5nnn/n5//n5n5nn/////5+Z55/+B//5+Z+eH/////+fmfmf/gf/+fmfnh//////n5n5n//////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/AAAAH//AAAAAAAGAAAfh/wAAAB//wAAAAAABgAAH4f8AAAAf/8AAAAAAB4ABmBnA4AAAAAHAAAAAAAeAAZgZwOAAAAABwAAAAAABgAYYGcDgAAAAAcAAAAAAAYAGGBnAHH44AA4AAAAAAAGAGAfhwBx+OAAOAAAAAAABgBgH4cAcfjgADgAAAAAAAYBgGBnAHHHHAHAAAAAAAAGAYBgZwBxxxwBwAAAAAAABgYAYGcAccccAcAAAAAAAAYGAGBnAHHHHA4AAAAAAAAfgAAfhwBxxxwOAAAAAAAAH4AAH4cAccccDgAAAAAAAAAAAAAHA4HAHA4AAAAAAAAAAAAABwOBwBwOAAAAAAAAAAAAAAcDgcAcDgAAAAAAAAAAAAAH/AHAHA4AAAAAAAAAAAAAB/wBwBz///wAAAAAAAAAAAf8AcAc///8AAAAAAAAAAAAAAAAAP///AAAAAAAAAAAAAAAAAD///wAAAAAAAAAAAAAAAAA/AD8AAAAAAAAAAAAAAAAAPwA/AAAAAAAAAAAAAAAAAD8//wAAAAAAAAAAAAAAAAA/P/8AAAAAAAAAAAAAAAAAPz//AAAAAAAAAAAAAAAAAD8//wAAAAAAAAAAAAAAAAA/AP8AAAAAAAAAAAAAAAAAPwD/AAAAAAAAAAAAAD8AAD8//wAA/AAAA/AAAAA/AAA/P/8AAPwAAAPwAAAAMMAAPz//AAMDAAAMDAAAADDAAD8//wADAwAADAwAAAAwMAA/P/8AAwMAAAwAAAAAMDAAPz//AAMDAAAMAAAAADAwAD///wADAwAADAAAAAAwMAA///8AAwMAAAwAAAAAMDAAP///AAP/AAAMAAAAADAwAD///wAD/wAADAAAAAAwwAAAAAAAAwMAAAwMAAP////////////////////8AD8AAAAAAAADAwAAA/AAAAA/AAAAAAAAAwMAAAPwAAA==",
+     "layers": [
+      {
+       "id": "fjgvq4k7bn7x",
+       "type": "raster",
+       "name": "Frame",
+       "visible": true,
+       "x": 0,
+       "y": 0,
+       "data": "/////////////////////+B//5+eB/gf/////geAeAfgf/+fngf4H/////4HgHgHn5//hhn5/n/////5+Z+Z+Z+f/4YZ+f5/////+fmfmfmf//+Zmfn+f/////n5n5n5n///mZn5/n/////5+Z+Z+Z///5mZ+f5/////+fmAeAef//+Zmfn+f/////n5gHgHn///n5gB/n/////4AZn5/5///5+YAf5/////+AGZ+f+fn/+fmfmef/////n5nnn/n5//n5n5nn/////5+Z55/+B//5+Z+eH/////+fmfmf/gf/+fmfnh//////n5n5n//////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/AAAAH//AAAAAAAGAAAfh/wAAAB//wAAAAAABgAAH4f8AAAAf/8AAAAAAB4ABmBnA4AAAAAHAAAAAAAeAAZgZwOAAAAABwAAAAAABgAYYGcDgAAAAAcAAAAAAAYAGGBnAHH44AA4AAAAAAAGAGAfhwBx+OAAOAAAAAAABgBgH4cAcfjgADgAAAAAAAYBgGBnAHHHHAHAAAAAAAAGAYBgZwBxxxwBwAAAAAAABgYAYGcAccccAcAAAAAAAAYGAGBnAHHHHA4AAAAAAAAfgAAfhwBxxxwOAAAAAAAAH4AAH4cAccccDgAAAAAAAAAAAAAHA4HAHA4AAAAAAAAAAAAABwOBwBwOAAAAAAAAAAAAAAcDgcAcDgAAAAAAAAAAAAAH/AHAHA4AAAAAAAAAAAAAB/wBwBz///wAAAAAAAAAAAf8AcAc///8AAAAAAAAAAAAAAAAAP///AAAAAAAAAAAAAAAAAD///wAAAAAAAAAAAAAAAAA/AD8AAAAAAAAAAAAAAAAAPwA/AAAAAAAAAAAAAAAAAD8//wAAAAAAAAAAAAAAAAA/P/8AAAAAAAAAAAAAAAAAPz//AAAAAAAAAAAAAAAAAD8//wAAAAAAAAAAAAAAAAA/AP8AAAAAAAAAAAAAAAAAPwD/AAAAAAAAAAAAAD8AAD8//wAA/AAAA/AAAAA/AAA/P/8AAPwAAAPwAAAAMMAAPz//AAMDAAAMDAAAADDAAD8//wADAwAADAwAAAAwMAA/P/8AAwMAAAwAAAAAMDAAPz//AAMDAAAMAAAAADAwAD///wADAwAADAAAAAAwMAA///8AAwMAAAwAAAAAMDAAP///AAP/AAAMAAAAADAwAD///wAD/wAADAAAAAAwwAAAAAAAAwMAAAwMAAP////////////////////8AD8AAAAAAAADAwAAA/AAAAA/AAAAAAAAAwMAAAPwAAA==",
+       "alpha": "/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////w=="
+      }
+     ]
+    },
+    {
+     "id": "j8b7tfq7xkwo",
+     "duration": 250,
+     "image": "/////////////////////+B//5+eB/gf/////geAeAfgf/+fngf4H/////4HgHgHn5//hhn5/n/////5+Z+Z+Z+f/4YZ+f5/////+fmfmfmf//+Zmfn+f/////n5n5n5n///mZn5/n/////5+Z+Z+Z///5mZ+f5/////+fmAeAef//+Zmfn+f/////n5gHgHn///n5gB/n/////4AZn5/5///5+YAf5/////+AGZ+f+fn/+fmfmef/////n5nnn/n5//n5n5nn/////5+Z55/+B//5+Z+eH/////+fmfmf/gf/+fmfnh//////n5n5n//////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/AAAAH//AAAAAAAGAAAfh/wAAAB//wAAAAAABgAAH4f8AAAAf/8AAAAAAB4ABmBnA4AAAAAHAAAAAAAeAAZgZwOAAAAABwAAAAAABgAYYGcDgAAAAAcAAAAAAAYAGGBnAHH44AA4AAAAAAAGAGAfhwBx+OAAOAAAAAAABgBgH4cAcfjgADgAAAAAAAYBgGBnAHHHHAHAAAAAAAAGAYBgZwBxxxwBwAAAAAAABgYAYGcAccccAcAAAAAAAAYGAGBnAHHHHA4AAAAAAAAfgAAfhwBxxxwOAAAAAAAAH4AAH4cAccccDgAAAAAAAAAAAAAHA4HAHA4AAAAAAAAAAAAABwOBwBwOAAAAAAAAAAAAAAcDgcAcDgAAAAAAAAAAAAAH/AHAHA4AAAAAAAAAAAAAB/wBwBwOAAAD///wAAAAAAf8AcAcDgAAA///8AAAAAAAAAAAAAAAAAP///AAAAAAAAAAAAAAAAAD///wAAAAAAAAAAAAAAAAA/wP8AAAAAAAAAAAAAAAAAP8D/AAAAAAAAAAAAAAAAAD8/PwAAAAAAAAAAAAAAAAA/Pz8AAAAAAAAAAAAAAAAAPz8/AAAAAAAAAAAAAAAAAD8/PwAAAAAAAAAAAAAAAAA/Pz8AAAAAAAAAAAAAAAAAPz8/AAAAAAAAD8AAAD/wAD8APwAA/AAAAA/AAAA/8AA/AD8AAPwAAAAMMAAAMAAAPz8/AAMDAAAADDAAADAAAD8/PwADAwAAAAwMAAAwAAA/Pz8AAwAAAAAMDAAAMAAAPz8/AAMAAAAADAwAAD/AAD///wADAAAAAAwMAAA/wAA///8AAwAAAAAMDAAAMAAAP///AAMAAAAADAwAADAAAD///wADAAAAAAwwAAAwAAAAAAAAAwMAAP////////////////////8AD8AAADAAAAAAAAAA/AAAAA/AAAAwAAAAAAAAAPwAAA==",
+     "layers": [
+      {
+       "id": "886vompzom75",
+       "type": "raster",
+       "name": "Frame",
+       "visible": true,
+       "x": 0,
+       "y": 0,
+       "data": "/////////////////////+B//5+eB/gf/////geAeAfgf/+fngf4H/////4HgHgHn5//hhn5/n/////5+Z+Z+Z+f/4YZ+f5/////+fmfmfmf//+Zmfn+f/////n5n5n5n///mZn5/n/////5+Z+Z+Z///5mZ+f5/////+fmAeAef//+Zmfn+f/////n5gHgHn///n5gB/n/////4AZn5/5///5+YAf5/////+AGZ+f+fn/+fmfmef/////n5nnn/n5//n5n5nn/////5+Z55/+B//5+Z+eH/////+fmfmf/gf/+fmfnh//////n5n5n//////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/AAAAH//AAAAAAAGAAAfh/wAAAB//wAAAAAABgAAH4f8AAAAf/8AAAAAAB4ABmBnA4AAAAAHAAAAAAAeAAZgZwOAAAAABwAAAAAABgAYYGcDgAAAAAcAAAAAAAYAGGBnAHH44AA4AAAAAAAGAGAfhwBx+OAAOAAAAAAABgBgH4cAcfjgADgAAAAAAAYBgGBnAHHHHAHAAAAAAAAGAYBgZwBxxxwBwAAAAAAABgYAYGcAccccAcAAAAAAAAYGAGBnAHHHHA4AAAAAAAAfgAAfhwBxxxwOAAAAAAAAH4AAH4cAccccDgAAAAAAAAAAAAAHA4HAHA4AAAAAAAAAAAAABwOBwBwOAAAAAAAAAAAAAAcDgcAcDgAAAAAAAAAAAAAH/AHAHA4AAAAAAAAAAAAAB/wBwBwOAAAD///wAAAAAAf8AcAcDgAAA///8AAAAAAAAAAAAAAAAAP///AAAAAAAAAAAAAAAAAD///wAAAAAAAAAAAAAAAAA/wP8AAAAAAAAAAAAAAAAAP8D/AAAAAAAAAAAAAAAAAD8/PwAAAAAAAAAAAAAAAAA/Pz8AAAAAAAAAAAAAAAAAPz8/AAAAAAAAAAAAAAAAAD8/PwAAAAAAAAAAAAAAAAA/Pz8AAAAAAAAAAAAAAAAAPz8/AAAAAAAAD8AAAD/wAD8APwAA/AAAAA/AAAA/8AA/AD8AAPwAAAAMMAAAMAAAPz8/AAMDAAAADDAAADAAAD8/PwADAwAAAAwMAAAwAAA/Pz8AAwAAAAAMDAAAMAAAPz8/AAMAAAAADAwAAD/AAD///wADAAAAAAwMAAA/wAA///8AAwAAAAAMDAAAMAAAP///AAMAAAAADAwAADAAAD///wADAAAAAAwwAAAwAAAAAAAAAwMAAP////////////////////8AD8AAADAAAAAAAAAA/AAAAA/AAAAwAAAAAAAAAPwAAA==",
+       "alpha": "/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////w=="
+      }
+     ]
+    },
+    {
+     "id": "wbbr4qmw2wxf",
+     "duration": 250,
+     "image": "/////////////////////+B//5+eB/gf/////geAeAfgf/+fngf4H/////4HgHgHn5//hhn5/n/////5+Z+Z+Z+f/4YZ+f5/////+fmfmfmf//+Zmfn+f/////n5n5n5n///mZn5/n/////5+Z+Z+Z///5mZ+f5/////+fmAeAef//+Zmfn+f/////n5gHgHn///n5gB/n/////4AZn5/5///5+YAf5/////+AGZ+f+fn/+fmfmef/////n5nnn/n5//n5n5nn/////5+Z55/+B//5+Z+eH/////+fmfmf/gf/+fmfnh//////n5n5n//////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/AAAAH//AAAAAAAGAAAfh/wAAAB//wAAAAAABgAAH4f8AAAAf/8AAAAAAB4ABmBnA4AAAAAHAAAAAAAeAAZgZwOAAAAABwAAAAAABgAYYGcDgAAAAAcAAAAAAAYAGGBnAHH44AA4AAAAAAAGAGAfhwBx+OAAOAAAAAAABgBgH4cAcfjgADgAAAAAAAYBgGBnAHHHHAHAAAAAAAAGAYBgZwBxxxwBwAAAAAAABgYAYGcAccccAcAAAAAAAAYGAGBnAHHHHA4AAAAAAAAfgAAfhwBxxxwOAAAAAAAAH4AAH4cAccccDgAAAAAAAAAAAAAHA4HAHA4AAAAAAAAAAAAABwOBwBwOAAAAAAAAAAAAAAcDgcAcDgAAAAAAAAAAAAAH/AHAHA4AAAAAAAAAAAAAB/wBwBwOAAAAAAAAD///wAf8AcAcDgAAAAAAAA///8AAAAAAAAAAAAAAAAAP///AAAAAAAAAAAAAAAAAD///wAAAAAAAAAAAAAAAAA/wP8AAAAAAAAAAAAAAAAAP8D/AAAAAAAAAAAAAAAAAD8/PwAAAAAAAAAAAAAAAAA/Pz8AAAAAAAAAAAAAAAAAPz//AAAAAAAAAAAAAAAAAD8//wAAAAAAAAAAAAAAAAA/P/8AAAAAAAAAAAAAAAAAPz//AAAD8AAAD/wAAA/AAD8//wAAA/AAAA/8AAAPwAA/P/8AAAMMAAAMAAAAMDAAPz8/AAADDAAADAAAADAwAD8/PwAAAwMAAAwAAAAwMAA/wP8AAAMDAAAMAAAAMDAAP8D/AAADAwAAD/AAADAwAD///wAAAwMAAA/wAAAwMAA///8AAAMDAAAMAAAAP/AAP///AAADAwAADAAAAD/wAD///wAAAwwAAAwAAAAwMAAAAAAAP////////////////////8AD8AAADAAAADAwAAAAAAAAA/AAAAwAAAAwMAAAAAAAA==",
+     "layers": [
+      {
+       "id": "ogo4mvn4a4wf",
+       "type": "raster",
+       "name": "Frame",
+       "visible": true,
+       "x": 0,
+       "y": 0,
+       "data": "/////////////////////+B//5+eB/gf/////geAeAfgf/+fngf4H/////4HgHgHn5//hhn5/n/////5+Z+Z+Z+f/4YZ+f5/////+fmfmfmf//+Zmfn+f/////n5n5n5n///mZn5/n/////5+Z+Z+Z///5mZ+f5/////+fmAeAef//+Zmfn+f/////n5gHgHn///n5gB/n/////4AZn5/5///5+YAf5/////+AGZ+f+fn/+fmfmef/////n5nnn/n5//n5n5nn/////5+Z55/+B//5+Z+eH/////+fmfmf/gf/+fmfnh//////n5n5n//////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH/AAAAH//AAAAAAAGAAAfh/wAAAB//wAAAAAABgAAH4f8AAAAf/8AAAAAAB4ABmBnA4AAAAAHAAAAAAAeAAZgZwOAAAAABwAAAAAABgAYYGcDgAAAAAcAAAAAAAYAGGBnAHH44AA4AAAAAAAGAGAfhwBx+OAAOAAAAAAABgBgH4cAcfjgADgAAAAAAAYBgGBnAHHHHAHAAAAAAAAGAYBgZwBxxxwBwAAAAAAABgYAYGcAccccAcAAAAAAAAYGAGBnAHHHHA4AAAAAAAAfgAAfhwBxxxwOAAAAAAAAH4AAH4cAccccDgAAAAAAAAAAAAAHA4HAHA4AAAAAAAAAAAAABwOBwBwOAAAAAAAAAAAAAAcDgcAcDgAAAAAAAAAAAAAH/AHAHA4AAAAAAAAAAAAAB/wBwBwOAAAAAAAAD///wAf8AcAcDgAAAAAAAA///8AAAAAAAAAAAAAAAAAP///AAAAAAAAAAAAAAAAAD///wAAAAAAAAAAAAAAAAA/wP8AAAAAAAAAAAAAAAAAP8D/AAAAAAAAAAAAAAAAAD8/PwAAAAAAAAAAAAAAAAA/Pz8AAAAAAAAAAAAAAAAAPz//AAAAAAAAAAAAAAAAAD8//wAAAAAAAAAAAAAAAAA/P/8AAAAAAAAAAAAAAAAAPz//AAAD8AAAD/wAAA/AAD8//wAAA/AAAA/8AAAPwAA/P/8AAAMMAAAMAAAAMDAAPz8/AAADDAAADAAAADAwAD8/PwAAAwMAAAwAAAAwMAA/wP8AAAMDAAAMAAAAMDAAP8D/AAADAwAAD/AAADAwAD///wAAAwMAAA/wAAAwMAA///8AAAMDAAAMAAAAP/AAP///AAADAwAADAAAAD/wAD///wAAAwwAAAwAAAAwMAAAAAAAP////////////////////8AD8AAADAAAADAwAAAAAAAAA/AAAAwAAAAwMAAAAAAAA==",
+       "alpha": "/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////w=="
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "hym4l1vfz3zf",
+   "x": 2296,
+   "y": 1680,
+   "w": 1048,
+   "h": 200,
+   "type": "note",
+   "text": "Its MIDI (Perform on channel 1, the bass on 2) goes where the Routing page sends ChoralRoot's MIDI: other firmwares, Out.",
+   "color": "#ffe58a"
+  },
+  {
+   "id": "kkibj3j4wj99",
+   "x": 3544,
+   "y": 120,
+   "w": 700,
+   "h": 420,
+   "type": "note",
+   "text": "TAKEOVER (tk1), the rules every firmware shares:\n- Track 1 tapped in FM-1 mode: the firmware's takeover (its name shown and said); tapped in the takeover: FM-1 mode. From MIDI / Control / Seq: back to whichever of the two the slot was left in.\n- Volume touched + Back: FM-1 mode from any takeover (the only way out when a firmware claims everything).\n- What a firmware does not claim keeps RemoteFM1's meaning. ChoralRoot claims all but the Track buttons and Volume.\n- Screen reader: \"Chords, takeover\" on entering, \"FM-1 mode\" on leaving; the firmware's own words between (\"Chord D minor seven\").",
+   "color": "#e0c3ff"
+  },
+  {
+   "id": "ibag7i1mnbqn",
+   "x": 3544,
+   "y": 580,
+   "w": 700,
+   "h": 300,
+   "type": "note",
+   "text": "OPEN QUESTIONS\n1. Steps: the 16 progressions (proposed), or something else (performance modes, looper slots)?\n2. Chords and bass to different firmwares (a per-channel route in the core), or one route for both?\n3. Capture, Sample, Undo: unused here. Ideas?",
+   "color": "#ffb3a7"
+  }
+ ]
+}

@@ -19,6 +19,10 @@ The manifest's id, name, version, licence and source_url come from the descripto
 --wants CAP..: a host capability the cart uses when the host has it and does without otherwise, the manifest's
 "wants" (any cart; "ain1": audio input, docs/VIRTUAL-CARTS.md 8). Hosts ignore names they do not know.
 
+--takeover-name NAME [--takeover-claim CLAIM]..: (with --wants tk1) the manifest's informative "takeover" (docs/RFM1-
+TAKEOVER.md 3): the Move takeover's name (at most 15 printable ASCII characters) and its claims (screen pads steps
+knobs jog volume buttons tracks, or all).
+
 --skin-metadata PATH: a firmware's RemoteFM1Metadata.json (docs/RFM1-METADATA.md): its "skin" becomes the skin sections
 (docs/RFM1-FORMAT.md section 8: rfm1.skin, rfm1.skin.background, rfm1.skin.background.landscape) after the licence
 texts. Every bad field is skipped with a warning; nothing in that file fails the pack (tools/rfm1_skin.py).
@@ -36,6 +40,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import rfm1_skin  # noqa: E402
 
 MAGIC = b"\0asm\x01\0\0\0"
+# docs/RFM1-TAKEOVER.md 2: the claims' names, as the manifest's takeover.claims gives them
+TK_CLAIMS = ("screen", "pads", "steps", "knobs", "jog", "volume", "buttons", "tracks", "all")
 
 
 def leb_u32(b, at):
@@ -119,6 +125,9 @@ def main():
                     help="(--virtual) a part of the shared folder it uses: audio=r, code=r, data=rw")
     ap.add_argument("--wants", action="append", default=[],
                     help="a host capability it uses when present (ain1: audio input); any cart")
+    ap.add_argument("--takeover-name", help="(--wants tk1) the takeover's name, the manifest's takeover.name")
+    ap.add_argument("--takeover-claim", action="append", default=[],
+                    help="(--wants tk1) a claim of the takeover (screen pads .. tracks, all), takeover.claims")
     ap.add_argument("--skin-metadata", metavar="PATH", help="a RemoteFM1Metadata.json: its skin, as skin sections")
     for k in ("id", "name", "version", "license", "source-url"):
         ap.add_argument("--" + k, help="override the descriptor's " + k)
@@ -175,6 +184,15 @@ def main():
             if not re.fullmatch(r"[a-z0-9_]{1,31}", w):
                 sys.exit("rfm1_pack: --wants %r is not [a-z0-9_]{1,31}" % w)
         man["wants"] = list(dict.fromkeys(a.wants))
+    if a.takeover_name is not None or a.takeover_claim:   # docs/RFM1-TAKEOVER.md 3 (informative)
+        if "tk1" not in a.wants:
+            sys.exit("rfm1_pack: --takeover-name / --takeover-claim need --wants tk1")
+        if not re.fullmatch(r"[ -~]{1,15}", a.takeover_name or ""):
+            sys.exit("rfm1_pack: --takeover-name %r: 1..15 printable ASCII characters" % a.takeover_name)
+        for c in a.takeover_claim:
+            if c not in TK_CLAIMS:
+                sys.exit("rfm1_pack: --takeover-claim %r: one of %s" % (c, ", ".join(TK_CLAIMS)))
+        man["takeover"] = {"name": a.takeover_name, "claims": list(dict.fromkeys(a.takeover_claim))}
     if not re.fullmatch(r"[a-z0-9_]{1,31}", man["id"]):
         sys.exit("rfm1_pack: the id %r is not [a-z0-9_]{1,31}" % man["id"])
     for k in ("license", "source_url"):

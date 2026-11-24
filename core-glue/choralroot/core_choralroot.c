@@ -85,3 +85,8 @@ static int fm1core_cr_sync(void)
 
 /* ---- the Tier 2 parameter map (in this unit: it reaches the firmware's statics) ---- */
 #include "core_choralroot_params.c"
+
+/* ---- engine parameters (ep1: cr_ep.c), only in an .rfm1 built WANTS ep1 (and the ctest rfm1_ep_choralroot) ---- */
+#ifdef FM1_HOST_EP1
+#include "cr_ep.c"
+#endif

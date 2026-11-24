@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """rfm1_check: an .rfm1 file checked against docs/RFM1-FORMAT.md (version 1).
 
-    rfm1_check.py [--quiet] <file.rfm1>..
+    rfm1_check.py [--quiet] [--run <rfm1_run>] <file.rfm1>..
 
 Checks the WebAssembly binary (magic, every section's bounds), the manifest (the `rfm1` custom section: JSON, the
 required fields and their forms), the `rfm1.credits` / `rfm1.license.<n>` sections, the imports (only the format's
@@ -26,6 +26,18 @@ checker does not know are ignored, as hosts ignore them), the optional exports r
 
 Core 1 (docs/RFM1.md "cpu2"): the optional exports rfm1_cpu2 ([] -> [i32]), rfm1_c1_stack ([i32] -> []) and
 rfm1_c1_call ([i32 i32] -> []), all three or none, and "cpu2" in "wants" whenever they are exported.
+
+The Move takeover (docs/RFM1-TAKEOVER.md, "tk1"): the optional exports rfm1_tk ([] -> [i32]), rfm1_tk_input ([i32] ->
+[i32]) and rfm1_tk_state ([i32 i32 i32] -> []), all three or none, and "tk1" in "wants" whenever they are exported; the
+manifest's informative "takeover" ({"name": at most 15 printable ASCII characters, "claims": section 2's names}) when
+present. The record itself is only there once the module ran: with --run (tools/rfm1_run), the module is booted
+(rfm1_run --tk-info) and the record rfm1_tk() gives after init is checked: version 1, size 1468, a printable,
+NUL-terminated name, claims within 0xFF.
+
+Engine parameters (docs/RFM1.md "Engine parameters (ep1)", engine-params/SPEC.md): the optional exports rfm1_ep
+([] -> [i32]), rfm1_ep_set ([i32 i32 i32 i32] -> [i32]) and rfm1_ep_watch ([i32 i32] -> []), all three or none, and
+"ep1" in "wants" exactly when they are exported. With --run, the module is booted (rfm1_run --ep-info --out) and the
+record (version 1, size >= 264, 1..8 layers) and the whole EP1D description are checked (ep1_blob_errors).
 
 A skin (section 8, optional: tools/rfm1_skin.py): rfm1.skin's JSON ({"skin": 1}, dim 0 .. 0.8, a theme of all fourteen
 roles or the five picked ones as "#RRGGBB"), each image a PNG or JPEG of at most 4 MiB, its longer side at most 4096 px.
@@ -72,6 +84,12 @@ AIN_EXPORTS = {"rfm1_audio_in": (2, 0), "rfm1_audio_in_info": (2, 0)}
 CPU2_EXPORTS = {"rfm1_cpu2": (0, 1), "rfm1_c1_stack": (1, 0), "rfm1_c1_call": (2, 0)}
 # docs/RFM1.md "Readouts (rd1)": the readout record, with "rd1" in "wants"
 RD1_EXPORTS = {"rfm1_readout": (0, 1)}
+# docs/RFM1-TAKEOVER.md 4.1: the Move takeover, all three or none, with "tk1" in "wants"
+TK1_EXPORTS = {"rfm1_tk": (0, 1), "rfm1_tk_input": (1, 1), "rfm1_tk_state": (3, 0)}
+# engine-params/SPEC.md 5 (docs/RFM1.md "Engine parameters (ep1)"): all three or none, with "ep1" in "wants"
+EP1_EXPORTS = {"rfm1_ep": (0, 1), "rfm1_ep_set": (4, 1), "rfm1_ep_watch": (2, 0)}
+TK1_CLAIMS = ("screen", "pads", "steps", "knobs", "jog", "volume", "buttons", "tracks", "all")
+TK1_VERSION, TK1_SIZE = 1, 1468
 # section 2: the exports, (params, results); all i32
 EXPORTS = {
     "rfm1_version": (0, 1), "rfm1_get": (1, 1), "rfm1_layout": (1, 1), "rfm1_alloc": (1, 1), "rfm1_free": (1, 0),
@@ -489,9 +507,10 @@ class Check:
 
         if exports.get("memory", (None,))[0] != 2:
             self.err("no memory exported as \"memory\"")
-        for nm, (na, nr) in list(EXPORTS.items()) + list(OPTIONAL_EXPORTS.items()) + list(AIN_EXPORTS.items()) + list(CPU2_EXPORTS.items()) + list(RD1_EXPORTS.items()):
+        for nm, (na, nr) in list(EXPORTS.items()) + list(OPTIONAL_EXPORTS.items()) + list(AIN_EXPORTS.items()) + list(CPU2_EXPORTS.items()) + list(RD1_EXPORTS.items()) + list(TK1_EXPORTS.items()) + list(EP1_EXPORTS.items()):
             if nm not in exports:
-                if nm not in OPTIONAL_EXPORTS and nm not in AIN_EXPORTS and nm not in CPU2_EXPORTS and nm not in RD1_EXPORTS:
+                if (nm not in OPTIONAL_EXPORTS and nm not in AIN_EXPORTS and nm not in CPU2_EXPORTS and
+                        nm not in RD1_EXPORTS and nm not in TK1_EXPORTS and nm not in EP1_EXPORTS):
                     self.err("no export %s" % nm)
                 continue
             kind, idx = exports[nm]
@@ -508,6 +527,8 @@ class Check:
         self.info["ain_exports"] = sorted(n for n in AIN_EXPORTS if n in exports)
         self.info["cpu2_exports"] = sorted(n for n in CPU2_EXPORTS if n in exports)
         self.info["rd1"] = "rfm1_readout" in exports
+        self.info["tk1_exports"] = sorted(n for n in TK1_EXPORTS if n in exports)
+        self.info["ep1_exports"] = sorted(n for n in EP1_EXPORTS if n in exports)
 
         # the custom sections (sections 1 and 4)
         if "rfm1" not in custom:
@@ -599,6 +620,36 @@ class Check:
         self.info["cpu2"] = bool(c2)
         if self.info.get("rd1") and "rd1" not in wants:
             self.err("exports rfm1_readout but the manifest has no \"rd1\" in wants (docs/RFM1.md \"Readouts (rd1)\")")
+        tk = self.info.get("tk1_exports", [])
+        if tk and len(tk) != len(TK1_EXPORTS):
+            self.err("exports %s but not %s (docs/RFM1-TAKEOVER.md 4.1: all three or none)" %
+                     (" and ".join(tk), " and ".join(n for n in sorted(TK1_EXPORTS) if n not in tk)))
+        if tk and "tk1" not in wants:
+            self.err("exports %s but the manifest has no \"tk1\" in wants (docs/RFM1-TAKEOVER.md 4.1)" %
+                     " and ".join(tk))
+        self.info["tk1"] = len(tk) == len(TK1_EXPORTS)
+        ep = self.info.get("ep1_exports", [])
+        if ep and len(ep) != len(EP1_EXPORTS):
+            self.err("exports %s but not %s (engine parameters, ep1: all three or none)" %
+                     (" and ".join(ep), " and ".join(n for n in sorted(EP1_EXPORTS) if n not in ep)))
+        if ep and "ep1" not in wants:
+            self.err("exports %s but the manifest has no \"ep1\" in wants (docs/RFM1.md \"Engine parameters (ep1)\")" %
+                     " and ".join(ep))
+        if "ep1" in wants and len(ep) != len(EP1_EXPORTS):
+            self.err("the manifest wants ep1 but the module does not export rfm1_ep, rfm1_ep_set and rfm1_ep_watch")
+        self.info["ep1"] = len(ep) == len(EP1_EXPORTS)
+        if "takeover" in m:
+            t = m["takeover"]
+            if not isinstance(t, dict):
+                self.err("the manifest's takeover is not an object")
+            else:
+                if not isinstance(t.get("name"), str) or not re.fullmatch(r"[ -~]{1,15}", t["name"]):
+                    self.err("the manifest's takeover.name %r is not 1..15 printable ASCII characters" % t.get("name"))
+                cl = t.get("claims", [])
+                if not isinstance(cl, list) or not all(isinstance(c, str) and c in TK1_CLAIMS for c in cl):
+                    self.err("the manifest's takeover.claims %r: names of %s" % (cl, ", ".join(TK1_CLAIMS)))
+            if not self.info["tk1"]:
+                self.err("the manifest has \"takeover\" but the module does not export the tk1 functions")
         host = False
         for mod, nm, ti in func_imports:
             what = "%s.%s" % (mod, nm)
@@ -674,6 +725,156 @@ class Check:
                     mm, self.info["memory"] / 1048576))
 
 
+def tk_record(c, path, run):
+    """the takeover's record after init (rfm1_run --tk-info): version, size, name, claims"""
+    import subprocess
+    try:
+        r = subprocess.run([run, "--tk-info", path], capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        c.err("rfm1_run --tk-info: %s" % e)
+        return
+    try:
+        rec = json.loads(r.stdout)
+    except ValueError:
+        c.err("rfm1_run --tk-info failed (%d): %s" % (r.returncode, (r.stderr or r.stdout).strip()[-300:]))
+        return
+    if rec.get("version") != TK1_VERSION:
+        c.err("the takeover record's version is %r (1)" % rec.get("version"))
+    if rec.get("size") != TK1_SIZE:
+        c.err("the takeover record's size is %r (1468)" % rec.get("size"))
+    name = rec.get("name")
+    if not rec.get("name_terminated"):
+        c.err("the takeover record's name is not NUL-terminated within its 16 bytes")
+    elif not isinstance(name, str) or not re.fullmatch(r"[ -~]*", name):
+        c.err("the takeover record's name %r is not printable ASCII" % name)
+    elif not name:
+        c.warn("the takeover record's name is empty after init (rfm1_tk_register not called?)")
+    if not isinstance(rec.get("claims"), int) or rec["claims"] & ~0xFF:
+        c.err("the takeover record's claims 0x%x has bits outside 0xFF" % (rec.get("claims") or 0))
+    t = c.info.get("manifest", {}).get("takeover")
+    if isinstance(t, dict) and isinstance(name, str) and name and t.get("name") != name:
+        c.warn("the manifest's takeover.name %r is not the record's %r" % (t.get("name"), name))
+    c.info["tk1_record"] = rec
+
+
+def ep1_blob_errors(b, desc_len):
+    """the EP1D description (engine-params/SPEC.md 3): every field in range, every index inside; [] when it is good"""
+    import struct
+    e = []
+    def name(off, n, what):
+        f = b[off:off + n]
+        z = f.find(b"\0")
+        if z < 0 or z > 10 or not all(32 <= c < 127 for c in f[:z]):
+            e.append("%s at %d is not 0..10 printable characters, NUL-terminated" % (what, off))
+            return ""
+        return f[:z].decode()
+    if len(b) < 32 or b[:4] != b"EP1D":
+        return ["not an EP1D blob"]
+    ver, hs, npar, neng, nlay, npg, ntab, total, fnv = struct.unpack_from("<HHHBBHHII", b, 4)
+    if ver != 1 or hs < 32:
+        e.append("version %d, header %d" % (ver, hs))
+    if total != len(b) or total != desc_len or total > 65536:
+        e.append("total %d, blob %d, record %d" % (total, len(b), desc_len))
+    h = 2166136261
+    for c in b[hs:]:
+        h = ((h ^ c) * 16777619) & 0xFFFFFFFF
+    if h != fnv:
+        e.append("the FNV-1a is 0x%08x, the header says 0x%08x" % (h, fnv))
+    if not (1 <= nlay <= 8 and 1 <= neng <= 64 and 1 <= npg <= 512 and 1 <= npar <= 2048 and ntab <= 512):
+        e.append("counts: %d layers, %d engines, %d pages, %d params, %d tables" % (nlay, neng, npg, npar, ntab))
+        return e
+    lo = hs
+    eo = lo + 16 * nlay
+    po = eo + 16 * neng
+    qo = po + 32 * npg
+    to = qo + 32 * npar
+    so = to + 8 * ntab
+    if so > len(b):
+        return e + ["the sections run past the blob"]
+    for i in range(nlay):
+        name(lo + 16 * i, 11, "layer %d's name" % i)
+    nxt = 0
+    for i in range(neng):
+        o = eo + 16 * i
+        name(o + 2, 11, "engine %d's name" % i)
+        n, first = b[o + 13], struct.unpack_from("<H", b, o + 14)[0]
+        if first != nxt or first + n > npg:
+            e.append("engine %d's pages %d..%d are not the next ones" % (i, first, first + n))
+        nxt = first + n
+    if nxt != npg:
+        e.append("the engines have %d pages, the header %d" % (nxt, npg))
+    for i in range(npg):
+        o = po + 32 * i
+        name(o + 1, 11, "page %d's name" % i)
+        for k in range(8):
+            x = struct.unpack_from("<H", b, o + 12 + 2 * k)[0]
+            if x != 0xFFFF and x >= npar:
+                e.append("page %d knob %d: param %d of %d" % (i, k + 1, x, npar))
+        if b[o + 28] > 9:
+            e.append("page %d's group %d" % (i, b[o + 28]))
+    pids = set()
+    for i in range(npar):
+        o = qo + 32 * i
+        pid = struct.unpack_from("<H", b, o)[0]
+        name(o + 2, 11, "param %d's name" % i)
+        mn, mx, df = struct.unpack_from("<hhh", b, o + 14)
+        fmt, arg, tab = b[o + 20], b[o + 21], struct.unpack_from("<H", b, o + 22)[0]
+        name(o + 24, 5, "param %d's unit" % i)
+        if pid in (0, 0xFFFF) or pid in pids:
+            e.append("param %d's pid %d (0, 0xFFFF or twice)" % (i, pid))
+        pids.add(pid)
+        if b[o + 13] & 0x80 or mx <= mn or not mn <= df <= mx or fmt > 5:
+            e.append("param %d (pid %d): flags 0x%02x, %d..%d def %d, fmt %d" % (i, pid, b[o + 13], mn, mx, df, fmt))
+        if (fmt == 1 and not 1 <= arg <= 4) or (fmt == 3 and arg not in (3, 4)):
+            e.append("param %d (pid %d): fmt %d arg %d" % (i, pid, fmt, arg))
+        if fmt == 2 and tab >= ntab:
+            e.append("param %d (pid %d): table %d of %d" % (i, pid, tab, ntab))
+    for i in range(ntab):
+        so_i, cnt, first = struct.unpack_from("<IHh", b, to + 8 * i)
+        at = so + so_i
+        for k in range(cnt):
+            z = b.find(b"\0", at)
+            if at >= len(b) or z < 0 or z - at > 10 or not all(32 <= c < 127 for c in b[at:z]):
+                e.append("table %d's string %d" % (i, k))
+                break
+            at = z + 1
+    return e
+
+
+def ep_record(c, path, run):
+    """the ep1 record and description after init (rfm1_run --ep-info --out): the record's fields, the blob checked"""
+    import subprocess
+    import tempfile
+    with tempfile.TemporaryDirectory() as d:
+        out = os.path.join(d, "desc.bin")
+        try:
+            r = subprocess.run([run, "--ep-info", "--out", out, path], capture_output=True, text=True, timeout=300)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            c.err("rfm1_run --ep-info: %s" % e)
+            return
+        try:
+            rec = json.loads(r.stdout)
+        except ValueError:
+            c.err("rfm1_run --ep-info failed (%d): %s" % (r.returncode, (r.stderr or r.stdout).strip()[-300:]))
+            return
+        if not rec.get("record"):
+            c.err("rfm1_ep() is 0 after init: the module exports ep1 but has no description")
+            return
+        if rec.get("version") != 1 or (rec.get("size") or 0) < 264:
+            c.err("the ep1 record's version %r, size %r (1, >= 264)" % (rec.get("version"), rec.get("size")))
+        if not 1 <= (rec.get("nlayers") or 0) <= 8:
+            c.err("the ep1 record's nlayers %r" % rec.get("nlayers"))
+        try:
+            with open(out, "rb") as f:
+                blob = f.read()
+        except OSError:
+            c.err("rfm1_run --ep-info wrote no description")
+            return
+        for x in ep1_blob_errors(blob, rec.get("desc_len")):
+            c.err("the ep1 description: %s" % x)
+        c.info["ep1_record"] = rec
+
+
 def sig(t):
     if t is None:
         return "(none)"
@@ -682,14 +883,27 @@ def sig(t):
 
 def main(argv):
     quiet = "--quiet" in argv
-    paths = [a for a in argv if a != "--quiet"]
+    argv = [a for a in argv if a != "--quiet"]
+    run = None
+    if "--run" in argv:
+        i = argv.index("--run")
+        if i + 1 >= len(argv):
+            print("usage: rfm1_check.py [--quiet] [--run <rfm1_run>] <file.rfm1>..", file=sys.stderr)
+            return 2
+        run = argv[i + 1]
+        del argv[i:i + 2]
+    paths = argv
     if not paths or any(p.startswith("-") for p in paths):
-        print("usage: rfm1_check.py [--quiet] <file.rfm1>..", file=sys.stderr)
+        print("usage: rfm1_check.py [--quiet] [--run <rfm1_run>] <file.rfm1>..", file=sys.stderr)
         return 2
     bad = False
     for p in paths:
         c = Check(p)
         c.run()
+        if run and c.info.get("tk1") and not c.errors:
+            tk_record(c, p, run)
+        if run and c.info.get("ep1") and not c.errors:
+            ep_record(c, p, run)
         for w in c.warnings:
             print("%s: warning: %s" % (p, w))
         for e in c.errors:
@@ -699,7 +913,7 @@ def main(argv):
             print("%s: FAILED (%d errors)" % (p, len(c.errors)))
         elif not quiet:
             m = c.info.get("manifest", {})
-            print("%s: ok: %s %s (%s)%s%s%s%s, %d bytes, %g MiB memory, %d exports, %d licence texts%s%s%s" % (
+            print("%s: ok: %s %s (%s)%s%s%s%s%s%s, %d bytes, %g MiB memory, %d exports, %d licence texts%s%s%s" % (
                 p, m.get("id"), m.get("version"), m.get("license"),
                 ", virtual (Fantasy CFW, needs %s%s)" % (",".join(m.get("needs", [])) or "nothing",
                                                         ", imports rfm1_host_1" if c.info.get("host_imports") else "")
@@ -707,6 +921,13 @@ def main(argv):
                 ", audio input (ain1)" if c.info.get("ain") else "",
                 ", core 1 (cpu2)" if c.info.get("cpu2") else "",
                 ", readouts (rd1)" if c.info.get("rd1") else "",
+                (", takeover (tk1%s)" % (", \"%s\" claims 0x%02x" % (c.info["tk1_record"]["name"],
+                                                                       c.info["tk1_record"]["claims"])
+                                         if c.info.get("tk1_record") else "")) if c.info.get("tk1") else "",
+                (", engine parameters (ep1%s)" % (", %(nlayers)d layers, %(nengines)d engines, %(npages)d pages, "
+                                                  "%(nparams)d params, a %(desc_len)d-byte description"
+                                                  % c.info["ep1_record"] if c.info.get("ep1_record") else ""))
+                if c.info.get("ep1") else "",
                 c.size, c.info.get("memory", 0) / 1048576, c.info.get("exports", 0), c.info.get("licenses", 0),
                 ", skin: %s" % c.info["skin"] if c.info.get("skin") else "",
                 ", labels: %s" % c.info["labels"] if c.info.get("labels") else "",
