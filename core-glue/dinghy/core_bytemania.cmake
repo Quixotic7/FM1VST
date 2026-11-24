@@ -32,7 +32,11 @@ dinghy_golden_check(bytemania SCRIPT golden_bytemania.txt AT 3000 SOURCE ${_bm}/
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md): the main loop on the coroutine, so Asyncify
 # (tools/rfm1/rfm1_link.cmake). The licence texts: its GPL, its LICENSING.md and both fonts' OFL; Emscripten's and
 # musl's are added by fm1_add_rfm1. rfm1_run plays its chord: no RUN_ARGS
-fm1_add_rfm1(bytemania AUTHORS "llozd"
+# rd1: the knob bank as drawn, live labels and readouts (core_bytemania.c, common/rd_cols.h)
+fm1_add_rfm1(bytemania WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_A_=_13 --expect-readout ctl_6_D_=_5
+             AUTHORS "llozd"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
                            "OFL-1.1 (the Terminus font in {name})=assets/fonts/Terminus-LICENSE.txt"
                            "OFL-1.1 (Press Start 2P, as Bytemania Pixel, in {name})=assets/fonts/PressStart2P-OFL.txt")

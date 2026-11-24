@@ -95,4 +95,21 @@ static void fm1core_dg_info(char *buf, uint32_t n)
 #define FM1CORE_DG_OTA_C "../../cores/sid-1/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
 
+/* the live knob labels and readouts (common/rd_cols.h): the page's four knobs as sid1.c draw_knobs draws them on every
+ * page (KNOB[page][k].name, knob_text(knob_get)); an unnamed knob "" */
+#include "rd_cols.h"
+static void fm1core_sid1_rd(void)
+{
+    uint32_t k;
+    rdc_begin();
+    for (k = 0; k < 4u; k++) {
+        const knob_t *kn = &KNOB[page][k];
+        char s[16];
+        s[0] = 0;
+        if (kn->name[0])
+            knob_text(page, k, knob_get(page, k), s);
+        rdc_col(k, kn->name, s);
+    }
+}
+#define FM1CORE_DG_AFTER_FRAME fm1core_sid1_rd
 #include "dinghy_glue.h"

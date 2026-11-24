@@ -88,4 +88,21 @@ static void fm1core_dg_info(char *buf, uint32_t n)
 #define FM1CORE_DG_OTA_C "../../cores/fmel-1/firmware/src/ota.c"
 #define FM1CORE_DG_SYSEX_IN(p, n) fm1core_dg_ota_frame((p), (n))
 
+/* the live knob labels and readouts (common/rd_cols.h): the plate's four knobs as mel_ui.c draw_plate draws them
+ * (CTL[page][k].name, fmt_val of its parameter); no knob there "" */
+#include "rd_cols.h"
+static void fm1core_fmel1_rd(void)
+{
+    uint32_t k;
+    rdc_begin();
+    for (k = 0; k < 4u; k++) {
+        const ctl_t *c = &CTL[page][k];
+        char v[24];
+        v[0] = 0;
+        if (c->name)
+            fmt_val(c, PV(c->pid), v);
+        rdc_col(k, c->name ? c->name : "", v);
+    }
+}
+#define FM1CORE_DG_AFTER_FRAME fm1core_fmel1_rd
 #include "dinghy_glue.h"

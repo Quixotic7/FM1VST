@@ -33,7 +33,11 @@ dinghy_golden_check(sid1 SCRIPT golden_sid1.txt AT 3000 SOURCE ${CMAKE_CURRENT_L
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md): the main loop on the coroutine, so Asyncify
 # (tools/rfm1/rfm1_link.cmake). The licence texts: its GPL, its LICENSING.md, reSID's GPL-2.0 (sid.c) and the Press
 # Start 2P font's OFL; Emscripten's and musl's are added by fm1_add_rfm1
-fm1_add_rfm1(sid1 AUTHORS "putchdev (the SID-1 authors)"
+# rd1: its knob row as drawn, live labels and readouts (core_sid1.c, common/rd_cols.h)
+fm1_add_rfm1(sid1 WANTS rd1
+             READOUT_TEST --keys none --min-rms 0 --press ENV@4100 --turn K1@4450:1 --turn K4@4750:1 --settle 4900 --seconds 0.15
+                          --expect-readout ctl_3_ATTACK_=_8 --expect-readout ctl_6_RELEASE_=_1.5S
+             AUTHORS "putchdev (the SID-1 authors)"
              LICENSE_FILES "GPL-3.0-only ({name})=LICENSE" "LICENSING.md ({name})=LICENSING.md"
                            "GPL-2.0-or-later (reSID 0.16 by Dag Lem, ported as sid.c in {name})=tests/ref/resid-0.16/COPYING"
                            "OFL-1.1 (the Press Start 2P font in {name})=assets/fonts/PressStart2P-OFL.txt")
