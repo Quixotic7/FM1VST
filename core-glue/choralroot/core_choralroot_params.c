@@ -270,11 +270,18 @@ static void fm1_s_perform(int32_t v)
         cu_perf_toggle();                          /* PERF tap */
 }
 static int32_t fm1_g_perf_mode(void) { return cs.perf_sel; }
-static void fm1_s_perf_mode(int32_t v)             /* the PERF picker (cu_layer_pick L_PERF: also turns PERF on) */
+static void fm1_s_perf_mode(int32_t v)             /* the chord's PERF pick (cu_layer_pick L_PERF's: also turns PERF on) */
 {
     v = fm1_clamp(v, 0, 6);
-    if (v != cs.perf_sel)
-        cu_layer_pick(L_PERF, v);
+    if (v == cs.perf_sel)
+        return;
+    /* (since 0.39 the picker's list is per part, Off first: entry v + 1 of the chord's, so the pick itself here) */
+    cu_hot.knob = 0;                               /* another mode: its row has no hot cell */
+    cu_perf_pick((uint32_t)v);
+    if (!cs.perform_on) {
+        cs.perform_on = 1;
+        cr_post(CRE_PERFORM, 0, 0, 1);
+    }
 }
 static const char *const FM1_PERF_NAMES[7] = {"Strum", "Strum 2 Octaves", "Slop", "Arpeggiate", "Arp 2 Octaves",
                                               "Pattern", "Harp"};   /* CU_PERF[].name */
@@ -690,7 +697,11 @@ static void fm1_fxp_text(int32_t id, int32_t v, char *d, uint32_t n)   /* cu_fx_
             cu_fx_hz(d, xq_high_hz((uint32_t)v), n);
         break;
     case XP_FSLOPE: cu_cpy(d, v ? "12 dB" : "6 dB", n); break;
-    case XP_FON: cu_cpy(d, v ? "On" : "Off", n); break;
+    case XP_FON: {                       /* (0.22: Off / On; since: what goes through it, cr_ui.c cu_fx_val) */
+        static const char *const FON[4] = {"Off", "All", "Chord", "Bass"};
+        cu_cpy(d, FON[v & 3], n);
+        break;
+    }
     default: cu_int(d, v, 0, n); break;
     }
 }
@@ -709,10 +720,12 @@ static const char *const FM1_SYNC[2] = {"Free", "Tempo"};
 static const char *const FM1_DMODE[2] = {"Stereo", "Ping-pong"};
 static const char *const FM1_RATIO[4] = {"1:1", "3:4", "2:3", "1:2"};
 static const char *const FM1_SLOPE[2] = {"6 dB", "12 dB"};
+static const char *const FM1_FILTER_ON[4] = {"Off", "All", "Chord", "Bass"};   /* XP_FON: what goes through it */
 
-/* FX Page: the FX layer's picker (its SELECT): Sends, Reverb 1, Reverb 2, Chorus, Delay 1, Delay 2, Drive, Filter */
+/* FX Page: the FX layer's picker (its SELECT): Sends, Reverb 1, Reverb 2, Chorus, Delay 1, Delay 2, Drive, Filter,
+ * Routing */
 static const char *const FM1_FXPAGES[CU_NFXP] = {"Sends", "Reverb 1", "Reverb 2", "Chorus", "Delay 1", "Delay 2",
-                                                 "Drive", "Filter"};   /* CU_FXP's order */
+                                                 "Drive", "Filter", "Routing"};   /* CU_FXP's order */
 static int32_t fm1_g_fxpage(void) { return (int32_t)cu_fx_pg(); }
 static void fm1_s_fxpage(int32_t v)
 {
@@ -1037,7 +1050,7 @@ static void fm1_t_option(int32_t v, char *d, uint32_t n) { fm1_opt_text(fm1_optb
     FM1_FXP(X, "Delay Mode", dmode, XP_DMODE, FM1_DMODE, HD_) FM1_FXP(X, "Delay Tone", dtone, XP_DTONE, 0, HD_) \
     FM1_FXP(X, "Delay Wow", dwow, XP_DWOW, 0, HD_) \
     FM1_FXP(X, "Filter Low Cut", flow, XP_FLOW, 0, 0) FM1_FXP(X, "Filter High Cut", fhigh, XP_FHIGH, 0, 0) \
-    FM1_FXP(X, "Filter Slope", fslope, XP_FSLOPE, FM1_SLOPE, HD_) FM1_FXP(X, "Filter", fon, XP_FON, FM1_ONOFF, HD_) \
+    FM1_FXP(X, "Filter Slope", fslope, XP_FSLOPE, FM1_SLOPE, HD_) FM1_FXP(X, "Filter", fon, XP_FON, FM1_FILTER_ON, HD_) \
     /* ---- the sound editor (FM1P_HIDDEN unless FM1_EXPOSE_EDITOR), the knobs' own cells */ \
     FM1_EDITOR_ENTRIES(X) FM1_HIDDEN_ENTRIES(X)
 

@@ -323,7 +323,12 @@ int main()
         click(EMU_B_GLO);                         // OPT tapped: Options
         pump(300);
         followed("Options open (" + page() + ")");
+        click(EMU_B_OCTUP);                       // (0.40: the group list first) OCT+: into the first group, Play
+        pump(300);
+        followed("Options, Play (" + page() + ")");
         firstTurn("Options", EMU_E_K1, 1);
+        click(EMU_B_OCTDN);                       // back to the group list (Options reopen where they were closed)
+        pump(300);
         click(EMU_B_GLO);
         pump(600);
         followed("Options closed (" + page() + ")");
@@ -616,13 +621,13 @@ int main()
         p.buttonParam(EMU_B_FX)->setValueNotifyingHost(0.0f);
         h.run_ms(300);
         p.drainTier2();
-        // 0.25.1: SELECT picks one of eight pages (cr_ui.c CU_FXP: Sends, Reverb 1, Reverb 2, Chorus, Delay 1, Delay 2,
-        // Drive, Filter); the layer opens on the Sends page (cr_ui.c "the FX layer opens on its first page, the Sends")
+        // SELECT picks one of nine pages (cr_ui.c CU_FXP: Sends, Reverb 1, Reverb 2, Chorus, Delay 1, Delay 2, Drive,
+        // Filter, Routing); the layer opens on the Sends page (cr_ui.c "the FX layer opens on its first page, the Sends")
         std::printf("        (FX: %s)\n", page().c_str());
         const fm1param_t *fxp = sel->entry();
         check(row() == "Chord Drive | Chord Chorus | Chord Delay | Chord Reverb" && fn(sel) == "FX Page" && fxp &&
-                  (fxp->flags & FM1P_HIDDEN) && fxp->max - fxp->min == 7 && namesFixed(),
-              "FX held: KNOB1..4 the Sends page (the four sends), SELECT the page (\"FX Page\", hidden, 8 pages)");
+                  (fxp->flags & FM1P_HIDDEN) && fxp->max - fxp->min == 8 && namesFixed(),
+              "FX held: KNOB1..4 the Sends page (the four sends), SELECT the page (\"FX Page\", hidden, 9 pages)");
         for (int r : kOrder)
             if (r != EMU_E_SELECT)                // (SELECT: the page, below)
                 turnRule("FX", r, 2);
@@ -661,33 +666,52 @@ int main()
     }
     // ---- (e) Options: SELECT is the cursor (relative), KNOB1 the row's value
     {
-        p.deviceForTest()->buttons_tap(1u << EMU_B_GLO);   // (OPT tapped: Options)
-        h.run_ms(200);
+        // 0.40's Options are grouped (cr_ui.c O_ORD, CU_G_*: Play, Chords, Keys, MIDI, Screen, Audio, System, ..): OPT
+        // opens the group list, where SELECT and KNOB1 pick a group (both relative); OCT+ enters the group, OCT- goes
+        // back to the list. Inside, SELECT is the cursor and KNOB1 the row's value (the hidden "Option" entry rewritten
+        // for the rows without a named entry)
+        auto tap = [&](int b) {
+            p.deviceForTest()->buttons_tap(1u << b);
+            h.run_ms(200);
+            p.drainTier2();
+        };
+        auto selTurn = [&](int n) {                       // n detents, then the re-centre (500 ms) and kSettleMs
+            sel->setValueNotifyingHost(0.5f + (float)n / 24.0f);
+            h.run_ms(700);
+            p.drainTier2();
+        };
+        auto rowTo = [&](const std::string &name) {        // SELECT down a row at a time to the row called name
+            for (int i = 0; i < 12 && fn(k[0]) != name; i++)
+                selTurn(1);
+            return fn(k[0]) == name;
+        };
+        tap(EMU_B_GLO);                                   // (OPT tapped: Options, the group list)
         w.clear();
-        p.drainTier2();
         std::printf("        (Options: %s)\n", page().c_str());
-        check(sel->isRelative() && fn(sel) == "turn" && sel->getValue() == 0.5f && fn(k[0]) == "Play Style",
-              "Options: SELECT (the cursor) relative at 0.5, KNOB1 the first row: \"" + fn(k[0]) + "\"");
-        // 0.25.1's order (cr_ui.c O_*: Play Style, Ext Addition, Secret Chords, Chord Keys, SUS Window, Full K Shorts,
-        // MIDI Keys, 6th with 7th, Velocity ..): 6 rows down is MIDI Keys (no named entry: the hidden "Option" entry,
-        // O_MAX 16: Off, ch 1..16), one more 6th with 7th (the same entry rewritten: O_MAX 1, In place / Octave up)
+        check(sel->isRelative() && fn(sel) == "turn" && sel->getValue() == 0.5f && k[0]->isRelative() && fn(k[0]) == "turn",
+              "Options: the group list, SELECT and KNOB1 relative (they pick a group): \"" + fn(sel) + "\", \"" + fn(k[0]) + "\"");
+        tap(EMU_B_OCTUP);                                 // into the first group, Play
+        check(fn(k[0]) == "Play Style" && !k[0]->isRelative(), "OCT+: inside Play, KNOB1 the first row: \"" + fn(k[0]) + "\"");
+        tap(EMU_B_OCTDN);                                 // back to the group list
         const int32_t sent0 = p.knobDetentsSent(EMU_E_SELECT);
         w.clear();
-        sel->setValueNotifyingHost(0.75f);
+        sel->setValueNotifyingHost(0.5f + 3.0f / 24.0f);  // three groups on: MIDI
         h.run_ms(60);
         p.drainTier2();
         const int32_t d1 = p.knobDetentsSent(EMU_E_SELECT) - sent0;
-        check(d1 == 6 && fn(k[0]) == "MIDI Keys" && w.changes[idx(sel)] == 1 && !w.begins.count(idx(sel)),
-              "host SELECT 0.5 -> 0.75: " + std::to_string(d1) + " detents at the device; the cursor moved 6 rows: \"" +
-                  fn(k[0]) + "\" (the host's own turn is not nudged back)");
+        check(d1 == 3 && fn(k[0]) == "turn" && w.changes[idx(sel)] == 1 && !w.begins.count(idx(sel)),
+              "host SELECT 0.5 -> 0.625: " + std::to_string(d1) + " detents at the device (the host's own turn is not nudged back)");
         w.clear();
         h.run_ms(500);
         p.drainTier2();
         const int32_t d2 = p.knobDetentsSent(EMU_E_SELECT) - sent0;
         check(sel->getValue() == 0.5f && w.changes.count(idx(sel)) && w.last[idx(sel)] == 0.5f && !w.begins.count(idx(sel)) &&
-                  d2 == 6 && fn(k[0]) == "MIDI Keys",
+                  d2 == 3,
               "500 ms later: SELECT re-centred to 0.5 (the host told, no gesture), no detents from it (still " +
-                  std::to_string(d2) + "), the cursor stays");
+                  std::to_string(d2) + ")");
+        h.run_ms(200);
+        tap(EMU_B_OCTUP);                                 // into MIDI
+        check(rowTo("MIDI Keys"), "MIDI: SELECT down to MIDI Keys: \"" + fn(k[0]) + "\"");
         const fm1param_t *opt = k[0]->entry();
         check(opt && !k[0]->isRelative() && (opt->flags & FM1P_HIDDEN) && opt->max - opt->min == 16,
               "MIDI Keys: KNOB1 the hidden \"Option\" entry rewritten, 17 values");
@@ -700,12 +724,11 @@ int main()
         k[0]->setValueNotifyingHost(k[0]->toNorm(keys0));
         h.run_ms(60);
         p.drainTier2();
-        sel->setValueNotifyingHost(0.5f + 1.0f / 24.0f);   // one row down: 6th with 7th (no named entry either)
-        h.run_ms(200);                            // (a host write right after a retarget would be dropped: kSettleMs)
-        p.drainTier2();
-        check(fn(k[0]) == "6th with 7th" && !k[0]->isRelative() && k[0]->entry() == opt && opt &&
-                  opt->max - opt->min == 1,
-              "+1 detent: KNOB1 \"" + fn(k[0]) + "\" (the same hidden \"Option\" entry rewritten), 2 values");
+        tap(EMU_B_OCTDN);                                 // the group list, then two groups back: Chords
+        selTurn(-2);
+        tap(EMU_B_OCTUP);
+        check(rowTo("6th with 7th") && !k[0]->isRelative() && k[0]->entry() == opt && opt && opt->max - opt->min == 1,
+              "Chords: KNOB1 \"" + fn(k[0]) + "\" (the same hidden \"Option\" entry rewritten), 2 values");
         const int32_t six0 = opt ? opt->get() : 0;
         k[0]->setValueNotifyingHost(k[0]->toNorm(1 - six0));
         h.run_ms(60);
@@ -877,6 +900,18 @@ int main()
         // (d) a menu: Options, SELECT is the cursor (relative): one row per click; the re-centre makes no detents
         {
             click(EMU_B_GLO);
+            pump(300);
+            // (0.40's groups: Options reopen inside the group they were closed in, (e)'s Chords; the rows of MIDI, a
+            // longer group: OCT- to the group list, two groups on, OCT+)
+            if (!k[0]->isRelative()) {
+                click(EMU_B_OCTDN);
+                pump(300);
+            }
+            clickG(sel, 1, 24);
+            pump(70);
+            clickG(sel, 1, 24);
+            pump(700);
+            click(EMU_B_OCTUP);
             pump(300);
             check(sel->isRelative() && std::abs(sel->hostValue() - 0.5f) < 1e-6f, "(d) Options: Knob Select relative at 0.5");
             const int32_t d0 = p.knobDetentsSent(EMU_E_SELECT);

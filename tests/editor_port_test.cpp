@@ -940,7 +940,7 @@ struct MProfile {
 static const MProfile kManagers[] = {
     {"choralroot", "ChoralRoot ", MProfile::DX7}, {"felucca", "FELUCCA v", MProfile::STORE19},
     {"jiant", "JIANT ", MProfile::STORE19},       {"ghoulbox", "FELUCCA ", MProfile::STORE19},
-    {"rainbow", "FELUCCA ", MProfile::STORE19},   {"duell", "FELUCCA DUELL", MProfile::STORE19, 4},
+    {"rainbow", "FELUCCA ", MProfile::STORE19},   {"duell", "DUELL ", MProfile::STORE19, 4},
     {"melodee", "MELODEE ", MProfile::LIB80},     {"sloop", "FELUCCA SLOOP", MProfile::SLOOP},
     {"sloopdx", "FELUCCA sloopDX", MProfile::SLOOP}, {"orbit", "FELUCCA ORBIT", MProfile::SLOOP},
     {"nomansky", "FELUCCA NMS", MProfile::SLOOP}, {"x0x", "X0X ", MProfile::X0X},
