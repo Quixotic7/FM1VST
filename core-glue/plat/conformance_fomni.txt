@@ -1,9 +1,13 @@
-# FoMni-1 0.4: tests/core_conformance.cpp's script for this core (see its header for the directives)
+# FoMni-1 0.5: tests/core_conformance.cpp's script for this core (see its header for the directives)
 # the sound: a white key strums the plate (the default chord) on its own
-# the flash round trip: KNOB 1 (Voice 1, a project parameter shown on the play page) turned; flash_sync saves the
-# project (AUTOSAVE's write, nothing sounding); after the reboot the page shows the other value
+# the flash round trip: KNOB 1 (Voice 1, a project parameter shown on the play page) turned, then SAVE (since 0.5 the
+# only save, issue #8: no AUTOSAVE; ui.c B_SAVE: project_save at once); after the reboot the page shows the other value
 save wait 600
 save knob KNOB1 -5
+save wait 300
+save btn SAVE down
+save wait 100
+save btn SAVE up
 save wait 1500
 save quit
 saved wait 1000
