@@ -351,6 +351,25 @@ Bytes mupg_unpack(const Bytes &f)             // ota_unpack7 of the bytes betwee
     }
     return out;
 }
+// mupg_unpack's inverse: the bytes, least significant bit first, as 7-bit groups between F0 and F7
+Bytes mupg_pack(const Bytes &d)
+{
+    Bytes f = {0xF0};
+    uint32_t acc = 0, nb = 0;
+    for (uint8_t b : d) {
+        acc |= (uint32_t)b << nb;
+        nb += 8;
+        while (nb >= 7) {
+            f.push_back((uint8_t)(acc & 127u));
+            acc >>= 7;
+            nb -= 7;
+        }
+    }
+    if (nb)
+        f.push_back((uint8_t)(acc & 127u));
+    f.push_back(0xF7);
+    return f;
+}
 const Bytes kMupgIdentity = {0xF0, 0x00, 0x32, 0x45, 0x00, 0x00, 0x00, 0x40, 0x7F, 0xF7};
 const Bytes kOtaStart = {0xF0, 0x22, 0x24, 0x35, 0x7F, 0xF7};
 const Bytes kUboot = {0xF0, 0x22, 0x24, 0x35, 0x7D, 0xF7};
@@ -715,10 +734,26 @@ bool mupg_identity_exact(Link &k, std::string &id)
     uint32_t took = 0;
     if (!k.request(kMupgIdentity, match, r, 1000, &took))   // DELAY.hs
         return false;
-    const Bytes d = mupg_unpack(r);
+    Bytes d = mupg_unpack(r);
     id.clear();
     for (size_t i = 6; i < 33 && d[i]; i++)
         id += (char)d[i];
+    // felucca-bsp's ota.c since PERF-1's scheme: the plain query gets NAME_ and three digits (M-UPGRADE 3.11's limit),
+    // the query with the one-byte body 01 the whole identity; the installers ask it when the plain answer is NAME_ddd
+    // (a firmware without it does not answer, and the plain answer stands)
+    const size_t us = id.find('_');
+    if (us != std::string::npos && id.size() == us + 4) {
+        const Bytes full = mupg_pack({0x00, 0x59, 0x11, 0x01, 0x00, 0x00, 0x01, 0xFE});
+        Bytes r2;
+        uint32_t took2 = 0;
+        if (k.request(full, match, r2, 300, &took2)) {
+            d = mupg_unpack(r2);
+            id.clear();
+            for (size_t i = 6; i < 33 && d[i]; i++)
+                id += (char)d[i];
+            took += took2;
+        }
+    }
     std::printf("    M-UPGRADE identity: \"%s\" in %u blocks\n", id.c_str(), took);
     return true;
 }
@@ -1518,7 +1553,7 @@ void grimm_run(const std::string &module, Device &dev, Link &k, Session &s, cons
     uint32_t used = 0;
     check(mupg_identity_exact(k, id) && id == p.mupg, "M-UPGRADE identity: \"" + id + "\" (the package's " + p.mupg +
                                                           ", 34 bytes as the installer reads it)");
-    check(gr_info(k, ver, used) && ver == "1.0" && used == 4,
+    check(gr_info(k, ver, used) && ver == "2.0.2" && used == 4,
           "INFO (20): protocol 2, format 1, version \"" + ver + "\", " + std::to_string(used) +
               " sample slots in use (the four factory samples)");
     Bytes fac, empty, back;
@@ -1883,19 +1918,19 @@ const Profile kProfiles[] = {
     {"coralflower", "CoralFlower ", true, "FM-1_930", true,
      panel_change(30, [](Device &d) { d.enc(EMU_E_PRESETS, 2); })},
     {"purplemonkey", "PurpleMonkey ", false, "FM-1_927", false, nullptr},
-    {"felucca", "FELUCCA v1.6.1", true, "FM-1_900", false, up_store_change()},
-    {"jiant", "JIANT v0.9.9", true, "FM-1_900", false, up_store_change()},
-    {"ghoulbox", "FELUCCA v1.4.1 GB2.3.2", true, "FM-1_900", false, up_store_change()},
+    {"felucca", "FELUCCA v1.8.2", true, "FM-1_918", false, up_store_change()},
+    {"jiant", "JIANT v10.26", true, "FM-1_909", false, up_store_change()},
+    {"ghoulbox", "FELUCCA v1.4.1 GB2.4", true, "FM-1_900", false, up_store_change()},
     {"rainbow", "FELUCCA v1.1.5", true, "FM-1_900", false, up_store_change()},
     // DUELL 1.0: the stored preset is a patch record (Session::rec_pages; the profile's id is how main() knows)
-    {"duell", "FELUCCA DUELL 1.0", true, "FM-1_900", false, up_store_change()},
+    {"duell", "DUELL 1.3.6", true, "FM-1_901", false, up_store_change()},
     {"pigeon", "PIGEON v0.4.1", true, "FM-1_900", false, nullptr, false, nullptr, pigeon_run},
     {"melodee", "MELODEE v1.5.1", true, "FM-1_900", false, up_store_change(80)},
     // Mini-Tone, FMini-1, Skiff: Felucca's editor.c (their web editors' INFO, BACKUP_LIST / GET / PUT, UP_STORE);
     // the identity is each build.py --release's (FM-1_9XY; Skiff's FM-1_7XY)
-    {"minitone", "FELUCCA v1.0.1", true, "FM-1_910", false, up_store_change()},
-    {"fmini", "FELUCCA v1.8.0", true, "FM-1_918", false, up_store_change()},
-    {"skiff", "FELUCCA v1.4", true, "FM-1_714", false, up_store_change()},
+    {"minitone", "FELUCCA v1.0.5", true, "FM-1_900", false, up_store_change()},
+    {"fmini", "FELUCCA v1.6.1", true, "FM-1_900", false, up_store_change()},
+    {"skiff", "FELUCCA v2.7", true, "FM-1_727", false, up_store_change()},
     // the sloop family: editor.c's v6 backup; the identity is build.py's development FM-1_900 (no --release)
     {"sloop", "FELUCCA SLOOP 2.8", true, "FM-1_900", false, sl_upreset_change, true},
     {"sloopdx", "FELUCCA sloopDX 4.0", true, "FM-1_900", false, sl_dxbank_change, true, sl_dxbank_kept},
@@ -1903,15 +1938,15 @@ const Profile kProfiles[] = {
     {"nomansky", "FELUCCA NMS FM 0.5", true, "FM-1_900", false, sl_upreset_change, true},
     // plat, fm1base, dinghy
     {"x0x", "X0X ", false, "FM-1_9010100", false, nullptr, false, nullptr, x0x_run},
-    {"amb", nullptr, false, "FM-1_7010300", false, nullptr, false, nullptr, installer_run("AMB-1 ", true)},
+    {"amb", nullptr, false, "FM-1_7010302", false, nullptr, false, nullptr, installer_run("AMB-1 ", true)},
     {"loom", "LOOM-8 0.14", false, "FM-1_10001400", false, nullptr, false, nullptr, loom_run},
     // ECHOFIELD 0.2.8: build.py --release 0.2.8 (fm1.toml id_prefix FM-1_3246 + 00 02 08); its companion app
     {"echofield", nullptr, false, "FM-1_3246000208", false, nullptr, false, nullptr, echofield_run},
-    {"fomni", nullptr, false, "FM-1_8000400", false, nullptr, false, nullptr, installer_run("FoMni-1 ", false)},
-    {"fimba", nullptr, false, "FM-1_8000601", false, nullptr, false, nullptr, installer_run(nullptr, false)},
+    {"fomni", nullptr, false, "FM-1_8000500", false, nullptr, false, nullptr, installer_run("FoMni-1 ", false)},
+    {"fimba", nullptr, false, "FM-1_8000700", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"fartmachine", nullptr, false, "FM-1_701", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"fm106", nullptr, false, "FM-1_907", false, nullptr, false, nullptr, fm106_run},
-    {"obervave", nullptr, false, "FM-1_9533", false, nullptr, false, nullptr, installer_run(nullptr, false)},
+    {"obervave", nullptr, false, "FM-1_9535", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     // S1Vave: OberVave's fork, its README's release build (build.py --release 1.0: FM-1_950)
     {"s1vave", nullptr, false, "FM-1_950", false, nullptr, false, nullptr, installer_run(nullptr, false)},
     {"frodhes", nullptr, false, "FM-1_958", false, nullptr, false, nullptr, installer_run(nullptr, false)},
@@ -1953,7 +1988,9 @@ bool update_keys(Link &k, Session &s, const Profile &p)
     }
     if (p.mupg) {
         std::string id;
-        check(alive && mupg_identity(k, id) && id == p.mupg, "after them the M-UPGRADE identity still answers");
+        // (the plain query: felucca-bsp's NAME_ and three digits of a longer identity, mupg_identity_exact)
+        const std::string full = p.mupg, us = full.substr(0, full.find('_') + 4);
+        check(alive && mupg_identity(k, id) && (id == full || id == us), "after them the M-UPGRADE identity still answers");
     }
     return alive;
 }
