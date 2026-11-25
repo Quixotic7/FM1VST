@@ -3,7 +3,7 @@
 FM1VST's releases. The version is `project(FM1VST VERSION ..)` in CMakeLists.txt (the plugin shows it in its
 settings sheet); a release is the tag `v<version>` on it (.github/workflows/release.yml builds and publishes it).
 
-## 0.7.0 (2026-11-24): build your firmware as an .rfm1
+## 0.7.0 (2026-11-25): build your firmware as an .rfm1
 
 ### The .rfm1 toolchain, for firmware authors
 
@@ -40,6 +40,8 @@ labels and readouts, rd1, for most). They are not in the plugin's public build: 
 
 - **ChoralRoot 0.46** (from 0.29.2): every release since, with the Move takeover, the engine picker's readout and
   engine parameters.
+- **ChoralRoot's host parameters follow 0.46**: Perform Mode sets the chord's PERF mode again (it was one entry off
+  since 0.39's per-part picker), FX Page has the Routing page, and Filter is Off / All / Chord / Bass.
 - Updated to their latest stable releases: Felucca 1.8.2, S1Vave 2.0.1, DUELL 1.3.6, FMini-1 2.6.0, Skiff 2.7,
   OberVave 3.5.2, CoralFlower 0.7.1, FiMba-1 0.7.0, FoMni-1 0.5, PurpleMonkey 0.12, AMB-1 1.3.2.
 - **S1Vave** joins the public build (2026-10-29).
