@@ -87,7 +87,9 @@ fm1_add_core(evilgenius ${CMAKE_CURRENT_LIST_DIR}
 # plutovg and SAM are vendored: their own warnings are not ours (tools/Makefile builds them -w too)
 set(_eg_quiet ${_eg_pvg_sources} ${_eg_sam_sources})
 list(TRANSFORM _eg_quiet PREPEND ${CMAKE_CURRENT_LIST_DIR}/)
-set_source_files_properties(${_eg_quiet} TARGET_DIRECTORY core_evilgenius_obj PROPERTIES COMPILE_OPTIONS "-w")
+if(TARGET core_evilgenius_obj)   # (left out of a public build: gated)
+    set_source_files_properties(${_eg_quiet} TARGET_DIRECTORY core_evilgenius_obj PROPERTIES COMPILE_OPTIONS "-w")
+endif()
 
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). 16 MiB, as FIZZ's. The licence texts: EVILGENIUS's
 # MPL-2.0 and LICENSING.md, the SID model's BSD-2-Clause, SAM's README (its no-licence status), plutovg's MIT, FreeType's

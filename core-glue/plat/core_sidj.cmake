@@ -83,7 +83,9 @@ if(NOT _old STREQUAL "${_lic}\n")
     file(WRITE ${_tdir}/sidj_tunes_terms.txt "${_lic}\n")
 endif()
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_deps})
-target_include_directories(core_sidj_obj PRIVATE ${_tdir})
+if(TARGET core_sidj_obj)   # (left out of a public build: not in tools/release/cores.tsv)
+    target_include_directories(core_sidj_obj PRIVATE ${_tdir})
+endif()
 set_property(SOURCE ${CMAKE_CURRENT_LIST_DIR}/core_sidj.c APPEND PROPERTY OBJECT_DEPENDS ${_tdir}/sidj_tunes.h)
 
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md). A fresh flash has the two tunes (above), the first
