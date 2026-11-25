@@ -3,7 +3,7 @@
 # Phase 1: the ChoralRoot core as a loadable module, the engine (core loader, device clock, resampler), replay tests.
 # Phase 2: the JUCE plugin (plugin/): AU, VST3, Standalone. Phase 3: the panel GUI (plugin/PanelComponent, Theme).
 cmake_minimum_required(VERSION 3.22)
-project(FM1VST VERSION 0.6.2 LANGUAGES C CXX)
+project(FM1VST VERSION 0.7.0 LANGUAGES C CXX)
 
 # ---- the cores: one fm1_add_core() per firmware (cmake/FM1Cores.cmake documents it), each in its glue folder:
 # core-glue/<family>/core.cmake (or core_<id>.cmake for a family of several), picked up by the glob below, so a new
@@ -171,6 +171,10 @@ endforeach()
 get_property(_left_out GLOBAL PROPERTY FM1_CORES_LEFT_OUT)
 foreach(_id IN LISTS _left_out)
     string(APPEND _m "gated\t${_id}\n")
+endforeach()
+get_property(_unlisted GLOBAL PROPERTY FM1_CORES_UNLISTED)
+foreach(_id IN LISTS _unlisted)
+    string(APPEND _m "unlisted\t${_id}\n")
 endforeach()
 file(WRITE ${CMAKE_BINARY_DIR}/release-manifest.tsv "${_m}")
 

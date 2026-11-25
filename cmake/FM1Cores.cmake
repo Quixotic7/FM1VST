@@ -99,6 +99,18 @@ function(fm1_add_core id glue)
     if(A_GATED)   # (every gated id, built or not: hub_test checks no gated firmware is in the Hub's fallback list)
         set_property(GLOBAL APPEND PROPERTY FM1_CORES_GATED_ALL ${id})
     endif()
+    # a public native build bundles only the public set, tools/release/cores.tsv (each core added there by the owner's
+    # call: CORES-PLAN.md 6); an un-gated core not listed there is left out too. A firmware's .rfm1 build
+    # (FM1_RFM1_ONLY: nothing bundled) builds any un-gated core.
+    if(FM1_PUBLIC_BUILD AND NOT FM1_RFM1_ONLY AND NOT A_GATED)
+        file(STRINGS ${CMAKE_SOURCE_DIR}/tools/release/cores.tsv _pub_lines REGEX "^[a-z0-9_]+\t")
+        list(TRANSFORM _pub_lines REPLACE "\t.*$" "")
+        if(NOT id IN_LIST _pub_lines)
+            message(STATUS "${id} core: left out of this public build (not in tools/release/cores.tsv)")
+            set_property(GLOBAL APPEND PROPERTY FM1_CORES_UNLISTED ${id})
+            return()
+        endif()
+    endif()
     if(A_GATED AND FM1_PUBLIC_BUILD)
         message(STATUS "${id} core: left out of this public build (gated: ${A_GATED})")
         set_property(GLOBAL APPEND PROPERTY FM1_CORES_LEFT_OUT ${id})

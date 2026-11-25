@@ -11,7 +11,7 @@ The manifest's id, name, version, licence and source_url come from the descripto
 
     rfm1_pack.py --wasm felucca.wasm --describe felucca.describe.json --out felucca-1.6.1.rfm1 \\
         --author "Leo Kuroshita (Hügelton Instruments)" \\
-        --license-file "GPL-3.0-only ({name})=cores/Felucca/LICENSE" --built-by "FM1VST 0.6.2 fm1_add_rfm1, emcc 6.0.13"
+        --license-file "GPL-3.0-only ({name})=cores/Felucca/LICENSE" --built-by "FM1VST 0.7.0 fm1_add_rfm1, emcc 6.0.13"
 
 --virtual [--needs CAP].. [--folder NAME=r|rw]..: a Fantasy CFW (docs/VIRTUAL-CARTS.md): the manifest's "virtual": true,
 "needs" and "folders".

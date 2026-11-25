@@ -3,6 +3,50 @@
 FM1VST's releases. The version is `project(FM1VST VERSION ..)` in CMakeLists.txt (the plugin shows it in its
 settings sheet); a release is the tag `v<version>` on it (.github/workflows/release.yml builds and publishes it).
 
+## 0.7.0 (2026-11-24): build your firmware as an .rfm1
+
+### The .rfm1 toolchain, for firmware authors
+
+FM1VST now builds `.rfm1` files: an FM-1 firmware compiled to WebAssembly to run inside host apps (RemoteFM1 on
+iOS, Android, the web and the Ableton Move), with your sources and FM1VST's glue for them. Pin this release
+(`ref: v0.7.0`) in your firmware's CI and attach the file to your own releases. The guide is
+[docs/RFM1.md](docs/RFM1.md); the format is [docs/RFM1-FORMAT.md](docs/RFM1-FORMAT.md).
+
+- **`fm1_add_rfm1(<id> AUTHORS ..)`**, one line in a core's glue (cmake/FM1Rfm1.cmake). `-DFM1_RFM1_ONLY=ON`
+  configures only the cores and their .rfm1 files (no plugin, no JUCE), and `-DFM1_ONLY_CORES=<id>` only yours, so
+  only your firmware's submodule has to be checked out. The manifest's id, name, version, licence and source URL come
+  from your descriptor; the file carries your licence texts, credits and FM1VST's licence.
+- **`tools/rfm1_check.py`** (standard library Python) checks a whole module: manifest, imports, exports and their
+  signatures, memory, every instruction. **`rfm1_run`** (wasm3) runs it as an app would: boots it, plays a chord,
+  fails if it traps, halts, stays silent or never draws; it saves WAVs and screens, presses buttons, turns knobs. The
+  build runs both on every file as ctests (`rfm1_<id>`).
+- **Your repository's `RemoteFM1Metadata.json`** (skin and button / knob labels) is packed into the file
+  ([docs/RFM1-METADATA.md](docs/RFM1-METADATA.md)).
+- Optional host capabilities, used where a host has them (`WANTS`): **`ain1`** audio input, **`aout1`** more output
+  channels (LOOM-8's tracks on 3..10), **`cpu2`** core 1 on a host thread, **`rd1`** live knob labels and readouts,
+  **`tk1`** the Ableton Move takeover ([docs/RFM1-TAKEOVER.md](docs/RFM1-TAKEOVER.md)), **`ep1`** engine parameters
+  ([docs/RFM1-FORMAT-ep1.md](docs/RFM1-FORMAT-ep1.md)); live panel labels ([docs/DYNAMIC-LABELS.md](docs/DYNAMIC-LABELS.md));
+  Fantasy CFWs, host-only carts with a shared folder ([docs/VIRTUAL-CARTS.md](docs/VIRTUAL-CARTS.md)).
+- A gated core is never built as an .rfm1 unless its glue says `HOSTED_DESPITE_GATE` (hosted at RemoteFM1FW, never
+  bundled).
+
+### More firmwares, as .rfm1 files
+
+About 95 more firmwares have glue in FM1VST now, most of them built as .rfm1 files for the RemoteFM1 catalogue (live
+labels and readouts, rd1, for most). They are not in the plugin's public build: it bundles the public set in
+`tools/release/cores.tsv`, as before, and a public build now leaves out every core not listed there, gated or not.
+
+### The plugin's firmwares
+
+- **ChoralRoot 0.46** (from 0.29.2): every release since, with the Move takeover, the engine picker's readout and
+  engine parameters.
+- Updated to their latest stable releases: Felucca 1.8.2, S1Vave 2.0.1, DUELL 1.3.6, FMini-1 2.6.0, Skiff 2.7,
+  OberVave 3.5.2, CoralFlower 0.7.1, FiMba-1 0.7.0, FoMni-1 0.5, PurpleMonkey 0.12, AMB-1 1.3.2.
+- **S1Vave** joins the public build (2026-10-29).
+- **LOOM-8 leaves the public build.** Since 0.14 it builds in the 909 cymbals, the same open question as X0X's; it is
+  hosted as an .rfm1 only, as its author ships it (gated 2026-11-06).
+- The Remote FM-1 host library from RemoteFM1 0.3.1 (its portable core relicensed to MPL-2.0).
+
 ## 0.6.2 (2026-10-27): Remote FM-1 over Bluetooth MIDI
 
 - **Remote FM-1 over Bluetooth MIDI.** A unit on RemoteFM1 0.2 or later, paired with the Mac over Bluetooth (it shows

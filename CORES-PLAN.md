@@ -174,12 +174,14 @@ so these need an answer first:
 Gated today (left out of FM1_PUBLIC_BUILD): fm106 (Juno-106 patch data), rainbow (character
 look-alikes), fartmachine (recordings), orbit (OP-1 material, the Hugelton atlas), sloop and sloopdx (the Hugelton
 atlas), nomansky (game art), x0x (the cymbal samples), rhythmer (the Amen and Think breaks, 2026-11-06), cultbox (the Elka
-Drummer One samples, the BEAT CULT logo, 2026-11-06). GATED still builds an .rfm1 when its `fm1_add_rfm1` says `HOSTED_DESPITE_GATE` (sloop, clipper, x0x since 2026-10-31; orbit, rhythmer and cultbox since 2026-11-06): a
+Drummer One samples, the BEAT CULT logo, 2026-11-06), loom (the 909 cymbals since 0.14, 2026-11-06), and more since (each glue file says why). GATED still builds an .rfm1 when its `fm1_add_rfm1` says `HOSTED_DESPITE_GATE` (sloop, clipper, x0x since 2026-10-31; orbit, rhythmer and cultbox since 2026-11-06): a
 hosted download from RemoteFM1FW, never bundled in an app or a public native build; a public build (FM1_PUBLIC_BUILD=ON)
-leaves the core out altogether, so hosted files come from a build without it. A public build bundles the other twenty-two: choralroot
-(the default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee, fomni, fimba, amb, obervave, frodhes,
-loom (un-gated 2026-10-21), duell (un-gated 2026-10-22), minitone, fmini, skiff, grimm, pigeon, tonitor, speak37
-(added public 2026-10-22), s1vave (added public 2026-10-29), and the fm1emu engine.
+leaves the core out altogether, so hosted files come from a build without it. A public build bundles only the public set,
+tools/release/cores.tsv, twenty-two: choralroot (the default), felucca, ghoulbox, jiant, purplemonkey, coralflower, melodee,
+fomni, fimba, amb, obervave, frodhes, duell (un-gated 2026-10-22), minitone, fmini, skiff, grimm, pigeon, tonitor, speak37
+(added public 2026-10-22), s1vave (added public 2026-10-29), and the fm1emu engine; loom (un-gated 2026-10-21) is gated
+again since 0.14 (2026-11-06). Every other core, gated or not, is left out of a public build (cmake/FM1Cores.cmake) until
+its line is added there.
 
 ## 7. Rules
 
