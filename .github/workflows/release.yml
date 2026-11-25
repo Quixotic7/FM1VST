@@ -30,7 +30,7 @@ concurrency:
 
 jobs:
   macos-arm64:
-    runs-on: macos-14
+    runs-on: macos-15                # (macos-14 is retired: "not supported", 2026-11-25)
     timeout-minutes: 120
     permissions:
       contents: write
