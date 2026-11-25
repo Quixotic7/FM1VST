@@ -108,7 +108,7 @@ void Device::run_ms(const Between &between)   // emu_web.c run_ms (emu.c bench: 
 {
     const uint32_t ms = dev_ms_++;
     c_->tick(ms);
-    const bool frame = ms == 0 || ms - last_frame_ >= 15u;
+    const bool frame = ms == 0 || ms - last_frame_ >= frame_period_;
     if (between)
         between(ms, frame);
     else if (between_)

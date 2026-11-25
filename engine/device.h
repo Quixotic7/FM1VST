@@ -82,6 +82,9 @@ public:
     using Between = std::function<void(uint32_t ms, bool frame)>;
     void run_ms(const Between &between = nullptr);
     void set_between(Between b) { between_ = std::move(b); }
+    // the UI frame's period, device ms (15: emu.c's; 1: frame() every ms, so a core that draws at the host's pace
+    // draws on the firmware's own cadence, as its reference does: the felucca_web golden check)
+    void set_frame_period(uint32_t ms) { frame_period_ = ms ? ms : 1u; }
     uint64_t frames_produced() const { return frames_done_; }   // device frames rendered since power-on
 
     // device frames (44.1 kHz) produced and not yet taken
@@ -116,7 +119,7 @@ private:
 
     const fm1core_t *c_;
     bool booted_ = false;
-    uint32_t dev_ms_ = 0, last_frame_ = 0;
+    uint32_t dev_ms_ = 0, last_frame_ = 0, frame_period_ = 15;
     uint64_t frames_done_ = 0;
     int32_t enc_total_[EMU_NE - 1] = {};
     int16_t ring_[RING * 2];
