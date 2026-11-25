@@ -23,6 +23,6 @@ fm1_add_core(duell ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/DU
                  felucca_fm6.h duell_sounds.h duell_multis.h midi_map_defaults.h
              INCLUDES ${CMAKE_SOURCE_DIR}/cores/DUELL/duell/firmware/src
              VERSION 1.3.6)
-fw_golden(duell ${CMAKE_SOURCE_DIR}/cores/DUELL/felucca-base web/emu/felucca_web.c)
+fw_golden(duell ${CMAKE_SOURCE_DIR}/cores/DUELL/duell web/emu/felucca_web.c)
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
 fm1_add_rfm1(duell AUTHORS "oscillr")
