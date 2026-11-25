@@ -20,7 +20,9 @@ include(${CMAKE_CURRENT_LIST_DIR}/../plat/plat_golden.cmake)
 plat_golden(amb GEN_TARGET gen_amb SOURCES ${_amb}/base/host/plat_host.c ${_amb}/app/dsp/amb.c DEFINES PLAT_HOST
             INCLUDES ${_amb}/base/device ${_amb}/base/include ${_amb}/base/lib ${_amb}/app ${_amb}/app/build/gen
                      ${_amb}/app/dsp
-            SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden_amb.txt)
+            SCRIPT ${CMAKE_CURRENT_LIST_DIR}/golden_amb.txt
+            ALLOWED 120)   # (the status bar's battery, 15 x 8: since 1.3.2 the core shows USB power, plat_battery 4, as
+                           # an emulated unit is always on USB; the host simulator's plat_host.c says full, 3)
 # the key sensing path (velocity and pressure through lib/touch.c, for an fm1-base app with APP_TOUCH: CTL-1, MONK-1)
 # is compiled out for AMB-1; this object builds the same unit with APP_TOUCH so the path keeps compiling
 if(TARGET amb_core)

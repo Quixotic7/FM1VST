@@ -123,6 +123,9 @@ int main(int argc, char **argv)
         check(ok, std::string("FW_GOLDEN_SYSEX ") + sx + ": uploaded into a fresh copy; both power on from its image");
     }
     Device d(lc->core());
+    // frame() every device ms: a Felucca-family core draws main.c's 15 ms frame only in a host frame (fw_core.h
+    // FM1CORE_FW_HOST_FRAMES), so the firmware's own cadence, the reference's, needs a host frame at every ms
+    d.set_frame_period(1);
     if (image.empty()) {
         d.boot_from(nullptr, 0);
         fw_ref_boot();
@@ -164,6 +167,8 @@ int main(int argc, char **argv)
                 lit += a[i] != a[0];
             }
             write_ppm(out + "/" + id + "_golden_" + std::to_string(ms) + ".ppm", a);
+            if (diff)                                   // (the reference's too, to compare)
+                write_ppm(out + "/" + id + "_golden_" + std::to_string(ms) + "_ref.ppm", b);
             checks++;
             same += diff == 0;
             check(diff == 0 && fw_ref_now() == d.ms(),
@@ -179,6 +184,14 @@ int main(int argc, char **argv)
         if (pc[i] != pr[i] && first == n)
             first = i;
         peak = std::max<size_t>(peak, (size_t)std::abs((int)pc[i]));
+    }
+    // FW_GOLDEN_NO_AUDIO=<why>: the audio is not compared (DUELL: the core's KEY SENSE, DUELL_VELO, has no
+    // counterpart in the web unit, so a key's velocity differs); it must still sound
+    if (const char *why = std::getenv("FW_GOLDEN_NO_AUDIO")) {
+        check(n > 44100u * 4u && peak > 64, "audio: " + std::to_string(n / 2) + " frames, it sounds (peak " +
+                                                std::to_string(peak) + "); not compared: " + why);
+        std::printf("fw_golden %s: %s (%d of %d screens identical)\n", id.c_str(), fails ? "FAIL" : "PASS", same, checks);
+        return fails ? 1 : 0;
     }
     check(n > 44100u * 4u && first == n && peak > 64,
           "audio: " + std::to_string(n / 2) + " frames compared, " +

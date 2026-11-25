@@ -24,5 +24,9 @@ fm1_add_core(duell ${CMAKE_CURRENT_LIST_DIR} SOURCE ${CMAKE_SOURCE_DIR}/cores/DU
              INCLUDES ${CMAKE_SOURCE_DIR}/cores/DUELL/duell/firmware/src
              VERSION 1.3.6)
 fw_golden(duell ${CMAKE_SOURCE_DIR}/cores/DUELL/duell web/emu/felucca_web.c)
+if(TEST fw_golden_duell)   # (the core's KEY SENSE, DUELL_VELO 1, is not in the web unit: the screens compared, not the audio)
+    set_property(TEST fw_golden_duell APPEND PROPERTY ENVIRONMENT
+                 "FW_GOLDEN_NO_AUDIO=the core has KEY SENSE (DUELL_VELO 1), the web unit not")
+endif()
 # the .rfm1 (cmake/FM1Rfm1.cmake: -DFM1_RFM1=ON; docs/RFM1.md)
 fm1_add_rfm1(duell AUTHORS "oscillr")
